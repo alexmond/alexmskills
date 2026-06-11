@@ -1,0 +1,10 @@
+{
+  "name": "implement-issue",
+  "description": "Drive a GitHub issue from branch to pull request with a language and build-tool agnostic workflow.",
+  "version": "1.0.0",
+  "author": { "name": "Alex Mondshain", "email": "alexmond@gmail.com" },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": ["github","issue","pull-request","workflow","git"]
+}

@@ -1,0 +1,43 @@
+= Evolving CLAUDE.md
+:navtitle: evolving-claude-md
+
+Wires `CLAUDE.md` to maintain a living *Decisions & Learnings* log that the assistant updates as the project evolves — without letting the file bloat. `CLAUDE.md` is read into context every turn, so the goal is a small, well-pruned set of durable decisions, with everything else linked out or archived. Three hooks keep the log healthy automatically. It complements the built-in `init` skill: `init` describes the codebase, this adds the mechanism that lets the file grow safely.
+
+== Install
+
+[source,text]
+----
+/plugin install evolving-claude-md@alexmskills
+----
+
+== When to use it
+
+* "add learning mechanism to CLAUDE.md", "make CLAUDE.md evolve", "self-updating CLAUDE.md"
+* "decisions log", "ADR-style notes in CLAUDE.md", "project memory in CLAUDE.md"
+* "compact CLAUDE.md" / "CLAUDE.md is getting too big"
+* A `CLAUDE.md` exists but has no mechanism to keep itself current
+* Not for plain codebase documentation — use `init` for that
+
+== What it does
+
+=== Three automatic hooks
+
+The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the hooks register on enable with nothing to add to settings:
+
+* *SessionStart* — `audit-claude-md.py` checks the D&L section and injects a compaction/graduation recommendation when it is bloated; silent when healthy.
+* *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
+* *PostCompact* — re-runs the audit so the assistant sees the current D&L state without paying to re-read the whole file.
+
+=== Entry format contract
+
+Every entry follows `- YYYY-MM-DD — **topic-tag** — what. Why: reason. [see → docs/decisions/...]`. Absolute dates only, a mandatory kebab-case topic tag, and a hard 200-char body cap (bigger detail moves to `docs/decisions/`).
+
+=== Downward pressure on size
+
+A Recent (last 14 days) / Historic split keeps the actively-scanned section small. Reversals are struck through, stable patterns *graduate* into Conventions/Gotchas, and a quarterly `archive-decisions.py` run moves old entries into `docs/decisions/{YYYY-Q}.md`.
+
+== Notes
+
+* Manual (non-plugin) install requires copying the three scripts into `.claude/skills/evolving-claude-md/` and adding the hooks to `.claude/settings.json`, then one session restart.
+* The quarterly archive is the one operational step nothing automates — set a calendar reminder.
+* Disable a hook by removing its entry; disable all via `disableAllHooks: true`.
