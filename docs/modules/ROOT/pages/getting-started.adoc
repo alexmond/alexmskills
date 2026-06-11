@@ -1,0 +1,54 @@
+= Getting Started
+
+== Add the marketplace
+
+Add the marketplace once, then install any plugin from it:
+
+[source,text]
+----
+/plugin marketplace add alexmond/alexmskills
+/plugin install evolving-claude-md@alexmskills
+----
+
+Or browse interactively with `/plugin` (the **Discover** tab). After a new release is pushed, refresh
+the catalog with:
+
+[source,text]
+----
+/plugin marketplace update alexmskills
+----
+
+== Try a plugin without installing
+
+Load a plugin straight from a checkout — useful for evaluating or developing:
+
+[source,bash]
+----
+claude --plugin-dir ./plugins/dev-crew
+----
+
+== Quick start by plugin
+
+[cols="1,3",options="header"]
+|===
+| Plugin | Say…
+
+| xref:evolving-claude-md.adoc[evolving-claude-md]
+| "make CLAUDE.md evolve" — its hooks (audit, lint, re-audit) register automatically once enabled.
+
+| xref:dev-crew.adoc[dev-crew]
+| "run the crew on this feature" — review the roster, then it relays architect → dev → qa → deployer.
+
+| xref:brainstorm-panel.adoc[brainstorm-panel]
+| "get a team on this and make it better" — it proposes a panel + style for your sign-off, then runs.
+
+| xref:learn-on-failure.adoc[learn-on-failure]
+| nothing — install it and it captures a learning whenever a task needs more than one attempt.
+|===
+
+[NOTE]
+====
+Installing from a **local directory** marketplace is not supported by the Claude Code CLI
+(it expects a GitHub/git source). For local evaluation use `claude --plugin-dir` as shown above;
+`+/plugin install ...@alexmskills+` works once the marketplace is published to GitHub.
+====

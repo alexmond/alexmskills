@@ -1,0 +1,10 @@
+{
+  "name": "maven-quality",
+  "description": "Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects.",
+  "version": "1.0.0",
+  "author": { "name": "Alex Mondshain", "email": "alexmond@gmail.com" },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": ["maven","java","checkstyle","pmd","jacoco","precommit"]
+}

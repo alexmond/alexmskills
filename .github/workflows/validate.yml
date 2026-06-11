@@ -1,0 +1,23 @@
+name: Validate Marketplace
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # jq is preinstalled on ubuntu-latest runners.
+      - name: Validate marketplace + plugin manifests
+        run: bash scripts/validate-marketplace.sh
+
+      - name: Lint all JSON manifests
+        run: |
+          find . -path ./node_modules -prune -o -name '*.json' -print \
+            | grep -E '\.claude-plugin/(marketplace|plugin)\.json$' \
+            | while read -r f; do echo "jq: $f"; jq empty "$f"; done

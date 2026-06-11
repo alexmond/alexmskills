@@ -1,0 +1,56 @@
+= Release Channels (stable & beta)
+
+`alexmskills` ships two marketplace channels from one repository:
+
+[cols="1,2,2",options="header"]
+|===
+| Channel | Marketplace | Contents
+
+| **stable** | `alexmskills` (`.claude-plugin/marketplace.json`)
+| Released, versioned plugins. What most users install.
+
+| **beta** | `alexmskills-beta` (`beta/.claude-plugin/marketplace.json`)
+| Unreleased and in-progress plugins. Unstable; expect breaking changes.
+|===
+
+The beta channel is a git **subdirectory** (`beta/`) that is its own marketplace root, so both channels
+live on `main` and a plugin is "released" by physically moving it into the stable catalog.
+
+== Opting into beta
+
+Add the beta channel alongside stable via a `git-subdir` source in `.claude/settings.json`:
+
+[source,json]
+----
+{
+  "extraKnownMarketplaces": {
+    "alexmskills-beta": {
+      "source": { "source": "git-subdir", "url": "alexmond/alexmskills", "path": "beta" }
+    }
+  }
+}
+----
+
+Then `+/plugin install <name>@alexmskills-beta+`. To evaluate without installing:
+
+[source,bash]
+----
+claude --plugin-dir ./beta/plugins/<name>
+----
+
+== Authoring & promoting
+
+[cols="1,2",options="header"]
+|===
+| Step | Command
+
+| Scaffold a beta plugin | `make new-beta NAME=<name>`
+| Validate both channels | `make validate`
+| Promote beta → stable | `make promote PLUGIN=<name>`
+|===
+
+`make promote` moves `beta/plugins/<name>` → `plugins/<name>`, removes the entry from the beta catalog,
+and adds it to the stable catalog. Afterwards, set a real release version with
+`make bump PLUGIN=<name> VERSION=1.0.0` and add a documentation page.
+
+Beta plugins start at version `0.x` by convention; promotion is the moment they earn a `1.0.0`.

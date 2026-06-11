@@ -1,0 +1,13 @@
+{
+  "name": "evolving-claude-md",
+  "description": "Turn CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks (SessionStart audit, PreToolUse lint, PostCompact re-audit).",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": ["claude-md", "memory", "learning", "hooks", "adr", "self-evolving"]
+}

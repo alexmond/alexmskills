@@ -1,0 +1,10 @@
+{
+  "name": "review-agents",
+  "description": "Read-only specialist subagents for code review, test running, and dependency/CVE auditing.",
+  "version": "1.0.0",
+  "author": { "name": "Alex Mondshain", "email": "alexmond@gmail.com" },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": ["agents","code-review","testing","dependencies","cve"]
+}

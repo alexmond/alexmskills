@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "alexmskills-beta",
+  "description": "Beta channel for alexmskills — unreleased and in-progress plugins. Unstable; expect breaking changes. Promote to the stable `alexmskills` marketplace when ready.",
+  "owner": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "version": "1.0.0",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": []
+}
