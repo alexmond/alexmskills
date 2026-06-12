@@ -7,6 +7,17 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-12 (later)
+
+### Added
+- **brainstorm-panel 1.1.1** / **research-sweep 1.1.1** — the roster checkpoint now emits an opt-in
+  **Fable suggestion** grounded in the orchestrator's bottleneck: the panel (generation-bound) recommends
+  one deep "visionary" generator seat on Fable (rest stay Opus for diversity); the sweep
+  (verification-bound) recommends the skeptic-verifier (+ optional synthesizer) on Fable, scouts stay
+  Opus. Never default. Design rationale: `docs/decisions/2026-06-12-fable-model-selection.md` (issue #8).
+- README **"The Role System"** section — the four role-system plugins (`roles` + the three orchestrators)
+  presented as a dedicated block, not just rows in the catalog.
+
 ## 2026-06-12
 
 ### Added
