@@ -3,30 +3,60 @@
 :toc: macro
 :toclevels: 3
 
-This marketplace grew from a set of independent skills into a small *system*: three plugins —
-xref:dev-crew.adoc[dev-crew], xref:brainstorm-panel.adoc[brainstorm-panel], and the
-xref:roles.adoc[roles] plugin — that share one underlying abstraction, the **evolving role**. This
-page explains that abstraction end to end: the problem it solves, the file model, how roles evolve
-without corrupting each other, and how everything degrades gracefully when you install only part of it.
+This marketplace grew from a set of independent skills into a small *system*: three *orchestrators* —
+xref:dev-crew.adoc[dev-crew], xref:brainstorm-panel.adoc[brainstorm-panel], and
+xref:research-sweep.adoc[research-sweep] — over one shared substrate, the
+xref:roles.adoc[roles] plugin (four plugins total). They all share one underlying abstraction, the
+**evolving role**. This page explains that abstraction end to end: the problem it solves, the file
+model, how roles evolve without corrupting each other, and how everything degrades gracefully when you
+install only part of it.
 
 toc::[]
 
 == The idea in one sentence
 
 **The role is the unit of reuse; the orchestrators are just contexts a role runs in.** One persona —
-say a senior debugger — can run three ways without being redefined: invoked *solo* for a quick pass, seated
-as a gated *crew* role inside a delivery relay, or seated as a *panel* lens in a brainstorming session.
-Its identity lives in one place and its hard-won lessons accumulate there, regardless of which context
-produced them.
+say a senior debugger — can run several ways without being redefined: invoked *solo* for a quick pass, or
+seated into any of the three orchestrators (as a gated *crew* role inside a delivery relay, a *panel*
+lens in a brainstorming session, or a *research* verifier in a coverage sweep). Its identity lives in one
+place and its hard-won lessons accumulate there, regardless of which context produced them.
+
+The `roles` plugin is the substrate — one role, one solo pass; the three orchestrators each compose a
+task-fit roster of those roles toward a different end:
 
 [cols="1,2,2,2",options="header"]
 |===
-| Tier | Plugin | Unit of work | Cost / latency
+| Mode | Plugin | Unit of work | End
 
-| **Solo** | `roles` | one role, one pass, one context | cheapest, instant
-| **Relay** | `dev-crew` | many roles, gated pipeline, file handoffs | medium
-| **Panel** | `brainstorm-panel` | many roles in parallel, critique + converge | broadest
+| **Solo** | `roles` | one role, one pass, one context | the substrate (cheapest, instant)
+| **Panel** | `brainstorm-panel` | many roles in parallel, critique + converge | **decide**
+| **Relay** | `dev-crew` | many roles, gated pipeline, file handoffs | **deliver**
+| **Sweep** | `research-sweep` | many roles fan-out, synthesize + verify | **discover**
 |===
+
+== The three orchestrators (and what `roles` is)
+
+`roles` is **not an orchestrator** — it is the *substrate*: the shared, evolving talent pool plus solo
+invocation (`/roles:as`). It's the **noun** the three **verbs** operate on. Each orchestrator composes a
+task-fit roster of those roles, but they differ on every axis below.
+
+[cols="1,3,3,3",options="header"]
+|===
+| Axis | brainstorm-panel — **decide** | dev-crew — **deliver** | research-sweep — **discover**
+
+| Produces | a judgment / decision (advisory, no artifact shipped) | a shipped target, gated | verified, cited findings
+| Roles relate by | **disagreement** — the clash is the point | **handoff** — sequential, each builds on the last | **independence** — disjoint coverage, no clash
+| Flow | parallel diverge → converge | sequential gated relay | parallel fan-out → synthesize + verify
+| Compose roles from | quality axes (perspectives) | the delivery target (functions) | the information space (coverage angles)
+| Guards against | groupthink / blind spots (unanimity = red flag) | shipping broken / unverified work | incomplete coverage + unverified facts
+|===
+
+Two properties tie them together:
+
+* **They chain.** research (discover the facts) → panel (decide what to do) → crew (deliver it).
+* **They share roles.** The `skeptic` is a panel seat, a crew adversarial check, *and* a research
+  fact-verifier — one evolving persona, three contexts. That cross-context reuse is exactly what the
+  shared core (below) exists for; research-sweep is the third consumer that proves it.
 
 == The problem it solves
 
@@ -57,6 +87,7 @@ The registry must live in the repo.
 .claude/roles/
   crew.md        # dev-crew's role registry      (one writer: dev-crew)
   panel.md       # brainstorm-panel's registry    (one writer: brainstorm-panel)
+  research.md    # research-sweep's role registry  (one writer: research-sweep)
   registry.md    # auto-generated index of shared core roles (written by the roles plugin hook)
   <role>.md      # shared core role files         (one writer: the roles plugin / user-gated graduation)
 ----
@@ -98,6 +129,7 @@ consumer's own registry row, so the single-writer rule holds:
 
 | Crew | a row in `crew.md` (+ `role: <name>` link) | model tier, tool scope, handoff contract, crew-specific learnings
 | Panel | a row in `panel.md` (+ `role: <name>` link) | lens emphasis, pairing notes, panel-specific learnings
+| Research | a row in `research.md` (+ `role: <name>` link) | coverage angle, dedup / verification notes, research-specific learnings
 | Solo | the core file's `## Learnings (solo)` section | solo-run lessons
 |===
 
@@ -129,7 +161,7 @@ belongs to everyone. Moving that, and only that, to the shared core is the job o
   plainly context-independent, it is promoted to `## Learnings (core)` and struck from the rows. This is
   the same append → graduate → prune loop the xref:evolving-claude-md.adoc[evolving-claude-md] skill uses
   for CLAUDE.md, one level down. The `roles` plugin's SessionStart hook surfaces candidates (a role used
-  by both crew and panel, or a bloated solo-learnings section); it never rewrites a role file itself.
+  by 2+ of crew / panel / research, or a bloated solo-learnings section); it never rewrites a role file itself.
 . **Identity edits are deliberate.** Either orchestrator may *propose* a Charter or Body change; only the
   user applies it. A panel run silently rewriting the persona that crew will execute tomorrow is the one
   genuinely dangerous channel, so it is gated — and everything is in git, so every change is reviewable.
@@ -148,6 +180,7 @@ learning, solo invocation, and one talent pool. Neither orchestrator is ever sec
 
 | crew alone | ✅ dynamic compose path mints into `crew.md` | ✅ full loop in `crew.md` | cross-skill learning; one pool
 | panel alone | ✅ dynamic, as before | ✅ `panel.md` rows (no longer ephemeral) | seats gain shared, evolving identity
+| research-sweep alone | ✅ dynamic angle composition into `research.md` | ✅ `research.md` rows evolve | cross-context learning + the shared verifier (`skeptic`)
 | roles alone | — | per-role solo annex + graduation audit | solo invocation of any role
 |===
 
@@ -198,7 +231,7 @@ recurring rung-3 hops to a missing owner are the trigger to mint a new role.
 |===
 | Want to… | Do
 
-| Run one expert pass, fast | install `roles` → `/roles:as debug-root-cause <target>` (or a wrapper skill like `/roles:debug-root-cause`)
+| Run one expert pass, fast | install `roles` → `/roles:as debugger <target>` (or a wrapper skill like `/roles:debugger`)
 | Build & ship something with gates | install `dev-crew` → "run the crew on <task>"
 | Decide *what / whether*; stress-test a plan | install `brainstorm-panel` → "get a team on this"
 | All of the above, sharing one evolving talent pool | install all three — registries link to shared cores automatically

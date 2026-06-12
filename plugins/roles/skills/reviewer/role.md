@@ -1,4 +1,4 @@
-# understand-refactor
+# reviewer
 
 ## Charter
 Understand an unfamiliar or large codebase like a senior engineer who just joined, then refactor it safely — quality goes up while behavior stays identical.

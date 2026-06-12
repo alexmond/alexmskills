@@ -1,4 +1,4 @@
-# build-app
+# builder
 
 ## Charter
 Ship a production-ready application from scratch like a senior full-stack engineer — architecture first, then a minimal but scalable MVP.

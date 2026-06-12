@@ -95,7 +95,7 @@ Ecosystem index: [hesreallyhim/awesome-claude-code](https://github.com/hesreally
 | Use for | Decide *what/whether*; stress-test plans; wide solution spaces | Build/ship a decided thing; verification against criteria + reality |
 | Composition | Panel outcome = crew's task brief | Crew's contract files = panel's review subject (acceptance re-review) |
 
-**senior-prompts (beta)** = the validated third tier: one persona, three orchestration levels — solo prompt (beta) → gated crew role → panel seat. Mapping: `system-design`→architect · `build-app`→architect+dev collapsed · `understand-refactor`/`clean-arch`→reviewer (candidate) · `debug-root-cause`→debugger/lead (candidate) · `optimize-perf`→perf-profiler (candidate). The ecosystem's strongest pattern (VoltAgent agents seated into agent-review-panel) validates exactly this cross-pollination.
+**senior-prompts (beta)** = the validated third tier: one persona, three orchestration levels — solo prompt (beta) → gated crew role → panel seat. These personas now **are** crew's roles, by the same name — `architect`, `debugger`, `optimizer`, `reviewer`, `refactorer`, `builder` — so one evolving role serves solo, crew, and panel alike; `builder` collapses architect+dev, and `skeptic` is the shared verifier across panel, crew, and research. The ecosystem's strongest pattern (VoltAgent agents seated into agent-review-panel) validates exactly this cross-pollination.
 
 ### The formation/evolution asymmetry (the gap §3.0 closes)
 
@@ -135,7 +135,7 @@ The orchestrators become two consumers among three — and **every file has exac
 plugins/roles/
   .claude-plugin/plugin.json
   skills/as/SKILL.md              # /roles:as <role> <target> — run any registered role solo
-  skills/<persona>/SKILL.md       # short-reference wrappers: /roles:debug-root-cause, /roles:build-app, …
+  skills/<persona>/SKILL.md       # short-reference wrappers: /roles:debugger, /roles:builder, …
   seeds/<role>.md                 # seed role files, instantiated into the repo on first run
   hooks/hooks.json                # SessionStart: init .claude/roles/ + graduation audit
   scripts/roles-audit.py          # surfaces graduation candidates (annex → core), bloat warnings
@@ -237,7 +237,7 @@ Same logic for dev-crew alone: `crew.md` is canonical — crew keeps its full ev
 
 ### senior-prompts → absorbed into `roles` (supersedes the earlier 0.2.0 plan)
 
-1. The six persona bodies become the `roles` plugin's **seed role files**; short-reference invocation lives on as `/roles:debug-root-cause` etc., plus the generic `/roles:as <role> <target>`.
+1. The six persona bodies become the `roles` plugin's **seed role files**; short-reference invocation lives on as `/roles:debugger` etc., plus the generic `/roles:as <role> <target>`.
 2. The per-repo markdown learning loop — field-validated as a differentiator (keep markdown, not SQLite; read-on-use, not SessionStart injection) — generalizes from one pack-wide `learnings.md` into **per-role solo annexes**; the compress hook becomes the registry's graduation/bloat audit.
 3. `senior-prompts` retires from the beta catalog at Phase 3 — it never left beta, so no compatibility promise is broken.
 
@@ -283,6 +283,36 @@ across repos instead of within one), and it is mechanically detectable.
 Automate detection + drafting (cheap, evidence-backed); keep the decision human. Note the marketplace
 **dogfoods its own plugins**, so its own `.claude/roles/` learnings graduate into its own seeds directly
 — only cross-repo harvest needs the PR path. Tracked as a follow-up to the role-system epic (issue #2).
+
+## 3.6 · The three orchestrators + `roles` — what's different
+
+`roles` is **not an orchestrator** — it is the *substrate*: the shared, evolving talent pool plus solo
+invocation (`/roles:as`). It's the **noun** the three **verbs** operate on. The three orchestrators each
+compose a task-fit roster of those roles, but differ on every axis below.
+
+| Axis | brainstorm-panel — **decide** | dev-crew — **deliver** | research-sweep — **discover** |
+|---|---|---|---|
+| Produces | a judgment / decision (advisory, no artifact shipped) | a shipped target, gated | verified, cited findings |
+| Roles relate by | **disagreement** — the clash is the point | **handoff** — sequential, each builds on the last | **independence** — disjoint coverage, no clash |
+| Flow | parallel diverge → converge | sequential gated relay | parallel fan-out → synthesize + verify |
+| Compose roles from | quality axes (perspectives) | the delivery target (functions) | the information space (coverage angles) |
+| Guards against | groupthink / blind spots (unanimity = red flag) | shipping broken / unverified work | incomplete coverage + unverified facts |
+
+Two properties tie them together:
+
+* **They chain.** research (discover the facts) → panel (decide what to do) → crew (deliver it).
+* **They share roles.** The `skeptic` is a panel seat, a crew adversarial check, *and* a research
+  fact-verifier — one evolving persona, three contexts. That cross-context reuse is exactly what the
+  shared core (§3.0) exists for; research-sweep is the third consumer that proves it.
+
+**Decision — research-sweep's coverage roles are named, evolving roles** (not ad-hoc angles), seeded as
+generic *archetypes* (`entity-scout`, `timeline-scout`, `source-scout`, `container-scout`) with probationary minting
+for corpus-specific angles — the crew seed+mint model. The verifier (shared `skeptic`) and a synthesizer
+are persistent core roles. This makes research-sweep a full role-system consumer: registry
+`.claude/roles/research.md`, dynamic composition from the information space, per-repo learning,
+shared-core linking, self-sufficient without the `roles` plugin (no-downgrade). The registry hook's
+`CONSUMER_FILES` gains `research.md`, and graduation fires when a role appears in **2+ of the three**
+consumer registries.
 
 ## 4 · Evidence base (local)
 

@@ -1,4 +1,4 @@
-# system-design
+# architect
 
 ## Charter
 Design a scalable system like a senior systems architect, then implement its minimal production version — not a diagram-only exercise.
