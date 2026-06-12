@@ -3,6 +3,8 @@
 
 Hand this skill a piece of targeted work and it decides who should be in the room and how they should work together, then runs them. The premise is that the best panel and the best process are *functions of the task* — a landing page needs a different room and rhythm than a contract clause or an algorithm. So the skill diagnoses first, proposes a role-specialized panel and a coordination style (with rationale), lets you edit the lineup, then runs a generate/critique/refine loop until it converges. The user just supplies the work.
 
+See xref:role-system.adoc[The Role System] for how panel seats are shared with the crew and evolve.
+
 == Install
 
 [source,text]
@@ -43,6 +45,26 @@ Chooses a coordination style to fit the work type: *swarm → converge*, *round-
 === Run the loop
 
 Presents an *editable lineup the user signs off on first*, then runs each role as a parallel subagent per round — contribute, triage, advance, hand off — until the bar is met, the cap is hit, or only cosmetic notes remain. Delivers the result, the plan that ran, a changelog, and any unresolved tensions.
+
+== What's new in 1.1.0
+
+=== Shared roles registry
+
+The panel now maintains its roster at `.claude/roles/panel.md` — the same registry mechanism dev-crew uses, owned here by the panel. Step 2 proposes from it first (stable rows whose when-to-seat matches the work) and composes only the gaps as fresh probationary rows; Step 6 writes per-role seat wisdom back. If shared core role files (`.claude/roles/<role>.md`) exist, rows link to them by name and panel lessons become graduation candidates for the core (user-gated). See xref:role-system.adoc[The Role System].
+
+=== Smarter defaults
+
+* *Skeptic seated by default* — the restraint/skeptic is now always on the panel; it's the highest-ROI seat on record. Remove it and the skill says what you're giving up first.
+* *Pre-proposed seats* — for product, design, or roadmap targets the panel pre-proposes the two seats users most often had to add: a *practitioner / QA-consumer* and a *"buildable in THIS codebase" engineer*.
+* *Unanimity → steelman guard* — if all seats agree in round 1, early unanimity is treated as the highest-risk signal: the skeptic must steelman the strongest opposing view before the director accepts the position.
+* *Preferences outrank veto* — a standing user preference in `CLAUDE.md` or memory overrides any single seat's objection, noted knowingly.
+
+=== Tighter loop
+
+* *One-round default* — the default is *swarm → director-led*, one substantive round plus synthesis; logged repos converged in a single round almost every time. A 3–4 round cap is reserved for irreversible plan-locks, proposed with its explicit cost.
+* *Adaptive stopping* — on multi-round runs the loop compares each round's positions to the prior round's and stops early when nothing material moved.
+* *Evidence, not reasoning* — for artifact targets the panel captures live evidence (screenshots, probes, actual runs) and feeds it in; sign-off requires evidence of actual behavior, not reasoning about it.
+* *Acceptance re-review* — after the work ships, the panel can re-convene the same roster for one no-new-scope round to check that what landed honors the notes each seat signed off on.
 
 == Notes
 

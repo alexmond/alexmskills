@@ -46,6 +46,10 @@ Write `DIAGNOSIS.md` and `CONTRACT.md` to the run directory:
 - `DIAGNOSIS.md` — reproduction, root cause, alternatives ruled out + how.
 - `CONTRACT.md` — what to change + numbered testable done-criteria.
 
+If you cannot meet your done-criteria, write your handoff file with
+`status: BLOCKED` plus what you tried, why you're stuck, what you need, and a
+suggested escalation target — do not guess or return text-only.
+
 ## Definition of done
 The root cause is identified with evidence, alternatives are ruled out, and the
 contract is specific enough for dev to implement and qa to verify without

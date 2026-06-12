@@ -23,7 +23,11 @@ From the run directory:
 1. Go criterion by criterion. For each, run or write a test that proves it.
 2. Probe edges the contract implies: nulls, boundaries, error paths, concurrency.
 3. Run the repo's quality gate (tests + any static-analysis gate named in `CLAUDE.md`).
-4. Record evidence — the command and its result — for each verdict.
+4. Verify against reality: the REAL gate, real data. A test that re-encodes the
+   logic under test is not verification — no synthetic fixtures that mirror the
+   implementation. Sweep all cases and exercise actual interactions; a single
+   happy-path sample proves nothing.
+5. Record evidence — the command and its result — for each verdict.
 
 ## Don't
 - Don't edit source. You have no write access to it by design. If a fix is
@@ -35,6 +39,10 @@ Write `QA.md` to the run directory:
 - a table of done-criterion -> PASS/FAIL -> evidence
 - defects found, each with where it was likely introduced (for the learning loop)
 - overall gate: PASS only if every criterion passes
+
+If you cannot meet your done-criteria, write your handoff file with
+`status: BLOCKED` plus what you tried, why you're stuck, what you need, and a
+suggested escalation target — do not guess or return text-only.
 
 ## Definition of done
 Every done-criterion has a verdict backed by evidence. One FAIL means the deploy
