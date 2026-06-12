@@ -1,0 +1,52 @@
+= Maven Quality
+:navtitle: maven-quality
+
+Three quality skills for Maven/Java projects built around spring-javaformat, Checkstyle, PMD, and JaCoCo: enforce coding standards, run a pre-commit gate, and analyze test coverage against a threshold. The defaults target a spring-javaformat stack but every command, module path, and threshold is documented as adjustable per project.
+
+== Install
+
+[source,text]
+----
+/plugin install maven-quality@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+/maven-quality:codestyle
+----
+
+One slash command per skill:
+
+* `/maven-quality:codestyle` — check or fix code-style/static-analysis violations
+* `/maven-quality:precommit` — run the format → validate → test gate before committing
+* `/maven-quality:jacoco payment-service` — check coverage, optionally scoped to a module or class
+
+Or ask in natural language: "format and validate this module before I commit" or "what's our test coverage on the payment service?".
+
+== When to use it
+
+* Checking or fixing code-style/static-analysis violations, or asking what the project's formatting rules are
+* Verifying the working tree is ready before creating a commit
+* Checking coverage, finding uncovered code, or planning tests to reach a coverage gate
+
+== What it does
+
+=== codestyle
+
+Documents the project's formatting and static-analysis conventions (tab indentation, mandatory braces, parenthesized single-param lambdas, `catch (Exception ex)`, no star imports), the common Checkstyle suppressions and PMD exclusions, naming rules, and Lombok usage. Ships a check-and-fix workflow: `./mvnw spring-javaformat:apply` to auto-fix most issues, then a violation→fix table for the rest, looping until `validate` is clean.
+
+=== precommit
+
+A four-step pre-commit gate run before every commit: *format* (`spring-javaformat:apply`) → *validate* (Checkstyle + PMD, must pass before proceeding) → *test* (`./mvnw test`) → *report* a per-step result table. Surfaces any files the formatter changed so they can be staged.
+
+=== jacoco
+
+Generates coverage via `./mvnw verify`, then parses `jacoco.xml` with self-contained Python snippets for: module PASS/FAIL vs the gate, class-level breakdown (lowest first), uncovered line numbers in a specific class, gap analysis (lines needed to reach the gate), quick-win targets, and a full LINE/BRANCH/METHOD/CLASS summary. Includes a coverage-improvement strategy that chains gap analysis → quick wins → uncovered lines → targeted tests.
+
+== Notes
+
+* Default coverage gate is *80%* line coverage (adjust `THRESHOLD` in the snippets); `codestyle` and `precommit` reference the same gate.
+* Examples use the `./mvnw` wrapper — substitute your `mvn` binary if there's no wrapper, and scope multi-module builds with `-pl <module>`.
+* Violations typically fail the build at the `validate` phase; adjust the bound phase if your `pom.xml` differs.

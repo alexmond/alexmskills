@@ -1,0 +1,42 @@
+= Implement Issue
+:navtitle: implement-issue
+
+Drives a GitHub issue from branch to pull request in one workflow: read the issue, create a feature branch, implement the change, run the project's build and tests, then commit, push, and open a PR that closes the issue. Language- and build-tool-agnostic — it discovers the build and test commands from the repo rather than assuming a specific stack.
+
+== Install
+
+[source,text]
+----
+/plugin install implement-issue@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+/implement-issue:implement-issue 42
+----
+
+Invoke it explicitly with the issue number as the argument — model auto-invocation is disabled, so natural language alone won't trigger it.
+
+== When to use it
+
+* Asked to implement, fix, or resolve a GitHub issue by number
+* You want the full branch → code → test → PR loop handled in one pass
+* Invoked explicitly (model auto-invocation is disabled); pass the issue number as the argument
+
+== What it does
+
+A fixed six-step workflow:
+
+. *Read the issue* — `gh issue view <number>`; note assumptions if it's ambiguous.
+. *Create a feature branch* — `git checkout main && git pull`, then `git checkout -b feature/<number>-<short-description>`.
+. *Implement* — read relevant sources first, follow existing conventions, keep changes focused (no unrelated refactors).
+. *Build and test* — discover and run the project's commands (e.g. `./mvnw test`, Gradle, npm, pytest, go test); fix failures before continuing.
+. *Commit and push* — descriptive message with `Closes #<number>`, push to the feature branch with `-u origin HEAD`.
+. *Open the PR* — `gh pr create` with a Summary and Test plan, then report the PR URL.
+
+== Notes
+
+* Tool access is scoped to `Bash(gh *)` and `Bash(git *)`.
+* Git safety rails: never force-push or delete branches without explicit confirmation, and never push directly to `main` — only the feature branch.

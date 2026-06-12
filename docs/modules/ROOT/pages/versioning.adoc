@@ -1,0 +1,47 @@
+= Versioning & Maintenance
+
+== How versioning works
+
+Claude Code versions **per plugin**, not per skill. Each plugin declares a semantic `version` in its
+`plugin.json`, mirrored in the marketplace entry in `.claude-plugin/marketplace.json`.
+
+* **Bump a version to ship an update.** A user pinned to a version only receives changes when the
+  number changes — new commits alone do not trigger an update.
+* **Coupled skills share a plugin.** For example, `maven-quality` bundles `codestyle`, `precommit`,
+  and `jacoco`; they version together. Everything else is its own plugin so it can move independently.
+
+== Maintenance commands
+
+[cols="2,3",options="header"]
+|===
+| Command | Purpose
+
+| `make validate`
+| Validate `marketplace.json` + every plugin manifest (jq-based, no extra dependencies). Runs in CI.
+
+| `make list`
+| Print the catalog: name, version, description.
+
+| `make bump PLUGIN=<name> VERSION=<x.y.z>`
+| Bump a plugin's version in both `plugin.json` and `marketplace.json` so they never drift.
+
+| `claude plugin tag --dry-run plugins/<name>`
+| Validate that a plugin's `plugin.json` agrees with its marketplace entry (no tag created).
+
+| `claude plugin tag --push plugins/<name>`
+| Create and push a `<name>--v<version>` release tag.
+|===
+
+== Continuous integration
+
+`.github/workflows/validate.yml` runs `make validate` on every push and pull request, and lints all
+`plugin.json` / `marketplace.json` manifests with `jq`. A red badge on the README means a manifest is
+malformed or a plugin's name/version disagrees with the catalog.
+
+== Releasing a new plugin
+
+. Add `plugins/<name>/` with a `.claude-plugin/plugin.json` and a `skills/` and/or `agents/` directory.
+. Register it under `plugins` in `.claude-plugin/marketplace.json`.
+. Run `make validate` — it must pass.
+. Add a `docs/modules/ROOT/pages/<name>.adoc` page and link it in `nav.adoc`.
+. Commit, then optionally cut a release tag with `claude plugin tag`.

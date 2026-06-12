@@ -1,0 +1,50 @@
+= Review Agents
+:navtitle: review-agents
+
+Three focused, read-only review subagents for a Java/Maven project — a test runner, a PR reviewer, and a dependency auditor. Each carries its own model tier and a tightly scoped tool allowlist, so verification steps report findings without being able to rewrite the code they're checking. Designed to be invoked after writing code, before opening a PR, or ahead of a release.
+
+== Install
+
+[source,text]
+----
+/plugin install review-agents@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+Use the pr-reviewer subagent on the current diff.
+----
+
+These are subagents, not slash commands — ask Claude to delegate to them:
+
+* "Use the test-runner subagent to run the tests for the order module."
+* "Use the pr-reviewer subagent on `git diff main...HEAD`."
+* "Use the dependency-auditor subagent to check for CVEs before this release."
+
+== When to use it
+
+* After writing code, to verify the tests pass (`test-runner`)
+* When reviewing a PR or before creating one (`pr-reviewer`)
+* For security checks or before releases, to audit dependencies (`dependency-auditor`)
+
+== What it does
+
+=== test-runner (haiku)
+
+Runs the requested tests at the right scope (all / single class / single method) and reports total run/passed/failed/skipped, with assertion messages and key stack-trace lines for failures. It only reports — never fixes code. Tools: `Bash(./mvnw *)`, `Bash(cat *)`, Read, Glob, Grep.
+
+=== pr-reviewer (sonnet)
+
+Reviews the `git diff main...HEAD` against a checklist spanning code quality (imports, logging, modern Java, descriptive exceptions, no OWASP top-10), style (formatter, PMD/Checkstyle clean via `./mvnw validate`, file/method size limits), and testing (new tests, consistent assertions, parameterized where useful). Reports findings grouped as *Blocker* / *Warning* / *Suggestion*. Tools: `Bash(git *)`, `Bash(./mvnw *)`, `Bash(python3 *)`, Read, Glob, Grep.
+
+=== dependency-auditor (haiku)
+
+Lists dependencies (`./mvnw dependency:tree`), checks for updates, searches for CVEs (prioritizing direct deps and anything handling untrusted input), and checks Maven Central for latest versions. Reports a table of current/latest/CVEs/action and flags critical/high CVEs. Tools: `Bash(./mvnw *)`, `Bash(cat *)`, Read, Glob, Grep, WebSearch, WebFetch.
+
+== Notes
+
+* Model tiers are chosen per job: cheap *haiku* for the mechanical test-runner and dependency-auditor, *sonnet* for the judgment-heavy pr-reviewer.
+* All three are read-only on source — their Bash allowlists permit running and inspecting, not editing — so a review step can't silently change what it audits.
+* Checklists and commands assume a Maven/Java project; adapt items to other stacks.

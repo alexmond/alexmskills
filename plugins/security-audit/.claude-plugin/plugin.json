@@ -1,0 +1,10 @@
+{
+  "name": "security-audit",
+  "description": "Scan a codebase for OWASP-style vulnerabilities and report findings with file:line locations and remediation guidance.",
+  "version": "1.0.0",
+  "author": { "name": "Alex Mondshain", "email": "alexmond@gmail.com" },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": ["security","owasp","audit","vulnerabilities"]
+}

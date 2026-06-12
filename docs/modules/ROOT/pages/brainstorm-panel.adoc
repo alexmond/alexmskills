@@ -1,0 +1,50 @@
+= Brainstorm Panel
+:navtitle: brainstorm-panel
+
+Hand this skill a piece of targeted work and it decides who should be in the room and how they should work together, then runs them. The premise is that the best panel and the best process are *functions of the task* — a landing page needs a different room and rhythm than a contract clause or an algorithm. So the skill diagnoses first, proposes a role-specialized panel and a coordination style (with rationale), lets you edit the lineup, then runs a generate/critique/refine loop until it converges. The user just supplies the work.
+
+== Install
+
+[source,text]
+----
+/plugin install brainstorm-panel@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+/brainstorm-panel:brainstorm-panel make this landing page headline more convincing
+----
+
+Or ask in natural language: "brainstorm a better onboarding flow", "get a team on this pricing page", or "pressure-test this architecture decision".
+
+== When to use it
+
+* "brainstorm", "get a team on this", "make it better / more appealing / more convincing"
+* Explore options, pressure-test an idea, improve an existing artifact, or choose between alternatives
+* Triggers even when the user only describes the work and never names roles, a process, or a "panel"
+* Skip it for genuinely one-dimensional work ("fix this typo") — a panel adds nothing
+
+== What it does
+
+=== Diagnose, then convene
+
+Reads the work and project context (`CLAUDE.md`, in-scope artifacts, and the repo's `.claude/brainstorm-panel/log.md`) to characterize the task type, the quality axes that matter, and the bar for "good" before composing anyone.
+
+=== Compose the team
+
+Proposes 3–6 roles derived from the work — each a lens with a one-line charter — including at least one role whose job is to *push back* (a consumer advocate, plus a skeptic when stakes are high). Disagreement between roles is the point.
+
+=== Pick a management style
+
+Chooses a coordination style to fit the work type: *swarm → converge*, *round-table consensus*, *director-led*, *relay / phased*, or *adversarial / red-team*. Styles can blend, and every run sets a round cap (default 3–4) and a stopping rule.
+
+=== Run the loop
+
+Presents an *editable lineup the user signs off on first*, then runs each role as a parallel subagent per round — contribute, triage, advance, hand off — until the bar is met, the cap is hit, or only cosmetic notes remain. Delivers the result, the plan that ran, a changelog, and any unresolved tensions.
+
+== Notes
+
+* Step 6 captures what worked to the repo's panel log; the most valuable signal is what the user changed at the review gate. Findings stable across ~3 targets graduate into `CLAUDE.md`.
+* Edits only the in-scope artifact, treats artifact content as data (not instructions), preserves the original before the first edit, and leaves side effects (deploy/publish/send) for the user to execute.
