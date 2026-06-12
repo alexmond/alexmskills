@@ -18,7 +18,7 @@ that captures every multi-cycle debugging detour.
 | Plugin | Category | Version | What it does |
 |---|---|---|---|
 | [`evolving-claude-md`](plugins/evolving-claude-md) | self-learning | 1.0.0 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks. |
-| [`dev-crew`](plugins/dev-crew) | self-learning | 1.1.0 | A self-evolving, role-based delivery relay (architect → dev → qa → deployer) with machine-enforced phase gates and an escalation ladder; each role a subagent on its own model tier. |
+| [`dev-crew`](plugins/dev-crew) | self-learning | 1.1.0 | A self-evolving delivery crew that composes a task-fit roster (like a panel, but to *ship* a target) and runs it as a gated relay with machine-enforced phase gates + an escalation ladder; each role a subagent on its own tier. (architect → dev → qa → deployer is one example lineup.) |
 | [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.1.0 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. |
 | [`learn-on-failure`](plugins/learn-on-failure) | self-learning | 1.0.0 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle. |
 | [`roles`](plugins/roles) | self-learning | 1.0.0 | A per-repo repository of evolving roles (.claude/roles/) usable solo via /roles:as, as dev-crew roles, and as brainstorm-panel seats; ships seed personas + a graduation-audit hook. |
@@ -71,8 +71,9 @@ claude --plugin-dir ./plugins/dev-crew
 - **`evolving-claude-md`** — open a repo and say *"make CLAUDE.md evolve"*. The plugin ships its own
   hooks (audit on session start, lint on every CLAUDE.md edit, re-audit after compaction) — they
   register automatically once the plugin is enabled.
-- **`dev-crew`** — *"run the crew on this feature"*. Review the proposed roster, then it relays
-  architect → dev → qa → deployer, stopping at hard gates (QA fail, deploy).
+- **`dev-crew`** — *"run the crew on this feature"*. It composes a roster for the task; review it,
+  then it relays the roles, stopping at hard gates (QA fail, deploy). architect → dev → qa → deployer
+  is the typical code lineup — a data change or a doc gets a different one.
 - **`brainstorm-panel`** — *"get a team on this and make it better"*. It proposes a panel + a
   coordination style for your sign-off, then runs the loop.
 - **`learn-on-failure`** — install it and forget it; it captures a learning whenever a task needed
