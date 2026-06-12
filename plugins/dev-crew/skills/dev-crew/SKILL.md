@@ -1,8 +1,9 @@
 ---
 name: dev-crew
 description: >-
-  Use this to take a coding task through a role-based delivery relay
-  (architect -> dev -> qa -> deployer and beyond), where each role runs as a
+  Use this to take a delivery task through a task-fit roster of role subagents —
+  composed for the work and run as a gated relay (architect -> dev -> qa ->
+  deployer is one example lineup; the roster is dynamic), where each role runs as a
   subagent on its own model tier. Trigger on "run the crew on", "ship this
   feature", "build and test X", "take this through the cycle", or any
   multi-step implementation/refactor/release task that benefits from separated

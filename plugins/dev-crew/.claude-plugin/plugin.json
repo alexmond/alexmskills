@@ -1,6 +1,6 @@
 {
   "name": "dev-crew",
-  "description": "A self-evolving, role-based delivery relay (architect → dev → qa → deployer) where each role runs as a subagent on its own model tier, with editable rosters and a per-repo learning loop.",
+  "description": "A self-evolving delivery crew: it composes a task-fit roster of role subagents (each on its own model tier) and runs them as a gated relay to deliver a target, with editable rosters and a per-repo learning loop. architect → dev → qa → deployer is just one example lineup.",
   "version": "1.1.0",
   "author": {
     "name": "Alex Mondshain",
