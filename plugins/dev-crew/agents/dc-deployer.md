@@ -53,6 +53,10 @@ autonomous relay and an unreviewed change to prod or a homelab cluster.
 Write `DEPLOY.md`: dry-check results, the staged command list, and — after the
 user's go — what actually ran and its result.
 
+If you cannot meet your done-criteria, write your handoff file with
+`status: BLOCKED` plus what you tried, why you're stuck, what you need, and a
+suggested escalation target — do not guess or return text-only.
+
 ## Definition of done
 Either: the release executed after an explicit go and verified healthy; or the
 commands are staged and clearly surfaced and you are waiting on go.

@@ -47,8 +47,8 @@ behind an explicit go.
 
 ## Files this skill owns
 
-- `roles.md` — the canonical role registry: role -> model -> tools -> status -> learnings. **Read this first, every run.**
-- `log.md` — append-only run log; the substrate the learning loop reads from.
+- `<repo>/.claude/roles/crew.md` — the canonical role registry: role -> model -> tools -> status -> learnings. **Read this first, every run.** The conductor creates it on first run in a repo by copying this skill's shipped `roles.md` seed. It lives in the repo — not next to the skill — because a marketplace-installed plugin's skill dir is a read-only cache, and `.claude/roles/` is the shared home (brainstorm-panel keeps its registry at `.claude/roles/panel.md`; optional shared core role files `.claude/roles/<role>.md` may exist via the `roles` plugin).
+- `<repo>/.claude/dev-crew/log.md` — append-only run log; the substrate the learning loop reads from. The conductor seeds it on first run from this skill's shipped `log.md` (a read-only schema seed — never write to the installed copy). **Every `log.md` reference below means this repo file.**
 - `templates/role-template.md` — scaffold for minting a new role subagent.
 - `templates/CLAUDE-md-block.md` — the `## Dev crew` block graduated into a repo.
 - Per-run scratch lives in `<repo>/.claude/dev-crew/runs/<run-id>/` (handoff files, never committed unless the user asks).
@@ -86,14 +86,15 @@ the *facts* about the repo; the block is the *learned patterns* on top of them.
 
 ### 1. Intake
 Read, in order: `PROFILE.md` (run `dc-scout` first if absent); the task brief;
-the repo's `CLAUDE.md` (especially any `## Dev crew` block); this skill's
-`roles.md`; recent `log.md` entries for this repo. Restate the task in one line
+the repo's `CLAUDE.md` (especially any `## Dev crew` block);
+`.claude/roles/crew.md` (create it from this skill's shipped `roles.md` seed if
+absent); recent `log.md` entries for this repo. Restate the task in one line
 and name the task **category** (e.g. `feature`, `bugfix`, `refactor`,
 `schema-change`, `perf`, `release`, `infra`). Profile + category drive roster
 selection.
 
 ### 2. Roster selection — editable checkpoint
-From `roles.md`, pick the minimal set of roles this category needs. Prefer the
+From `.claude/roles/crew.md`, pick the minimal set of roles this category needs. Prefer the
 lineup `PROFILE.md` recommends and the repo's `## Dev crew` block confirms for
 this category. Set `dev`'s tier from the profile's recommendation for this repo
 adjusted for this task's difficulty. Present an **editable roster** and STOP for
@@ -111,6 +112,18 @@ Add / drop / reorder / re-tier any role, or say "go".
 Never run the relay before the user confirms or edits the roster. The user may
 add a role that does not exist yet — if so, follow **New-role protocol** before
 running.
+
+#### Compose path
+
+When no category lineup fits the task, don't force one: derive the task's
+**failure axes** (the ways this work could go wrong) and compose a roster
+panel-style — match registry roles whose when-to-use covers an axis, and mint
+the missing roles as probationary into `.claude/roles/crew.md` via the
+**New-role protocol**. This path is unconditional — it requires no `roles`
+plugin. If shared core role files (`.claude/roles/<role>.md`) exist, link
+registry rows to them by name and, at delegation, inject the role's core plus
+its crew row into the subagent prompt; crew lessons then become graduation
+candidates for the core (user-gated).
 
 ### 3. Run the relay
 For each active role in order, delegate to its `dc-<role>` subagent via the Task
@@ -137,11 +150,52 @@ pauses at each handoff so you can redirect.
   **stop and surface the exact irreversible commands** (apply, push, publish,
   release, prune, drop) for explicit user go-ahead before executing them. This
   holds even when the session runs with permissions skipped. See safety rails.
+- **Phase-gate hook (machine-enforced):** the plugin ships a PreToolUse hook
+  (`hooks/hooks.json` → `scripts/check-handoffs.py`) that enforces the handoffs
+  themselves — dev can't start without `CONTRACT.md`, qa can't start without
+  `CHANGES.md`, deployer can't start without a `QA.md` that passes. A handoff
+  with `status: BLOCKED` routes to the escalation ladder instead of advancing
+  the relay. Prompt discipline drifts; hooks don't.
 
 ### 5. Log
-Append a structured entry to `log.md` (schema in that file): run-id, repo,
-category, final roster with models, per-role outcome, gate events, defects
-caught and where, model-fit notes, and anything that smells like a missing role.
+Append a structured entry to `.claude/dev-crew/log.md` (schema from this skill's shipped `log.md` seed): run-id, repo,
+category, final roster with models, per-role outcome, gate events, escalations
+taken (`escalation:` — rungs + outcome), defects caught and where, model-fit
+notes, and anything that smells like a missing role.
+
+## Escalation protocol
+
+A role that cannot meet its done-criteria writes its handoff file with
+`status: BLOCKED` plus what it tried, why it's stuck, what it needs, and a
+suggested escalation target. **Deliver or declare — silent flailing is a
+defect.** A BLOCKED handoff satisfies the phase-gate hook as a valid handoff,
+but routes to the conductor instead of advancing the relay.
+
+**The ladder is conductor-owned.** Take each rung at most once per stumble:
+
+1. **Clarify & retry** the same role (one retry).
+2. / 3. **Re-tier vs re-role** — diagnosis-driven, see below.
+4. **Re-plan** — escalate *up the relay* to architect when the contract itself
+   is wrong; mark downstream artifacts stale.
+5. **User** — ladder exhausted, a genuine user decision, or a cost gate.
+
+**② re-tier vs ③ re-role is a diagnosis, not a sequence** — the BLOCKED
+report's "why stuck" decides:
+
+- **Capability gap** (role right, model short — real progress, repeated
+  near-misses) → **② re-tier** the same role (sonnet→opus; →Fable only via the
+  existing gated escalation policy).
+- **Ownership gap** (model fine, role wrong — doing work its charter doesn't
+  own: dev looping on root-cause is debugger's job; cross-subsystem → lead; or
+  it needs tools its scope denies) → **③ re-role** to the failure-class owner
+  (mint it probationary via the compose path if missing).
+- Approach sound but execution falling short → re-tier (continuity); approach
+  itself suspect → re-role (fresh method). Unclear → re-tier first (lane
+  discipline).
+
+Log every escalation as `escalation:` in the run entry — repeated rung-② hits
+are permanent re-tier evidence; recurring rung-③ hops to a missing owner are
+the mint trigger.
 
 ## Steering: you stay in the driver's seat
 
@@ -193,7 +247,7 @@ each with its rationale logged:
 - *Escalate* an architect to `fable` for designs that span more than a single
   sitting or touch many subsystems.
 Apply re-tiers by editing the role's subagent `model` frontmatter and the
-registry row; record old->new + reason in `roles.md` and `log.md`.
+registry row; record old->new + reason in `.claude/roles/crew.md` and `log.md`.
 
 **Graduate a steer.** When the `steering:` log shows you injecting the same kind
 of correction ≥3 times (a library/pattern preference, a recurring re-scope, a
@@ -208,14 +262,14 @@ past qa, security findings late), follow the **New-role protocol**:
 1. Name the role and its single job + done-criteria.
 2. Scaffold `~/.claude/agents/dc-<role>.md` from `templates/role-template.md`,
    set its `model`/`tools`/`effort`, read-only tools for review roles.
-3. Register it in `roles.md` with status `probationary`.
+3. Register it in `.claude/roles/crew.md` with status `probationary`.
 4. Use it in the relevant category; after ≥3 clean runs, flip to `stable` and it
    becomes eligible for graduation into repo `## Dev crew` blocks.
 Retire or merge roles that go unused or overlap.
 
 **Scope of graduation.** Repo-specific patterns -> that repo's `## Dev crew`
 block. Patterns that hold across repos (a model re-tier that's right everywhere,
-a broadly useful new role) -> the user-level `roles.md` defaults, so every repo
+a broadly useful new role) -> your user-level `~/.claude/roles/` defaults, so every repo
 inherits them.
 
 ## Fable escalation policy

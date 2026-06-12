@@ -35,6 +35,10 @@ Write `CHANGES.md` to the run directory:
 - how to build/verify (exact commands)
 - anything deferred or assumptions made
 
+If you cannot meet your done-criteria, write your handoff file with
+`status: BLOCKED` plus what you tried, why you're stuck, what you need, and a
+suggested escalation target — do not guess or return text-only.
+
 ## Definition of done
 Code builds, your self-checks pass, and every contract done-criterion is either
 satisfied or explicitly flagged as blocked with the reason.

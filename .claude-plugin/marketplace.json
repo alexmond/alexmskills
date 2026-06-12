@@ -31,7 +31,7 @@
       "displayName": "Dev Crew",
       "source": "dev-crew",
       "description": "A self-evolving, role-based delivery relay (architect → dev → qa → deployer) where each role runs as a subagent on its own model tier.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "self-learning",
       "keywords": [
         "agents",
@@ -46,7 +46,7 @@
       "displayName": "Brainstorm Panel",
       "source": "brainstorm-panel",
       "description": "Assemble a task-fit panel of role-specialized agents, pick a coordination style, and run a generate-critique-refine loop that converges on a strong result.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "self-learning",
       "keywords": [
         "agents",
@@ -143,6 +143,21 @@
         "agents",
         "synthesis",
         "verification"
+      ]
+    },
+    {
+      "name": "roles",
+      "displayName": "Role Registry",
+      "source": "roles",
+      "description": "A per-repo repository of evolving roles (.claude/roles/) usable solo, as dev-crew roles, and as brainstorm-panel seats — with seed personas, init + graduation-audit hook, and the shared-core convention.",
+      "version": "1.0.0",
+      "category": "self-learning",
+      "keywords": [
+        "roles",
+        "personas",
+        "registry",
+        "self-learning",
+        "agents"
       ]
     }
   ]

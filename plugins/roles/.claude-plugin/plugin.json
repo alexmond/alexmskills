@@ -1,0 +1,20 @@
+{
+  "name": "roles",
+  "description": "A per-repo repository of evolving roles (.claude/roles/) usable three ways: solo via /roles:as or per-persona skills, as dev-crew roles, and as brainstorm-panel seats. Ships seed personas, an init + graduation-audit hook, and the shared-core convention.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "roles",
+    "personas",
+    "registry",
+    "self-learning",
+    "agents",
+    "beta"
+  ]
+}
