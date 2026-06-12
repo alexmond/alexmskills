@@ -15,6 +15,8 @@ description: >-
 
 # Brainstorm Panel
 
+> **Try it:** `/brainstorm-panel:brainstorm-panel make this landing page headline more convincing` — or say "brainstorm a better onboarding flow".
+
 You hand this skill a piece of work; it decides who should be in the room and how
 they should work together, then runs them. The premise is that the best panel and
 the best process are *functions of the task*, not fixed in advance — a landing

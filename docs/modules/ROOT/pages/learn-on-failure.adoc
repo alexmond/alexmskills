@@ -10,6 +10,15 @@ Captures hard-won lessons into per-project memory so the same detour isn't repea
 /plugin install learn-on-failure@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+/learn-on-failure:learn-on-failure testing "BCrypt accepts $2a$ but not $2y$ hashes"
+----
+
+Mostly it fires automatically after any multi-cycle fix — you don't invoke it. To save something on demand, just say: "remember this: ..." or "save this learning".
+
 == When to use it
 
 * Automatically after any multi-cycle resolution — a second attempt was needed to get something working

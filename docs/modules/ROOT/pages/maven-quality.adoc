@@ -10,6 +10,21 @@ Three quality skills for Maven/Java projects built around spring-javaformat, Che
 /plugin install maven-quality@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+/maven-quality:codestyle
+----
+
+One slash command per skill:
+
+* `/maven-quality:codestyle` — check or fix code-style/static-analysis violations
+* `/maven-quality:precommit` — run the format → validate → test gate before committing
+* `/maven-quality:jacoco payment-service` — check coverage, optionally scoped to a module or class
+
+Or ask in natural language: "format and validate this module before I commit" or "what's our test coverage on the payment service?".
+
 == When to use it
 
 * Checking or fixing code-style/static-analysis violations, or asking what the project's formatting rules are

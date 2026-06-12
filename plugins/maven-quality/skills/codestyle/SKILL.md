@@ -5,6 +5,8 @@ description: Coding standards, formatting, and static-analysis conventions for M
 
 ## Maven/Java Coding Standards
 
+> **Try it:** `/maven-quality:codestyle` — or say "fix the code-style violations in this module".
+
 These are sensible defaults for a Maven/Java project that uses
 [spring-javaformat](https://github.com/spring-io/spring-javaformat),
 Checkstyle, and PMD. Adjust thresholds, plugin versions, and module/path

@@ -10,6 +10,15 @@ A self-evolving, role-based software delivery relay. The main Claude Code sessio
 /plugin install dev-crew@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+/dev-crew:dev-crew add rate limiting to the login endpoint
+----
+
+Or ask in natural language: "run the crew on this feature" or "take this refactor through the cycle". The conductor delegates to the role subagents itself; you can also point it at a specific role, e.g. "have dc-architect plan this" or "use the dc-lead subagent to root-cause this failure".
+
 == When to use it
 
 * "run the crew on", "ship this feature", "build and test X", "take this through the cycle"

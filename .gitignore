@@ -21,3 +21,6 @@ node_modules/
 # Python
 __pycache__/
 *.pyc
+
+# Per-repo runtime state written by plugins (not for distribution)
+.claude/senior-prompts/

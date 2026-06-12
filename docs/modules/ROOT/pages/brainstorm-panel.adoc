@@ -10,6 +10,15 @@ Hand this skill a piece of targeted work and it decides who should be in the roo
 /plugin install brainstorm-panel@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+/brainstorm-panel:brainstorm-panel make this landing page headline more convincing
+----
+
+Or ask in natural language: "brainstorm a better onboarding flow", "get a team on this pricing page", or "pressure-test this architecture decision".
+
 == When to use it
 
 * "brainstorm", "get a team on this", "make it better / more appealing / more convincing"

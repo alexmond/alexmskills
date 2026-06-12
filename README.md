@@ -29,15 +29,28 @@ that captures every multi-cycle debugging detour.
 
 ## Install
 
-Add the marketplace once, then install any plugin:
+Add the marketplace once:
 
 ```text
 /plugin marketplace add alexmond/alexmskills
-/plugin install evolving-claude-md@alexmskills
 ```
 
-Browse and install interactively with `/plugin` (Discover tab). After the maintainer pushes an update,
-refresh with `/plugin marketplace update alexmskills`.
+Then install what you want — copy-paste any of these:
+
+```text
+/plugin install evolving-claude-md@alexmskills
+/plugin install dev-crew@alexmskills
+/plugin install brainstorm-panel@alexmskills
+/plugin install learn-on-failure@alexmskills
+/plugin install implement-issue@alexmskills
+/plugin install maven-quality@alexmskills
+/plugin install security-audit@alexmskills
+/plugin install review-agents@alexmskills
+/plugin install parallel-research-sweep@alexmskills
+```
+
+Or browse interactively with `/plugin` (Discover tab). After a maintainer pushes an update, refresh
+with `/plugin marketplace update alexmskills`.
 
 ### Try a plugin without installing
 
