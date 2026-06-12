@@ -3,6 +3,8 @@
 
 A self-evolving, role-based software delivery relay. The main Claude Code session acts as the *conductor*: it profiles the repo, picks the minimal set of roles a task needs, delegates each phase to a role *subagent* running on its own model tier, passes work between roles through shared handoff files, gates risky transitions, and writes back what it learned so the crew tunes itself to the codebase over time. It is the execution counterpart to `brainstorm-panel`: the panel converges on *what* to build, the crew runs the *building*.
 
+See xref:role-system.adoc[The Role System] for how crew roles are shared and evolve.
+
 == Install
 
 [source,text]
@@ -34,7 +36,7 @@ Roles report up to the conductor and hand off only through files — never calli
 * *dc-scout* (haiku) — read-only repo scan on init; writes `PROFILE.md` that drives roster, prompts, and tiers.
 * *dc-architect* (opus) — plan + interface/done-criteria contract; writes `PLAN.md` and `CONTRACT.md`.
 * *dc-dev* (sonnet) — implements against the contract; writes `CHANGES.md`.
-* *dc-qa* (sonnet, read-only) — writes/runs tests; pass/fail verdict per done-criterion in `QA.md`.
+* *dc-qa* (sonnet, read-only) — writes/runs tests; pass/fail verdict per done-criterion in `QA.md`. Verifies *against reality* — the real gate command and real data, never a test that re-encodes the logic under test or a single happy-path sample.
 * *dc-deployer* (haiku, `permissionMode: default`) — runs dry/idempotent checks, then *stages* irreversible commands and stops.
 * *dc-lead* (opus) — deep root-cause / multi-system investigation; the Fable-eligible role.
 
@@ -46,10 +48,29 @@ Intake (profile + category) → an *editable roster checkpoint* that always stop
 
 * *QA gate* — never advances to deploy on a QA fail; routes back to dev with `QA.md` as the defect list, max two loops before escalating.
 * *Deploy gate (hard)* — the deployer may run `build`/`lint`/`--dry-run`/`diff` freely but must stop and surface the exact irreversible commands (apply, push, publish, drop) for explicit go-ahead, even when permissions are skipped.
+* *Phase-gate hook (machine-enforced)* — the plugin ships a PreToolUse hook (`hooks/hooks.json` → `scripts/check-handoffs.py`) that enforces the handoffs themselves: dev can't start without `CONTRACT.md`, qa can't start without `CHANGES.md`, deployer can't start without a `QA.md` that passes. A handoff marked `status: BLOCKED` routes to the escalation ladder instead of advancing the relay. Prompt discipline drifts; hooks don't.
 
 === Self-learning loop
 
 Mines `log.md` to graduate stable lineups into a repo `## Dev crew` block, re-tier models (promote/demote/escalate with logged rationale), graduate recurring user steers, and mint new roles for unowned failure classes.
+
+== What's new in 1.1.0
+
+=== Phase-gate hook
+
+Handoffs are now machine-enforced, not just prompt discipline. The plugin ships a PreToolUse hook (`hooks/hooks.json` → `scripts/check-handoffs.py`) that blocks a role from starting until its predecessor's artifact exists: dev needs `CONTRACT.md`, qa needs `CHANGES.md`, deployer needs a `QA.md` that passes. A handoff written with `status: BLOCKED` is treated as a valid handoff but routes to the escalation ladder rather than advancing the relay.
+
+=== Escalation protocol
+
+A role that can't meet its done-criteria writes its handoff with `status: BLOCKED` plus what it tried, why it's stuck, what it needs, and a suggested target — *deliver or declare; silent flailing is a defect*. The conductor then walks a fixed ladder, each rung at most once per stumble: *clarify & retry* the same role → *re-tier vs re-role* by diagnosis (a capability gap re-tiers the same role; an ownership gap re-roles to the failure-class owner) → *re-plan* up to the architect when the contract itself is wrong → *user*. Every escalation is logged.
+
+=== Shared role registry
+
+The per-repo registry now lives at `.claude/roles/crew.md` (instantiated from the skill's shipped `roles.md` seed on first run) — the shared home alongside `brainstorm-panel`'s `panel.md` and any optional `.claude/roles/<role>.md` core files. When no category lineup fits a task, an *axis-driven compose path* derives the work's failure axes, matches registry roles to them, and mints the missing ones probationary — panel-style, no extra plugin required. See xref:role-system.adoc[The Role System] for the shared-core story.
+
+=== New and candidate roles
+
+qa's verdict is now explicitly *verify against reality* — the real gate command and real data, sweeping all cases rather than a happy-path sample. A new *ui-reviewer* candidate role (sonnet, read-only) runs after a qa PASS on anything touching templates, CSS, or rendered pages: it runs the app, screenshots it, and checks design-system fit, theme correctness, accessibility, and link wiring — the craft gap correctness-qa can't see.
 
 == Notes
 

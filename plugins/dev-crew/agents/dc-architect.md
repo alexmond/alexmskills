@@ -35,6 +35,10 @@ Write two files to the run directory:
 - `PLAN.md` — approach, rejected alternative, step list, risks.
 - `CONTRACT.md` — interfaces + the numbered, testable done-criteria.
 
+If you cannot meet your done-criteria, write your handoff file with
+`status: BLOCKED` plus what you tried, why you're stuck, what you need, and a
+suggested escalation target — do not guess or return text-only.
+
 ## Definition of done
 `CONTRACT.md` is specific enough that dev could implement and qa could verify
 without asking you a question. If a subsystem spans more than a single sitting,

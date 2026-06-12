@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/compress-learnings.py 2>/dev/null || true",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/roles-init-audit.py 2>/dev/null || true",
             "timeout": 5
           }
         ]
