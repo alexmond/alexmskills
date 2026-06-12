@@ -38,7 +38,8 @@ Makefile                          # validate / list / bump helpers
 - **Skills must be project-agnostic.** No hardcoded absolute paths, usernames, or repo names — these
   are pulled FROM other repos and generalized; keep them that way.
 - **Docs are part of "done":** a new plugin needs a `docs/modules/ROOT/pages/<n>.adoc` page + a
-  `nav.adoc` entry.
+  `nav.adoc` entry, and every plugin version bump gets a `CHANGELOG.md` entry (grouped by date,
+  tagged with the plugin + version).
 - **Plugin naming:** orchestrators are `<scope>-<team-noun>`, the team-noun encoding coordination
   (`crew` = handoff/deliver, `panel` = debate/decide, `sweep` = fan-out/discover); other skills are
   descriptive kebab-case, verb-first for actions, ≤3 words, no redundant qualifiers.
