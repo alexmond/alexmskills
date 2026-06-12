@@ -177,6 +177,17 @@ wait for the user's response — do not start the loop until they approve.
 >
 > Add, remove, or swap anyone — or say go and I'll convene them.
 
+**Emit a Fable suggestion with the lineup (opt-in).** A panel is *generation-bound* — the result's
+ceiling is the best idea proposed, and a skeptic can only prune, never raise it. So when you present the
+roster, also offer to run **one** seat on the Fable tier: a deep "visionary" generator to raise that
+ceiling — and keep the *other* seats on Opus, because Fable on every seat self-converges and flattens the
+diversity that is the panel's whole point. Name the **skeptic** as the secondary Fable-worthy seat for
+high-stakes verification. Always opt-in, never default: note Fable ≈ 2× Opus quota (API-rate credits after
+2026-06-22) and that it can silently reroute to Opus on security/bio topics. For example:
+
+> Fable (optional): run the *visionary* seat on Fable to deepen the ideas — the rest stay on Opus for
+> diversity; or the *skeptic* for a harder critique. ~2× cost, opt-in — or skip.
+
 Handle the user's edits directly:
 
 - **Remove** a role → drop it; if it was the only voice on a quality axis that
