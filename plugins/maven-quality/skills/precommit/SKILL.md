@@ -5,6 +5,8 @@ description: Run pre-commit quality checks for a Maven/Java project — auto-for
 
 ## Pre-commit Check: Format → Validate → Test
 
+> **Try it:** `/maven-quality:precommit` — or say "format and validate this before I commit".
+
 Run this before every commit to catch format, style, and test failures early.
 Defaults target a Maven/Java project using spring-javaformat, Checkstyle, and
 PMD. Adjust module names (`-pl`), profiles, and the `mvn` invocation to match

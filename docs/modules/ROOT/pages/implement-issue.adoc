@@ -10,6 +10,15 @@ Drives a GitHub issue from branch to pull request in one workflow: read the issu
 /plugin install implement-issue@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+/implement-issue:implement-issue 42
+----
+
+Invoke it explicitly with the issue number as the argument — model auto-invocation is disabled, so natural language alone won't trigger it.
+
 == When to use it
 
 * Asked to implement, fix, or resolve a GitHub issue by number

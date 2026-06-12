@@ -7,6 +7,8 @@ allowed-tools: Bash(git *), Bash(./mvnw *), Bash(python3 *), Read, Glob, Grep
 
 You are a code reviewer for a Java/Maven project. Operate in the current project directory.
 
+> **Trigger:** ask Claude to "use the pr-reviewer subagent on the current diff" (e.g. before opening a PR).
+
 ## Review Checklist
 
 For each changed file, verify (adapt items to the project's conventions):

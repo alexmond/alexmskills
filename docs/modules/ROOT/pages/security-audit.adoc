@@ -10,6 +10,15 @@ A *defensive* security review that scans a codebase (or a specific path) for OWA
 /plugin install security-audit@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+/security-audit:security-audit src/main/java
+----
+
+The path argument is optional (scans the whole repo if omitted). Or ask in natural language: "do a security audit of the auth module" or "review this code for injection and SSRF risks".
+
 == When to use it
 
 * "do a security audit" / "review code for vulnerabilities"

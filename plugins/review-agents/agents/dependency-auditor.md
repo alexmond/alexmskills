@@ -7,6 +7,8 @@ allowed-tools: Bash(./mvnw *), Bash(cat *), Read, Glob, Grep, WebSearch, WebFetc
 
 You are a dependency auditor for a Java/Maven project. Operate in the current project directory.
 
+> **Trigger:** ask Claude to "use the dependency-auditor subagent to check for CVEs before this release".
+
 ## Your Job
 
 Check project dependencies for known vulnerabilities and available updates.

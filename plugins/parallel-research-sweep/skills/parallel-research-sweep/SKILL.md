@@ -1,9 +1,12 @@
 ---
 name: parallel-research-sweep
 description: Tackle a broad research or exploration question by partitioning it into non-overlapping angles, launching parallel research agents with an identical output contract, then merging their results from the agent transcripts via jq (without dumping the JSONL back into context) and adversarially verifying the synthesized findings. Use when the user asks for something "comprehensive", "exhaustive", "as many as possible", "every X", a "catalog/survey/landscape of Y", or any large-scale gathering task where one agent's coverage would be insufficient and re-outputting each agent's result into a Write call would burn output tokens unnecessarily.
+argument-hint: "[research or catalog question]"
 ---
 
 # Parallel research sweep
+
+> **Try it:** `/parallel-research-sweep:parallel-research-sweep every open-source vector database` — or say "give me an exhaustive catalog of public datasets for X".
 
 For when the user wants coverage that is *exhaustive*, not representative. Launch N parallel research agents with disjoint scopes and identical contracts, assemble their YAML/JSON outputs into one file via shell redirect — never letting the agent transcripts pass through the main context — then run an adversarial verification pass before trusting the result.
 

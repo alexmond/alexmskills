@@ -11,6 +11,8 @@ argument-hint: "[topic] [what you learned]"
 
 ## Save a learning to project memory
 
+> **Try it:** `/learn-on-failure:learn-on-failure testing "BCrypt accepts $2a$ but not $2y$ hashes"` — or just say "remember this: ...". Mostly it fires automatically after a multi-cycle fix.
+
 $ARGUMENTS
 
 ### Locate the project memory directory

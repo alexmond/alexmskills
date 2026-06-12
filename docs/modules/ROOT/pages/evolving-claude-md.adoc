@@ -10,6 +10,15 @@ Wires `CLAUDE.md` to maintain a living *Decisions & Learnings* log that the assi
 /plugin install evolving-claude-md@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+/evolving-claude-md:evolving-claude-md
+----
+
+This skill is model-invokable — most often you just ask in natural language: "make CLAUDE.md evolve", "add a self-updating decisions log to CLAUDE.md", or "CLAUDE.md is getting too big, compact it".
+
 == When to use it
 
 * "add learning mechanism to CLAUDE.md", "make CLAUDE.md evolve", "self-updating CLAUDE.md"

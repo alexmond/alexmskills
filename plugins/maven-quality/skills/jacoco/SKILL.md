@@ -6,6 +6,8 @@ argument-hint: "[module-or-class]"
 
 ## Check JaCoCo Code Coverage
 
+> **Try it:** `/maven-quality:jacoco payment-service` — or say "what's our test coverage on the payment service?".
+
 Run `verify` to generate coverage reports, then parse and display the results.
 Defaults target a Maven/Java project with the JaCoCo plugin bound so that
 `verify` produces `target/site/jacoco/jacoco.xml`.

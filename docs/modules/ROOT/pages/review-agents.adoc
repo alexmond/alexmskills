@@ -10,6 +10,19 @@ Three focused, read-only review subagents for a Java/Maven project — a test ru
 /plugin install review-agents@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+Use the pr-reviewer subagent on the current diff.
+----
+
+These are subagents, not slash commands — ask Claude to delegate to them:
+
+* "Use the test-runner subagent to run the tests for the order module."
+* "Use the pr-reviewer subagent on `git diff main...HEAD`."
+* "Use the dependency-auditor subagent to check for CVEs before this release."
+
 == When to use it
 
 * After writing code, to verify the tests pass (`test-runner`)

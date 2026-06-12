@@ -5,6 +5,8 @@ description: Set up CLAUDE.md to maintain a living Decisions & Learnings log tha
 
 # Evolving CLAUDE.md
 
+> **Try it:** `/evolving-claude-md:evolving-claude-md` — or say "make CLAUDE.md evolve".
+
 CLAUDE.md is read into Claude's context on every turn. Every byte costs tokens. So the goal isn't "log everything we learned" — it's **a small, well-pruned set of durable decisions that future-Claude needs, with everything else linked to or archived**.
 
 This skill wires that. Three mechanisms keep it healthy automatically:

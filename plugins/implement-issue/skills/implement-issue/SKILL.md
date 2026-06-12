@@ -8,6 +8,8 @@ allowed-tools: Bash(gh *), Bash(git *)
 
 ## Implement GitHub issue #$ARGUMENTS
 
+> **Try it:** `/implement-issue:implement-issue 42` — invoke explicitly with the issue number (model auto-invocation is disabled).
+
 Follow this workflow for every code change. It is independent of language and build tool — adapt the build and test commands to whatever the project uses.
 
 ### Step 1: Read the issue

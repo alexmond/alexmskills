@@ -10,6 +10,15 @@ Tackles a broad, "exhaustive" research or cataloging question by partitioning it
 /plugin install parallel-research-sweep@alexmskills
 ----
 
+== Trigger it
+
+[source,text]
+----
+/parallel-research-sweep:parallel-research-sweep every open-source vector database
+----
+
+Or ask in natural language: "give me an exhaustive catalog of public datasets for X" or "find as many open-source tools for Y as possible".
+
 == When to use it
 
 * "as many as possible", "exhaustive", "comprehensive", "every X", "all known …"

@@ -14,6 +14,8 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 
 # dev-crew
 
+> **Try it:** `/dev-crew:dev-crew add rate limiting to the login endpoint` — or say "run the crew on this feature".
+
 A self-evolving software delivery crew. The main session acts as the
 **conductor**: it selects which roles a task needs, delegates each phase to a
 role **subagent** (which carries its own model and tool scope), passes work

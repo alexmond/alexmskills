@@ -7,6 +7,8 @@ allowed-tools: Read, Glob, Grep, Bash
 
 ## Security Audit
 
+> **Try it:** `/security-audit:security-audit src/main/java` — or say "do a security audit of the auth module". The path argument is optional.
+
 A **defensive** security review. The goal is to *find and report* vulnerabilities so they can be fixed — never to exploit them. Produce confirmed findings with `file:line`, severity, and remediation. Do not generate exploit payloads, weaponized proof-of-concept code, or instructions for attacking a live system.
 
 This skill is language-agnostic. Patterns below use **Java / Spring** as worked examples; adapt the regexes to the languages actually present in the repo (check file extensions, build files, and framework imports first).
