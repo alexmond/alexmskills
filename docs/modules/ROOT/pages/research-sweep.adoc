@@ -49,6 +49,12 @@ Extracts each agent's final message from its JSONL transcript with a `jq` + `awk
 
 Runs a fresh verifier agent that didn't produce the data: spot-checks a 10–20% sample against primary sources, hunts for fabricated URLs/dates/IDs, checks cross-agent seams for duplicates, and tests the volume claim and gaps. Dedup, normalization, and URL verification follow as separate passes.
 
+== What's new in 1.1.1
+
+* *Fable suggestion at the roster checkpoint* — because a sweep is verification-bound, the roster now
+  comes with an opt-in recommendation to run the skeptic-verifier (and optionally the synthesizer) on the
+  Fable tier; the coverage scouts stay on Opus. Always opt-in; never default.
+
 == What's new in 1.1.0
 
 === Coverage-roles registry
