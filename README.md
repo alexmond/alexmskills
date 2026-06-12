@@ -107,6 +107,8 @@ Claude Code versions **per plugin**, not per skill. Each plugin carries a semant
 make bump PLUGIN=dev-crew VERSION=1.1.0   # updates plugin.json + marketplace.json together
 ```
 
+Record every version bump in [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Maintenance
 
 | Command | Purpose |
