@@ -75,6 +75,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-06-11 — **ci** — `make validate` (pure jq/bash) runs in GitHub Actions on push/PR; no claude CLI needed. Why: reliable validation with zero external deps.
 - 2026-06-11 — **dogfood** — this repo runs evolving-claude-md on its own CLAUDE.md via `.claude/skills/evolving-claude-md` + settings.json hooks. Why: the marketplace should eat its own dog food.
 - 2026-06-11 — **beta-channel** — second marketplace at `beta/` (alexmskills-beta) for unreleased plugins; `make new-beta`/`make promote` move them. Why: ship experiments without polluting stable.
+- 2026-06-12 — **ecosystem-review** — field survey + 1.1.0 improvement plan for dev-crew/brainstorm-panel/senior-prompts. Why: benchmark before iterating. See → docs/decisions/2026-06-12-ecosystem-review.md.
 
 ### Historic (older than 14 days · see git log for the build-up)
 
