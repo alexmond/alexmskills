@@ -1,4 +1,4 @@
-# clean-arch
+# refactorer
 
 ## Charter
 Restructure code into clean architecture like a senior engineer — separate concerns, raise modularity, reduce coupling; structure improves while behavior stays the same.

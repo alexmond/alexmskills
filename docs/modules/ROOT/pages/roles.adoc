@@ -1,7 +1,7 @@
 = Role Registry
 :navtitle: Role Registry
 
-The `roles` plugin adds the *shared core layer* and *solo invocation* to the role system: a per-repo repository of evolving roles at `.claude/roles/` that can be run three ways — solo via `/roles:as` or a per-persona wrapper skill, as dev-crew roles, and as brainstorm-panel seats. It ships seed personas, a SessionStart index + graduation-audit hook, and the shared-core convention that lets a lesson learned in one context graduate (user-gated) into a core every consumer inherits.
+The `roles` plugin adds the *shared core layer* and *solo invocation* to the role system: a per-repo repository of evolving roles at `.claude/roles/` that can be run four ways — solo via `/roles:as` or a per-persona wrapper skill, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles. It ships seed personas, a SessionStart index + graduation-audit hook, and the shared-core convention that lets a lesson learned in one context graduate (user-gated) into a core every consumer inherits.
 
 See xref:role-system.adoc[the architecture page] for the full model — how the core, consumer registries, and learning graduation fit together.
 
@@ -23,7 +23,7 @@ claude --plugin-dir ./plugins/roles
 == What it ships
 
 * *The `/roles:as` dispatcher* — the generic solo runner: `/roles:as <role> <target>` resolves the role from `.claude/roles/`, applies it, works the target, and appends a solo learning.
-* *Per-persona wrapper skills* — dedicated entry points that each load and apply one role: `build-app`, `understand-refactor`, `debug-root-cause`, `system-design`, `optimize-perf`, `clean-arch`, and `skeptic`.
+* *Per-persona wrapper skills* — dedicated entry points that each load and apply one role: `builder`, `reviewer`, `debugger`, `architect`, `optimizer`, `refactorer`, and `skeptic`.
 * *The SessionStart hook* (`scripts/roles-init-audit.py`) — runs three safe, non-blocking jobs each session: *init* (instantiate any seed role into `.claude/roles/<role>.md` if absent — never overwriting an evolved copy), *index* (regenerate `.claude/roles/registry.md` from the core role files), and *graduation audit* (flag when a role's solo-learnings grow large, or a role appears in both `crew.md` and `panel.md`, as a candidate for graduating a lesson to the shared core — user-gated, never auto-applied).
 * *Seed role files* — one `role.md` per persona, copied into the repo on first run as the canonical, evolving copy.
 
@@ -42,22 +42,22 @@ Charter and Body edits are *never* made during a run — identity changes are de
 |===
 | Persona | Charter
 
-| `build-app`
+| `builder`
 | Ship a production-ready application from scratch like a senior full-stack engineer — architecture first, then a minimal but scalable MVP.
 
-| `understand-refactor`
+| `reviewer`
 | Understand an unfamiliar or large codebase like a senior engineer who just joined, then refactor it safely — quality goes up while behavior stays identical.
 
-| `debug-root-cause`
+| `debugger`
 | Investigate failures like a senior debugging engineer in production — trace the true root cause step by step and fix it robustly, never band-aid the symptom.
 
-| `system-design`
+| `architect`
 | Design a scalable system like a senior systems architect, then implement its minimal production version — not a diagram-only exercise.
 
-| `optimize-perf`
+| `optimizer`
 | Optimize like a performance engineer — find bottlenecks and unnecessary work, then improve speed, memory, and scalability with measured, behavior-preserving changes.
 
-| `clean-arch`
+| `refactorer`
 | Restructure code into clean architecture like a senior engineer — separate concerns, raise modularity, reduce coupling; structure improves while behavior stays the same.
 
 | `skeptic`
@@ -66,6 +66,6 @@ Charter and Body edits are *never* made during a run — identity changes are de
 
 == Notes
 
-* This plugin absorbs the former `senior-prompts` beta plugin and reframes its personas as evolving roles in the shared registry.
+* This plugin absorbs the former `senior-prompts` beta plugin and reframes its personas as evolving roles in the shared registry. The persona set was inspired by a public prompt thread from https://x.com/nahidulislam404[@nahidulislam404^] on X — generalized and rewritten here.
 * Learnings are plain *markdown* in the role files (`## Learnings (core)` / `## Learnings (solo)`), not a database — readable, diffable, and committed with the repo.
 * The registry is fully self-sufficient without the consumers: `crew.md` and `panel.md` are optional layers that link to the same cores by name.

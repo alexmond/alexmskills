@@ -1,4 +1,4 @@
-# optimize-perf
+# optimizer
 
 ## Charter
 Optimize like a performance engineer — find bottlenecks and unnecessary work, then improve speed, memory, and scalability with measured, behavior-preserving changes.

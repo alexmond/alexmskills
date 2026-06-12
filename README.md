@@ -26,7 +26,7 @@ that captures every multi-cycle debugging detour.
 | [`maven-quality`](plugins/maven-quality) | workflow | 1.0.0 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects (codestyle, precommit, jacoco). |
 | [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
 | [`review-agents`](plugins/review-agents) | review | 1.0.0 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers. |
-| [`parallel-research-sweep`](plugins/parallel-research-sweep) | research | 1.0.0 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
+| [`research-sweep`](plugins/research-sweep) | research | 1.0.0 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
 
 > **The Role System.** `dev-crew` and `brainstorm-panel` share one underlying abstraction — the
 > *evolving role* — backed by a per-repo `.claude/roles/` registry, and the
@@ -54,7 +54,7 @@ Then install what you want — copy-paste any of these:
 /plugin install maven-quality@alexmskills
 /plugin install security-audit@alexmskills
 /plugin install review-agents@alexmskills
-/plugin install parallel-research-sweep@alexmskills
+/plugin install research-sweep@alexmskills
 ```
 
 Or browse interactively with `/plugin` (Discover tab). After a maintainer pushes an update, refresh
@@ -107,6 +107,8 @@ Claude Code versions **per plugin**, not per skill. Each plugin carries a semant
 make bump PLUGIN=dev-crew VERSION=1.1.0   # updates plugin.json + marketplace.json together
 ```
 
+Record every version bump in [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Maintenance
 
 | Command | Purpose |
@@ -134,6 +136,14 @@ Full docs are published at **[alexmond.org/alexmskills](https://www.alexmond.org
 2. Register it in `.claude-plugin/marketplace.json` (under `plugins`).
 3. Run `make validate` — it must pass.
 4. Add a doc page under `docs/modules/ROOT/pages/` and link it in `nav.adoc`.
+
+## Provenance & attribution
+
+All plugins in this marketplace are **original work by Alex Mondshain**, MIT-licensed — authorship is
+recorded in each plugin's `plugin.json` (`author`) and the repo [LICENSE](LICENSE). One third-party
+**inspiration** is credited: the `roles` plugin's persona set was seeded by a public prompt thread from
+[@nahidulislam404](https://x.com/nahidulislam404) on X — the wording here is generalized and rewritten,
+but that thread sparked the original set.
 
 ## License
 

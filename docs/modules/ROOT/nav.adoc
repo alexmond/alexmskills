@@ -16,4 +16,4 @@
 ** xref:security-audit.adoc[Security Audit]
 * Agents & research
 ** xref:review-agents.adoc[Review Agents]
-** xref:parallel-research-sweep.adoc[Parallel Research Sweep]
+** xref:research-sweep.adoc[Research Sweep]
