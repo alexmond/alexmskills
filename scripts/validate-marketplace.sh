@@ -35,9 +35,17 @@ validate_channel() {
   if [ "$count" -eq 0 ]; then warn "no plugins yet (empty channel)"; return; fi
 
   while read -r name; do
-    local src dir manifest pname ver
-    src="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source' "$mp")"
-    dir="$base/${plugin_root:+$plugin_root/}$src"
+    local src_type src_path dir manifest pname ver
+    src_type="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source | type' "$mp")"
+    if [ "$src_type" = "object" ]; then
+      # Explicit { source: github, repo, path } form — path is repo-relative
+      src_path="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source.path // ""' "$mp")"
+      dir="$base/$src_path"
+    else
+      # Bare-string form — resolve under pluginRoot
+      src_path="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source' "$mp")"
+      dir="$base/${plugin_root:+$plugin_root/}$src_path"
+    fi
     manifest="$dir/.claude-plugin/plugin.json"
 
     if [ ! -f "$manifest" ]; then err "$name: missing $manifest"; continue; fi
