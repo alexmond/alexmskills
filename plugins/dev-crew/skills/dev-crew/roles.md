@@ -1,9 +1,28 @@
+<!-- SHIPPED SEED — read-only when installed as a plugin. The live registry lives at
+     <repo>/.claude/roles/crew.md; the conductor copies this seed there on first run.
+     Never write to this installed copy. -->
 # dev-crew role registry
 
 The canonical roster. The conductor reads this every run to know which roles
 exist, what model each runs on, and what's been learned about them. Each row
 maps to a subagent file at `~/.claude/agents/dc-<role>.md` (or a repo override
 at `<repo>/.claude/agents/dc-<role>.md`).
+
+> **This file is the shipped seed.** The per-repo *live* copy of this registry
+> is `<repo>/.claude/roles/crew.md` — the conductor instantiates it from this
+> seed on first run, and all evolution (learnings, re-tiers, minted roles)
+> happens there.
+
+## Handoff discipline (all roles)
+
+Every role's handoff is a **file written to the run directory**, not its chat
+reply. A role that returns text only has *not* handed off. The conductor
+confirms the handoff file exists before advancing the relay, and bridges if it
+is missing — capturing the returned content into the file and steering the
+role's prompt so it doesn't happen again. A role that cannot meet its
+done-criteria writes its handoff with `status: BLOCKED` plus what it tried, why
+it's stuck, what it needs, and a suggested escalation target — instead of
+guessing.
 
 ## Row schema
 
@@ -59,6 +78,7 @@ at `<repo>/.claude/agents/dc-<role>.md`).
 - done: QA.md gives a pass/fail verdict per done-criterion with evidence
 - learnings:
   - (seed) verdict is per-criterion, not a blanket "looks good"; a single fail blocks the deploy gate
+  - (seed) verify against the REAL gate and real data — a test that re-encodes the logic under test is not verification; sweep all cases and exercise actual interactions, never a single happy-path sample
 
 ### deployer
 - subagent: dc-deployer
@@ -83,6 +103,7 @@ up. None are installed until a recurring failure class justifies them.
 - **perf-profiler** — sonnet. Owns: regressions in latency/throughput/memory. Mint when perf slips past qa.
 - **docs-writer** — haiku. Owns: README/API/CHANGELOG drift. Mint when docs lag shipped behavior.
 - **debugger** — sonnet/opus. Owns: reproduce-isolate-fix on stubborn failures. Mint when bugfix loops exceed two passes (escalates into `lead` if it spans subsystems).
+- **ui-reviewer** — sonnet, read-only (runs the app + screenshots, never edits source). Owns: UI craft on the rendered page — design-system fit, theme correctness, accessibility, link wiring — the gap correctness-qa can't see. Runs after qa PASS on any task touching templates/CSS/rendered pages. Done: UIREVIEW.md with PASS/CHANGES-REQUESTED + screenshot + per-criterion UI check.
 
 ## Seniority — a design note
 
@@ -114,7 +135,7 @@ escalation policy.
 `status: probationary`. Flip to `stable` after ≥3 clean runs.
 
 **Re-tier a model:** edit the role's subagent `model` frontmatter and its row
-here; append old->new + reason to that row's `learnings` and to `log.md`.
+here; append old->new + reason to that row's `learnings` and to `.claude/dev-crew/log.md`.
 
 **Graduate a lineup:** when a category's roster is stable ≥3 runs, write it into
 the repo's `## Dev crew` block via `templates/CLAUDE-md-block.md`.

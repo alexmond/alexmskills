@@ -18,14 +18,21 @@ that captures every multi-cycle debugging detour.
 | Plugin | Category | Version | What it does |
 |---|---|---|---|
 | [`evolving-claude-md`](plugins/evolving-claude-md) | self-learning | 1.0.0 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks. |
-| [`dev-crew`](plugins/dev-crew) | self-learning | 1.0.0 | A self-evolving, role-based delivery relay (architect → dev → qa → deployer), each role a subagent on its own model tier. |
-| [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.0.0 | Assembles a task-fit panel of role-specialized agents, picks a coordination style, and runs a generate-critique-refine loop. |
+| [`dev-crew`](plugins/dev-crew) | self-learning | 1.1.0 | A self-evolving, role-based delivery relay (architect → dev → qa → deployer) with machine-enforced phase gates and an escalation ladder; each role a subagent on its own model tier. |
+| [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.1.0 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. |
 | [`learn-on-failure`](plugins/learn-on-failure) | self-learning | 1.0.0 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle. |
+| [`roles`](plugins/roles) | self-learning | 1.0.0 | A per-repo repository of evolving roles (.claude/roles/) usable solo via /roles:as, as dev-crew roles, and as brainstorm-panel seats; ships seed personas + a graduation-audit hook. |
 | [`implement-issue`](plugins/implement-issue) | workflow | 1.0.0 | Drives a GitHub issue from branch → implement → verify → PR with a guided workflow. |
 | [`maven-quality`](plugins/maven-quality) | workflow | 1.0.0 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects (codestyle, precommit, jacoco). |
 | [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
 | [`review-agents`](plugins/review-agents) | review | 1.0.0 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers. |
 | [`parallel-research-sweep`](plugins/parallel-research-sweep) | research | 1.0.0 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
+
+> **The Role System.** `dev-crew` and `brainstorm-panel` share one underlying abstraction — the
+> *evolving role* — backed by a per-repo `.claude/roles/` registry, and the
+> [`roles`](plugins/roles) plugin lets you run any role solo (`/roles:as <role>`) or share an
+> evolving talent pool across both. See the
+> [architecture page](https://www.alexmond.org/alexmskills/role-system.html) for the full model.
 
 ## Install
 
@@ -42,6 +49,7 @@ Then install what you want — copy-paste any of these:
 /plugin install dev-crew@alexmskills
 /plugin install brainstorm-panel@alexmskills
 /plugin install learn-on-failure@alexmskills
+/plugin install roles@alexmskills
 /plugin install implement-issue@alexmskills
 /plugin install maven-quality@alexmskills
 /plugin install security-audit@alexmskills

@@ -112,6 +112,8 @@ Each skill has half of the right mechanism. Venice even shows the *same* persona
 
 ### 3.0 · `roles` → NEW plugin (beta 0.1.0) — the structural headline
 
+> **Status (implemented):** the role system shipped — `dev-crew`/`brainstorm-panel` at 1.1.0, and `roles` promoted directly to the **stable** catalog at 1.0.0 (the beta-staging phase was skipped by maintainer decision; the beta-channel narrative below is the original plan).
+
 **The decision — two layers, one mechanism:**
 
 - **Layer 1 (unconditional, in each orchestrator):** crew and panel run the **same roles-registry mechanism, under one roof**. Crew's registry moves to `.claude/roles/crew.md` (the rows-with-charter/status/learnings + minting mechanism it already has). Panel 1.1.0 replicates it exactly at `.claude/roles/panel.md` — so panel roles stop being ephemeral even standalone. Same row schema, same lifecycle, same name ("roles" — panel's graduated CLAUDE.md block was already called `## Panel roles`; "seats" was a distinction without a difference).
@@ -248,6 +250,39 @@ Same logic for dev-crew alone: `crew.md` is canonical — crew keeps its full ev
 ruflo-style swarm topologies/consensus protocols (over-engineering) · 16-phase fixed pipelines · blind/anonymized scoring (wrong scale) · statistical PluginEval (cost ≫ benefit at this catalog size).
 
 ---
+
+## 3.5 · The learning lifecycle — feeding evolution back to the marketplace
+
+The open design question: per-repo evolution strands hard-won learnings in individual repos; the
+shipped seeds never improve. The answer is **harvest, don't sync** — most learnings are *meant* to stay
+local (repo-specific quirks); only the genuinely universal few belong upstream, and lifting them is the
+existing graduation ladder with one more rung.
+
+| Level | Lesson lives in | Promotion gate | Status |
+|---|---|---|---|
+| 1 · Observed | a run → local lane (solo/crew/panel annex) | free-append | built |
+| 2 · Repo-core | `.claude/roles/<role>.md` core (recurs / context-independent in this repo) | user-gated graduation | built |
+| 3 · **Upstream** | the marketplace **seed** (`plugins/<p>/.../role.md`) | **a PR** — the missing rung | **gap** |
+| 4 · Shipped | every install, on update | version bump | built |
+
+**Why a PR is the right boundary, not a limitation:** the marketplace is public, versioned, and curated —
+a contribution must be reviewed and version-bumped. The PR review *is* the "is this universal?" judgment,
+the same human gate every other graduation has. Over-promoting local quirks would pollute the seed for
+everyone, so the decision stays human.
+
+**Strength signal — cross-repo recurrence:** a single repo asserting universality is weak; the same
+learning independently graduating to core in ≥2 repos is the strong signal (the 3×-recurrence rule applied
+across repos instead of within one), and it is mechanically detectable.
+
+**Proposed mechanism — `make harvest` (maintainer-side, next phase):**
+1. Read-only scan of a configured set of repos' `.claude/roles/*.md` (+ `crew.md`/`panel.md` learnings, CLAUDE.md D&L).
+2. Cluster by role + similar text; flag learnings recurring across repos or tagged universal.
+3. Draft a PR to the marketplace adding the lesson to the relevant seed `role.md` `## Learnings (core)` + a version bump.
+4. Human review at the PR = the curation gate; CI + `make validate` guard the rest.
+
+Automate detection + drafting (cheap, evidence-backed); keep the decision human. Note the marketplace
+**dogfoods its own plugins**, so its own `.claude/roles/` learnings graduate into its own seeds directly
+— only cross-repo harvest needs the PR path. Tracked as a follow-up to the role-system epic (issue #2).
 
 ## 4 · Evidence base (local)
 

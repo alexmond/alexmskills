@@ -2,11 +2,14 @@
 * xref:getting-started.adoc[Getting Started]
 * xref:versioning.adoc[Versioning & Maintenance]
 * xref:channels.adoc[Release Channels (stable & beta)]
+* Architecture
+** xref:role-system.adoc[The Role System]
 * Self-learning skills
 ** xref:evolving-claude-md.adoc[Evolving CLAUDE.md]
 ** xref:dev-crew.adoc[Dev Crew]
 ** xref:brainstorm-panel.adoc[Brainstorm Panel]
 ** xref:learn-on-failure.adoc[Learn on Failure]
+** xref:roles.adoc[Role Registry]
 * Workflow skills
 ** xref:implement-issue.adoc[Implement Issue]
 ** xref:maven-quality.adoc[Maven Quality Gate]

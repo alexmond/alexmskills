@@ -1,0 +1,214 @@
+= The Role System — Architecture
+:navtitle: Role System (architecture)
+:toc: macro
+:toclevels: 3
+
+This marketplace grew from a set of independent skills into a small *system*: three plugins —
+xref:dev-crew.adoc[dev-crew], xref:brainstorm-panel.adoc[brainstorm-panel], and the
+xref:roles.adoc[roles] plugin — that share one underlying abstraction, the **evolving role**. This
+page explains that abstraction end to end: the problem it solves, the file model, how roles evolve
+without corrupting each other, and how everything degrades gracefully when you install only part of it.
+
+toc::[]
+
+== The idea in one sentence
+
+**The role is the unit of reuse; the orchestrators are just contexts a role runs in.** One persona —
+say a senior debugger — can run three ways without being redefined: invoked *solo* for a quick pass, seated
+as a gated *crew* role inside a delivery relay, or seated as a *panel* lens in a brainstorming session.
+Its identity lives in one place and its hard-won lessons accumulate there, regardless of which context
+produced them.
+
+[cols="1,2,2,2",options="header"]
+|===
+| Tier | Plugin | Unit of work | Cost / latency
+
+| **Solo** | `roles` | one role, one pass, one context | cheapest, instant
+| **Relay** | `dev-crew` | many roles, gated pipeline, file handoffs | medium
+| **Panel** | `brainstorm-panel` | many roles in parallel, critique + converge | broadest
+|===
+
+== The problem it solves
+
+Before this system, each orchestrator had exactly **half** of the right mechanism:
+
+[cols="1,2,2",options="header"]
+|===
+| | Formation (how the team is picked) | Evolution (do roles improve?)
+
+| **brainstorm-panel** | ✅ Dynamic — seats derived from the task | ❌ Ephemeral — every seat re-invented cold each run; accumulated wisdom buried in log prose
+| **dev-crew** | ❌ Static — category → fixed lineup lookup | ✅ Roles persist with learnings, model tiers, a probationary→stable lifecycle
+|===
+
+Worse, the *same* persona could live in both worlds with **unconnected** lessons — an art-historian role
+that learned one thing as a crew member and another as a panel seat, its knowledge split across two files
+that never talked. The role system gives both orchestrators *both* halves: dynamic formation **and**
+evolving roles, over one shared talent pool.
+
+== The file model — everything under `.claude/roles/`
+
+A per-repo directory is the single home. It is created in the repository (not in a plugin's install
+directory) for a hard reason: **a marketplace-installed plugin's files are a read-only cache**
+(`~/.claude/plugins/cache/…`), so a plugin can never evolve a registry that lives next to its own skill.
+The registry must live in the repo.
+
+[source]
+----
+.claude/roles/
+  crew.md        # dev-crew's role registry      (one writer: dev-crew)
+  panel.md       # brainstorm-panel's registry    (one writer: brainstorm-panel)
+  registry.md    # auto-generated index of shared core roles (written by the roles plugin hook)
+  <role>.md      # shared core role files         (one writer: the roles plugin / user-gated graduation)
+----
+
+The defining property: **every file has exactly one writer.** No write contention, no lane-violation
+risk, no schema drift between plugins — by construction, not by convention.
+
+=== Two layers
+
+[cols="1,3",options="header"]
+|===
+| Layer | What it is
+
+| **Layer 1 — local registries** (unconditional) | Each orchestrator keeps its own registry (`crew.md`, `panel.md`) using the *same* row schema and lifecycle. This ships in dev-crew 1.1.0 and brainstorm-panel 1.1.0 and needs no other plugin — each skill is fully self-sufficient with just its own file.
+| **Layer 2 — shared core** (optional, the `roles` plugin) | Shared `<role>.md` files hold a role's canonical identity and graduated, context-independent knowledge. Registry rows *link* to a core role by name. Installing `roles` also unlocks **solo** invocation (`/roles:as <role>`).
+|===
+
+=== The shared core role file
+
+Written only by the `roles` plugin (and user-gated graduations):
+
+[source]
+----
+## Charter        ← one-sentence mandate (keeps the role in lane everywhere)
+## When to use    ← trigger axes; consumers match against these to seat the role
+## Body           ← the full persona method + deliverables
+## Learnings (core) ← context-INDEPENDENT lessons; arrive only by GRADUATION, never direct append
+## Learnings (solo) ← lessons from /roles:as runs (free-append)
+----
+
+=== The consumer rows (the "annexes")
+
+Context-specific bindings and lessons are **not** sections of the shared file — they are each
+consumer's own registry row, so the single-writer rule holds:
+
+[cols="1,2,2",options="header"]
+|===
+| Lane | Lives in | Holds
+
+| Crew | a row in `crew.md` (+ `role: <name>` link) | model tier, tool scope, handoff contract, crew-specific learnings
+| Panel | a row in `panel.md` (+ `role: <name>` link) | lens emphasis, pairing notes, panel-specific learnings
+| Solo | the core file's `## Learnings (solo)` section | solo-run lessons
+|===
+
+A row with no `role:` link is a purely local role — that is exactly how an orchestrator behaves when the
+`roles` plugin isn't installed.
+
+== Why lanes — shared identity, lane-scoped evolution
+
+Sharing everything would be a bug, because the two orchestrators teach a role *different kinds* of
+lessons:
+
+* **Crew teaches procedural lessons:** "write your handoff to the run dir, don't return text",
+  "implement the contract, flag don't absorb scope." Useful inside a gated relay; meaningless or wrong
+  elsewhere.
+* **Panel teaches epistemic lessons:** "judge by title + depicts, never the slug", "push back —
+  disagreement is the point." Useful as a critique lens; directly *contradicts* crew's "implement the
+  contract" if applied in a relay.
+
+Merged naively these contaminate each other (a solo run obeying run-dir procedures that don't exist; a
+crew dev-phase adopting panel-style divergence that violates its contract). So procedural lessons stay in
+their lane. But context-**independent** knowledge — "title + depicts, never slug" is true everywhere —
+belongs to everyone. Moving that, and only that, to the shared core is the job of **graduation**.
+
+=== Three evolution rules
+
+. **Free-append only to your own lane.** An invocation loads the shared core (if linked) plus its own row
+  — never another consumer's.
+. **Core learnings arrive by graduation, never direct append.** When a lesson appears in two lanes, or is
+  plainly context-independent, it is promoted to `## Learnings (core)` and struck from the rows. This is
+  the same append → graduate → prune loop the xref:evolving-claude-md.adoc[evolving-claude-md] skill uses
+  for CLAUDE.md, one level down. The `roles` plugin's SessionStart hook surfaces candidates (a role used
+  by both crew and panel, or a bloated solo-learnings section); it never rewrites a role file itself.
+. **Identity edits are deliberate.** Either orchestrator may *propose* a Charter or Body change; only the
+  user applies it. A panel run silently rewriting the persona that crew will execute tomorrow is the one
+  genuinely dangerous channel, so it is gated — and everything is in git, so every change is reviewable.
+
+== The no-downgrade principle
+
+The guarantee that makes partial installs safe: **a capability gates on the shared registry only if it
+intrinsically requires sharing.** Composing a roster from a task's axes, the phase-gate hook, qa
+hardening, the escalation ladder — none of these need a shared pool, so they ship unconditionally in the
+1.1.0 skills. The shared core's *exclusive* value is only what sharing actually enables: cross-context
+learning, solo invocation, and one talent pool. Neither orchestrator is ever second-class standalone.
+
+[cols="1,2,2,2",options="header"]
+|===
+| Installed | Formation | Evolution | What the shared core adds when present
+
+| crew alone | ✅ dynamic compose path mints into `crew.md` | ✅ full loop in `crew.md` | cross-skill learning; one pool
+| panel alone | ✅ dynamic, as before | ✅ `panel.md` rows (no longer ephemeral) | seats gain shared, evolving identity
+| roles alone | — | per-role solo annex + graduation audit | solo invocation of any role
+|===
+
+== Crew's escalation protocol
+
+Delivery relays need a defined answer to "a role is stuck." dev-crew 1.1.0 adds one, unifying the old
+qa-loop, the Fable-tier policy, the `debugger`/`lead` candidate roles, and the user's "go back" steering
+into a single mechanism.
+
+=== The `BLOCKED` handoff
+
+The missing primitive: **a role that cannot meet its done-criteria writes its handoff with
+`status: BLOCKED`** plus what it tried, why it's stuck, what it needs, and a suggested escalation target.
+Deliver or declare — silent flailing (or confident-but-wrong output) is a defect. This pairs with the
+**phase-gate hook** (`scripts/check-handoffs.py`, a `PreToolUse` hook): the hook accepts a `BLOCKED`
+handoff as valid and routes it to the ladder, while still rejecting a *missing* one. Prompt discipline
+drifts; hooks don't.
+
+=== The ladder (conductor-owned, each rung once per stumble)
+
+. **Clarify & retry** — re-delegate the same role with the missing context (one retry).
+. **Re-tier** vs **3. Re-role** — *a diagnosis, not a sequence* (below).
+. (see 2)
+. **Re-plan** — when the *contract itself* is wrong, escalate **up** the relay to the architect;
+  downstream artifacts are marked stale (a role-initiated "go back").
+. **User** — the ladder is exhausted, the issue is a genuine user decision (scope/topology forks skip
+  straight here), or a cost gate fires.
+
+=== Re-tier vs re-role: read the BLOCKED report
+
+[cols="1,2,2",options="header"]
+|===
+| Diagnosis | Symptom | Action
+
+| **Capability gap** | role is right, the model is short — real progress, repeated near-misses, work exceeds the tier's depth | **Re-tier** the same role (sonnet→opus; →Fable only via the gated policy). A different role would hit the same ceiling.
+| **Ownership gap** | the model is fine, the role is wrong — doing work its charter doesn't own (dev looping on root-cause is the debugger's job; cross-subsystem → lead), or needs tools its scope denies | **Re-role** to the failure-class owner (mint probationary via the compose path if missing). A heavier model here is a more expensive flail.
+|===
+
+Continuity heuristic: approach sound but execution short → re-tier (preserves artifacts, changes one
+variable); approach itself suspect → re-role (fresh method). Unclear → re-tier first, which keeps lane
+discipline (jumping straight to `lead` imports scope creep). Every escalation is logged (`escalation:` in
+the run entry), which feeds the learning loop: repeated rung-2 hits are evidence for a permanent re-tier;
+recurring rung-3 hops to a missing owner are the trigger to mint a new role.
+
+== Using it
+
+[cols="1,3",options="header"]
+|===
+| Want to… | Do
+
+| Run one expert pass, fast | install `roles` → `/roles:as debug-root-cause <target>` (or a wrapper skill like `/roles:debug-root-cause`)
+| Build & ship something with gates | install `dev-crew` → "run the crew on <task>"
+| Decide *what / whether*; stress-test a plan | install `brainstorm-panel` → "get a team on this"
+| All of the above, sharing one evolving talent pool | install all three — registries link to shared cores automatically
+|===
+
+== Field position
+
+No surveyed public project has roles that *accumulate experience across orchestration contexts*. Large
+agent catalogs (VoltAgent's 154, wshobson's 192) are static libraries; dynamic-selection panels learn
+nothing between runs; the one pack that fuses prompts with a learning loop stores it in an opaque global
+database. Dynamic formation **plus** lane-scoped evolving roles, shared across solo / crew / panel as
+reviewable per-repo markdown, is — as of this writing — unique. See the full survey and rationale in the
+project's decision record, `docs/decisions/2026-06-12-ecosystem-review.md`.
