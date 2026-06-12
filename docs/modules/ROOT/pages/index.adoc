@@ -37,7 +37,7 @@ The emphasis is on **self-learning** tooling — skills that get better at _your
 | xref:review-agents.adoc[review-agents] | review
 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing.
 
-| xref:parallel-research-sweep.adoc[parallel-research-sweep] | research
+| xref:research-sweep.adoc[research-sweep] | research
 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies.
 |===
 

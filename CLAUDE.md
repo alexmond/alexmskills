@@ -23,7 +23,7 @@ Makefile                          # validate / list / bump helpers
 
 `evolving-claude-md`, `dev-crew`, `brainstorm-panel`, `learn-on-failure` (self-learning) ·
 `implement-issue`, `maven-quality`, `security-audit` (workflow) · `review-agents` (review) ·
-`parallel-research-sweep` (research).
+`research-sweep` (research).
 
 ## Conventions
 
@@ -39,10 +39,20 @@ Makefile                          # validate / list / bump helpers
   are pulled FROM other repos and generalized; keep them that way.
 - **Docs are part of "done":** a new plugin needs a `docs/modules/ROOT/pages/<n>.adoc` page + a
   `nav.adoc` entry.
+- **Plugin naming:** orchestrators are `<scope>-<team-noun>`, the team-noun encoding coordination
+  (`crew` = handoff/deliver, `panel` = debate/decide, `sweep` = fan-out/discover); other skills are
+  descriptive kebab-case, verb-first for actions, ≤3 words, no redundant qualifiers.
+- **Role naming:** a role is named for the *persona* (a noun — who they are), never the *task* (a verb
+  — what they do), so it reads right seated solo, in a crew, on a panel, or in a sweep. Coverage roles
+  use `<dimension>-scout`. Role names are shared across orchestrators (one `skeptic`, one `architect`).
 - **Never push or cut release tags without explicit user confirmation.**
 
 ## Gotchas (load-bearing)
 
+- **Evolving plugins must write state OUTSIDE their own dir.** A marketplace-installed plugin lives in
+  a read-only cache (`~/.claude/plugins/cache/…`), so all mutable state goes to the consuming repo's
+  `.claude/` (e.g. `.claude/roles/`, `.claude/dev-crew/log.md`) or user memory. Shipped `roles.md` /
+  `log.md` are read-only *seeds*; the conductor copies them into `.claude/` on first run.
 - **Local-directory marketplace install is unsupported by the CLI** (v2.1.173: "source type your
   Claude Code version does not support"). The marketplace still *parses/lists* locally; full install
   works once pushed to GitHub. Test a plugin locally with `claude --plugin-dir ./plugins/<n>`.
@@ -78,6 +88,10 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-06-12 — **ecosystem-review** — field survey + 1.1.0 improvement plan for dev-crew/brainstorm-panel/senior-prompts. Why: benchmark before iterating. See → docs/decisions/2026-06-12-ecosystem-review.md.
 - 2026-06-12 — **role-system** — roles first-class & evolving; crew/panel registries at `.claude/roles/{crew,panel}.md`; beta `roles` plugin adds shared core + `/roles:as`; senior-prompts absorbed.
 - 2026-06-12 — **escalation** — dev-crew 1.1.0 adds BLOCKED handoff + phase-gate hook + diagnosis ladder (retry → re-tier vs re-role → re-plan → user). Why: stumbling roles had no defined path.
+- 2026-06-12 — **research-discover** — research-sweep 1.1.0 joins the role system as the 'discover' orchestrator: registry `.claude/roles/research.md`, evolving coverage roles, learning. Why: parity with crew/panel.
+- 2026-06-12 — **naming** — convention: orchestrators `<scope>-<team-noun>` (crew/panel/sweep); roles named as personas (noun) not tasks; coverage roles `<dimension>-scout`. Why: catalog looked random.
+- 2026-06-12 — **renames** — `parallel-research-sweep`→`research-sweep`; role personas → crew-aligned nouns (architect/debugger/optimizer/reviewer/refactorer/builder). Why: unify role vocab.
+- 2026-06-12 — **attribution** — roles personas credit @nahidulislam404's prompt thread as inspiration; all plugins are Alex's own original work (MIT, per plugin.json author). Why: public-repo provenance.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

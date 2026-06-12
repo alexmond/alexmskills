@@ -21,7 +21,7 @@ Then install what you want — copy-paste any of these:
 /plugin install maven-quality@alexmskills
 /plugin install security-audit@alexmskills
 /plugin install review-agents@alexmskills
-/plugin install parallel-research-sweep@alexmskills
+/plugin install research-sweep@alexmskills
 ----
 
 Or browse interactively with `/plugin` (the **Discover** tab). After a new release is pushed, refresh
