@@ -21,18 +21,32 @@ that captures every multi-cycle debugging detour.
 | [`dev-crew`](plugins/dev-crew) | self-learning | 1.1.0 | A self-evolving delivery crew that composes a task-fit roster (like a panel, but to *ship* a target) and runs it as a gated relay with machine-enforced phase gates + an escalation ladder; each role a subagent on its own tier. (architect → dev → qa → deployer is one example lineup.) |
 | [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.1.0 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. |
 | [`learn-on-failure`](plugins/learn-on-failure) | self-learning | 1.0.0 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle. |
-| [`roles`](plugins/roles) | self-learning | 1.0.0 | A per-repo repository of evolving roles (.claude/roles/) usable solo via /roles:as, as dev-crew roles, and as brainstorm-panel seats; ships seed personas + a graduation-audit hook. |
+| [`roles`](plugins/roles) | self-learning | 1.0.0 | A per-repo repository of evolving roles (.claude/roles/) usable solo via /roles:as, as dev-crew roles, brainstorm-panel seats, and research-sweep coverage roles; ships seed personas + a graduation-audit hook. |
 | [`implement-issue`](plugins/implement-issue) | workflow | 1.0.0 | Drives a GitHub issue from branch → implement → verify → PR with a guided workflow. |
 | [`maven-quality`](plugins/maven-quality) | workflow | 1.0.0 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects (codestyle, precommit, jacoco). |
 | [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
 | [`review-agents`](plugins/review-agents) | review | 1.0.0 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers. |
 | [`research-sweep`](plugins/research-sweep) | research | 1.0.0 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
 
-> **The Role System.** `dev-crew` and `brainstorm-panel` share one underlying abstraction — the
-> *evolving role* — backed by a per-repo `.claude/roles/` registry, and the
-> [`roles`](plugins/roles) plugin lets you run any role solo (`/roles:as <role>`) or share an
-> evolving talent pool across both. See the
-> [architecture page](https://www.alexmond.org/alexmskills/role-system.html) for the full model.
+## The Role System
+
+Four of the plugins form **one system**: a shared substrate of **evolving roles** (`.claude/roles/`) and
+three **orchestrators** that compose those roles task-fit and learn over time. One persona — say a
+`skeptic` or an `architect` — behaves the same whether it's run solo, seated in a crew, on a panel, or in
+a sweep, accumulating what it learns along the way.
+
+| Plugin | Role in the system | Verb |
+|---|---|---|
+| [`roles`](plugins/roles) | the shared substrate — evolving roles + solo invocation (`/roles:as <role>`) | — |
+| [`dev-crew`](plugins/dev-crew) | composes a roster and runs it as a **gated delivery relay** | **deliver** |
+| [`brainstorm-panel`](plugins/brainstorm-panel) | convenes a **multi-perspective panel** that critiques and converges | **decide** |
+| [`research-sweep`](plugins/research-sweep) | fans out **parallel coverage roles** then synthesizes + adversarially verifies | **discover** |
+
+The three orchestrators **chain** — research *discovers* the facts, the panel *decides* what to do, the
+crew *delivers* it — and they **share roles** (one `skeptic` is a panel seat, a crew adversarial check,
+and a research verifier). Each is fully usable on its own; co-installed, they share one evolving talent
+pool. Full model: the
+**[Role System architecture](https://www.alexmond.org/alexmskills/role-system.html)**.
 
 ## Install
 
