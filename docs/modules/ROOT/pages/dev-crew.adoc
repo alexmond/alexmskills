@@ -1,7 +1,7 @@
 = Dev Crew
 :navtitle: dev-crew
 
-A self-evolving, role-based software delivery relay. The main Claude Code session acts as the *conductor*: it profiles the repo, picks the minimal set of roles a task needs, delegates each phase to a role *subagent* running on its own model tier, passes work between roles through shared handoff files, gates risky transitions, and writes back what it learned so the crew tunes itself to the codebase over time. It is the execution counterpart to `brainstorm-panel`: the panel converges on *what* to build, the crew runs the *building*.
+A self-evolving delivery crew that *composes a task-fit roster* for the work — like `brainstorm-panel` assembles a panel, but oriented to **deliver a target** rather than decide. The lineup `architect → dev → qa → deployer` is the canonical code example; a data change, a refactor, or a doc gets a different roster. The main Claude Code session acts as the *conductor*: it profiles the repo, picks the minimal set of roles the task needs, delegates each phase to a role *subagent* running on its own model tier, passes work between roles through shared handoff files, gates risky transitions, and writes back what it learned so the crew tunes itself over time. It is the execution counterpart to `brainstorm-panel`: the panel converges on *what* to build, the crew runs the *building*.
 
 See xref:role-system.adoc[The Role System] for how crew roles are shared and evolve.
 
