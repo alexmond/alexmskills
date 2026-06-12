@@ -1,0 +1,52 @@
+= Security Audit
+:navtitle: security-audit
+
+A *defensive* security review that scans a codebase (or a specific path) for OWASP-style vulnerabilities and reports each confirmed finding with its `file:line`, severity, and concrete remediation. The goal is to find and report so issues get fixed — never to exploit; it does not generate exploit payloads or weaponized proof-of-concept code. Language-agnostic, with Java/Spring used as worked examples.
+
+== Install
+
+[source,text]
+----
+/plugin install security-audit@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+/security-audit:security-audit src/main/java
+----
+
+The path argument is optional (scans the whole repo if omitted). Or ask in natural language: "do a security audit of the auth module" or "review this code for injection and SSRF risks".
+
+== When to use it
+
+* "do a security audit" / "review code for vulnerabilities"
+* Find injection, SSRF, path-traversal, or secret-exposure risks
+* Harden a project before a release
+* Optionally pass a path to limit the scan to one file or directory
+
+== What it does
+
+=== Scope and method
+
+Scans repo source (or the given path), excluding generated output, vendored deps, and build artifacts. For each category it greps for candidate patterns, then *reads each hit in context* and traces data flow — a match is a finding only when untrusted input actually reaches the sink without adequate validation, encoding, or sandboxing. Reports confirmed issues, not theoretical ones.
+
+=== Checks performed
+
+* *Injection* — SQL / OS command / template / LDAP built by concatenating untrusted input.
+* *Path traversal* — file/resource paths from input without canonicalization and base-dir bounding.
+* *Unsafe reflection / deserialization* — `Class.forName`, `ObjectInputStream`, unsafe YAML, polymorphic `readValue`, etc.
+* *SSRF* — outbound requests whose URL/host comes from input, without allow-listing or blocking internal/metadata addresses.
+* *Hardcoded secrets* — credentials/tokens/keys in source or config, distinguishing real values from placeholders and test fixtures.
+* *XXE* — XML parsers without DOCTYPE/external-entity processing disabled.
+* *TLS/certificate validation bypass* — global disabling of cert or hostname verification.
+
+=== Report
+
+Outputs a single table ordered by severity (CRITICAL → HIGH → MEDIUM → LOW) with location, category, the data-flow description, and a specific fix, followed by a one-line count summary. If nothing is found, it states "No vulnerabilities found."
+
+== Notes
+
+* Tool access is scoped to `Read, Glob, Grep, Bash`.
+* Secret-style findings in production code are rated higher severity than those in test fixtures, and reported separately rather than ignored.

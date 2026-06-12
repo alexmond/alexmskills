@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "alexmskills",
+  "description": "A curated marketplace of reusable, self-improving Claude Code skills and agents. Each skill is an independently versioned plugin.",
+  "owner": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "version": "1.0.0",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "evolving-claude-md",
+      "displayName": "Evolving CLAUDE.md",
+      "source": "evolving-claude-md",
+      "description": "Turn CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks (audit, lint, archive).",
+      "version": "1.0.0",
+      "category": "self-learning",
+      "keywords": [
+        "claude-md",
+        "memory",
+        "learning",
+        "hooks",
+        "adr"
+      ]
+    },
+    {
+      "name": "dev-crew",
+      "displayName": "Dev Crew",
+      "source": "dev-crew",
+      "description": "A self-evolving, role-based delivery relay (architect → dev → qa → deployer) where each role runs as a subagent on its own model tier.",
+      "version": "1.0.0",
+      "category": "self-learning",
+      "keywords": [
+        "agents",
+        "orchestration",
+        "delivery",
+        "relay",
+        "self-evolving"
+      ]
+    },
+    {
+      "name": "brainstorm-panel",
+      "displayName": "Brainstorm Panel",
+      "source": "brainstorm-panel",
+      "description": "Assemble a task-fit panel of role-specialized agents, pick a coordination style, and run a generate-critique-refine loop that converges on a strong result.",
+      "version": "1.0.0",
+      "category": "self-learning",
+      "keywords": [
+        "agents",
+        "brainstorm",
+        "panel",
+        "ideation",
+        "review"
+      ]
+    },
+    {
+      "name": "learn-on-failure",
+      "displayName": "Learn on Failure",
+      "source": "learn-on-failure",
+      "description": "Auto-save a durable learning to project memory whenever a task takes more than one fix cycle to resolve.",
+      "version": "1.0.0",
+      "category": "self-learning",
+      "keywords": [
+        "memory",
+        "learning",
+        "retrospective",
+        "first-run"
+      ]
+    },
+    {
+      "name": "implement-issue",
+      "displayName": "Implement Issue",
+      "source": "implement-issue",
+      "description": "Drive a GitHub issue from branch to PR with a guided plan → implement → verify → push workflow.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "keywords": [
+        "github",
+        "issue",
+        "pull-request",
+        "workflow",
+        "git"
+      ]
+    },
+    {
+      "name": "maven-quality",
+      "displayName": "Maven Quality Gate",
+      "source": "maven-quality",
+      "description": "Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects (codestyle, precommit, jacoco).",
+      "version": "1.0.0",
+      "category": "workflow",
+      "keywords": [
+        "maven",
+        "java",
+        "checkstyle",
+        "pmd",
+        "jacoco",
+        "precommit"
+      ]
+    },
+    {
+      "name": "security-audit",
+      "displayName": "Security Audit",
+      "source": "security-audit",
+      "description": "Scan a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets).",
+      "version": "1.0.0",
+      "category": "workflow",
+      "keywords": [
+        "security",
+        "owasp",
+        "audit",
+        "vulnerabilities"
+      ]
+    },
+    {
+      "name": "review-agents",
+      "displayName": "Review Agents",
+      "source": "review-agents",
+      "description": "Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers.",
+      "version": "1.0.0",
+      "category": "review",
+      "keywords": [
+        "agents",
+        "code-review",
+        "testing",
+        "dependencies",
+        "cve"
+      ]
+    },
+    {
+      "name": "parallel-research-sweep",
+      "displayName": "Parallel Research Sweep",
+      "source": "parallel-research-sweep",
+      "description": "Fan out independent research agents across distinct angles, then synthesize and adversarially verify the findings.",
+      "version": "1.0.0",
+      "category": "research",
+      "keywords": [
+        "research",
+        "parallel",
+        "agents",
+        "synthesis",
+        "verification"
+      ]
+    }
+  ]
+}

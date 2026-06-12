@@ -1,0 +1,10 @@
+{
+  "name": "brainstorm-panel",
+  "description": "Assemble a task-specific panel of role-specialized agents and run a generate-critique-refine loop until the work converges on a strong result.",
+  "version": "1.0.0",
+  "author": { "name": "Alex Mondshain", "email": "alexmond@gmail.com" },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": ["agents","brainstorm","panel","ideation","review"]
+}

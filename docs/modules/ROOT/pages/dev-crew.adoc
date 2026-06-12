@@ -1,0 +1,59 @@
+= Dev Crew
+:navtitle: dev-crew
+
+A self-evolving, role-based software delivery relay. The main Claude Code session acts as the *conductor*: it profiles the repo, picks the minimal set of roles a task needs, delegates each phase to a role *subagent* running on its own model tier, passes work between roles through shared handoff files, gates risky transitions, and writes back what it learned so the crew tunes itself to the codebase over time. It is the execution counterpart to `brainstorm-panel`: the panel converges on *what* to build, the crew runs the *building*.
+
+== Install
+
+[source,text]
+----
+/plugin install dev-crew@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+/dev-crew:dev-crew add rate limiting to the login endpoint
+----
+
+Or ask in natural language: "run the crew on this feature" or "take this refactor through the cycle". The conductor delegates to the role subagents itself; you can also point it at a specific role, e.g. "have dc-architect plan this" or "use the dc-lead subagent to root-cause this failure".
+
+== When to use it
+
+* "run the crew on", "ship this feature", "build and test X", "take this through the cycle"
+* Any multi-step implementation, refactor, schema change, or release that benefits from separated design / build / verify / deploy phases
+* When you want per-phase model tiering and explicit gates rather than one monolithic agent
+
+== What it does
+
+=== The roster (6 role subagents)
+
+Roles report up to the conductor and hand off only through files — never calling each other directly. Review roles are read-only on source so a verification step can't rewrite what it checks.
+
+* *dc-scout* (haiku) — read-only repo scan on init; writes `PROFILE.md` that drives roster, prompts, and tiers.
+* *dc-architect* (opus) — plan + interface/done-criteria contract; writes `PLAN.md` and `CONTRACT.md`.
+* *dc-dev* (sonnet) — implements against the contract; writes `CHANGES.md`.
+* *dc-qa* (sonnet, read-only) — writes/runs tests; pass/fail verdict per done-criterion in `QA.md`.
+* *dc-deployer* (haiku, `permissionMode: default`) — runs dry/idempotent checks, then *stages* irreversible commands and stops.
+* *dc-lead* (opus) — deep root-cause / multi-system investigation; the Fable-eligible role.
+
+=== Operating cycle
+
+Intake (profile + category) → an *editable roster checkpoint* that always stops for user confirmation → run the relay phase by phase → enforce gates → append a structured run entry to `log.md`.
+
+=== Gates
+
+* *QA gate* — never advances to deploy on a QA fail; routes back to dev with `QA.md` as the defect list, max two loops before escalating.
+* *Deploy gate (hard)* — the deployer may run `build`/`lint`/`--dry-run`/`diff` freely but must stop and surface the exact irreversible commands (apply, push, publish, drop) for explicit go-ahead, even when permissions are skipped.
+
+=== Self-learning loop
+
+Mines `log.md` to graduate stable lineups into a repo `## Dev crew` block, re-tier models (promote/demote/escalate with logged rationale), graduate recurring user steers, and mint new roles for unowned failure classes.
+
+== Notes
+
+* Run the conductor on *opus* (or sonnet to economize); never on *fable* — it is the always-on, token-heavy seat.
+* *Fable* is a gated, per-run escalation for `architect`/`lead` only, proposed with an explicit cost line; the learning loop must never promote it into a default lineup. It silently falls back to Opus on safety-classifier trips or when unavailable.
+* Keep `CLAUDE_CODE_SUBAGENT_MODEL` unset — if set, every role collapses onto one model and per-role tiering is lost.
+* Steering modes: `autopilot`, `checkpoint` (default), `co-drive`.

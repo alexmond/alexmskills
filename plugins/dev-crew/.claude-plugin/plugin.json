@@ -1,0 +1,13 @@
+{
+  "name": "dev-crew",
+  "description": "A self-evolving, role-based delivery relay (architect → dev → qa → deployer) where each role runs as a subagent on its own model tier, with editable rosters and a per-repo learning loop.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": ["agents", "orchestration", "delivery", "relay", "self-evolving"]
+}

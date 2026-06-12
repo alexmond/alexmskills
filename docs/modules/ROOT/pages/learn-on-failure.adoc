@@ -1,0 +1,46 @@
+= Learn on Failure
+:navtitle: learn-on-failure
+
+Captures hard-won lessons into per-project memory so the same detour isn't repeated. It fires *automatically* — without being asked — whenever a task took more than one fix cycle to resolve (a test that failed and needed a second attempt, a compile error, an API that behaved unexpectedly, an assumption that proved wrong), synthesizing the root cause and the correct approach into the project's memory files. It also records anything the user explicitly asks to remember.
+
+== Install
+
+[source,text]
+----
+/plugin install learn-on-failure@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+/learn-on-failure:learn-on-failure testing "BCrypt accepts $2a$ but not $2y$ hashes"
+----
+
+Mostly it fires automatically after any multi-cycle fix — you don't invoke it. To save something on demand, just say: "remember this: ..." or "save this learning".
+
+== When to use it
+
+* Automatically after any multi-cycle resolution — a second attempt was needed to get something working
+* A non-obvious library behavior, API quirk, or version/compatibility constraint surfaced mid-task
+* The user explicitly says "remember this" / "save this learning"
+* Not for routine, single-pass work that succeeded first time
+
+== What it does
+
+=== Locates project memory
+
+Writes to Claude Code's per-project memory at `~/.claude/projects/<project-slug>/memory/` — using the path supplied in the session's memory context, never a hardcoded one. `MEMORY.md` is the index; topic files (e.g. `dependencies.md`, `testing.md`, `debugging.md`) hold detailed notes. Creates them if absent.
+
+=== Synthesizes the learning
+
+On an automatic trigger it derives, from the conversation: the root cause of the extra cycle(s), the failed assumption, the correct approach, and what to check first next time. On a user trigger it records exactly what was stated.
+
+=== Writes it concisely
+
+Short insights go into a `MEMORY.md` section (kept under 200 lines); detailed learnings go into a topic file with a one-line index reference. Entries are bullet points that lead with *what to do / check* and follow with *why*, superseding stale notes rather than duplicating them. Confirms in one line where it saved.
+
+== Notes
+
+* Saves root causes, non-obvious API quirks, version constraints (e.g. BCrypt `$2y$` vs `$2a$`), architectural decisions, and stated user preferences.
+* Does *not* save routine first-pass outcomes, transient task state, anything already in `CLAUDE.md`, or unverified guesses.
