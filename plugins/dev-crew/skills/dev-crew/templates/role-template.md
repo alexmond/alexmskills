@@ -5,7 +5,7 @@ description: >-
   trigger conditions so the conductor delegates correctly.> Reads <inputs from
   prior role>, produces <this role's handoff artifact>.
 tools: <allowlist — read-only for review roles>
-model: <opus | sonnet | haiku | fable>
+model: <opus | sonnet | haiku>
 effort: <low | medium | high | xhigh>
 # permissionMode: default   # uncomment for roles that touch irreversible ops
 ---

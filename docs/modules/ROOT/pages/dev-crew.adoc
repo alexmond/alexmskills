@@ -38,7 +38,7 @@ Roles report up to the conductor and hand off only through files — never calli
 * *dc-dev* (sonnet) — implements against the contract; writes `CHANGES.md`.
 * *dc-qa* (sonnet, read-only) — writes/runs tests; pass/fail verdict per done-criterion in `QA.md`. Verifies *against reality* — the real gate command and real data, never a test that re-encodes the logic under test or a single happy-path sample.
 * *dc-deployer* (haiku, `permissionMode: default`) — runs dry/idempotent checks, then *stages* irreversible commands and stops.
-* *dc-lead* (opus) — deep root-cause / multi-system investigation; the Fable-eligible role.
+* *dc-lead* (opus) — deep root-cause / multi-system investigation.
 
 === Operating cycle
 
@@ -74,7 +74,6 @@ qa's verdict is now explicitly *verify against reality* — the real gate comman
 
 == Notes
 
-* Run the conductor on *opus* (or sonnet to economize); never on *fable* — it is the always-on, token-heavy seat.
-* *Fable* is a gated, per-run escalation for `architect`/`lead` only, proposed with an explicit cost line; the learning loop must never promote it into a default lineup. It silently falls back to Opus on safety-classifier trips or when unavailable.
+* Run the conductor on *opus* (or sonnet to economize).
 * Keep `CLAUDE_CODE_SUBAGENT_MODEL` unset — if set, every role collapses onto one model and per-role tiering is lost.
 * Steering modes: `autopilot`, `checkpoint` (default), `co-drive`.

@@ -46,11 +46,11 @@ Chooses a coordination style to fit the work type: *swarm → converge*, *round-
 
 Presents an *editable lineup the user signs off on first*, then runs each role as a parallel subagent per round — contribute, triage, advance, hand off — until the bar is met, the cap is hit, or only cosmetic notes remain. Delivers the result, the plan that ran, a changelog, and any unresolved tensions.
 
-== What's new in 1.1.1
+== What's new in 1.1.2
 
-* *Fable suggestion at the roster checkpoint* — because a panel is generation-bound, the lineup now comes
-  with an opt-in recommendation to run *one* deep "visionary" generator seat on the Fable tier (the rest
-  stay on Opus to preserve diversity), or the skeptic for a harder critique. Always opt-in; never default.
+* *Fable suggestion removed* — Anthropic suspended Claude Fable 5 / Mythos 5 on 2026-06-12 in response to
+  a US government export-control directive; the opt-in Fable suggestion at the roster checkpoint has been
+  withdrawn until access is restored. Issue #8 (per-role model tiers) is parked.
 
 == What's new in 1.1.0
 
