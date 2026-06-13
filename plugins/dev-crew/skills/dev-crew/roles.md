@@ -29,7 +29,7 @@ guessing.
 ```
 ### <role>
 - subagent: dc-<role>
-- model: <opus | sonnet | haiku | fable | full-id>   effort: <low|medium|high|xhigh|max>
+- model: <opus | sonnet | haiku | full-id>   effort: <low|medium|high|xhigh|max>
 - tools: <allowlist, or "read-only" / "inherit">
 - status: <stable | probationary | retired>
 - owns: <the single failure class / job this role is responsible for>
@@ -51,7 +51,7 @@ guessing.
 
 ### architect
 - subagent: dc-architect
-- model: opus   effort: high   (Fable-eligible: gated opt-in for cross-subsystem / multi-sitting designs — see SKILL.md Fable escalation policy; never auto-selected)
+- model: opus   effort: high
 - tools: read-only + Write (plan files only)
 - status: stable
 - owns: design soundness — interfaces, data model, trade-offs, ADR
@@ -95,7 +95,7 @@ guessing.
 These are pre-described so the New-role protocol is one step when the need shows
 up. None are installed until a recurring failure class justifies them.
 
-- **lead** — opus, **Fable-eligible (gated)**, read-only + Write(plan). Owns: deep root-cause / multi-system investigation on ambiguous or circling failures. This is the natural Fable home alongside architect. **File `dc-lead.md` is already provided** (status: probationary) — register it `stable` after ≥3 clean runs. Use it when bugfix/debug loops repeatedly exceed two passes or a failure spans subsystems.
+- **lead** — opus, read-only + Write(plan). Owns: deep root-cause / multi-system investigation on ambiguous or circling failures. **File `dc-lead.md` is already provided** (status: probationary) — register it `stable` after ≥3 clean runs. Use it when bugfix/debug loops repeatedly exceed two passes or a failure spans subsystems.
 - **tech-lead** — opus/sonnet. Owns: decomposing a large contract into independent work items, dispatching parallel `dev` subagents (each tiered to its item), and integration review. Mint when single-threaded `dev` is the throughput bottleneck on big features. This is the real "senior" pattern — orchestration, not a model tier.
 - **reviewer** — sonnet/opus, read-only. Owns: *craft* review — design fit, maintainability, idiomatic use of the stack — distinct from qa's correctness-against-criteria. Mint when the profile flags a large or convention-heavy codebase where craft drift is a risk.
 - **security-reviewer** — opus, read-only. Owns: auth flows, input handling, secret exposure. Mint when security findings land late.
@@ -118,15 +118,6 @@ the crew already has:
 So seniority is a dial and two optional roles, not a set of titles. Adding
 `junior-dev`/`senior-dev` would just rename the model tier and fragment the
 roster. Mint tech-lead/reviewer when the work calls for them.
-
-## Fable tier — usage note
-
-Fable is an escalation **tier**, not a role. Only `architect` and `lead` may be
-bumped to it, only via the roster-checkpoint gate, only for long-horizon /
-cross-subsystem / ambiguous-investigation work. It burns ~2x Opus quota and,
-after 2026-06-22, draws usage credits at API rates. The graduation loop never
-promotes a Fable bump into a default lineup. Full rules: SKILL.md → Fable
-escalation policy.
 
 ## Protocols (mirror SKILL.md)
 
