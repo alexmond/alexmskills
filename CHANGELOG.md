@@ -7,6 +7,16 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-13
+
+### Removed
+- **brainstorm-panel 1.1.2** / **research-sweep 1.1.2** / **dev-crew 1.1.1** — all references to the
+  **Fable** model tier (the opt-in Fable suggestion at the roster checkpoint; the architect/lead
+  Fable-eligible flags + escalation policy in dev-crew; the conductor-never-on-Fable rule; the design
+  doc `docs/decisions/2026-06-12-fable-model-selection.md`). Reason: Anthropic suspended Claude Fable 5
+  and Mythos 5 on 2026-06-12 in response to a US government export-control directive citing a potential
+  jailbreak; the timeline for restoration is unclear. Issue #8 is parked. Re-add when Fable returns.
+
 ## 2026-06-12 (later)
 
 ### Added

@@ -187,8 +187,8 @@ learning, solo invocation, and one talent pool. Neither orchestrator is ever sec
 == Crew's escalation protocol
 
 Delivery relays need a defined answer to "a role is stuck." dev-crew 1.1.0 adds one, unifying the old
-qa-loop, the Fable-tier policy, the `debugger`/`lead` candidate roles, and the user's "go back" steering
-into a single mechanism.
+qa-loop, the `debugger`/`lead` candidate roles, and the user's "go back" steering into a single
+mechanism.
 
 === The `BLOCKED` handoff
 
@@ -215,7 +215,7 @@ drifts; hooks don't.
 |===
 | Diagnosis | Symptom | Action
 
-| **Capability gap** | role is right, the model is short — real progress, repeated near-misses, work exceeds the tier's depth | **Re-tier** the same role (sonnet→opus; →Fable only via the gated policy). A different role would hit the same ceiling.
+| **Capability gap** | role is right, the model is short — real progress, repeated near-misses, work exceeds the tier's depth | **Re-tier** the same role (e.g. sonnet→opus). A different role would hit the same ceiling.
 | **Ownership gap** | the model is fine, the role is wrong — doing work its charter doesn't own (dev looping on root-cause is the debugger's job; cross-subsystem → lead), or needs tools its scope denies | **Re-role** to the failure-class owner (mint probationary via the compose path if missing). A heavier model here is a more expensive flail.
 |===
 

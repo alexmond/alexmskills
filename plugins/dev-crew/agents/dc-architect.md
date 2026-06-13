@@ -41,5 +41,4 @@ suggested escalation target — do not guess or return text-only.
 
 ## Definition of done
 `CONTRACT.md` is specific enough that dev could implement and qa could verify
-without asking you a question. If a subsystem spans more than a single sitting,
-say so — that's the signal to escalate this role to `fable`.
+without asking you a question.

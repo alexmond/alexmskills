@@ -16,7 +16,7 @@ substrate of *evolving roles*:
 |---|---|---|
 | `roles` | — | shared substrate: evolving roles + solo `/roles:as` |
 | `dev-crew` | **deliver** | composes a roster, runs a gated relay; escalation ladder, phase-gate hook |
-| `brainstorm-panel` | **decide** | task-fit panel; skeptic-by-default, 1-round default, Fable suggestion |
+| `brainstorm-panel` | **decide** | task-fit panel; skeptic-by-default, 1-round default |
 | `research-sweep` | **discover** | parallel coverage roles → synthesize + adversarially verify |
 
 The three orchestrators compose roles dynamically, learn per-repo, share a role vocabulary, and each runs
@@ -29,15 +29,12 @@ the read-only plugin cache.
 
 | # | Item | Status |
 |---|---|---|
-| [#8](https://github.com/alexmond/alexmskills/issues/8) | Per-role model tiers + gated Fable escalation (→ panel/research 1.2.0) | design draft; the do-it-now slice (Fable suggestion at the roster checkpoint) shipped in 1.1.1 |
+| [#8](https://github.com/alexmond/alexmskills/issues/8) | Per-role model tiers across orchestrators | parked — the Fable slice was removed after 2026-06-12 (Fable 5 / Mythos 5 suspended by US government directive); revisit when access is restored |
 | [#3](https://github.com/alexmond/alexmskills/issues/3) | Harvest universal learnings from repos back into marketplace seeds (graduation level 3 — `make harvest`) | not started |
 | [#4](https://github.com/alexmond/alexmskills/issues/4) | CI guard for the read-only invariant | not started |
 
 ### Design threads (working drafts — open, not decided)
 
-- **Fable model-selection** — `docs/decisions/2026-06-12-fable-model-selection.md`. Three archetypes
-  (generator / verifier / orchestrator); spend Fable at the run's bottleneck. Open: one vs two Fable
-  seats; role-eligibility flag vs per-row `model`; whether to allow conductor-on-Fable at all.
 - **Ecosystem review + role-system design** — `docs/decisions/2026-06-12-ecosystem-review.md`.
 
 ### Harvest candidates (surveyed 2026-06-12 — not yet built)
@@ -59,7 +56,5 @@ Already-harvested duplicates seen and skipped: yj-schema-validator agents (`revi
 
 ### Future enhancements (from the design threads)
 
-- Per-row `model` tier on `panel.md` / `research.md`, or — preferred — **Fable-eligibility as a property
-  of the shared core roles** (`skeptic`, `architect`, `lead`, a panel "visionary"), gated like dev-crew's
-  Fable policy. Ships as panel/research **1.2.0**.
-- Verify the "Fable orchestrates agents better" claim on real runs before any conductor-on-Fable default.
+- Per-row `model` tier on `panel.md` / `research.md` for orchestrator-specific model overrides — currently
+  every seat inherits the orchestrator's model. Ships as panel/research **1.2.0**.
