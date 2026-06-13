@@ -40,11 +40,7 @@ files — they never call each other directly. The conductor's model and each
 role's model are **independent**: a subagent runs on its own frontmatter model
 and inherits nothing of the conductor's context or system prompt.
 
-Run the conductor on **`opus`** (or `sonnet` to economize). Never run it on
-`fable`: the conductor is the always-on seat that emits the most coordination
-tokens, and at 2x-Opus rates that is the worst place to spend Fable. Fable lives
-in specific role bodies on qualifying tasks (see Fable escalation policy), gated
-behind an explicit go.
+Run the conductor on **`opus`** (or `sonnet` to economize).
 
 ## Files this skill owns
 
@@ -184,8 +180,7 @@ but routes to the conductor instead of advancing the relay.
 report's "why stuck" decides:
 
 - **Capability gap** (role right, model short — real progress, repeated
-  near-misses) → **② re-tier** the same role (sonnet→opus; →Fable only via the
-  existing gated escalation policy).
+  near-misses) → **② re-tier** the same role (e.g. sonnet→opus).
 - **Ownership gap** (model fine, role wrong — doing work its charter doesn't
   own: dev looping on root-cause is debugger's job; cross-subsystem → lead; or
   it needs tools its scope denies) → **③ re-role** to the failure-class owner
@@ -245,8 +240,6 @@ each with its rationale logged:
   let edge-case bugs through twice -> propose `sonnet`).
 - *Demote* when a role's output never needed the heavier tier (e.g. deployer on
   `sonnet` only ever ran mechanical steps -> propose `haiku`).
-- *Escalate* an architect to `fable` for designs that span more than a single
-  sitting or touch many subsystems.
 Apply re-tiers by editing the role's subagent `model` frontmatter and the
 registry row; record old->new + reason in `.claude/roles/crew.md` and `log.md`.
 
@@ -272,47 +265,6 @@ Retire or merge roles that go unused or overlap.
 block. Patterns that hold across repos (a model re-tier that's right everywhere,
 a broadly useful new role) -> your user-level `~/.claude/roles/` defaults, so every repo
 inherits them.
-
-## Fable escalation policy
-
-Fable is the top tier and is treated as a **deliberate, gated escalation — never
-a default**. It is not its own role; it is a tier that two roles can be bumped
-to when the work genuinely justifies it.
-
-**Eligible only when** the task is long-horizon and would otherwise be broken
-into pieces, spans multiple subsystems, or is an ambiguous root-cause /
-investigation problem — the cases where Fable's investigate-before-acting and
-self-verification actually pay for the cost. Eligible roles: `architect` (large
-cross-subsystem designs) and `lead` (deep root-cause / multi-system
-investigation). Never `dev`, `qa`, or `deployer` — their work is mechanical and
-Fable there is pure waste.
-
-**Gate (hard).** The conductor never silently selects Fable. When a role
-qualifies, the conductor proposes the bump **in the roster checkpoint with an
-explicit cost line**, and runs it only on the user's go:
-
-```
-  1. architect  (FABLE, high)  — cross-subsystem redesign; spans >1 sitting
-       ⚠ Fable ≈ 2x Opus quota burn. After 2026-06-22 it draws usage credits
-         at API rates ($10/$50 per Mtok). Confirm, or keep architect on opus.
-```
-
-Default the same role to `opus` in the proposal so declining is the easy path.
-
-**Auto-fallback caveat.** Fable runs safety classifiers for cybersecurity and
-biology. A flagged request silently reroutes to Opus, and the classifier can
-trip on the *first* request from a repo's `CLAUDE.md` or git status alone — so a
-"Fable architect" on a security-adjacent repo may quietly be an Opus architect.
-If a run was supposed to use Fable, confirm in the transcript that it actually
-did before crediting any outcome to it in `log.md`.
-
-**Availability.** Fable requires Claude Code v2.1.170+ and is not selectable
-under zero-data-retention. If unavailable, fall back to `opus` and note it.
-
-**Learning-loop rule.** Because Fable is expensive, the graduation loop must
-**never** promote a Fable bump into a repo's default lineup. Fable stays a
-per-run, opt-in escalation. The loop may *suggest* "this category tends to need
-the architect at Fable" as a note, but the gate fires every time regardless.
 
 ## Safety rails
 

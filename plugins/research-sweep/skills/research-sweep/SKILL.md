@@ -60,16 +60,6 @@ Derive the coverage angles from the **information space** = the task + the corpu
 
 Present the proposed sweep team as an **editable roster the user signs off on before anything fans out** — a roster checkpoint, exactly like crew's and panel's. List each coverage role numbered, with its charter and the slice / angle it will own, then the verifier and synthesizer. Invite changes (add, remove, swap, retune an angle) and wait for approval before launching. A removed coverage role is a coverage gap — say what it gives up so the user removes it knowingly, then comply.
 
-**Emit a Fable suggestion with the roster (opt-in).** A sweep is *verification-bound* — the coverage
-scouts are mechanical breadth, so keep them on Opus/Sonnet; the depth pays on checking, not gathering. So
-when you present the roster, also offer to run the **skeptic-verifier** (and optionally the
-**synthesizer**) on the Fable tier — that is where harder reasoning improves the result. Always opt-in,
-never default: note Fable ≈ 2× Opus quota (API-rate credits after 2026-06-22) and that it can silently
-reroute to Opus on security/bio topics. For example:
-
-> Fable (optional): run the *verifier* (and the *synthesizer*) on Fable for a harder check — the scouts
-> stay on Opus. ~2× cost, opt-in — or skip.
-
 > Proposed sweep team for this information space:
 > 1. **container-scout** — one source registry per agent. *The corpus splits cleanly across registries.*
 > 2. **timeline-scout** — pre-2015 / 2015–2020 / post-2020. *The space has a strong temporal spread.*

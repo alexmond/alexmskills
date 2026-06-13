@@ -1,7 +1,7 @@
 {
   "name": "research-sweep",
   "description": "A self-evolving 'discover' crew: it composes a task-fit team of coverage roles for an information space, fans them out in parallel, dedups, and adversarially verifies their findings into one trustworthy, cited result. The discover counterpart to dev-crew (deliver) and brainstorm-panel (decide).",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"
