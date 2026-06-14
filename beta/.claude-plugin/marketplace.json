@@ -7,8 +7,19 @@
     "email": "alexmond@gmail.com"
   },
   "version": "1.0.0",
-  "metadata": {
-    "pluginRoot": "./plugins"
-  },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "tune-repo",
+      "displayName": "Tune Repo",
+      "source": {
+        "source": "github",
+        "repo": "alexmond/alexmskills",
+        "path": "beta/plugins/tune-repo"
+      },
+      "description": "Audit and tighten a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately in it: verify CLAUDE.md against reality, tighten the verify loop, add missing static guardrails, cut permission friction.",
+      "version": "0.1.1",
+      "category": "beta",
+      "keywords": ["claude-md", "guardrails", "onboarding", "verification", "accuracy"]
+    }
+  ]
 }

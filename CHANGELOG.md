@@ -7,6 +7,21 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-14
+
+### Added
+- **tune-repo 0.1.1** *(beta)* — new plugin: a one-shot audit-and-tune skill that calibrates a
+  repo's `CLAUDE.md`, verify loop, static guardrails, and permission allowlist to its house
+  style (using the closest well-tuned sibling repo as the template). Three phases — discover →
+  audit → propose-then-apply — with an `audit` keyword for report-only mode. The calibration
+  counterpart to `evolving-claude-md`'s ongoing maintenance loop. Ships on the **beta**
+  channel.
+
+### Changed
+- **beta marketplace.json** — switched to the explicit `{source: github, repo, path}` form
+  (parity with stable's 2026-06-12 fix); older Claude Code CLIs (≤v2.1.153) reject the
+  bare-string `pluginRoot`-relative shorthand.
+
 ## 2026-06-13
 
 ### Removed
