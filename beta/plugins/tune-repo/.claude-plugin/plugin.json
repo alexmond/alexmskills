@@ -1,0 +1,10 @@
+{
+  "name": "tune-repo",
+  "description": "Audit and tighten a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately in it: verify CLAUDE.md against reality, tighten the verify loop, add missing static guardrails, cut permission friction.",
+  "version": "0.1.1",
+  "author": { "name": "Alex Mondshain", "email": "alexmond@gmail.com" },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": ["claude-md", "guardrails", "onboarding", "verification", "accuracy"]
+}

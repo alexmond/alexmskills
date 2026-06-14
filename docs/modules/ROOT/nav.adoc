@@ -17,3 +17,5 @@
 * Agents & research
 ** xref:review-agents.adoc[Review Agents]
 ** xref:research-sweep.adoc[Research Sweep]
+* Beta channel
+** xref:tune-repo.adoc[Tune Repo]
