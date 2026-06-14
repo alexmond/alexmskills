@@ -38,11 +38,11 @@ validate_channel() {
     local src_type src_path dir manifest pname ver
     src_type="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source | type' "$mp")"
     if [ "$src_type" = "object" ]; then
-      # Explicit { source: github, repo, path } form — path is repo-relative
+      # Explicit { source: github, repo, path } form — path is repo-root-relative
       src_path="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source.path // ""' "$mp")"
-      dir="$base/$src_path"
+      dir="$root/$src_path"
     else
-      # Bare-string form — resolve under pluginRoot
+      # Bare-string form — resolve under pluginRoot, relative to the channel base
       src_path="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source' "$mp")"
       dir="$base/${plugin_root:+$plugin_root/}$src_path"
     fi

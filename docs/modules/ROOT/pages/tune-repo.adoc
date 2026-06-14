@@ -1,0 +1,50 @@
+= Tune Repo
+:page-status: beta
+
+`tune-repo` is a one-shot audit-and-tune skill for any repository: it verifies the existing
+`CLAUDE.md` against reality, tightens the build/test/lint verify loop, adds only the missing
+*house* guardrails, and reduces permission friction in `.claude/settings.json`. The biggest
+accuracy killer for Claude Code in a repo is a *stale* `CLAUDE.md` — a wrong instruction is
+worse than a missing one — so accuracy is the top lever this skill pulls.
+
+[NOTE]
+====
+`tune-repo` ships on the *beta* channel (`alexmskills-beta`). Expect breaking changes; it is
+the calibration counterpart to xref:evolving-claude-md.adoc[Evolving CLAUDE.md] (which is the
+ongoing maintenance loop).
+====
+
+== When to run it
+
+Use when the user wants to "tune", "audit", "harden", or "onboard" a repository, or when a
+`CLAUDE.md` has gone stale, or when agent runs in this repo keep tripping on the same
+friction. Works on any repo. Pass `audit` as the argument to report findings without applying
+anything.
+
+== How it works (three phases)
+
+. *Discover (read-only)* — detect language, build tool, exact build/test/lint/format commands,
+  what CI enforces, hermetic-test status, module layout, current `CLAUDE.md` + `.claude/`
+  settings. If sibling repos exist in the parent directory, read the closest *well-tuned* one
+  as the house template so a fleet of related repos converges on one style.
+. *Audit (report findings, each with `file:line`)* — six dimensions: `CLAUDE.md` accuracy,
+  `CLAUDE.md` completeness, the verification loop, static guardrails (formatter / linter /
+  static analysis / coverage), permission friction, and structure smells (oversized files,
+  hidden wiring, non-hermetic tests).
+. *Propose, then (on approval) apply* — a prioritized, minimal change set, each line carrying
+  a one-line "why this improves accuracy or speed." After applying, the skill runs the repo's
+  *own* verification command to prove nothing broke.
+
+== House-style calibration
+
+The skill *does not* impose a generic template. It calibrates to the project's own
+conventions, falling back to the closest well-tuned sibling repo when there is one. On
+conflicts, the in-repo working tool wins; divergence is surfaced as a finding for the user to
+decide, never silently aligned.
+
+== Companions
+
+* xref:maven-quality.adoc[Maven Quality Gate] — installs the actual format / Checkstyle / PMD
+  / JaCoCo / pre-commit skills this audit recommends for Java/Maven repos.
+* xref:evolving-claude-md.adoc[Evolving CLAUDE.md] — keeps `CLAUDE.md` healthy over time
+  (`tune-repo` is the one-shot tune-up; that one is the ongoing maintenance loop).
