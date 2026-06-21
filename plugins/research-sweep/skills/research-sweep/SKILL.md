@@ -30,13 +30,18 @@ Skip this skill if:
 - The domain is narrow enough that one agent can cover it well
 - The data already exists in the repo and just needs querying
 
+## Files this skill owns
+
+- `<repo>/.claude/roles/research.md` — the coverage-roles registry (per-role wisdom). Created on first run by copying the shared mechanism crew and panel use.
+- `<repo>/.claude/research-sweep/log.md` — append-only run log; the substrate the learning loop reads from to graduate stable angles, demote thin ones, retire dead ones, and lift cross-corpus patterns into the repo's `## Research sweep` CLAUDE.md block. The synthesizer seeds it on first run from this skill's shipped `log.md` (a read-only schema seed — never write to the installed copy). **Every `log.md` reference below means this repo file.**
+
 ## Coverage roles registry
 
 The sweep is a team of named **coverage roles**, not ad-hoc angles — and that team is *evolving*. The sweep maintains a roles registry at `.claude/roles/research.md` — the **same registry mechanism** dev-crew and brainstorm-panel use, owned here by the sweep. One row per role:
 
-- **name** · one-line **charter** · **when-to-cover** (the trigger / angle that earns it a place — the information-space signal it owns) · **status** (probationary → stable once it has proven useful on three or more runs) · **learnings** (accumulated bullets: which corpora it paid off on, dedup gotchas, source-trust rules, verification failure modes).
+- **name** · one-line **charter** · **when-to-cover** (the trigger / angle that earns it a place — the information-space signal it owns) · **status** (probationary → stable once it has proven useful on three or more runs; demoted to probationary on two thin runs with no fix; retired after three thin runs or three user-cut events at the roster gate) · **learnings** (accumulated bullets: which corpora it paid off on, dedup gotchas, source-trust rules, verification failure modes).
 
-Create the file on the sweep's first run in a repo. The roster is composed **from it first** ("Compose the team" below): stable coverage roles whose when-to-cover fits *this* information space keep their place; gaps become fresh probationary rows. After the sweep, per-role wisdom is written back to each row (see "Learn from the sweep"). Same row schema and probationary→stable lifecycle as crew's `crew.md` and the panel's `panel.md` — the sweep is just the third consumer of one mechanism.
+Create the file on the sweep's first run in a repo. The roster is composed **from it first** ("Compose the team" below): stable coverage roles whose when-to-cover fits *this* information space keep their place; gaps become fresh probationary rows. After the sweep, per-role wisdom is written back to each row, and the per-run record goes to `log.md` (see "Learn from the sweep"). Same row schema and probationary→stable lifecycle as crew's `crew.md` and the panel's `panel.md` — the sweep is just the third consumer of one mechanism.
 
 ### Coverage roles — the searchers, by angle
 
@@ -119,14 +124,17 @@ Use multiple `Agent` tool calls in one message so they run concurrently — one 
 
 Run agents with `run_in_background: true`. Don't poll — completion notifications fire automatically.
 
-## Step 4 — Handle partial failures
+## Step 4 — Handle partial failures (thin-agent diagnosis)
 
-Expect 1–2 agents per sweep to fail or return thin results. Common causes:
-- **Web tool denied** (WebFetch / WebSearch not permitted). Sometimes recoverable by re-running after the user permits; sometimes the agent must work from training-data recall alone (mark these results as best-effort).
-- **Slice too sparse** — the topic genuinely doesn't have N entries. Lower the target or merge with an adjacent slice (and note the angle's thinness in its `research.md` row).
-- **Agent exits early** — usually a prompt that didn't sufficiently emphasize "as many as possible".
+Expect 1–2 agents per sweep to fail or return thin results. **Thin is a diagnosis, not a verdict** — borrow crew's capability-vs-ownership framing. Before re-running, classify:
 
-For each failure, decide: re-run, accept partial output, or skip. Record the decision in CLAUDE.md if there is one.
+- **slice-thin** — the corpus genuinely has fewer entries than the target. The angle is right; the floor is wrong. Lower the target, merge with an adjacent slice, or accept partial. Note the slice's true depth in the coverage role's `research.md` learnings so the next sweep doesn't over-target it.
+- **agent-thin** — the corpus is plentiful but the agent under-delivered. Three sub-causes, three different fixes:
+  - *Web tool denied* (WebFetch / WebSearch not permitted) → re-run after the user permits, or mark as best-effort training-data recall.
+  - *Prompt under-emphasized volume* → re-run with a stronger "as many as possible" floor and an explicit "do not stop at the canonical few".
+  - *Wrong angle* (the role doesn't actually cover this corpus's structure) → **re-role**: mint a probationary corpus-specific coverage role to replace it, the same way crew re-roles on an ownership gap.
+
+For each thin result, decide: re-run, accept partial, or re-role. **Log every thin event** as `thin:` in the run entry (`log.md`) with the diagnosis and the action taken. Two thin runs on the same role with no fix demote it to probationary; three retire it. Recurring re-role events on the same corpus are the mint trigger for a new stable coverage role here.
 
 ## Step 5 — Extract via jq, never via Read
 
@@ -198,16 +206,42 @@ These are the synthesizer's follow-up tickets, not part of the sweep proper:
 
 ## Step 9 — Learn from the sweep
 
-After the sweep, persist per-role wisdom to `.claude/roles/research.md` rows so the next sweep in this space starts from a better roster — the same correction-driven loop crew and panel run. Don't log routine outcomes; record what will change a future roster:
+After the sweep, persist learning at **three layers** so the next sweep in this space starts from a better roster — the same correction-driven loop crew and panel run.
 
-- **Which angles paid off for THIS corpus** — which coverage roles delivered, which came back thin (and whether the thinness was the slice or the agent). Promote a coverage role probationary → stable after three or more useful runs.
+### 9a. Per-run log (one entry per sweep)
+
+Append a structured entry to `.claude/research-sweep/log.md` (schema from this skill's shipped `log.md` seed): run-id, question, corpus, roster, partition, per-role volume + thin diagnosis, verifier findings (sample size, fabrications, duplicates, gaps, verdict), dedup hotspots, source-trust, steering (what the user changed at the gate), outcome, and any graduations written back this run. The log is the substrate the graduation pass reads — without it, the registry is a snapshot with no history.
+
+### 9b. Per-role wisdom (back to the registry)
+
+Write what will change a future roster to the role's row in `.claude/roles/research.md`. Don't log routine outcomes:
+
+- **Which angles paid off for THIS corpus** — promote probationary → stable after three or more useful runs.
+- **Demote** a stable role after **two thin runs** with no fix (back to probationary, with the diagnosis recorded). **Retire** after three thin runs, or after the user has cut it at the roster gate three times — the default is over-covering here.
 - **Dedup gotchas** — which seams collided, which ID scheme prevented it.
 - **Source-trust rules** — which registries were authoritative, which fabricated, which needed a second source.
 - **Verification failure modes** — what the skeptic caught (a whole agent hallucinating, a class of fabricated URLs), so the verifier's row carries the pattern forward.
 
 The strongest signal is **what the user changed at the roster gate** — an angle they added means the composition missed a cut this space needs; an angle they cut means the default over-covers here. Record those alongside the run.
 
-If shared core role files exist, research lessons that are plainly context-independent become **graduation candidates** for the core (e.g. a `skeptic` verification pattern that also helps the panel and crew) — proposed to the user, never applied silently. Absent them, the row in `research.md` is the whole story.
+### 9c. Graduate stable patterns into the repo
+
+When the log shows a pattern holding across **three or more sweeps** in this repo — a coverage role that's always stable here, an authoritative source list, a fabrication-prone source the verifier always flags, an ID-disambiguation rule that always prevents the same seam collision — graduate it into the repo's `CLAUDE.md` under a `## Research sweep` block so future sweeps pick it up without re-deriving:
+
+```markdown
+## Research sweep
+- **Default roster** for <corpus type>: <coverage roles> + verifier + synthesizer.
+- **Authoritative sources** for this corpus: <list>. Always seed coverage there.
+- **Untrusted sources**: <list> — verifier must re-check; flag fabricated <field type>.
+- **ID rule**: <disambiguation pattern that has prevented the recurring seam collision>.
+- **Skip angles**: <coverage roles repeatedly cut at the gate here> — propose only if asked.
+```
+
+Then prune the graduated entries from `log.md` so it stays evidence, not history. Periodically (or once the log passes ~30 entries) consolidate: merge duplicates, drop anything superseded, verify referenced paths still exist. The block above is the "always seat here" layer; the registry holds the lifecycle; the log is the evidence trail.
+
+### 9d. Shared-core graduation (when the `roles` plugin is installed)
+
+If shared core role files exist, research lessons that are plainly context-independent become **graduation candidates** for the core (e.g. a `skeptic` verification pattern that also helps the panel and crew) — proposed to the user, never applied silently. Absent them, the row in `research.md` plus the repo's `## Research sweep` block is the whole story.
 
 ## Anti-patterns
 

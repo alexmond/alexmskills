@@ -7,6 +7,24 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-21
+
+### Added
+- **research-sweep 1.1.3** — closes the cross-run learning gap (the only orchestrator without
+  a per-run log). Four changes:
+  - **Per-run log** at `.claude/research-sweep/log.md` (seeded from a shipped schema), with
+    fields for run-id, roster, partition, per-role volume + thin-diagnosis, verifier findings
+    (sample, fabrications, duplicates, gaps, verdict), dedup hotspots, source-trust, steering,
+    outcome, and graduations.
+  - **Thin-agent diagnosis** — classifies thin results as *slice-thin* (corpus sparse → merge /
+    lower target) vs *agent-thin* (web denied / weak prompt / wrong angle → re-run / re-role),
+    mirroring crew's capability-vs-ownership ladder. Logged as `thin:` events.
+  - **Demote / retire rule** — two thin runs (no fix) → probationary; three → retired. Three
+    user-cut events at the roster gate also retire the role.
+  - **Graduation block** — patterns holding across ≥3 sweeps in a repo graduate into a
+    `## Research sweep` block in CLAUDE.md (default roster, authoritative sources, untrusted
+    sources, ID-disambiguation rules, skip-angles); graduated entries are pruned from the log.
+
 ## 2026-06-14
 
 ### Added
