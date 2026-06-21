@@ -93,6 +93,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-06-12 — **naming** — convention: orchestrators `<scope>-<team-noun>` (crew/panel/sweep); roles named as personas (noun) not tasks; coverage roles `<dimension>-scout`. Why: catalog looked random.
 - 2026-06-12 — **renames** — `parallel-research-sweep`→`research-sweep`; role personas → crew-aligned nouns (architect/debugger/optimizer/reviewer/refactorer/builder). Why: unify role vocab.
 - 2026-06-12 — **attribution** — roles personas credit @nahidulislam404's prompt thread as inspiration; all plugins are Alex's own original work (MIT, per plugin.json author). Why: public-repo provenance.
+- 2026-06-21 — **research-sweep-learning** — 1.1.3 adds per-run log, thin-agent diagnosis (slice vs agent), demote/retire rule, `## Research sweep` graduation block. Why: closes the only orchestrator without a log.
 
 ### Historic (older than 14 days · see git log for the build-up)
 
