@@ -49,6 +49,13 @@ Extracts each agent's final message from its JSONL transcript with a `jq` + `awk
 
 Runs a fresh verifier agent that didn't produce the data: spot-checks a 10–20% sample against primary sources, hunts for fabricated URLs/dates/IDs, checks cross-agent seams for duplicates, and tests the volume claim and gaps. Dedup, normalization, and URL verification follow as separate passes.
 
+== What's new in 1.1.3
+
+* *Per-run log* — sweeps now write an entry to `.claude/research-sweep/log.md` with run-id, roster, partition, per-role volume + thin-diagnosis, verifier findings, dedup hotspots, source-trust, steering, and graduations. Seeded from a shipped schema on first run. Closes research-sweep's biggest cross-run learning gap (the other two orchestrators already had a log).
+* *Thin-agent diagnosis* — partial failures are now classified as *slice-thin* (corpus genuinely sparse → merge / lower target) or *agent-thin* (web denied / weak prompt / wrong angle → re-run / re-role), mirroring crew's capability-vs-ownership ladder. Logged as `thin:` events.
+* *Demote / retire rule* — a stable coverage role with two thin runs (no fix) demotes to probationary; three retires it. An angle the user has cut at the roster gate three times retires by default-overcoverage.
+* *Graduation block* — patterns holding across ≥3 sweeps in a repo (default roster for a corpus, authoritative sources, untrusted sources, ID-disambiguation rules, skip-angles) graduate into a `## Research sweep` block in the repo's `CLAUDE.md`; graduated entries are pruned from the log.
+
 == What's new in 1.1.2
 
 * *Fable suggestion removed* — Anthropic suspended Claude Fable 5 / Mythos 5 on 2026-06-12 in response to
