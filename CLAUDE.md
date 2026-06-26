@@ -94,6 +94,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-06-12 — **renames** — `parallel-research-sweep`→`research-sweep`; role personas → crew-aligned nouns (architect/debugger/optimizer/reviewer/refactorer/builder). Why: unify role vocab.
 - 2026-06-12 — **attribution** — roles personas credit @nahidulislam404's prompt thread as inspiration; all plugins are Alex's own original work (MIT, per plugin.json author). Why: public-repo provenance.
 - 2026-06-21 — **research-sweep-learning** — 1.1.3 adds per-run log, thin-agent diagnosis (slice vs agent), demote/retire rule, `## Research sweep` graduation block. Why: closes the only orchestrator without a log.
+- 2026-06-26 — **evolve-audit** — 1.1.0 adds whole-file size check (25/40 KB), self-report on missing D&L heading, staleness trigger (closes #16). Why: siblings hit size cap; audit stayed silent.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

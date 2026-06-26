@@ -7,6 +7,25 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-26
+
+### Added
+- **evolving-claude-md 1.1.0** — three audit upgrades after a sibling-repo survey found that
+  none of the live CLAUDE.md files were triggering compaction even though most were past the
+  Claude Code whole-file size pressure. Three changes:
+  - **Whole-file size check** in `audit-claude-md.py` (warn 25 KB, recommend 40 KB) — the
+    actual context-pressure dimension. Catches bloat that lives outside `### Decisions &
+    Learnings` (Conventions / Architecture / Gotchas / Changelog) which the entry/line
+    counters never saw.
+  - **Self-report when D&L is missing** — a CLAUDE.md without the section no longer exits
+    silently; the audit reports total file size + dated-bullet count and recommends wiring
+    `evolving-claude-md`. This is what was hiding the bloat in repos like `builder`.
+  - **Staleness trigger** (closes alexmskills#16) — extracts backticked artifact-looking
+    tokens (paths, `ClassName.method`, `--cli-flags`, `<xml-tags>`, known-extension
+    filenames) from each entry, runs `git grep -qF` against the tree, flags entries citing
+    ≥2 missing tokens. Wall-clock-budget-capped (~2.5s) so the hook stays under its
+    timeout. Gives the loop a *delete* lever, not just a *compress* lever.
+
 ## 2026-06-21
 
 ### Added
