@@ -33,9 +33,15 @@ This skill is model-invokable — most often you just ask in natural language: "
 
 The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the hooks register on enable with nothing to add to settings:
 
-* *SessionStart* — `audit-claude-md.py` checks the D&L section and injects a compaction/graduation recommendation when it is bloated; silent when healthy.
+* *SessionStart* — `audit-claude-md.py` checks the D&L section + whole-file size + staleness and injects a recommendation when something needs attention; silent when healthy.
 * *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
-* *PostCompact* — re-runs the audit so the assistant sees the current D&L state without paying to re-read the whole file.
+* *PostCompact* — re-runs the audit so the assistant sees the current state without paying to re-read the whole file.
+
+== What's new in 1.1.0
+
+* *Whole-file size check* — audit now reports total `CLAUDE.md` KB independently (warn 25 KB, recommend 40 KB). Catches bloat that lives outside the `### Decisions & Learnings` section (Conventions / Architecture / Gotchas) which the entry/line counters never saw.
+* *Self-report when D&L is missing* — a repo without the `### Decisions & Learnings` section no longer exits silently; the audit reports the file size + total dated-bullet count and nudges to wire `evolving-claude-md`.
+* *Staleness trigger* — for each D&L entry, the audit extracts backticked artifact-looking tokens (paths, `ClassName.method`, `--cli-flags`, `<xml-tags>`, filenames with known extensions) and runs `git grep -qF` against the tree. Entries citing ≥2 missing tokens surface as "may be wrong now" candidates. Budget-capped (~2.5s) so the hook stays fast. Closes the only signal the bloat-only audit lacked: a *delete* lever, not just a *compress* lever.
 
 === Entry format contract
 
