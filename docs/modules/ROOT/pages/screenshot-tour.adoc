@@ -1,0 +1,95 @@
+= Screenshot Tour
+:navtitle: screenshot-tour
+
+Build a *presentation-ready screenshot deck* of the current product — for demos, slide decks, stakeholder walkthroughs, or release announcements. The skill discovers the aspects worth showing, proposes an editable plan, captures each with the right tool per surface (the project's existing browser driver for web — Selenium-Java by default on JVM repos, Playwright for Node/Python; *VHS* for CLI/TUI; *Freeze* for code and output stills), and assembles a captioned, narrative-ordered deck under `presentation/`.
+
+Slide-deck export, README integration, and docs-site embedding are *opt-in follow-ups*, not part of the core loop. The deliverable is the deck itself.
+
+== Install
+
+[source,text]
+----
+/plugin install screenshot-tour@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+/screenshot-tour:screenshot-tour
+----
+
+Or ask in natural language: "build a presentation deck of this product", "screenshots for the slide deck", "I need to present this Friday — show what it does".
+
+== When to use it
+
+* Preparing for a demo, stakeholder meeting, release announcement, or pitch
+* "presentation deck", "demo deck", "slide-ready screenshots", "show what this does"
+* Walking a non-engineer through what the product actually does, end to end
+* Capturing a *consistent* set of images across features so the deck reads as one product
+
+Skip for: single ad-hoc screenshots (use `Bash` directly), visual regression tests (use Chromatic / Playwright tests), or docs-site illustrations (different audience, different framing — though the deck *can* feed those as an opt-in follow-up).
+
+== The three phases
+
+=== Discover — propose the plan
+
+Reads README + entry points (`--help`, route tables, public API) + `docs/` nav + recent CHANGELOG, then writes an editable `presentation/plan.md` with 5–12 numbered aspects and a proposed capture method per aspect. *Stops and asks the user to confirm the plan before any capture runs* — a 12-aspect deck costs real time, and capturing the wrong aspects is the most expensive failure mode.
+
+=== Capture — execute the plan, one aspect at a time
+
+For each aspect, runs the matching capture method. The right tool per surface:
+
+* *Web app* — the project's *existing* browser-driver test stack (don't introduce a new one). Defaults: Selenium / Selenide for Java, Playwright for Node/Python, or whatever already lives in `pom.xml` / `package.json` / `requirements.txt`. Cypress, WebDriverIO, TestCafe, `shot-scraper` all work — the skill's contract is "one recipe per aspect, numbered, lands in `presentation/`" — *how* the recipe runs is up to the project.
+* *CLI / TUI* — *Charmbracelet VHS*. Tape-file syntax → PNG / GIF / MP4. Reproducible, scriptable, renders text with fixed-width fonts so column alignment survives.
+* *Code snippet / config / output* — *Charmbracelet Freeze*. Pretty-prints code or live ANSI output to PNG with window chrome. No runtime, no terminal.
+* *Manual fallback* — for aspects only a human can capture cleanly (mobile UI, OS dialogs, hardware). Marked `*method: manual*` in the plan; the user supplies the file.
+
+Per-aspect recipes (`*.tape`, `*.spec.ts`, `*Test.java`, …) land under `presentation/recipes/` so the deck is *re-runnable* on the next release.
+
+=== Assemble — write the manifest
+
+Writes `presentation/tour.md`: a one-page captioned manifest with each image ordered for narrative (Hero → Install → 2–3 core flows → Advanced → Outcome). Optionally generates a `presentation/contact-sheet.png` (5×N grid of all captures) via ImageMagick `montage`.
+
+== Quality bar — would this deck land?
+
+Before finishing, gut-checks the deck against three questions:
+
+. *Does the hero shot answer "what is this"?* A reader who skips everything else should still know what the product does from image 1.
+. *Could you swap any two adjacent images without losing the story?* If yes, the order is too arbitrary — re-narrate.
+. *Is anything clearly missing?* Walk the README's Features section and the `--help` / route table again. The discovery phase always misses 1–2 aspects.
+
+If any answer is "no", iterate on the *plan* (don't re-capture; re-design).
+
+== Format rules (apply across all methods)
+
+* *PNG for stills* (no JPEG; JPEG artifacts murder small text). GIF / WEBM / MP4 for animated aspects only.
+* *One consistent set of dimensions* per deck (e.g. all web shots 1440×900, all VHS shots 1200×720). The deck reading as one product matters more than each shot being perfectly tight.
+* *Numbered prefixes* (`01-`, `02-`, …) so file order = deck order.
+* *No dev clutter* — close DevTools, hide notification banners, clear test fixtures, mask secrets. The deck represents the product, not the dev environment.
+* *Light theme by default* (better print legibility for slides); dark variants under `presentation/dark/` if needed.
+
+== Self-learning loop
+
+Each run appends an entry to `.claude/screenshot-tour/log.md` recording the product type, aspects planned vs captured vs fallback, tools used + their gotchas, what the user edited at the plan gate, and any pattern that has graduated to the repo's `CLAUDE.md`. After 2–3 successful runs in the same repo, stable invariants (default product type, standard dimensions, theme, canonical aspect list, default capture tool per surface) graduate into a `## Screenshot tour` block in `CLAUDE.md` so the next run starts there.
+
+== Files this skill owns
+
+* `presentation/plan.md` — editable tour plan, user-gated before capture
+* `presentation/tour.md` — final captioned manifest
+* `presentation/recipes/*` — per-aspect capture scripts (tape / spec / test)
+* `presentation/NN-<slug>.{png,gif}` — the captures
+* `presentation/contact-sheet.png` — optional 5×N grid
+* `.claude/screenshot-tour/log.md` — per-run log + graduation source
+
+== Optional follow-ups (not run by default)
+
+The deck under `presentation/` is the deliverable. These are opt-in consumers — only do them when the user asks.
+
+* *Slide-deck export* — re-package as Keynote / PowerPoint / Google Slides / Reveal.js / Marp slides with captions as speaker notes. Closest fit; reach for first when the user says "I'm presenting on Friday".
+* *README integration* — propose a README diff that adds the hero image + a `See full tour →` link to `presentation/tour.md`.
+* *Antora / docs-site page* — render the deck as a docs-site page.
+
+== Provenance
+
+Built on Charmbracelet *VHS* (https://github.com/charmbracelet/vhs[github.com/charmbracelet/vhs]) and *Freeze* (https://github.com/charmbracelet/freeze[github.com/charmbracelet/freeze]); the web layer is driver-agnostic and reuses whatever the project already uses (Selenium, Selenide, Playwright, Cypress, …). The *tour* layer (discovery → plan → capture → assemble → graduate) is original to this skill.

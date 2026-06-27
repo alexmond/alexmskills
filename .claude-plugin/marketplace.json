@@ -196,6 +196,25 @@
         "self-learning",
         "agents"
       ]
+    },
+    {
+      "name": "screenshot-tour",
+      "displayName": "Screenshot Tour",
+      "source": {
+        "source": "github",
+        "repo": "alexmond/alexmskills",
+        "path": "plugins/screenshot-tour"
+      },
+      "description": "Build a presentation-ready screenshot deck of the current product — discovers the aspects worth showing, proposes an editable plan, captures each with the right tool per surface (project's existing browser driver for web, VHS for CLI, Freeze for code), and assembles a captioned, narrative-ordered deck under presentation/. Slide-deck export and README integration are opt-in follow-ups.",
+      "version": "1.0.0",
+      "category": "workflow",
+      "keywords": [
+        "presentation",
+        "demo",
+        "deck",
+        "screenshot",
+        "slides"
+      ]
     }
   ]
 }
