@@ -37,6 +37,10 @@ The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the
 * *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
 * *PostCompact* — re-runs the audit so the assistant sees the current state without paying to re-read the whole file.
 
+== What's new in 1.1.1
+
+* *Merge as the fourth downward pressure* — SKILL.md now documents merging same-session same-area clusters (phased rollouts `e2a`/`e2b`/`e3`/`e4`; multi-aspect bursts within ~48h) as the compaction lever that works *pre-14-days*. Graduation and quarterly archive both require old entries; merge does not. Discovered while compacting jvmlens's 37-entry log when the audit fired "RECOMMENDED" but every documented pressure was blocked.
+
 == What's new in 1.1.0
 
 * *Whole-file size check* — audit now reports total `CLAUDE.md` KB independently (warn 25 KB, recommend 40 KB). Catches bloat that lives outside the `### Decisions & Learnings` section (Conventions / Architecture / Gotchas) which the entry/line counters never saw.

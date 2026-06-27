@@ -83,17 +83,29 @@ The D&L section is split into two subsections:
 
 The Recent section is what Claude actively scans every turn. Historic stays minimal — one-liners with teasers. New entries always go into Recent.
 
-## Pruning, graduation, archiving — three downward pressures
+## Pruning, graduation, archiving — four downward pressures
 
 ### 1. Strike-through on reversal
 When a decision is reversed, strike-through with `~~...~~` and add a follow-up explaining the change. Don't silently delete.
 
-### 2. Graduation — when a pattern stabilizes
+### 2. Merge same-session clusters (the pre-14-days lever)
+When a single work session lands 4+ entries about one piece of work — phased rollouts (`e2a-web`, `e2b-db`, `e3-consume`), same-feature aspects (`diff` + `diff-absolute`), bursts dated within ~48 hours of one another on the same area — **collapse them into one consolidated entry** with a single broader topic-tag. The compressed body keeps the load-bearing whys; the per-aspect detail moves to `docs/decisions/{date}-{topic}.md` if it's still wanted.
+
+This is the *only* compaction action that works pre-14-days. Graduation requires 14-day stability (so a stable pattern hasn't proven itself yet); archive requires a date cutoff older than entries. When the audit fires "Compaction RECOMMENDED" but every entry is young, merge is what's left.
+
+Triggers for merging:
+- Multiple entries dated within ~48h on the same broad area (the topic-tags read as a numbered sequence, or as facets of one effort)
+- The audit's mega-entry list is empty (no single entry is too big) but the *count* is over threshold
+- Reviewing the cluster, the consolidated version reads at least as well as the spread
+
+Merge does NOT graduate — the result is still in Decisions & Learnings, not Conventions. Reversibility: if a sub-decision later evolves independently, split it back out as a new entry that strikes through the consolidated one with a follow-up.
+
+### 3. Graduation — when a pattern stabilizes
 When the same `**topic-tag**` appears in 3+ entries AND the latest is ≥14 days old without a contradiction, the pattern is stable. **Graduate** it: rewrite as a one-line rule in **Conventions** (or **Gotchas** if it's a trap), strike through the D&L entries, leave a single graduation line `- YYYY-MM-DD — **topic** — graduated → see Conventions § X`.
 
 The audit hook surfaces graduation candidates automatically. The skill's job is to act on the surfaced suggestion when the user OKs it.
 
-### 3. Quarterly archive
+### 4. Quarterly archive
 Run `archive-decisions.py --cutoff YYYY-MM-DD --apply` at the end of each quarter. The script:
 - Moves all entries older than the cutoff to `docs/decisions/{YYYY-Q}.md`
 - Replaces them in CLAUDE.md with a single teaser line
