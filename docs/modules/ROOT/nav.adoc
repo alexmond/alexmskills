@@ -14,6 +14,7 @@
 ** xref:implement-issue.adoc[Implement Issue]
 ** xref:maven-quality.adoc[Maven Quality Gate]
 ** xref:security-audit.adoc[Security Audit]
+** xref:screenshot-tour.adoc[Screenshot Tour]
 * Agents & research
 ** xref:review-agents.adoc[Review Agents]
 ** xref:research-sweep.adoc[Research Sweep]

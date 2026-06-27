@@ -1,0 +1,23 @@
+{
+  "name": "screenshot-tour",
+  "description": "Build a presentation-ready screenshot deck of the current product for demos, slide decks, and stakeholder walkthroughs. Discovers the aspects worth showing (entry points, routes, --help, recent CHANGELOG), proposes an editable plan, captures each aspect with the right tool per surface (the project's existing browser driver for web — Selenium-Java by default on JVM repos, Playwright for Node/Python, or any framework already in the repo / VHS for CLI / Freeze for code snippets), and assembles a captioned, narrative-ordered deck under `presentation/`. Re-runnable per-aspect; evolves via a per-run log. Slide-deck export, README integration, and docs-site embedding are opt-in follow-ups, not the default.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "presentation",
+    "demo",
+    "deck",
+    "screenshot",
+    "product-tour",
+    "slides",
+    "selenium",
+    "playwright",
+    "vhs"
+  ]
+}

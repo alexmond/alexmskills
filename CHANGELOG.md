@@ -7,6 +7,22 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-27 (later)
+
+### Added
+- **screenshot-tour 1.0.0** — new plugin: build a presentation-ready screenshot deck of the
+  current product for demos, slide decks, and stakeholder walkthroughs. Three phases:
+  *discover* (read README + entry points + `--help`/routes + recent CHANGELOG → propose 5–12
+  numbered aspects in `presentation/plan.md`, user-gated), *capture* (one recipe per aspect
+  under `presentation/recipes/`, using the right tool per surface — the project's existing
+  browser driver for web (defaults: Selenium-Java for JVM repos, Playwright for Node/Python),
+  Charmbracelet VHS for CLI/TUI, Charmbracelet Freeze for code and output stills, manual
+  fallback for OS dialogs / mobile / hardware), *assemble* (captioned narrative-ordered
+  `presentation/tour.md`, optional ImageMagick contact sheet). Self-learning via
+  `.claude/screenshot-tour/log.md` → graduates stable invariants into a `## Screenshot tour`
+  block in the repo's `CLAUDE.md`. Slide-deck export, README integration, and docs-site
+  embedding are opt-in follow-ups, not the default.
+
 ## 2026-06-27
 
 ### Added
