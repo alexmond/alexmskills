@@ -7,6 +7,19 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-27
+
+### Added
+- **evolving-claude-md 1.1.1** — adds **merge** as the fourth downward pressure in SKILL.md,
+  closing a loop gap discovered while dogfooding: when CLAUDE.md hits the audit's "compaction
+  RECOMMENDED" level but every entry is <14 days old, graduation (needs 14-day stability) and
+  quarterly archive (needs an old-enough cutoff) are both blocked. Merge collapses same-session
+  same-area clusters (phased rollouts like `e2a` / `e2b` / `e3` / `e4`; multi-aspect bursts
+  within ~48h) into one consolidated entry without claiming the pattern has stabilized — keeps
+  the load-bearing whys, splits per-aspect detail out to `docs/decisions/{date}-{topic}.md` if
+  still wanted, and is reversible (split a sub-decision back out via strike-through follow-up
+  if it evolves independently). Discovered while compacting `jvmlens`'s 37-entry / 25 KB log.
+
 ## 2026-06-26
 
 ### Added
