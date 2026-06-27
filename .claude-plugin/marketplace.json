@@ -17,7 +17,7 @@
         "path": "plugins/evolving-claude-md"
       },
       "description": "Turn CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks (audit, lint, archive).",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "category": "self-learning",
       "keywords": [
         "claude-md",
