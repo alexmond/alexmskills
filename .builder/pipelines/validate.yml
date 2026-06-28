@@ -3,6 +3,7 @@ name: Validate Marketplace
 # Builder analog of .github/workflows/validate.yml.
 # Validates the marketplace + plugin manifests and lints every plugin JSON file.
 on: [push, manual]
+checkout: true
 push:
   branches: [main]
 
@@ -10,12 +11,10 @@ jobs:
   validate:
     image: debian:stable-slim
     steps:
-      - name: Install jq + git
+      - name: Install jq
         run: |
           apt-get update -qq
-          apt-get install -y -qq --no-install-recommends jq git ca-certificates
-      - name: Checkout
-        run: git clone --depth 1 https://github.com/alexmond/alexmskills.git .
+          apt-get install -y -qq --no-install-recommends jq
       - name: Validate marketplace + plugin manifests
         run: bash scripts/validate-marketplace.sh
       - name: Lint all JSON manifests
