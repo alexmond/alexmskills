@@ -1,7 +1,7 @@
 {
   "name": "roles",
-  "description": "A per-repo repository of evolving roles (.claude/roles/) usable four ways: solo via /roles:as or per-persona skills, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles. Ships seed personas, an init + graduation-audit hook, and the shared-core convention.",
-  "version": "1.0.0",
+  "description": "A per-repo repository of evolving roles (.claude/roles/) usable four ways: solo via /roles:as or per-persona skills, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles. Ships seed personas, a reactive init + graduation-audit SessionStart hook, the shared-core convention, and the `/roles:evolve` sub-skill that audits role files on demand (consolidation, staleness, body-drift, solo→core graduation candidates) so role personas keep improving after the first graduation. All proposals user-gated.",
+  "version": "1.1.0",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"

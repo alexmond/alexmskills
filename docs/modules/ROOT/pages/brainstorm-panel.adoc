@@ -46,6 +46,10 @@ Chooses a coordination style to fit the work type: *swarm → converge*, *round-
 
 Presents an *editable lineup the user signs off on first*, then runs each role as a parallel subagent per round — contribute, triage, advance, hand off — until the bar is met, the cap is hit, or only cosmetic notes remain. Delivers the result, the plan that ran, a changelog, and any unresolved tensions.
 
+== What's new in 1.2.0
+
+* *Graduation now routes to the right layer.* Previously the SKILL.md said "graduate stable findings to the repo's `## Panel roles` block in CLAUDE.md" — dumping per-seat wisdom, repo facts, and cross-context lessons into one place that the crew and sweep never read. The three-layer split is now explicit: *per-seat wisdom* (how seat X behaves in panels) → the seat's row in `.claude/roles/panel.md`; *cross-context wisdom* (true wherever the role appears) → graduation candidate for the shared core `.claude/roles/<role>.md` `## Learnings (core)` (user-gated); *repo facts about seating* ("always seat X here") → the `## Panel roles` block in `CLAUDE.md` (small, terse). The destination is what makes the wisdom load-bearing on the next run. Discovered by an audit across five sibling repos finding the wrong-layer graduation backlog (e.g. `unitrack` Restraint Skeptic 5×+ + QA/SDET 4×+ never lifted; `builder` UI-five roster 6×+ never lifted).
+
 == What's new in 1.1.2
 
 * *Fable suggestion removed* — Anthropic suspended Claude Fable 5 / Mythos 5 on 2026-06-12 in response to

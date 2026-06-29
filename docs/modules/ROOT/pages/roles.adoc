@@ -24,8 +24,13 @@ claude --plugin-dir ./plugins/roles
 
 * *The `/roles:as` dispatcher* — the generic solo runner: `/roles:as <role> <target>` resolves the role from `.claude/roles/`, applies it, works the target, and appends a solo learning.
 * *Per-persona wrapper skills* — dedicated entry points that each load and apply one role: `builder`, `reviewer`, `debugger`, `architect`, `optimizer`, `refactorer`, and `skeptic`.
-* *The SessionStart hook* (`scripts/roles-init-audit.py`) — runs three safe, non-blocking jobs each session: *init* (instantiate any seed role into `.claude/roles/<role>.md` if absent — never overwriting an evolved copy), *index* (regenerate `.claude/roles/registry.md` from the core role files), and *graduation audit* (flag when a role's solo-learnings grow large, or a role appears in both `crew.md` and `panel.md`, as a candidate for graduating a lesson to the shared core — user-gated, never auto-applied).
+* *The SessionStart hook* (`scripts/roles-init-audit.py`) — runs three safe, non-blocking jobs each session: *init* (instantiate any seed role into `.claude/roles/<role>.md` if absent — never overwriting an evolved copy), *index* (regenerate `.claude/roles/registry.md` from the core role files), and *reactive graduation audit* (flag when a role's solo-learnings grow large, or a role appears in both `crew.md` and `panel.md`, as a candidate for graduating a lesson to the shared core — user-gated, never auto-applied).
+* *`/roles:evolve` sub-skill* (added 1.1.0) — on-demand deeper audit that surfaces refinement candidates per role: *consolidation* (≥3 Learnings entries on one topic → propose merge), *staleness* (Learnings citing files/symbols no longer in the tree → propose strike), *body-drift* (cumulative Learnings contradict the Charter/Body), and *solo→core graduation* (≥3 solo entries on one topic + role used by ≥2 consumer registries). All proposals user-gated; never silently rewrites a role file. Complements the reactive SessionStart hook with an actionable deep pass.
 * *Seed role files* — one `role.md` per persona, copied into the repo on first run as the canonical, evolving copy.
+
+== What's new in 1.1.0
+
+* *`/roles:evolve` sub-skill* — closes the "graduation gets a learning in, but nothing keeps the role file useful afterward" gap. Audits each role file across four dimensions (consolidation, staleness, body-drift, solo→core graduation) and emits user-gated proposals. Engine is `scripts/evolve-roles.py` — pure regex + `git grep` (no LLM), wall-clock budget-capped, excludes `.claude/roles/` itself from staleness search to avoid self-reference false positives.
 
 == How a role runs
 
