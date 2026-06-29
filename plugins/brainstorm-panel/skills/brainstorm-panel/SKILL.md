@@ -278,25 +278,44 @@ Keep entries terse and durable; skip one-off observations that won't recur.
 
 ### Graduate stable findings, prune the rest
 
-The log accumulates evidence and the registry accumulates seat wisdom; settled
-rules belong in `CLAUDE.md`, which remains the "always seat here" layer above
-both. When a finding holds across roughly three or more targets — a role
-consistently added (or always cut), a style that reliably fits a work type
-here — promote it:
+A finding that holds across ≥3 targets is *settled*. Promote it to the right
+destination — and only that one. The three layers, in order of how much
+context they cross:
 
-- A role that always belongs → add it to the repo's `## Panel roles` block so it's
-  proposed by default.
-- A role always cut for a work type → note that exception in the same block.
-- A style that reliably fits a work type → record it as a one-line hint there too.
+1. **Per-seat wisdom** (lessons about how seat X *behaves in panels* — pairing
+   gotchas, when it reliably wins scope, failure modes, charter refinements) →
+   the seat's row in `.claude/roles/panel.md` (panel registry). Promote
+   probationary → stable here after three or more useful seatings; the
+   `learnings` field accumulates the seat-in-panel wisdom. **Most graduations
+   land here.**
+2. **Cross-context wisdom** (a pattern that's true wherever the role appears —
+   in crew runs, sweep runs, and solo use too, not just panels) → graduation
+   *candidate* for the shared core role file at `.claude/roles/<role>.md` →
+   `## Learnings (core)`. **User-gated, never silent.** Only proposed if the
+   shared `roles` plugin is installed; absent it, this layer is a no-op and the
+   wisdom stays in the registry row.
+3. **Repo facts about seating** (this *repo* always seats X for UI work; always
+   cuts Y for release work; default style for category Z) → the repo's
+   `CLAUDE.md` `## Panel roles` block — small, terse, just the seating
+   defaults the panel pre-fills the roster from. **Not the place for per-seat
+   wisdom or generalized lessons.**
 
-Then prune the graduated entries from the log so it stays evidence, not history.
-Periodically (or once the log passes ~30 entries) consolidate: merge duplicates,
-drop anything superseded, and verify referenced paths still exist. A log that only
-grows becomes noise; a lean one keeps steering well.
+Then prune the graduated entries from `log.md` so it stays evidence, not
+history. Periodically (or once the log passes ~30 entries) consolidate: merge
+duplicates, drop anything superseded, verify referenced paths still exist. A
+log that only grows becomes noise; a lean one keeps steering well.
 
-Treating the user's gate edits as the training signal is the same correction-driven
-loop used elsewhere in this setup — the panel converges on how *this* repo likes to
-work, one target at a time.
+Treating the user's gate edits as the training signal is the same
+correction-driven loop used elsewhere in this setup — the panel converges on
+how *this* repo likes to work, one target at a time.
+
+#### Why the split matters
+
+A finding routed to the wrong destination is invisible to the consumer that
+needs it: per-seat wisdom dumped in CLAUDE.md is never read by the crew or
+sweep that also seat that role; cross-context wisdom kept in the panel
+registry never reaches the panels that don't seat that role first. **The
+destination is what makes the wisdom load-bearing on the next run.**
 
 ## Safety and scope
 
