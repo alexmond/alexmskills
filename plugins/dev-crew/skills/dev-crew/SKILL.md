@@ -229,10 +229,35 @@ learns your cycle — it's a feature of the loop, not a fight with it.
 The crew tunes itself by reading `log.md` and writing back. Run the graduation
 pass automatically at the end of a run, or on demand ("graduate the crew").
 
-**Graduate a lineup.** When the same category has run a stable roster ≥3 times
-with good outcomes, write/update that category's recommended lineup in the
-repo's `## Dev crew` block (use `templates/CLAUDE-md-block.md`). That block is
-what intake reads next time, so the roster checkpoint pre-fills correctly.
+**Per-role wisdom always lands in the crew registry row first.** Pairing
+gotchas, when-to-seat refinements, recurring failure modes, charter tweaks —
+these are *role-in-crew* lessons and belong in the role's row in
+`.claude/roles/crew.md`, not in the repo's `CLAUDE.md`. The CLAUDE.md `## Dev
+crew` block is reserved for **repo facts about seating** (default lineup per
+category, repo-specific role wiring like "qa runs `./mvnw verify`", model
+re-tier defaults) — small, terse, pre-fills the roster checkpoint. Per-role
+wisdom in that block is invisible to anyone reading the role's row, and to
+the panel / sweep that also seat that role.
+
+**The three destinations, in order of how much context they cross:**
+
+1. **Per-role wisdom** (how role X *behaves in crew runs* — pairing notes,
+   failure modes, model-fit signals) → the role's row in
+   `.claude/roles/crew.md`. **Most graduations land here.** Promote
+   probationary → stable here after ≥3 useful runs.
+2. **Cross-context wisdom** (a pattern that's true wherever the role appears —
+   panels, sweeps, solo use, not just crew) → graduation *candidate* for the
+   shared core role file at `.claude/roles/<role>.md` → `## Learnings (core)`.
+   **User-gated, never silent.** Only proposed when the shared `roles` plugin
+   is installed.
+3. **Repo facts about seating** (default lineup for category X here, repo-wired
+   tool commands, model re-tier defaults for this stack) → `CLAUDE.md` `## Dev
+   crew` block (use `templates/CLAUDE-md-block.md`).
+
+**Graduate a lineup** (layer 3). When the same category has run a stable
+roster ≥3 times with good outcomes, write/update that category's recommended
+lineup in the repo's `## Dev crew` block. That block is what intake reads next
+time, so the roster checkpoint pre-fills correctly.
 
 **Re-tier a model.** Mine `log.md` for model-fit signals and propose changes,
 each with its rationale logged:
@@ -241,14 +266,18 @@ each with its rationale logged:
 - *Demote* when a role's output never needed the heavier tier (e.g. deployer on
   `sonnet` only ever ran mechanical steps -> propose `haiku`).
 Apply re-tiers by editing the role's subagent `model` frontmatter and the
-registry row; record old->new + reason in `.claude/roles/crew.md` and `log.md`.
+registry row; record old->new + reason in the row's `learnings` (layer 1) and
+`log.md`. A re-tier that's *right everywhere* (not just this repo's stack) is
+a layer-2 graduation candidate against the shared core role file.
 
 **Graduate a steer.** When the `steering:` log shows you injecting the same kind
 of correction ≥3 times (a library/pattern preference, a recurring re-scope, a
-convention the crew keeps missing), promote it: into the repo's `CLAUDE.md`
-conventions, into the relevant role's prompt, or — if it's really a missing
-owner — into a new role. Your repeated adjustments are the highest-signal
-training data the loop has.
+convention the crew keeps missing), promote it to the **right layer**: a steer
+about *how role X works* → the role's `crew.md` row (layer 1); a steer that's
+context-independent → graduation candidate for shared core (layer 2); a steer
+that's a *repo convention* the crew kept missing → the repo's `CLAUDE.md`
+conventions section (not the `## Dev crew` block — those are seating defaults).
+Your repeated adjustments are the highest-signal training data the loop has.
 
 **Mint a new role.** When `log.md` shows a recurring failure class that no
 current role owns (e.g. repeated migration breakage, perf regressions slipping
@@ -257,14 +286,18 @@ past qa, security findings late), follow the **New-role protocol**:
 2. Scaffold `~/.claude/agents/dc-<role>.md` from `templates/role-template.md`,
    set its `model`/`tools`/`effort`, read-only tools for review roles.
 3. Register it in `.claude/roles/crew.md` with status `probationary`.
-4. Use it in the relevant category; after ≥3 clean runs, flip to `stable` and it
-   becomes eligible for graduation into repo `## Dev crew` blocks.
+4. Use it in the relevant category; after ≥3 clean runs, flip to `stable` and the
+   category's *lineup* becomes eligible for graduation into the repo's
+   `## Dev crew` block (layer 3). The role's own wisdom stays in its registry
+   row (layer 1) and graduates to the shared core (layer 2) when it generalizes.
 Retire or merge roles that go unused or overlap.
 
-**Scope of graduation.** Repo-specific patterns -> that repo's `## Dev crew`
-block. Patterns that hold across repos (a model re-tier that's right everywhere,
-a broadly useful new role) -> your user-level `~/.claude/roles/` defaults, so every repo
-inherits them.
+**Why the split matters.** A finding routed to the wrong layer is invisible to
+the consumer that needs it: per-role wisdom dumped in CLAUDE.md is never read
+by the panel / sweep that also seat that role; cross-context wisdom kept in
+the crew registry never reaches the orchestrators that don't seat that role
+first. **The destination is what makes the wisdom load-bearing on the next
+run.**
 
 ## Safety rails
 

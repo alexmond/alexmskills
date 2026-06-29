@@ -7,6 +7,39 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-29
+
+### Changed
+- **brainstorm-panel 1.2.0** / **dev-crew 1.2.0** — graduation now routes to the right layer of
+  the role substrate, not flat into CLAUDE.md. Three-layer split is now explicit in both SKILL.md
+  files:
+  - **Per-role wisdom** (how the role *behaves in this orchestrator*) → the role's row in
+    `.claude/roles/{panel,crew}.md`.
+  - **Cross-context wisdom** (true in panels + crew + sweep + solo) → graduation *candidate*
+    for the shared core role file `.claude/roles/<role>.md` `## Learnings (core)` (user-gated;
+    only when the `roles` plugin is installed).
+  - **Repo facts about seating** (always seat X here; default lineup per category) → the small,
+    terse `## Panel roles` / `## Dev crew` block in `CLAUDE.md` — *not* the place for per-role
+    wisdom or generalized lessons.
+
+  Why: a sibling-repo audit found that flat graduation to CLAUDE.md was leaving per-role wisdom
+  invisible to the orchestrators that don't seat the role first, defeating the shared-role-
+  substrate premise. Discovered by `unitrack`'s Restraint Skeptic (5×+) and QA/SDET (4×+) never
+  lifting, and `builder`'s UI-five roster (6×+) never lifting — all because the only documented
+  destination was the wrong layer.
+
+### Added
+- **roles 1.1.0** — new sub-skill `/roles:evolve` that closes the "graduation gets a learning
+  *in*, but nothing keeps the role file useful *after*" gap. Audits each role file across four
+  dimensions: *consolidation* (≥3 Learnings entries on one topic → propose merge),
+  *staleness* (Learnings citing files/symbols no longer in the tree, excluding `.claude/roles/`
+  itself to avoid self-reference false positives → propose strike), *body-drift* (≥3 core
+  learnings contradict the Charter/Body → propose refresh), and *solo→core graduation*
+  (≥3 solo entries on one topic + role used by ≥2 consumer registries → propose lift). Engine
+  is `scripts/evolve-roles.py` — pure regex + `git grep`, no LLM, wall-clock budget-capped
+  (~4s). All proposals user-gated; never silently rewrites a role file. Complements the
+  existing reactive SessionStart `roles-init-audit.py` hook with an actionable deep pass.
+
 ## 2026-06-27 (later)
 
 ### Added
