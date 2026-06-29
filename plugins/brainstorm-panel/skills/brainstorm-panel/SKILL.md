@@ -213,8 +213,23 @@ panel as input. Sign-off requires evidence of the actual behavior, not reasoning
 about it: a screenshot of one happy-path case is not testing.
 
 **Unanimity guard.** If all seats agree in round 1, treat early unanimity as the
-highest-risk signal, not a success signal: the skeptic must steelman the
+**highest-risk signal**, not a success signal: the skeptic must steelman the
 strongest opposing view before the director accepts the position.
+
+**The guard leaves evidence, always.** Every round-1-unanimous run records its
+`steelman:` outcome in the log (see Step 6 template) — one of *ran, opposing
+view was X, retained / adopted / panel reversed* | *waived because <reason
+that names why this target legitimately has a single right shape>* | *n/a —
+substantive pushback present in R1*. **A silent unanimity is unaudited and
+indistinguishable from groupthink.** A waiver with a reason is fine; a waiver
+without one is the failure mode this guard exists to catch.
+
+Acceptable waiver reasons include: the target is binary (commit-or-don't,
+A-or-B with no third option), the scope was pre-constrained (the user pinned
+the answer-shape in the brief), or the panel had already done a round of
+divergence elsewhere and this is the confirmation pass. Acceptable adoption
+outcomes leave a follow-up note ("opposing view of X adopted; original
+position retained as fallback if Y").
 
 Stop when the bar is met and the pushback roles sign off, OR the cap is hit, OR a
 round yields only cosmetic notes. On multi-round runs, compare each round's
@@ -270,9 +285,19 @@ cut means the default over-reaches here. Record those alongside how the run went
 ## <date> — <target> (<work type>)
 - Proposed: <roles>. User added: <X>. User removed: <Y>.
 - Style: <style> — fit well | next time try <other> because <reason>.
+- Rounds: <N> (cap was <M>). Stop reason: <bar met | cap | cosmetic-notes-only | early-no-movement>.
+- Unanimity in R1: <none — substantive pushback present | unanimous>.
+- Steelman: <ran, opposing view was X — retained | adopted | panel reversed> | <waived because <reason>> | <n/a — pushback present in R1>.
 - Recurring: <a critique that has now come up on multiple targets here>.
 - Note: <domain quirk or convention worth respecting next time>.
 ```
+
+**The `Steelman:` field is required when `Unanimity in R1: unanimous`.** It is
+the only auditable evidence the unanimity guard fired. Reframe wording
+elsewhere accordingly: prefer *"5/6 aligned — note: low dissent; opposing
+view considered was Y, retained because Z"* over the older *"5/6 aligned,
+strong cross-role convergence"* — unanimity is a risk signal, not a positive
+outcome to celebrate in the log.
 
 Keep entries terse and durable; skip one-off observations that won't recur.
 

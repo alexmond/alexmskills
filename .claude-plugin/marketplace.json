@@ -55,7 +55,7 @@
         "path": "plugins/brainstorm-panel"
       },
       "description": "Assemble a task-fit panel of role-specialized agents, pick a coordination style, and run a generate-critique-refine loop that converges on a strong result.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "category": "self-learning",
       "keywords": [
         "agents",

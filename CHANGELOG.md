@@ -7,6 +7,24 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-29 (later)
+
+### Changed
+- **brainstorm-panel 1.2.1** (closes #25) — make the unanimity guard *auditable*. Audit across
+  47 panel runs in 5 sibling repos found that 30% of runs were round-1 unanimous but **0 logs
+  ever recorded the steelman guard firing** — the 1.1.0 anti-groupthink remedy was invisible
+  in practice. Two changes:
+  - Log entry template now requires a `Steelman:` field whenever R1 was unanimous, with one of
+    four outcomes (`ran, opposing view was X — retained | adopted | panel reversed` /
+    `waived because <reason>` / `n/a — pushback present in R1`). Silent unanimity is now
+    indistinguishable from groupthink and must be called out.
+  - SKILL.md prose reframed: unanimity is a **risk signal**, not a positive outcome to
+    celebrate. New log wording: *"5/6 aligned — note: low dissent; opposing view considered
+    was Y"* over the older *"strong cross-role convergence"*.
+  - Anti-anchoring (seats see only the question in R1, no prior synthesis — `affaan-m/ECC
+    council` mechanism) is **deferred**, contingent on a revalidation pass after 10+ new runs
+    with the auditable guard. Goal is the cheapest fix that turns invisible-guard into evidence.
+
 ## 2026-06-29
 
 ### Changed
