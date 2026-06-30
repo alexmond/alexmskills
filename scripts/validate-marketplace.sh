@@ -35,11 +35,21 @@ validate_channel() {
   if [ "$count" -eq 0 ]; then warn "no plugins yet (empty channel)"; return; fi
 
   while read -r name; do
-    local src_type src_path dir manifest pname ver
+    local src_type src_inner src_path dir manifest pname ver
     src_type="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source | type' "$mp")"
     if [ "$src_type" = "object" ]; then
-      # Explicit { source: github, repo, path } form — path is repo-root-relative
+      src_inner="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source.source // ""' "$mp")"
       src_path="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source.path // ""' "$mp")"
+      # Guard: the `github` source type does NOT support `path` — it silently
+      # ignores it, cloning the full repo and using the repo root as the
+      # plugin root. Skills/hooks/plugin.json then never resolve. For own-repo
+      # plugins use the bare-string form (`"./plugins/<name>"`); for plugins
+      # in a different repo use `git-subdir`. See anthropics/claude-code#43811.
+      if [ "$src_inner" = "github" ] && [ -n "$src_path" ]; then
+        err "$name: source uses {source: \"github\", path: \"$src_path\"} — \"github\" silently ignores path. Use bare-string \"./$src_path\" (own-repo) or \"git-subdir\" (cross-repo)."
+        continue
+      fi
+      # Otherwise the object form's path is repo-root-relative for validation.
       dir="$root/$src_path"
     else
       # Bare-string form — resolve under pluginRoot, relative to the channel base
