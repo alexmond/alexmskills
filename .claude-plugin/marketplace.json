@@ -11,11 +11,7 @@
     {
       "name": "evolving-claude-md",
       "displayName": "Evolving CLAUDE.md",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/evolving-claude-md"
-      },
+      "source": "./plugins/evolving-claude-md",
       "description": "Turn CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks (audit, lint, archive).",
       "version": "1.1.1",
       "category": "self-learning",
@@ -30,11 +26,7 @@
     {
       "name": "dev-crew",
       "displayName": "Dev Crew",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/dev-crew"
-      },
+      "source": "./plugins/dev-crew",
       "description": "A self-evolving delivery crew: it composes a task-fit roster of role subagents (each on its own model tier) and runs them as a gated relay to deliver a target. architect → dev → qa → deployer is just one example lineup — the roster is chosen for the work.",
       "version": "1.2.0",
       "category": "self-learning",
@@ -49,11 +41,7 @@
     {
       "name": "brainstorm-panel",
       "displayName": "Brainstorm Panel",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/brainstorm-panel"
-      },
+      "source": "./plugins/brainstorm-panel",
       "description": "Assemble a task-fit panel of role-specialized agents, pick a coordination style, and run a generate-critique-refine loop that converges on a strong result.",
       "version": "1.2.1",
       "category": "self-learning",
@@ -68,11 +56,7 @@
     {
       "name": "learn-on-failure",
       "displayName": "Learn on Failure",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/learn-on-failure"
-      },
+      "source": "./plugins/learn-on-failure",
       "description": "Auto-save a durable learning to project memory whenever a task takes more than one fix cycle to resolve.",
       "version": "1.0.0",
       "category": "self-learning",
@@ -86,11 +70,7 @@
     {
       "name": "implement-issue",
       "displayName": "Implement Issue",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/implement-issue"
-      },
+      "source": "./plugins/implement-issue",
       "description": "Drive a GitHub issue from branch to PR with a guided plan → implement → verify → push workflow.",
       "version": "1.0.0",
       "category": "workflow",
@@ -105,11 +85,7 @@
     {
       "name": "maven-quality",
       "displayName": "Maven Quality Gate",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/maven-quality"
-      },
+      "source": "./plugins/maven-quality",
       "description": "Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects (codestyle, precommit, jacoco).",
       "version": "1.0.0",
       "category": "workflow",
@@ -125,11 +101,7 @@
     {
       "name": "security-audit",
       "displayName": "Security Audit",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/security-audit"
-      },
+      "source": "./plugins/security-audit",
       "description": "Scan a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets).",
       "version": "1.0.0",
       "category": "workflow",
@@ -143,11 +115,7 @@
     {
       "name": "review-agents",
       "displayName": "Review Agents",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/review-agents"
-      },
+      "source": "./plugins/review-agents",
       "description": "Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers.",
       "version": "1.0.0",
       "category": "review",
@@ -162,11 +130,7 @@
     {
       "name": "research-sweep",
       "displayName": "Research Sweep",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/research-sweep"
-      },
+      "source": "./plugins/research-sweep",
       "description": "A self-evolving 'discover' crew: it composes a task-fit team of coverage roles for an information space, fans them out in parallel, dedups, and adversarially verifies the findings. The discover counterpart to dev-crew (deliver) and brainstorm-panel (decide).",
       "version": "1.1.3",
       "category": "research",
@@ -181,11 +145,7 @@
     {
       "name": "roles",
       "displayName": "Role Registry",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/roles"
-      },
+      "source": "./plugins/roles",
       "description": "A per-repo repository of evolving roles (.claude/roles/) usable solo, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles — with seed personas, init + graduation-audit hook, and the shared-core convention.",
       "version": "1.1.0",
       "category": "self-learning",
@@ -200,11 +160,7 @@
     {
       "name": "screenshot-tour",
       "displayName": "Screenshot Tour",
-      "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "plugins/screenshot-tour"
-      },
+      "source": "./plugins/screenshot-tour",
       "description": "Build a presentation-ready screenshot deck of the current product — discovers the aspects worth showing, proposes an editable plan, captures each with the right tool per surface (project's existing browser driver for web, VHS for CLI, Freeze for code), and assembles a captioned, narrative-ordered deck under presentation/. Slide-deck export and README integration are opt-in follow-ups.",
       "version": "1.0.0",
       "category": "workflow",

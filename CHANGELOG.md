@@ -7,6 +7,28 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-06-29 (later 2)
+
+### Fixed
+- **marketplace.json source schema** (closes #28) — every plugin in both channels migrated from
+  the silently-broken `{source: "github", repo, path}` object form to the canonical relative-path
+  string form (`"./plugins/<name>"` for stable, `"./plugins/tune-repo"` for beta). The `github`
+  source type **only supports `repo`, `ref`, and `sha`** — it silently ignores `path`, cloning
+  the full repo and putting `installPath` at the repo root, where Claude Code then fails to find
+  any plugin's `.claude-plugin/plugin.json` or `skills/`. Every external user who tried
+  `/plugin install <name>@alexmskills` since the marketplace launched got a silent no-op
+  install. Found by an external bug report (initially misdiagnosed as a CLI bug) traced back to
+  upstream issue [anthropics/claude-code#43811](https://github.com/anthropics/claude-code/issues/43811)
+  (closed by the original reporter as "user error, wrong source type"). Sampled 5 well-known
+  public marketplaces (anthropics/claude-code, wshobson/agents, daymade/claude-code-skills,
+  obra/superpowers, affaan-m/everything-claude-code) — every one uses the relative-path string
+  form. We were the outlier.
+
+### Changed
+- **`scripts/validate-marketplace.sh`** — hard-fails on any plugin source that uses
+  `{source: "github", path: <anything>}` to prevent the regression. Validator now teaches the
+  correct alternative in the error message.
+
 ## 2026-06-29 (later)
 
 ### Changed
