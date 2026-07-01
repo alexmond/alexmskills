@@ -1,4 +1,5 @@
 = alexmskills — Claude Code Skills Marketplace
+:description: A curated Claude Code plugin marketplace of reusable, self-improving skills and agents — each an independently versioned plugin you install and update on demand.
 :navtitle: Overview
 
 `alexmskills` is a curated https://code.claude.com[Claude Code] **plugin marketplace** of reusable,
