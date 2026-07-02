@@ -105,6 +105,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-01 — **prompt-coach-praise-skills** — 0.4.0: +21 positives (sparing praise per Kohn/Dweck/Fogg) + mastery/first-after-fire + L6 skill-awareness (rule of three). Why: coach should praise + know its ecosystem.
 - 2026-07-02 — **prompt-coach-typo-tolerance** — 0.5.0: Levenshtein pre-pass on ~90 trigger words + adaptive tolerance + fallback-count stats. Why: dyslexic-friendly; rising fallback rate signals catalog gaps.
 - 2026-07-02 — **beta-source-clone-root** — bare-string plugin sources resolve from CLONE ROOT, not the marketplace.json parent. Beta plugins need `./beta/plugins/<n>`. Why: subdir install failed silently.
+- 2026-07-02 — **retire-beta-channel** — dropped beta channel; in-progress plugins now live in stable with `-beta` suffix (prompt-coach-beta, tune-repo-beta). Why: subdir/url/git-subdir workarounds kept multiplying.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

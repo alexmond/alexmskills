@@ -7,6 +7,47 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02 (later)
+
+### Changed
+- **Retired the beta channel entirely.** The `alexmskills-beta` marketplace
+  (previously at `beta/.claude-plugin/marketplace.json`) is gone. In-progress
+  plugins now live in the single stable marketplace with a `-beta` suffix in
+  the name — the current examples are `prompt-coach-beta` (0.5.0) and
+  `tune-repo-beta` (0.1.1). Same catalog, same install command, obvious at a
+  glance that it's beta quality.
+- **Why the pivot.** The two-channel setup kept hitting edge cases in the
+  Claude Code CLI — bare-string plugin sources resolved from clone root vs
+  marketplace-parent (fine for stable, broken for beta); `sparsePaths` not
+  honored; dual `marketplace.json` at repo-root vs subdir confusing install
+  vs `/reload-plugins`; `extraKnownMarketplaces` requiring per-user opt-in
+  with a moving schema (`git-subdir` → `github` + path → `url`) — each
+  workaround caught a class of user error but the surface area kept growing.
+  One channel + a suffix convention removes every one of them.
+- **Install path for beta plugins is now identical to stable.** No
+  `extraKnownMarketplaces`, no `git-subdir` gymnastics — just:
+
+  ```
+  /plugin marketplace add alexmond/alexmskills
+  /plugin install prompt-coach-beta@alexmskills
+  ```
+
+- **`make graduate PLUGIN=<name>-beta`** replaces `make new-beta` +
+  `make promote`. Renames the directory (drops the `-beta` suffix),
+  updates the plugin.json name, and rewrites the marketplace entry (drops
+  the `beta` category + keyword). Follow with `make bump` to set a real
+  release version.
+
+### Removed
+- `beta/` directory tree — the whole beta channel, README, and empty
+  scaffold folders.
+- `scripts/new-beta-plugin.sh` and `scripts/promote-plugin.sh` — replaced
+  by `make graduate` for the one operation that survives.
+- `extraKnownMarketplaces.alexmskills-beta` from `.claude/settings.json` —
+  no separate marketplace to register.
+- Beta-channel handling in `scripts/validate-marketplace.sh` — one channel,
+  simpler validator.
+
 ## 2026-07-02
 
 ### Added

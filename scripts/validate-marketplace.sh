@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Validate every marketplace channel and the plugin manifests it references.
+# Validate the marketplace + the plugin manifests it references.
 # Pure jq + bash — no Claude Code CLI required, so it runs anywhere (incl. CI).
 #
-# Channels validated:
-#   - stable: .claude-plugin/marketplace.json
-#   - beta:   beta/.claude-plugin/marketplace.json   (if present)
+# One channel, one catalog: .claude-plugin/marketplace.json at the repo root.
+# In-progress plugins live alongside stable ones under plugins/ with a
+# `-beta` suffix in the name (e.g. `prompt-coach-beta`) — no separate
+# marketplace file, no dual clone-root logic, no extraKnownMarketplaces
+# needed on the consumer side.
 #
-# Per channel, for each plugin entry:
+# For each plugin entry:
 #   - the plugin dir + .claude-plugin/plugin.json exist
 #   - plugin.json is valid JSON, name matches the marketplace entry, has a version
 #   - the plugin ships at least one component dir (skills/ agents/ commands/)
@@ -82,14 +84,10 @@ validate_channel() {
 }
 
 validate_channel "$root/.claude-plugin/marketplace.json"
-if [ -f "$root/beta/.claude-plugin/marketplace.json" ]; then
-  echo
-  validate_channel "$root/beta/.claude-plugin/marketplace.json"
-fi
 
 echo
 if [ "$fail" -eq 0 ]; then
-  echo "All channels valid."
+  echo "Marketplace valid."
 else
   echo "Validation failed." >&2
 fi

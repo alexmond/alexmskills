@@ -1,13 +1,13 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump new-beta promote install-help docs-build
+.PHONY: help validate list bump graduate install-help docs-build
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-validate: ## Validate every channel (stable + beta) + all plugin manifests
+validate: ## Validate the marketplace + all plugin manifests
 	@bash scripts/validate-marketplace.sh
 
 list: ## List catalog: name, version, description
@@ -26,13 +26,17 @@ bump: ## Bump a plugin version: make bump PLUGIN=dev-crew VERSION=1.1.0
 			.claude-plugin/marketplace.json > "$$mtmp" && mv "$$mtmp" .claude-plugin/marketplace.json; \
 		echo "Bumped $(PLUGIN) -> $(VERSION) in plugin.json and marketplace.json"
 
-new-beta: ## Scaffold a beta-channel plugin: make new-beta NAME=my-skill
-	@test -n "$(NAME)" || { echo "Usage: make new-beta NAME=<name>"; exit 1; }
-	@bash scripts/new-beta-plugin.sh "$(NAME)"
-
-promote: ## Promote a beta plugin to stable: make promote PLUGIN=my-skill
-	@test -n "$(PLUGIN)" || { echo "Usage: make promote PLUGIN=<name>"; exit 1; }
-	@bash scripts/promote-plugin.sh "$(PLUGIN)"
+graduate: ## Graduate a -beta plugin to stable: make graduate PLUGIN=prompt-coach-beta
+	@test -n "$(PLUGIN)" || { echo "Usage: make graduate PLUGIN=<name>-beta"; exit 1; }
+	@echo "$(PLUGIN)" | grep -q -- '-beta$$' || { echo "Only -beta plugins can be graduated"; exit 1; }
+	@new="$$(echo $(PLUGIN) | sed 's/-beta$$//')"; \
+		test ! -d "plugins/$$new" || { echo "plugins/$$new already exists"; exit 1; }; \
+		git mv "plugins/$(PLUGIN)" "plugins/$$new"; \
+		jq --arg n "$$new" '.name=$$n' "plugins/$$new/.claude-plugin/plugin.json" > tmp && mv tmp "plugins/$$new/.claude-plugin/plugin.json"; \
+		jq --arg from "$(PLUGIN)" --arg to "$$new" --arg src "./plugins/$$new" \
+			'(.plugins[] | select(.name==$$from)) |= (.name=$$to | .source=$$src | del(.category) | .keywords -= ["beta"])' \
+			.claude-plugin/marketplace.json > tmp && mv tmp .claude-plugin/marketplace.json; \
+		echo "Graduated $(PLUGIN) -> $$new. Next: make bump PLUGIN=$$new VERSION=<x.y.z>"
 
 install-help: ## Print local install/test commands for Claude Code
 	@echo "Test locally (no install):  claude --plugin-dir ./plugins/<name>"

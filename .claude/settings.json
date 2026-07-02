@@ -37,13 +37,5 @@
       }
     ]
   },
-  "enabledPlugins": {},
-  "extraKnownMarketplaces": {
-    "alexmskills-beta": {
-      "source": {
-        "source": "url",
-        "url": "https://raw.githubusercontent.com/alexmond/alexmskills/main/beta/.claude-plugin/marketplace.json"
-      }
-    }
-  }
+  "enabledPlugins": {}
 }

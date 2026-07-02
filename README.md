@@ -93,18 +93,23 @@ claude --plugin-dir ./plugins/dev-crew
 - **`learn-on-failure`** — install it and forget it; it captures a learning whenever a task needed
   more than one attempt.
 
-## Channels
+## Beta plugins
 
-Two marketplace channels ship from this one repo:
+In-progress / unproven plugins live in the same marketplace as stable ones, distinguished by a
+`-beta` suffix in the name (e.g. `prompt-coach-beta`, `tune-repo-beta`). No separate channel, no
+extra marketplace to opt into — you install them the same way as any other plugin:
 
-- **stable** — `alexmskills` (`.claude-plugin/marketplace.json`): released, versioned plugins.
-- **beta** — `alexmskills-beta` ([`beta/`](beta)): unreleased / in-progress plugins. Opt in with a
-  `git-subdir` source (see [`beta/README.md`](beta/README.md)), then
-  `/plugin install <name>@alexmskills-beta`.
+```
+/plugin install prompt-coach-beta@alexmskills
+```
+
+The suffix is intentional: it makes it obvious at install time and in the enabled-plugins list
+that this is a beta plugin. When one earns its stable slot, it graduates — the directory is
+renamed, the `-beta` drops from the name and marketplace entry, and the version bumps:
 
 ```bash
-make new-beta NAME=my-skill     # scaffold an unreleased plugin in the beta channel
-make promote PLUGIN=my-skill    # move it into the stable catalog when it's ready
+make graduate PLUGIN=prompt-coach-beta         # renames -> prompt-coach, updates marketplace
+make bump     PLUGIN=prompt-coach VERSION=1.0.0
 ```
 
 ## Versioning
@@ -127,11 +132,10 @@ Record every version bump in [`CHANGELOG.md`](CHANGELOG.md).
 
 | Command | Purpose |
 | --- | --- |
-| `make validate` | Validate both channels + every plugin manifest (jq-based, no extra deps). Runs in CI. |
+| `make validate` | Validate the marketplace + every plugin manifest (jq-based, no extra deps). Runs in CI. |
 | `make list` | Print the catalog (name, version, description). |
 | `make bump PLUGIN=<name> VERSION=<x.y.z>` | Bump a plugin's version in both manifests. |
-| `make new-beta NAME=<name>` | Scaffold a new plugin in the beta channel. |
-| `make promote PLUGIN=<name>` | Move a beta plugin into the stable catalog. |
+| `make graduate PLUGIN=<name>-beta` | Graduate a beta plugin (drop the -beta suffix, bump the marketplace entry). |
 | `claude plugin tag --dry-run plugins/<name>` | Validate a plugin's `plugin.json` agrees with its marketplace entry. |
 | `claude plugin tag --push plugins/<name>` | Cut a `<name>--v<version>` release tag. |
 
