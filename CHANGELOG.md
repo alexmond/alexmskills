@@ -7,6 +7,101 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02
+
+### Added
+- **prompt-coach 0.5.0** (beta) — **typo tolerance**. A pre-pass normalizes each prompt against a
+  curated set of ~90 trigger words drawn from the rule catalog, using a banded Levenshtein edit
+  distance (custom, ~15 lines, zero deps). Dyslexic-friendly by design (Alex is dyslexic; this is
+  the personal use case that motivated it). Only substitutes on a **unique** closest match, and
+  uses **adaptive tolerance** (distance-1 for tokens ≤ 6 chars, distance-2 for longer) so
+  short-word collisions like `public ↔ rubric` don't produce false corrections. Examples that
+  get fixed: `refacotr` → `refactor`, `evrything` → `everything`, `veryfy` → `verify`,
+  `cleanre` → `cleaner`. Every correction is logged (raw + corrected in `log.md`; per-word
+  frequency in `state.json`).
+- **Self-report / health metrics.** New `normalization_stats` block in global state tracks
+  `prompts_with_corrections`, `tokens_corrected_total`, and per-word `top_corrections`. Rising
+  numbers signal that the regex rules aren't covering the user's actual prompts and are worth
+  tuning. A parallel `llm_fallback_stats` block is stubbed for the v0.6 opt-in fallback (same
+  signal, one level up).
+- **Config knobs**: `typo_tolerance` (int, default `2`; `0` disables the whole normalization
+  pass), `llm_fallback` (nested object, `enabled: false` default; v0.6 stub).
+
+## 2026-07-01 (latest)
+
+### Added
+- **prompt-coach 0.4.0** (beta) — encouragement layer + L6 skill-awareness.
+  - **Encouragement**: 21 *positive detectors* mirror the negative rules and praise the specific
+    positive behavior (not the absence of a negative), e.g. `stated-metric`, `stated-guardrails`,
+    `provided-example`, `asked-plan-first`. Praise is *sparing* — default 1-in-10 clean prompts
+    (variable-ratio, per Skinner) + always on rule mastery + always on first-after-fire
+    (immediate correction after being nudged). Never emitted on a prompt that also got a nudge
+    (Kohn 1993). 2–3 rotated phrasings per positive with a light touch of warmth/humor. Config:
+    `praise_ratio` (default 10), `praise_on_mastery` (default true),
+    `praise_on_first_after_fire` (default true), `disable_praise` (default false). Grounded in
+    Mueller & Dweck 1998 (process praise > trait praise), Fogg 2019 (celebration → habit),
+    Brophy 1981 (functional analysis of teacher praise), Deci & Ryan 2000 (autonomy-supportive
+    framing), Kohn 1993 (don't dilute the correction).
+  - **L6 skill-awareness** (new tier, 3 rules): `no-skill-lookup` ("how do I X" without checking
+    for an existing skill), `pattern-worth-abstracting` ("again / same as before" — rule of
+    three), `no-skill-composition` (multi-step ceremony not named as a skill candidate). Plus
+    2 positives: `invoked-skill` (used a slash-command / named a skill), `abstracted-to-skill`
+    ("let's make a skill for this"). Grounded in Fowler *Refactoring* (rule of three), Kent
+    Beck's YAGNI, Anthropic Claude Code Skills docs, McIlroy's Unix philosophy (composition),
+    Norman *Design of Everyday Things* (discoverability > memorability).
+- **Total catalog**: **27 rules across 6 tiers** + **21 positive detectors**. On the smoke-test
+  suite (49 positive+negative fixtures across all new detectors), all pass.
+- (v0.3 was folded into 0.4 — never externally released; single bump.)
+
+## 2026-07-01 (later)
+
+### Added
+- **prompt-coach 0.2.0** (beta) — advanced-concept coverage. 13 new rules across three
+  areas the v0.1 catalog missed:
+  - **L3 classical prompting** (4 new): `no-few-shot` ("like X" without an example),
+    `no-chain-of-thought` (why/debug/trace ask without "think first"), `no-rubric`
+    (judgment ask without axes), `no-uncertainty-budget` (investigative ask without
+    an "if unsure, say so" clause). Adds Wei et al. 2022 (CoT), Brown et al. 2020
+    (few-shot), and Anthropic multishot/CoT docs to sources.
+  - **L4 goals & loops** (new tier, 3 rules): `implicit-goal` (action without a
+    stated outcome/why), `unbounded-iteration` ("keep improving" without a stopping
+    condition), `no-rubric-for-refine` (refinement without naming which axis).
+  - **L5 Claude-Code tool-native** (new tier, 6 rules): `no-plan-mode-for-risky`,
+    `no-task-list-for-multi-step`, `no-agents-for-parallel-lookup`, `no-role-for-critique`,
+    `no-panel-for-contested-design`, `no-workflow-for-fanout`. These nudge you toward
+    your own tool chest (Plan mode, TaskCreate, parallel Explore/Agent, /roles:as,
+    brainstorm-panel, Workflow) when the prompt shape calls for it.
+- Total catalog: **24 rules** across 5 tiers. `max_active_rules=5` still caps how many
+  can nag at once — L1 masters first, then L2 rules slot in, and so on. On the
+  smoke-test suite (26 positive+negative fixtures for the new rules), all 26 pass.
+
+## 2026-07-01
+
+### Added
+- **prompt-coach 0.1.0** (beta) — new plugin in the `alexmskills-beta` channel. A
+  `UserPromptSubmit` hook analyzes every prompt sent to Claude Code against a tiered ruleset of
+  prompting best practices (L1 fundamentals: vague-reference, no-definition-of-done,
+  unbounded-scope, improve-without-metric, missing-guardrails; L2 intermediate: compound-tasks,
+  no-verify-loop, missing-context-fetch, no-format-spec; L3 advanced: no-adversarial-check,
+  retry-without-diagnosis). One nudge per prompt, per-rule cooldowns, tier-progressive graduation:
+  a rule masters after N clean prompts in a row (default 15), which activates the next dormant
+  rule. Rules cite ≥2 sources drawn from Anthropic prompt engineering docs, Claude Code best
+  practices, OpenAI's prompt engineering guide, Simon Willison's notes, and *The Prompt Report*
+  (Schulhoff et al., 2024) — see [`docs/sources.md`](beta/plugins/prompt-coach/docs/sources.md).
+- **Nudge style is configurable**: `both` (stderr box + `additionalContext` for Claude; default),
+  `silent` (Claude only), `log-only` (no output, log the fire). Config resolves local
+  (`.claude/prompt-coach/config.json`) → global (`~/.claude/prompt-coach/config.json`) → default.
+- **State: global mastery + per-repo overrides**. Global ledger at
+  `~/.claude/prompt-coach/state.json` tracks fires and mastery across every repo; local state at
+  `.claude/prompt-coach/state.json` records per-repo fires and lets a repo *reactivate* a globally
+  mastered rule (e.g. the rules that stayed on for a Java repo but should be re-taught in a docs
+  repo).
+- **Say-it affordances** for common toggles — *"coach pause 10"*, *"coach off vague-reference"*,
+  *"set prompt-coach to silent"* — Claude edits the right config/state file. No slash commands
+  yet; the SKILL.md documents the phrasing.
+- **Non-blocking, deterministic, cheap.** Pure regex heuristics, no LLM call; runs in ~10 ms; if
+  it errors, the hook prints the error to stderr and exits 0 so your prompt never gets blocked.
+
 ## 2026-06-29 (later 2)
 
 ### Fixed

@@ -100,6 +100,10 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-06-29 — **graduation-layers** — panel/crew 1.2.0 + roles 1.1.0: 3-layer split (registry / shared core / CLAUDE.md repo facts) + `/roles:evolve`. Why: flat graduation broke the role-substrate.
 - 2026-06-29 — **auditable-unanimity** — panel 1.2.1: require `Steelman:` field on R1-unanimous runs (closes #25). Why: 47-run audit showed 30% R1-unanimous, 0 steelmans logged — guard invisible.
 - 2026-06-29 — **marketplace-source** — migrated 12 plugins from broken `{github,path}` to `"./plugins/<name>"` (closes #28). Why: `github` source silently ignores `path`; install was a no-op for every external user.
+- 2026-07-01 — **prompt-coach-beta** — new 0.1.0 beta: UserPromptSubmit hook nudges toward better prompts (11 rules, 3 tiers); global mastery + per-repo overrides; configurable mode. Why: prompt quality drives downstream.
+- 2026-07-01 — **prompt-coach-advanced** — 0.2.0: +13 rules across L3 classical (CoT, few-shot, rubric, uncertainty), L4 goals/loops, L5 tool-native (plan mode, TaskCreate, agents, roles, panel, Workflow). Why: v0.1 missed advanced concepts.
+- 2026-07-01 — **prompt-coach-praise-skills** — 0.4.0: +21 positives (sparing praise per Kohn/Dweck/Fogg) + mastery/first-after-fire + L6 skill-awareness (rule of three). Why: coach should praise + know its ecosystem.
+- 2026-07-02 — **prompt-coach-typo-tolerance** — 0.5.0: Levenshtein pre-pass on ~90 trigger words + adaptive tolerance + fallback-count stats. Why: dyslexic-friendly; rising fallback rate signals catalog gaps.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

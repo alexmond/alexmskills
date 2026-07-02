@@ -22,6 +22,21 @@
         "verification",
         "accuracy"
       ]
+    },
+    {
+      "name": "prompt-coach",
+      "displayName": "Prompt Coach",
+      "source": "./plugins/prompt-coach",
+      "description": "Watches every prompt you send Claude Code and nudges you toward better prompting habits — fundamentals (definition-of-done, guardrails, verification), classical techniques (few-shot, chain-of-thought, rubric, uncertainty budget), goals & loops, and Claude-Code-native tool delegation (plan mode, TaskCreate, parallel agents, roles, brainstorm-panel, Workflow). Also cheers you on when you do the right thing: 19 positive detectors mirror the negative rules, plus milestone celebrations on mastery and first-after-fire moments — sparing, specific, process-focused praise (Brophy 1981, Mueller-Dweck 1998, Fogg 2019) with a light touch of humor to keep the coach from reading like a therapy app. Tiered mastery — coach fades as you improve. Configurable nudge_style (both / silent / log-only) applies to praise too; disable_praise silences encouragement without silencing nudges.",
+      "version": "0.5.0",
+      "category": "beta",
+      "keywords": [
+        "prompt-engineering",
+        "coach",
+        "self-learning",
+        "hooks",
+        "prompting"
+      ]
     }
   ]
 }

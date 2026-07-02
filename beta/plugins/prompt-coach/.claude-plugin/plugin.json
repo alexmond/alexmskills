@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "prompt-coach",
+  "description": "Analyzes each prompt you submit against a tiered ruleset of prompting best practices; nudges you toward better prompts (definition-of-done, scoped references, guardrails, verification steps) and quietly graduates rules you consistently follow. Beta — local until proven.",
+  "version": "0.5.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://github.com/alexmond/alexmskills",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "prompt-engineering",
+    "coach",
+    "self-learning",
+    "hooks",
+    "prompting"
+  ]
+}
