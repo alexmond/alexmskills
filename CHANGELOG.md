@@ -7,6 +7,32 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02 (latest 4)
+
+### Added
+- **prompt-coach-beta 0.9.0** — the "no permanent mastery" model. User's
+  insight: even mastered rules should occasionally fire, and if a mastered
+  rule matches a real prompt that's actually the *highest-signal event in
+  the whole system* (evidence a habit is regressing).
+  - **Refresher tier.** Mastered rules keep evaluating every prompt, but
+    with a much longer cooldown (default 50 prompts vs 5 for practicing).
+    When only a mastered rule matches, a softer box fires — one line,
+    with the rule id and how long ago it graduated. No sources block, no
+    progress bar. Emits as `🔄 prompt-coach — refresher on <rule>`.
+  - **Priority preserved.** Nudge (practicing) > refresher (mastered) >
+    praise. Kohn's don't-dilute principle still holds — refreshers count
+    as "spoke this prompt" for the praise gate.
+  - **Uncapped mastered evaluation.** Practicing rules still cap at
+    `max_active_rules` (default 5). Mastered rules are bonus evaluators
+    on top — they don't compete for a slot.
+  - **Optional self-healing (`demote_on_regression`)** — off by default,
+    opt-in. When enabled and a mastered rule fires threshold+ times within
+    window prompts, demote back to practicing. Post-mastery fire counter
+    is tracked either way (surfaced via `/stats`), so users can see drift
+    even when auto-demotion is off.
+  - **Backward-compat**: `mastered_cooldown_prompts: 0` in config reverts
+    to pre-0.9 permanent-silence-on-mastery behavior.
+
 ## 2026-07-02 (latest 3)
 
 ### Added

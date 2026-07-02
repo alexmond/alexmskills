@@ -109,6 +109,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-02 — **prompt-coach-conversational** — 0.6.0: skips analysis on approvals/multi-choice/continuations; praise_ratio default 10→3 for trial visibility. Why: coach misfired on "sure"/"1 and 2".
 - 2026-07-02 — **prompt-coach-evidence-tuned** — 0.7.0: log-mined 34 prompts; inflection guard kills 5/6 bad corrections; +15 action verbs; +L2 no-answer-shape; ratio 3→10. Why: real-session data.
 - 2026-07-02 — **prompt-coach-surfacing** — 0.8.0: /prompt-coach-beta:stats slash command + broadened cited-context/stated-goal + new grounded-scope positive. Why: 0 positives fired in 34 prompts (dark layer).
+- 2026-07-02 — **prompt-coach-refresher** — 0.9.0: mastered rules still evaluate at 50-prompt cooldown; softer refresher box; opt-in auto-demotion on regression. Why: mastery ≠ permanent silence.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

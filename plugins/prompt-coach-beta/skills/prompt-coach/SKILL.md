@@ -133,6 +133,8 @@ Config resolves in order: repo local → user global → default. Keys:
 - `praise_on_mastery` — celebrate when a rule graduates (default: true)
 - `praise_on_first_after_fire` — celebrate immediate corrections (default: true)
 - `disable_praise` — silence all encouragement but keep nudges (default: false)
+- `mastered_cooldown_prompts` — cooldown between refresher fires on mastered rules (default: 50; `0` disables refresher firing)
+- `demote_on_regression` — object `{enabled, threshold, window}`; off by default. When on, auto-demotes a mastered rule that fires threshold+ times within window prompts.
 - `typo_tolerance` — Levenshtein edit distance for typo normalization (default: 2, `0` disables)
 - `llm_fallback.enabled` — stub for v0.6 opt-in LLM classification when regex misses (default: false)
 
@@ -147,6 +149,24 @@ Just say it and Claude will edit the right file:
 - *"Reset prompt-coach mode"* → deletes the local override so the global default takes over
 - *"Disable praise"* → sets `disable_praise: true`
 - *"Praise every N prompts"* → sets `praise_ratio: N`
+
+## Mastery ≠ silence (v0.9+)
+
+Mastered rules aren't permanently dormant — they still evaluate every prompt, just emit rarely.
+When only a mastered rule matches (no practicing rule fired), you get a **refresher**: a
+one-line softer box (`🔄 prompt-coach — refresher on <rule>`) rather than the full nudge.
+
+Cooldown for practicing rules: 5 prompts. **Cooldown for mastered rules: 50 prompts** (10×
+longer). Set `mastered_cooldown_prompts: 0` in config to disable refresher firing entirely
+(reverts to permanent-silence-on-mastery behavior).
+
+**Priority when both fire in the same prompt**: nudge (practicing) > refresher (mastered) >
+praise. Nothing dilutes anything.
+
+**Optional self-healing** (`demote_on_regression: {enabled: false, threshold: 3, window: 30}`):
+if a mastered rule fires 3+ times within 30 prompts, demote it back to practicing. Off by
+default — being surprised by a graduated rule reactivating is unpleasant. Users who want strict
+self-healing turn this on.
 
 ## Introspection — `/prompt-coach-beta:stats`
 

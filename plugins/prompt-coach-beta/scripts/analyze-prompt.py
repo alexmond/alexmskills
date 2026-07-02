@@ -50,6 +50,16 @@ DEFAULT_CONFIG = {
     # Encouragement layer (v0.3+). Sparing praise for the specific positive
     # behaviors mirroring the negative rules — evidence-based defaults tuned
     # for variable-ratio reinforcement without diluting nudges.
+    # v0.9.0 — no permanent mastery. Mastered rules still evaluate; when
+    # they match they emit a rare "refresher" instead of the full nudge.
+    # Set mastered_cooldown_prompts to 0 to disable refresher firing entirely
+    # (reverts to pre-0.9 behavior of permanent silence on mastered rules).
+    "mastered_cooldown_prompts": 50,   # 10× the practicing cooldown
+    # Auto-demotion (opt-in): if a mastered rule fires threshold+ times within
+    # window prompts, demote back to practicing. Off by default — being
+    # surprised by a graduated rule reactivating is unpleasant. Users who
+    # want strict self-healing turn this on.
+    "demote_on_regression": {"enabled": False, "threshold": 3, "window": 30},
     "praise_ratio": 10,           # 1 praise per N clean prompts with a positive
                                   # (variable-ratio). Kohn's don't-dilute-praise
                                   # threshold — sparing praise stays potent. If
@@ -1874,48 +1884,62 @@ def effective_status(rule_id: str, g: dict, l: dict) -> str:
     return entry.get("status", "dormant")
 
 
-def active_rule_ids(cfg: dict, g: dict, l: dict) -> list[str]:
-    active: list[str] = []
+def active_rules_split(cfg: dict, g: dict, l: dict) -> tuple[list[str], list[str]]:
+    """v0.9.0: split into (practicing, mastered). Practicing is capped at
+    max_active_rules (the tier that drives daily coaching). Mastered is
+    uncapped — they always evaluate, but emit rarely via a longer cooldown.
+    A cooldown of 0 disables mastered firing entirely."""
+    practicing: list[str] = []
+    mastered: list[str] = []
     for rid in RULE_ORDER:
         if rid in cfg.get("disabled_rules", []):
             continue
         st = effective_status(rid, g, l)
         if st == "mastered":
-            continue
-        active.append(rid)
-    # Cap active count. Prefer lower-tier, more-fired rules.
+            mastered.append(rid)
+        else:
+            practicing.append(rid)
     max_active = int(cfg.get("max_active_rules", 5))
-    if len(active) <= max_active:
-        # But if none are 'practicing' yet, activate the first N as practicing on the fly.
-        return active[:max_active]
-    # Rank: tier ascending, then fires_total descending, then declaration order.
-    def rank(rid: str) -> tuple:
-        r = RULES_BY_ID[rid]
-        fires = g.get("rules", {}).get(rid, {}).get("fires_total", 0)
-        return (r.tier, -fires, RULE_ORDER.index(rid))
-    active.sort(key=rank)
-    return active[:max_active]
+    if len(practicing) > max_active:
+        def rank(rid: str) -> tuple:
+            r = RULES_BY_ID[rid]
+            fires = g.get("rules", {}).get(rid, {}).get("fires_total", 0)
+            return (r.tier, -fires, RULE_ORDER.index(rid))
+        practicing.sort(key=rank)
+        practicing = practicing[:max_active]
+    # If mastered firing is disabled, return no mastered candidates.
+    if int(cfg.get("mastered_cooldown_prompts", 50)) <= 0:
+        mastered = []
+    return practicing, mastered
+
+
+def active_rule_ids(cfg: dict, g: dict, l: dict) -> list[str]:
+    """Back-compat: return practicing only (used where the split isn't needed)."""
+    practicing, _ = active_rules_split(cfg, g, l)
+    return practicing
 
 
 def fires(prompt: str, rule_id: str) -> bool:
     return RULES_BY_ID[rule_id].check(prompt)
 
 
-def within_cooldown(rid: str, l: dict, cfg: dict) -> bool:
+def within_cooldown(rid: str, l: dict, cfg: dict, mastered: bool = False) -> bool:
     last = l.get("rules", {}).get(rid, {}).get("last_nudged_prompt")
     if last is None:
         return False
-    return (l.get("prompt_count", 0) - last) < int(cfg.get("cooldown_prompts", 5))
+    key = "mastered_cooldown_prompts" if mastered else "cooldown_prompts"
+    default = 50 if mastered else 5
+    return (l.get("prompt_count", 0) - last) < int(cfg.get(key, default))
 
 
-def pick_nudge(fired: list[str], l: dict, cfg: dict) -> str | None:
-    """Pick the highest-priority firing rule that isn't in cooldown."""
-    eligible = [r for r in fired if not within_cooldown(r, l, cfg)]
+def pick_nudge(fired: list[str], l: dict, cfg: dict, mastered: bool = False) -> str | None:
+    """Pick the highest-priority firing rule that isn't in cooldown.
+    mastered=True uses the longer mastered_cooldown_prompts window."""
+    eligible = [r for r in fired if not within_cooldown(r, l, cfg, mastered=mastered)]
     if not eligible:
         return None
     def rank(rid: str) -> tuple:
         r = RULES_BY_ID[rid]
-        # Prefer lower tier, then rules with fewer fires_total (spread coverage).
         return (r.tier, RULE_ORDER.index(rid))
     eligible.sort(key=rank)
     return eligible[0]
@@ -1924,6 +1948,18 @@ def pick_nudge(fired: list[str], l: dict, cfg: dict) -> str | None:
 # ---------------------------------------------------------------------------
 # Emission
 # ---------------------------------------------------------------------------
+
+
+def _refresher_box(rule: Rule, days_since_mastery: int | None, mode: str) -> str:
+    """v0.9.0 — softer box for a mastered rule that fired. No sources,
+    no progress bar; a one-line refresher plus the context that this rule
+    is mastered."""
+    mastery_line = (f"mastered {days_since_mastery}d ago"
+                    if days_since_mastery is not None else "mastered")
+    return (
+        f"🔄 prompt-coach [{mode} · refresher] — {rule.id} ({mastery_line})\n"
+        f"   {rule.nudge}"
+    )
 
 
 def _box(rule: Rule, streak: int, threshold: int, mode: str) -> str:
@@ -2151,13 +2187,21 @@ def main() -> int:
             k = orig.lower()
             top[k] = int(top.get(k, 0)) + 1
 
-    # Which rules are candidates right now?
-    active = active_rule_ids(cfg, g, l)
-    fired = [rid for rid in active if fires(prompt, rid)]
-    chosen = pick_nudge(fired, l, cfg)
+    # v0.9.0 — split practicing (capped at max_active) from mastered
+    # (uncapped, evaluated on every prompt, longer cooldown).
+    active_practicing, active_mastered = active_rules_split(cfg, g, l)
+    active = active_practicing + active_mastered
+    fired_practicing = [rid for rid in active_practicing if fires(prompt, rid)]
+    fired_mastered = [rid for rid in active_mastered if fires(prompt, rid)]
+    fired = fired_practicing + fired_mastered  # for logging + bookkeeping
+    chosen = pick_nudge(fired_practicing, l, cfg, mastered=False)
+    chosen_mastered: str | None = None
+    if chosen is None and fired_mastered:
+        chosen_mastered = pick_nudge(fired_mastered, l, cfg, mastered=True)
 
     threshold = int(cfg.get("graduation_threshold", 15))
     mastery_events: list[str] = []  # rule ids that graduated this prompt
+    demoted_events: list[str] = []  # rule ids that lost mastery this prompt
 
     # Bookkeeping: update every active rule's streak.
     for rid in active:
@@ -2194,7 +2238,30 @@ def main() -> int:
             and gr.get("status") != "mastered"):
             gr["status"] = "mastered"
             gr["graduated_at"] = _now_iso()
+            gr["post_mastery_fires"] = 0
+            gr["post_mastery_fire_prompts"] = []
             mastery_events.append(rid)
+
+        # v0.9.0 — post-mastery fire tracking (for optional auto-demotion).
+        # Even if demotion is off, we track the counter so /stats can surface
+        # regressions.
+        if rid in fired and gr.get("status") == "mastered":
+            gr["post_mastery_fires"] = int(gr.get("post_mastery_fires", 0)) + 1
+            fire_prompts = list(gr.get("post_mastery_fire_prompts", []))
+            fire_prompts.append(g["prompt_count"])
+            demote_cfg = cfg.get("demote_on_regression") or {}
+            window = int(demote_cfg.get("window", 30))
+            fire_prompts = [p for p in fire_prompts if g["prompt_count"] - p <= window]
+            gr["post_mastery_fire_prompts"] = fire_prompts
+
+            if (demote_cfg.get("enabled", False)
+                and len(fire_prompts) >= int(demote_cfg.get("threshold", 3))):
+                gr["status"] = "practicing"
+                gr["clean_streak"] = 0
+                gr["demoted_at"] = _now_iso()
+                gr["post_mastery_fires"] = 0
+                gr["post_mastery_fire_prompts"] = []
+                demoted_events.append(rid)
 
     outcome = "no-emit"
     context_line: str | None = None
@@ -2220,6 +2287,42 @@ def main() -> int:
                 print(_box(rule, streak, threshold, mode), file=sys.stderr, flush=True)
             if mode in ("both", "silent"):
                 context_line = _context_for_claude(rule)
+    elif chosen_mastered is not None:
+        # v0.9.0 — mastered rule fires: soft refresher, longer cooldown.
+        rule = RULES_BY_ID[chosen_mastered]
+        gr = g["rules"][chosen_mastered]
+        lr = l["rules"][chosen_mastered]
+        gr["last_nudged_at"] = _now_iso()
+        lr["last_nudged_at"] = _now_iso()
+        lr["last_nudged_prompt"] = l["prompt_count"]
+        l["last_nudge_prompt"] = l["prompt_count"]
+        outcome = f"refresher:{cfg['nudge_style']}"
+
+        mode = cfg["nudge_style"]
+        paused_until = int(cfg.get("pause_until_prompt", 0))
+        if g["prompt_count"] <= paused_until:
+            outcome = "paused"
+        else:
+            # Days since graduation, if available.
+            grad = gr.get("graduated_at")
+            days_since = None
+            if grad:
+                try:
+                    grad_dt = datetime.strptime(grad, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                    now_dt = datetime.now(timezone.utc)
+                    days_since = max(0, (now_dt - grad_dt).days)
+                except (ValueError, TypeError):
+                    pass
+            if mode == "both":
+                print(_refresher_box(rule, days_since, mode),
+                      file=sys.stderr, flush=True)
+            if mode in ("both", "silent"):
+                context_line = (
+                    f"[prompt-coach · refresher] Mastered rule '{rule.id}' "
+                    f"({rule.name}) matched this prompt — light re-fire. "
+                    f"Guidance: {rule.guidance} Continue with the task; no need "
+                    f"to belabor the point unless the pattern keeps repeating."
+                )
 
     # ---------------- Encouragement layer ---------------- #
     # Only consider praise on prompts that did NOT emit a nudge (Kohn 1993:
@@ -2227,7 +2330,11 @@ def main() -> int:
     # entirely if paused.
     positive_fires: list[str] = []
     praise_choice = None
-    nudged_this_prompt = chosen is not None and outcome != "paused"
+    # v0.9.0 — refreshers count as "spoke this prompt" for Kohn's
+    # don't-dilute-praise principle. If we said anything (nudge OR
+    # refresher), no praise on the same prompt.
+    nudged_this_prompt = ((chosen is not None or chosen_mastered is not None)
+                          and outcome != "paused")
     paused_until = int(cfg.get("pause_until_prompt", 0))
     is_paused = g["prompt_count"] <= paused_until
 
@@ -2295,7 +2402,8 @@ def main() -> int:
         "fired": fired,
         "positive_fires": positive_fires,
         "mastery_events": mastery_events,
-        "chosen": chosen,
+        "demoted_events": demoted_events,
+        "chosen": chosen or chosen_mastered,
         "praise": praise_choice[0] + ":" + praise_choice[1] if praise_choice else None,
         "outcome": outcome,
         "prompt": prompt_raw[:400],
