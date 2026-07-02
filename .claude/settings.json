@@ -41,10 +41,8 @@
   "extraKnownMarketplaces": {
     "alexmskills-beta": {
       "source": {
-        "source": "github",
-        "repo": "alexmond/alexmskills",
-        "path": "beta/.claude-plugin/marketplace.json",
-        "sparsePaths": ["beta"]
+        "source": "url",
+        "url": "https://raw.githubusercontent.com/alexmond/alexmskills/main/beta/.claude-plugin/marketplace.json"
       }
     }
   }
