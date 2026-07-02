@@ -14,18 +14,29 @@ beta/
 
 ## Opt in to beta
 
-Add the beta channel alongside the stable one. Beta is a git **subdirectory** of the repo, so it's
-added as a `git-subdir` source. In `.claude/settings.json`:
+Add the beta channel alongside the stable one. Beta lives at
+`beta/.claude-plugin/marketplace.json`, so it's added as a `github` source with the marketplace
+`path` pointing inside the repo. In `.claude/settings.json` (project) or `~/.claude/settings.json`
+(global):
 
 ```json
 {
   "extraKnownMarketplaces": {
     "alexmskills-beta": {
-      "source": { "source": "git-subdir", "url": "alexmond/alexmskills", "path": "beta" }
+      "source": {
+        "source": "github",
+        "repo": "alexmond/alexmskills",
+        "path": "beta/.claude-plugin/marketplace.json",
+        "sparsePaths": ["beta"]
+      }
     }
   }
 }
 ```
+
+`sparsePaths: ["beta"]` keeps the clone lean — only the `beta/` subtree is checked out. Note:
+`git-subdir` is only valid as a **plugin** source, not a marketplace source — the marketplace
+source schema uses `github` + `path` for the marketplace.json location.
 
 Then `/plugin install <name>@alexmskills-beta`. To evaluate locally without installing:
 
