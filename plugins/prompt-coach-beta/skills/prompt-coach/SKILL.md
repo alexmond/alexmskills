@@ -31,6 +31,7 @@ lower tiers dominate; as an L1 rule masters, an L2 rule activates in its place, 
 | no-verify-loop | Implementation ask with no verification step |
 | missing-context-fetch | "The failing test / the issue" with no identifier |
 | no-format-spec | Ask for summary/list/report with no shape |
+| no-answer-shape | "What are X" / "how much of Y" question without a format spec (v0.7.0) |
 
 **L3 — classical prompting techniques**
 | Rule | Catches |

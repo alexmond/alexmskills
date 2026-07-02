@@ -50,10 +50,13 @@ DEFAULT_CONFIG = {
     # Encouragement layer (v0.3+). Sparing praise for the specific positive
     # behaviors mirroring the negative rules — evidence-based defaults tuned
     # for variable-ratio reinforcement without diluting nudges.
-    "praise_ratio": 3,            # 1 praise per N clean prompts with a positive
-                                  # (variable-ratio). 3 is trial-friendly; bump to
-                                  # 8–10 once you're past the "does this even work"
-                                  # phase (Kohn's don't-dilute-praise threshold).
+    "praise_ratio": 10,           # 1 praise per N clean prompts with a positive
+                                  # (variable-ratio). Kohn's don't-dilute-praise
+                                  # threshold — sparing praise stays potent. If
+                                  # you feel the layer "isn't working," check
+                                  # log.md before dialing this down; it fires more
+                                  # than you think, just invisibly (via
+                                  # additionalContext to Claude).
     "praise_on_mastery": True,    # celebrate when a rule graduates to mastered
     "praise_on_first_after_fire": True,  # celebrate the immediate correction
     "disable_praise": False,      # silence all praise but keep nudges
@@ -76,6 +79,24 @@ DEFAULT_CONFIG = {
 # ---------------------------------------------------------------------------
 # Typo tolerance — Levenshtein-based prompt normalization
 # ---------------------------------------------------------------------------
+
+# English inflection suffixes that indicate a token is a legitimate English
+# word (plural, past tense, gerund, adverb). Tokens ending in these are
+# skipped by the normalizer — before v0.7.0 the coach was over-correcting
+# `changes → change`, `tickets → ticket`, `implemented → implement`.
+_ENGLISH_INFLECTION_SUFFIXES = ("s", "es", "ed", "ing", "ly", "er", "est",
+                                "tion", "ment", "ness", "able", "ible")
+
+# Common English words within edit distance 2 of a trigger word that would
+# otherwise get falsely normalized. Evidence-based list (grow as false
+# positives appear in log.md):
+#   - `publish` was normalized to `polish` (loop refinement trigger)
+_PROTECTED_ENGLISH_WORDS = frozenset({
+    "publish", "please", "answer", "review", "reason",
+    "finish", "punish", "release", "class", "field", "method",
+    "issue", "ticket", "packet", "action", "always",
+})
+
 
 # Hand-curated set of trigger words drawn from the rule/positive regexes.
 # Kept small on purpose — larger vocabularies increase false-positive risk on
@@ -164,6 +185,11 @@ def is_conversational(prompt: str) -> bool:
     p = prompt.strip()
     if not p:
         return True
+    # Agent-orchestration messages — task notifications and system reminders
+    # are not user prompts. They enter the hook because task-triggered wakes
+    # pass through UserPromptSubmit, but they shouldn't count for coaching.
+    if p.startswith("<task-notification>") or p.startswith("<system-reminder>"):
+        return True
     pl = p.lower().rstrip(".!?,;: ")
     if _CONVERSATIONAL_APPROVAL.match(pl):
         return True
@@ -213,6 +239,11 @@ def normalize_prompt(prompt: str, tolerance: int
         if low in TRIGGER_WORDS:
             out_parts.append(tok)
             continue
+        # v0.7.0 — protect a curated set of common English words that are
+        # within edit distance 2 of a trigger (publish ↔ polish, etc.).
+        if low in _PROTECTED_ENGLISH_WORDS:
+            out_parts.append(tok)
+            continue
 
         # Adaptive tolerance: shorter tokens get stricter matching because
         # false-positive rate at distance 2 is much higher for 5-6 char words
@@ -233,6 +264,19 @@ def normalize_prompt(prompt: str, tolerance: int
                 ties += 1
 
         if best_word and best_dist <= adaptive and ties == 1:
+            # v0.7.0 — protect legitimate English inflections. Only skip if
+            # the "correction" is JUST stripping a productive English suffix
+            # (target == token minus suffix). Real typos have insertions or
+            # substitutions elsewhere, not just a suffix strip.
+            # Evidence from v0.6.0 log: changes→change, tickets→ticket,
+            # implemented→implement were all suffix strips of valid English.
+            is_suffix_strip = any(
+                low.endswith(sfx) and low[: -len(sfx)] == best_word
+                for sfx in _ENGLISH_INFLECTION_SUFFIXES
+            )
+            if is_suffix_strip:
+                out_parts.append(tok)
+                continue
             corrected = _match_case(tok, best_word)
             corrections.append((tok, corrected))
             out_parts.append(corrected)
@@ -288,12 +332,24 @@ ACTION_VERBS = (
     "add", "build", "fix", "refactor", "implement", "create", "change",
     "update", "make", "write", "rewrite", "remove", "delete", "rename",
     "extract", "migrate", "wire", "hook",
+    # v0.7.0 — real-session-observed action verbs that were being missed
+    "move", "open", "close", "branch", "merge", "file", "format",
+    "install", "configure", "enable", "disable", "bump", "pin",
+    "strip", "gitignore",
+)
+
+# Multi-word action phrases that count as an action start (v0.7.0).
+_MULTIWORD_ACTIONS = re.compile(
+    r"^(get\s+rid\s+of|clean\s+up|set\s+up|tear\s+down|shut\s+down|"
+    r"back\s+up|hook\s+up|wire\s+up)\b"
 )
 
 
 def _starts_with_action(prompt: str) -> bool:
     first = _first_line(prompt).lower().lstrip("- *#>")
-    return any(first.startswith(v + " ") for v in ACTION_VERBS)
+    if any(first.startswith(v + " ") for v in ACTION_VERBS):
+        return True
+    return bool(_MULTIWORD_ACTIONS.match(first))
 
 
 def rule_no_definition_of_done(prompt: str) -> bool:
@@ -398,6 +454,27 @@ def rule_missing_context_fetch(prompt: str) -> bool:
         prompt,
     )
     return not bool(ids)
+
+
+def rule_no_answer_shape(prompt: str) -> bool:
+    """Information-seeking question with no format spec — evidence: real
+    prompts like 'what are lsp servers' and 'how much of github app support
+    do we have?' were firing nothing at all."""
+    pl = prompt.lower()
+    q = re.search(
+        r"^\s*(what (are|is|kinds|types|options)|how (much|many|do|does|can|should|would)|"
+        r"which \w+ (should|are|is|would)|why (should|is|are|does|doesn.?t)|"
+        r"does (\w+ )?exist|is there|are there)\b", pl)
+    if not q:
+        return False
+    shape = re.search(
+        r"\b(bullet|table|json|markdown|paragraph|numbered|"
+        r"\d+\s*(items?|points?|rows?|bullets?|paragraphs?|words?|lines?)|"
+        r"one[- ]liner|one line|short|long|detailed|brief|sentence|"
+        r"yes/no|y/n|"
+        r"columns?|rows?|schema|section|per\s+\w+|"
+        r"under\s+\d+\s+words?|less than \d)\b", pl)
+    return not bool(shape)
 
 
 def rule_no_format_spec(prompt: str) -> bool:
@@ -611,9 +688,11 @@ def rule_no_agents_for_parallel_lookup(prompt: str) -> bool:
 def rule_no_role_for_critique(prompt: str) -> bool:
     pl = prompt.lower()
     critique = re.search(
-        r"\b(review this|review my|code review|critique|"
+        r"\b(review (this|my|the|results|findings|changes|code|output|design|plan)|"
+        r"code review|critique|"
         r"find issues|find bugs|is this correct|check my|"
-        r"look over|red[- ]team|nitpick)\b", pl)
+        r"look over|red[- ]team|nitpick|"
+        r"assess (this|the|these|my)|evaluate (this|the|these|my))\b", pl)
     if not critique:
         return False
     role = re.search(
@@ -897,6 +976,24 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_BE_CLEAR, SRC_CC_BESTPRACTICE],
         check=rule_missing_context_fetch,
+    ),
+    Rule(
+        id="no-answer-shape",
+        tier=2,
+        name="Information ask without a shape",
+        nudge=(
+            "'What are X' / 'how much of Y' — you'll get a wall of prose. "
+            "Add a shape: '3-bullet summary each', 'one-liner per', 'under "
+            "100 words', or 'yes/no + one sentence why'."
+        ),
+        guidance=(
+            "User asked an information-seeking question without specifying "
+            "shape. Pick a compact default upfront (e.g. 'I'll give you 3 "
+            "bullets each') and STATE it before answering; the user can "
+            "redirect if the shape is wrong."
+        ),
+        sources=[SRC_OPENAI_GUIDE, SRC_ANTHROPIC_OVERVIEW, SRC_ANTHROPIC_BE_CLEAR],
+        check=rule_no_answer_shape,
     ),
     Rule(
         id="no-format-spec",

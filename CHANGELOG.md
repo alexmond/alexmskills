@@ -7,6 +7,47 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02 (latest 2)
+
+### Added
+- **prompt-coach-beta 0.7.0** — evidence-based improvements from log-mining a
+  day of real prompts (34 across 6 sibling repos). Every change is keyed to a
+  specific observed failure:
+  - **False-positive typo corrections killed** (5/6 observed corrections were
+    wrong: `changes → change`, `tickets → ticket`, `implemented → implement`,
+    `publish → polish`, etc.). Two guards: (a) small curated `_PROTECTED_ENGLISH_WORDS`
+    set for edge cases like `publish` ↔ `polish`; (b) English inflection guard —
+    when the "correction" is literally the token minus a productive suffix
+    (`-s`, `-es`, `-ed`, `-ing`, `-ly`, `-er`, `-est`, `-tion`, `-ment`, `-ness`,
+    `-able`, `-ible`), skip it (real typos have insertions/substitutions elsewhere,
+    not just a suffix strip). Preserves real dyslexic-style typos like
+    `evrything → everything` (insertion) and `refacotr → refactor` (transposition).
+  - **`ACTION_VERBS` broadened** with 15 real-session verbs the coach was
+    missing — `move`, `open`, `close`, `branch`, `merge`, `file`, `format`,
+    `install`, `configure`, `enable`, `disable`, `bump`, `pin`, `strip`,
+    `gitignore` — plus multi-word phrases (`get rid of`, `clean up`, `set up`,
+    `tear down`, `shut down`, `back up`, `hook up`, `wire up`). Catches
+    prompts like "file tickets for RFJ-070" and "get rid of the github pages
+    publish" that were silently ignored.
+  - **`no-role-for-critique` broadened** to match `review results / findings
+    / changes / the code / the output / design / plan` — plus `assess this`
+    and `evaluate this`. Was previously narrow ("review this / my").
+  - **New L2 rule `no-answer-shape`** — nudges when the prompt is `what are
+    X` / `how much of Y` / `does Z exist` without a format spec. Would have
+    caught 3+ real prompts from the day's log. Suggests "3-bullet summary
+    each" / "yes/no + one line why" / "one-liner per".
+  - **Task-notification short-circuit** — `<task-notification>` and
+    `<system-reminder>` prompts (from task-triggered wakes in multi-agent
+    workflows) now short-circuit through `is_conversational()` instead of
+    being counted as user prompts. Was inflating mastery ladders across
+    unitrack (many task-notifications) with meaningless "clean prompts."
+  - **`praise_ratio` default reverted 3 → 10**. The v0.6.0 bump was
+    compensation for the layer *appearing* not to fire (data-mining showed
+    it fires plenty via `additionalContext` — you just don't see it every
+    time). Kohn's don't-dilute-praise threshold is the right default;
+    users can dial it down in config if they want visible reinforcement.
+- Catalog: **28 rules across 6 tiers** (+1 new L2), 21 positives.
+
 ## 2026-07-02 (latest)
 
 ### Changed
