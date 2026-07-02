@@ -82,6 +82,19 @@ grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fo
 - **Milestone events** — a rule graduating to *mastered* and a "first-after-fire" (you did the
   thing you were nudged on last prompt) are always recognized regardless of ratio.
 
+## Conversational short-circuit (v0.6+)
+
+Many prompts in an ongoing conversation aren't full asks — they're **approvals**
+(`sure`, `publish`, `go`, `ship it`), **multi-choice picks** (`1 and 2`, `a and b`,
+`option a`), or **continuations** (`continue`, `next`, `thanks`). The coach's rules
+would misfire on these, and the typo normalizer would over-correct short conversational
+words (e.g. `publish` → `polish` at edit distance 2).
+
+`is_conversational()` catches these and short-circuits the analysis: no rule matching,
+no typo correction, no praise, no streak updates. The prompt is still logged (with
+`outcome: skipped:conversational`) so you can audit what was skipped. If a rule ever
+needs to fire on this class of prompt, log inspection tells you to widen the trigger.
+
 ## Typo tolerance (v0.5+)
 
 A pre-pass normalizes each prompt against a curated set of ~90 trigger words drawn from the rule
@@ -115,7 +128,7 @@ Config resolves in order: repo local → user global → default. Keys:
 - `max_active_rules` — never nag on more than this many rules at once (default: 5)
 - `pause_until_prompt` — skip nudging until global `prompt_count` passes this
 - `disabled_rules` — array of rule ids to permanently silence
-- `praise_ratio` — 1 praise per N clean prompts (default: 10)
+- `praise_ratio` — 1 praise per N clean prompts with a positive detection (default: 3, trial-friendly; bump to 8–10 once habits form)
 - `praise_on_mastery` — celebrate when a rule graduates (default: true)
 - `praise_on_first_after_fire` — celebrate immediate corrections (default: true)
 - `disable_praise` — silence all encouragement but keep nudges (default: false)

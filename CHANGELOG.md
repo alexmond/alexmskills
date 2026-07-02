@@ -7,6 +7,25 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02 (latest)
+
+### Changed
+- **prompt-coach-beta 0.6.0** — two behavior changes based on real-session feedback:
+  - **Conversational short-circuit.** Many prompts are approvals (`sure`, `publish`,
+    `go`, `ship it`), multi-choice picks (`1 and 2`, `a and b`, `option a`), or
+    continuations (`continue`, `next`, `thanks`). The rules misfire on these and the
+    typo normalizer over-corrects short conversational words (`publish` → `polish` at
+    edit distance 2, then the coach nags about refinement). A new `is_conversational()`
+    heuristic detects them BEFORE any rule matching / normalization and skips analysis
+    entirely — prompt is logged with `outcome: skipped:conversational` for audit, but
+    doesn't touch streaks, cooldowns, or praise counters. Same "approvals aren't the
+    signal" principle as GitHub PR-approval comments not counting toward review-count
+    metrics.
+  - **`praise_ratio` default 10 → 3.** The 1-in-10 default was Kohn-inspired
+    (don't-dilute-the-correction), but that's a steady-state value. During trial you
+    need to see the encouragement layer *fire* to know it works at all. 3 is trial-
+    friendly; bump to 8–10 in config once the layer has proved itself (a week of use).
+
 ## 2026-07-02 (later)
 
 ### Changed

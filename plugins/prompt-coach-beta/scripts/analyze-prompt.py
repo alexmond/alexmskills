@@ -50,7 +50,10 @@ DEFAULT_CONFIG = {
     # Encouragement layer (v0.3+). Sparing praise for the specific positive
     # behaviors mirroring the negative rules — evidence-based defaults tuned
     # for variable-ratio reinforcement without diluting nudges.
-    "praise_ratio": 10,           # 1 praise per N clean prompts (variable-ratio)
+    "praise_ratio": 3,            # 1 praise per N clean prompts with a positive
+                                  # (variable-ratio). 3 is trial-friendly; bump to
+                                  # 8–10 once you're past the "does this even work"
+                                  # phase (Kohn's don't-dilute-praise threshold).
     "praise_on_mastery": True,    # celebrate when a rule graduates to mastered
     "praise_on_first_after_fire": True,  # celebrate the immediate correction
     "disable_praise": False,      # silence all praise but keep nudges
@@ -134,6 +137,45 @@ def _levenshtein(a: str, b: str, limit: int) -> int:
             return limit + 1
         prev = cur
     return prev[lb]
+
+
+_CONVERSATIONAL_APPROVAL = re.compile(
+    r"^(y|yes|yep|yeah|no|nope|nah|ok|okay|k|sure|go|"
+    r"ship|publish|merge|push|deploy|"
+    r"proceed|confirm|approved?|approve|"
+    r"do it|go for it|ship it|send it|"
+    r"continue|next|more|again|"
+    r"thanks|thx|thank you|great|nice|perfect|cool|fine|good|done|got it|"
+    r"👍|👎|✓|✔)$"
+)
+_CONVERSATIONAL_NUMERIC = re.compile(r"^#?\d+([\s,]+(and\s+)?#?\d+)*$")
+_CONVERSATIONAL_LETTER = re.compile(r"^(option\s+)?[a-e]([\s,]+(and\s+)?[a-e])*$")
+_CONVERSATIONAL_AFFIRM = re.compile(
+    r"\b(yes|no|and|both|neither|either|but not|except|only|first|second|third)\b"
+)
+_CONVERSATIONAL_PICK = re.compile(r"\b\d+\b|\boption\s+[a-e]\b")
+
+
+def is_conversational(prompt: str) -> bool:
+    """Detect short-turn responses — approvals, multi-choice picks, continuations —
+    where the 'prompt' is really a fragment answering an implicit question and the
+    coaching rules would misfire (Alex's dyslexic 'sure' or '1 and 2 yes 3').
+    Skipped prompts still get logged for audit; they do not affect streaks."""
+    p = prompt.strip()
+    if not p:
+        return True
+    pl = p.lower().rstrip(".!?,;: ")
+    if _CONVERSATIONAL_APPROVAL.match(pl):
+        return True
+    if _CONVERSATIONAL_NUMERIC.match(pl):
+        return True
+    if _CONVERSATIONAL_LETTER.match(pl):
+        return True
+    # Mixed short pick + affirmation, e.g. "1 and 2 yes 3 no 4"
+    if len(pl.split()) <= 12:
+        if _CONVERSATIONAL_PICK.search(pl) and _CONVERSATIONAL_AFFIRM.search(pl):
+            return True
+    return False
 
 
 def _match_case(pattern: str, target: str) -> str:
@@ -1926,6 +1968,29 @@ def main() -> int:
     # Increment prompt counters.
     g["prompt_count"] = int(g.get("prompt_count", 0)) + 1
     l["prompt_count"] = int(l.get("prompt_count", 0)) + 1
+
+    # Conversational short-circuit — "sure", "publish", "1 and 2", "go for
+    # it" etc. are fragments answering an implicit question, not full
+    # prompts. Coaching rules misfire on them and the typo normalizer
+    # produces false corrections ("publish" → "polish"). Skip analysis
+    # entirely but log so the user can audit what was skipped.
+    if is_conversational(prompt_raw):
+        g["updated_at"] = _now_iso()
+        l["updated_at"] = _now_iso()
+        save_json(GLOBAL_STATE, g)
+        save_json(local_dir / "state.json", l)
+        append_log(local_dir, {
+            "t": _now_iso(),
+            "fired": [],
+            "positive_fires": [],
+            "mastery_events": [],
+            "chosen": None,
+            "praise": None,
+            "outcome": "skipped:conversational",
+            "prompt": prompt_raw[:400],
+            "corrections": [],
+        })
+        return 0
 
     # Typo normalization pass — makes the coach friendly to dyslexic
     # spellings without changing the rule catalog. Rules see the normalized

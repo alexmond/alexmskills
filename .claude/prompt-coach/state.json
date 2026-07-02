@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "prompt_count": 1,
+  "reactivated": [],
+  "last_nudge_prompt": 0,
+  "rules": {
+    "no-format-spec": {
+      "fires_here": 0,
+      "clean_streak_here": 1,
+      "last_fired_at": null,
+      "last_nudged_at": null,
+      "last_nudged_prompt": null
+    },
+    "no-adversarial-check": {
+      "fires_here": 0,
+      "clean_streak_here": 1,
+      "last_fired_at": null,
+      "last_nudged_at": null,
+      "last_nudged_prompt": null
+    },
+    "retry-without-diagnosis": {
+      "fires_here": 0,
+      "clean_streak_here": 1,
+      "last_fired_at": null,
+      "last_nudged_at": null,
+      "last_nudged_prompt": null
+    },
+    "no-few-shot": {
+      "fires_here": 0,
+      "clean_streak_here": 1,
+      "last_fired_at": null,
+      "last_nudged_at": null,
+      "last_nudged_prompt": null
+    },
+    "no-chain-of-thought": {
+      "fires_here": 0,
+      "clean_streak_here": 1,
+      "last_fired_at": null,
+      "last_nudged_at": null,
+      "last_nudged_prompt": null
+    }
+  },
+  "clean_prompts_since_praise": 1,
+  "last_prompt_fired_rules": [],
+  "updated_at": "2026-07-02T19:02:10Z"
+}
