@@ -7,6 +7,32 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02 (latest 3)
+
+### Added
+- **prompt-coach-beta 0.8.0** — surfacing + praise coverage.
+  - **`/prompt-coach-beta:stats` slash command** — read-only dashboard summarizing
+    prompts analyzed, nudge/praise/skipped counts, emit rate, most-fired and
+    mastered rules, top typo corrections, and current config. Answers "is this
+    thing actually doing anything?" without opening `state.json` by hand.
+  - **`cited-context` positive broadened** — now fires on ticket IDs
+    (`RFJ-070`), file paths with extensions (`ENGINE-COMPARISON.adoc`,
+    `src/api/auth.py`), backticked identifiers, URLs, and tech-name
+    identifiers (`notify4j`, `spring-boot`). No longer requires a "the
+    failing test" role phrase — the presence of ANY concrete grounding wins.
+  - **New L1 positive `grounded-scope`** (mirrors `vague-reference` from
+    the positive side) — praises substantive prompts (≥4 words) that
+    include a concrete pointer, even without an explicit
+    "the-X-role-phrase". Evidence: v0.7.0 log had 0 positive detectors
+    firing on any of 34 real prompts, because the strict
+    mirror-the-negative design missed real substantive prompts like "add
+    both sections to ENGINE-COMPARISON.adoc". This closes that gap.
+  - **`stated-goal` positive broadened** to match natural-voice reason
+    clauses ("we are fully moved away", "the plan is …", "for the
+    release") in addition to the textbook "so that / in order to" forms.
+- Catalog: 28 rules, **22 positives** (+1 new L1). Slash command adds
+  discoverability without expanding the rule surface.
+
 ## 2026-07-02 (latest 2)
 
 ### Added

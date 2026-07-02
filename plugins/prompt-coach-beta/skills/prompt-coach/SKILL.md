@@ -148,6 +148,14 @@ Just say it and Claude will edit the right file:
 - *"Disable praise"* → sets `disable_praise: true`
 - *"Praise every N prompts"* → sets `praise_ratio: N`
 
+## Introspection — `/prompt-coach-beta:stats`
+
+Type `/prompt-coach-beta:stats` (v0.8+) to see a compact dashboard: total prompts analyzed,
+nudge/praise/skipped counts, emit rate, most-fired rules, mastered rules, top typo corrections,
+and current config. Answers "is this thing actually doing anything?" without opening files.
+
+Read-only; the command never modifies state.
+
 ## Pause / disable (say-it phrases)
 
 - *"Coach pause 10"* — silence nudges for the next 10 prompts. Claude sets `pause_until_prompt` in

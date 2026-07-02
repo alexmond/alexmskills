@@ -1409,14 +1409,47 @@ def pos_stated_verify_loop(prompt: str) -> bool:
 
 
 def pos_cited_context(prompt: str) -> bool:
-    pl = prompt.lower()
-    role = re.search(
-        r"\b(the\s+(failing|broken)\s+test|the\s+(issue|ticket|bug|regression)|"
-        r"that\s+error|the\s+error|the\s+last\s+commit|the\s+recent\s+pr)\b", pl)
+    """Fires when the prompt grounds itself in a specific artifact.
+    v0.8.0: loosened from "role reference AND ID" to "any concrete
+    grounding present" — real substantive prompts cite files, ticket
+    IDs, project names without a 'the failing test' style role phrase.
+    Evidence: v0.7.0 log had "file tickets for RFJ-070" (specific ID),
+    "add both sections to ENGINE-COMPARISON.adoc" (file with ext),
+    "Check latest changes to notify4j" (specific project) — all should
+    have praised, none did."""
     ids = re.search(
-        r"#\d+|\bpr\s+\d+|test\w*\s+\w+::\w+|`[^`]+`|https?://",
-        prompt)
-    return bool(role and ids)
+        # ticket-style ids (RFJ-070, JIRA-1234, #123)
+        r"\b[A-Z]{2,}-\d+\b|#\d+|\bpr\s+\d+\b|"
+        # test-method paths (pytest::method)
+        r"\btest\w*\s+\w+::\w+\b|"
+        # backticked identifiers (`--flag`, `class Foo`)
+        r"`[^`]+`|"
+        # URLs
+        r"https?://|"
+        # explicit file paths with extension
+        r"\b[\w./-]+\.(py|js|ts|tsx|jsx|java|kt|go|rs|md|json|yaml|yml|sh|"
+        r"toml|adoc|rst|html|css|scss|sql|xml|proto|conf|env|txt|log)\b|"
+        # path-with-slash reference (src/foo/bar)
+        r"\b(src|test|tests|lib|app|config|docs?|scripts?|bin)/[\w./-]+\b|"
+        # tech-name identifier — lowercase word ending in digit(s),
+        # min 4 letters (notify4j, redis7, python3, spring5) OR
+        # hyphenated identifier of 3+3 letters (spring-boot, react-router)
+        r"\b[a-z]{4,}\d+[a-z]*\b|\b[a-z]{3,}-[a-z]{3,}(-[a-z]+)*\b",
+        prompt,
+    )
+    return bool(ids)
+
+
+def pos_grounded_scope(prompt: str) -> bool:
+    """Fires when a prompt names a specific target — a project, a file
+    stem, a config key, a component — rather than a vague 'this' or
+    'the thing'. Complement to no-vague-reference from the *positive*
+    side. v0.8.0."""
+    # Must be a substantive prompt (not just a filepath). At least 4 words.
+    if len(prompt.split()) < 4:
+        return False
+    # Presence of any concrete grounding wins.
+    return pos_cited_context(prompt)
 
 
 def pos_stated_format(prompt: str) -> bool:
@@ -1485,6 +1518,9 @@ def pos_stated_uncertainty_budget(prompt: str) -> bool:
 # ---- L4 positives ----------------------------------------------------------
 
 def pos_stated_goal(prompt: str) -> bool:
+    """v0.8.0: also matches reason clauses ('we are fully moved away',
+    'we already migrated', 'the plan is …') that state the WHY in a
+    natural voice rather than the textbook 'so that' / 'in order to'."""
     if not _starts_with_action(prompt):
         return False
     pl = prompt.lower()
@@ -1492,7 +1528,14 @@ def pos_stated_goal(prompt: str) -> bool:
         r"(\bso that\b|\bbecause\b|\bgoal is\b|\bgoal:|"
         r"\bin order to\b|\bto (make|enable|allow|support|prevent|"
         r"fix|reduce|increase|avoid|unblock|match)\b|"
-        r"\bwe want to\b|\bthe point is\b|\bwhy: )", pl))
+        r"\bwe want to\b|\bthe point is\b|\bwhy: |"
+        # v0.8.0 additions — real natural-voice reason clauses
+        r"\bwe (are|have|were|already) (moved|migrated|decided|"
+        r"switched|dropped|retired)\b|"
+        r"\bfully (moved|migrated|switched) (away|to|from)\b|"
+        r"\bthe plan is\b|\bthe ask is\b|"
+        r"\bfor (the |the next |the upcoming )?(release|ci|prod|q\d))",
+        pl))
 
 
 def pos_bounded_iteration(prompt: str) -> bool:
@@ -1640,6 +1683,11 @@ POSITIVES: list[Positive] = [
                  "You cited the specific test / PR / error text. Hallucination surface: zero.",
                  "You named the thing instead of 'the thing'. Ambiguity: minus one.",
              ], [SRC_BROPHY_PRAISE, SRC_MUELLER_DWECK]),
+    Positive("grounded-scope", "vague-reference", 1,
+             pos_grounded_scope, [
+                 "You grounded the ask in a specific file / id / project. Single biggest ambiguity killer.",
+                 "Concrete pointer in the prompt itself beats 'the thing' every time — Claude knows exactly what to touch.",
+             ], [SRC_BROPHY_PRAISE, SRC_ANTHROPIC_BE_CLEAR]),
     Positive("stated-format", "no-format-spec", 2,
              pos_stated_format, [
                  "Format specified up front — you'll get what you actually wanted, not a wall of text.",
