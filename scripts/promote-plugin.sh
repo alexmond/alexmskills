@@ -20,7 +20,7 @@ dst="$root/plugins/$name"
 
 # Carry the beta marketplace entry forward (fallback to a minimal entry if absent).
 entry="$(jq --arg n "$name" '.plugins[] | select(.name==$n)' "$beta_mp")"
-[ -n "$entry" ] || entry="$(jq -n --arg n "$name" '{name:$n, source:$n}')"
+[ -n "$entry" ] || entry="$(jq -n --arg n "$name" --arg src "./plugins/$name" '{name:$n, source:$src}')"
 
 # Move the plugin directory (git mv if tracked, else plain mv).
 if git -C "$root" ls-files --error-unmatch "beta/plugins/$name" >/dev/null 2>&1; then
@@ -33,10 +33,12 @@ fi
 tmp="$(mktemp)"
 jq --arg n "$name" 'del(.plugins[] | select(.name==$n))' "$beta_mp" > "$tmp" && mv "$tmp" "$beta_mp"
 
-# Add to stable catalog (source = plugin name, resolved against pluginRoot ./plugins).
+# Add to stable catalog. Source is the clone-root-relative bare-string form
+# (verified: Claude Code resolves bare-string plugin sources from the marketplace
+# clone root, not from the marketplace.json's parent directory).
 tmp="$(mktemp)"
-jq --argjson e "$entry" --arg n "$name" '
-  .plugins += [ ($e + { source: $n }) ]
+jq --argjson e "$entry" --arg n "$name" --arg src "./plugins/$name" '
+  .plugins += [ ($e + { source: $src }) ]
 ' "$stable_mp" > "$tmp" && mv "$tmp" "$stable_mp"
 
 echo "Promoted '$name': beta/plugins -> plugins; updated both marketplace manifests."

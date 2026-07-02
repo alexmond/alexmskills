@@ -52,9 +52,15 @@ validate_channel() {
       # Otherwise the object form's path is repo-root-relative for validation.
       dir="$root/$src_path"
     else
-      # Bare-string form — resolve under pluginRoot, relative to the channel base
+      # Bare-string form — resolve relative to REPO ROOT, not the marketplace
+      # dir. Claude Code treats bare-string plugin sources as clone-root-relative
+      # (verified empirically: install of a subdir marketplace fails on
+      # "Source path does not exist: <clone_root>/plugins/<name>" rather than
+      # <clone_root>/<subdir>/plugins/<name>). For the stable channel this is
+      # the same directory; for the beta channel the sources must include the
+      # channel prefix (e.g. "./beta/plugins/<name>").
       src_path="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source' "$mp")"
-      dir="$base/${plugin_root:+$plugin_root/}$src_path"
+      dir="$root/${src_path#./}"
     fi
     manifest="$dir/.claude-plugin/plugin.json"
 

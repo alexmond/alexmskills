@@ -42,12 +42,12 @@ MD
 
 # Register in the beta marketplace (skip if already present).
 tmp="$(mktemp)"
-jq --arg n "$name" '
+jq --arg n "$name" --arg src "./beta/plugins/$name" '
   if any(.plugins[]; .name == $n) then .
   else .plugins += [{
     name: $n,
     displayName: $n,
-    source: $n,
+    source: $src,
     description: ("TODO: " + $n + " (beta)"),
     version: "0.1.0",
     category: "beta",
