@@ -140,15 +140,33 @@ Config resolves in order: repo local → user global → default. Keys:
 
 Full source citations behind each rule: [`docs/sources.md`](../../docs/sources.md).
 
-## How to switch modes
+## nudge_style — four options (v0.10+)
+
+| Style | User sees | Claude sees | When to use |
+|---|---|---|---|
+| `both` (default) | boxed nudge on **stderr** (dim area under prompt) | `additionalContext` with guidance | You want the nudge visible AND Claude to factor it in |
+| `silent` | nothing | `additionalContext` with guidance | You've internalized the rules; just want Claude to compensate |
+| `log-only` | nothing | nothing | Weekly review discipline — read `log.md`, no live nudges |
+| **`inline`** (v0.10+) | **the boxed nudge is rendered as the opening block of Claude's response** | render instruction + guidance | You want the nudge **inline in your transcript**. Best if your TUI doesn't render hook stderr. |
+
+### Switching modes
 
 Just say it and Claude will edit the right file:
 
-- *"Set prompt-coach to silent"* → writes `nudge_style: "silent"` to `~/.claude/prompt-coach/config.json`
-- *"Set prompt-coach to log-only for this repo"* → writes `nudge_style: "log-only"` to `.claude/prompt-coach/config.json`
+- *"Set prompt-coach to inline"* → writes `nudge_style: "inline"` to `~/.claude/prompt-coach/config.json`
+- *"Set prompt-coach to silent"*
+- *"Set prompt-coach to log-only for this repo"*
 - *"Reset prompt-coach mode"* → deletes the local override so the global default takes over
 - *"Disable praise"* → sets `disable_praise: true`
 - *"Praise every N prompts"* → sets `praise_ratio: N`
+
+### About inline mode
+
+The mechanism: the hook writes an instruction into `additionalContext` telling Claude to render the
+nudge box *verbatim* at the very start of its response, then continue with the actual task. Costs
+~50 extra output tokens per fire and adds the nudge as a persistent line in your transcript. If a
+nudge doesn't substantively apply because prior context resolves the ambiguity, Claude renders the
+block but adds a one-line "(context resolves the ambiguity, proceeding)" note.
 
 ## Mastery ≠ silence (v0.9+)
 

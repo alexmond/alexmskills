@@ -40,7 +40,13 @@ GLOBAL_STATE = GLOBAL_DIR / "state.json"
 GLOBAL_CONFIG = GLOBAL_DIR / "config.json"
 
 DEFAULT_CONFIG = {
-    # nudge_style: "both" (stderr + Claude), "silent" (Claude only), "log-only" (no output)
+    # nudge_style: one of —
+    #   "both"     stderr box + Claude sees (default). Requires TUI to render hook stderr.
+    #   "silent"   Claude sees, user doesn't. Good after you've internalized rules.
+    #   "log-only" nothing external; every fire only recorded in log.md.
+    #   "inline"   the nudge is instructed to Claude to render as the opening
+    #              block of its response. Most visible — nudge lives in your
+    #              transcript. Adds ~50 output tokens per fire.
     "nudge_style": "both",
     "graduation_threshold": 15,   # clean prompts in a row → mastered
     "cooldown_prompts": 5,        # min prompts between same-rule nudges
@@ -1992,6 +1998,49 @@ def _context_for_claude(rule: Rule) -> str:
     )
 
 
+def _inline_context_for_claude(rule: Rule, streak: int, threshold: int) -> str:
+    """v0.10.0 — `nudge_style: inline` variant. Instructs Claude to render
+    the nudge as a visible block at the start of its response so the user
+    sees the coaching inline. More visible than stderr; costs ~50 output
+    tokens per fire."""
+    bar = "━" * 60
+    box = (
+        f"{bar}\n"
+        f"🎯 prompt-coach — {rule.id}: {rule.name}\n\n"
+        f"{rule.nudge}\n\n"
+        f"Progress: {streak}/{threshold} clean prompts → mastered\n"
+        f"{bar}"
+    )
+    return (
+        f"[prompt-coach · inline mode] The user's prompt matched the "
+        f"coaching rule '{rule.id}' ({rule.name}). Because the user has "
+        f"opted into `nudge_style: inline`, render the following block "
+        f"AT THE VERY START of your response, VERBATIM, before addressing "
+        f"the user's task:\n\n"
+        f"{box}\n\n"
+        f"Then answer the user's actual question. If the nudge doesn't "
+        f"substantively apply because prior context makes the referent "
+        f"clear, still render the block but add a one-line note like "
+        f"'(context resolves the ambiguity, proceeding)' after it. "
+        f"Guidance for shaping the response: {rule.guidance}"
+    )
+
+
+def _inline_context_for_claude_refresher(rule: Rule, days_since: int | None) -> str:
+    """v0.10.0 — inline variant for a refresher (mastered rule that fired).
+    Softer instruction — one-line block, not the full-width box."""
+    mastery_line = (f"mastered {days_since}d ago"
+                    if days_since is not None else "mastered")
+    line = f"🔄 prompt-coach — refresher on {rule.id} ({mastery_line}) — {rule.nudge}"
+    return (
+        f"[prompt-coach · inline refresher] Mastered rule '{rule.id}' matched. "
+        f"Render this ONE line at the start of your response before addressing "
+        f"the task: `{line}`. Keep it as a single blockquote or callout line. "
+        f"Guidance: {rule.guidance} Don't belabor it — this is a light "
+        f"re-fire, not a full nudge."
+    )
+
+
 def _praise_box(kind: str, header: str, text: str,
                 sources: list[tuple[str, str]], mode: str) -> str:
     """Praise line — deliberately shorter/gentler than the nudge box."""
@@ -2129,7 +2178,7 @@ def main() -> int:
     cwd = Path(payload.get("cwd") or os.getcwd())
 
     cfg = resolve_config(cwd)
-    if cfg.get("nudge_style") not in ("both", "silent", "log-only"):
+    if cfg.get("nudge_style") not in ("both", "silent", "log-only", "inline"):
         cfg["nudge_style"] = "both"
 
     g = load_json(GLOBAL_STATE, blank_global_state())
@@ -2285,7 +2334,10 @@ def main() -> int:
             if mode == "both":
                 streak = int(g["rules"][chosen].get("clean_streak", 0))
                 print(_box(rule, streak, threshold, mode), file=sys.stderr, flush=True)
-            if mode in ("both", "silent"):
+            if mode == "inline":
+                streak = int(g["rules"][chosen].get("clean_streak", 0))
+                context_line = _inline_context_for_claude(rule, streak, threshold)
+            elif mode in ("both", "silent"):
                 context_line = _context_for_claude(rule)
     elif chosen_mastered is not None:
         # v0.9.0 — mastered rule fires: soft refresher, longer cooldown.
@@ -2316,7 +2368,9 @@ def main() -> int:
             if mode == "both":
                 print(_refresher_box(rule, days_since, mode),
                       file=sys.stderr, flush=True)
-            if mode in ("both", "silent"):
+            if mode == "inline":
+                context_line = _inline_context_for_claude_refresher(rule, days_since)
+            elif mode in ("both", "silent"):
                 context_line = (
                     f"[prompt-coach · refresher] Mastered rule '{rule.id}' "
                     f"({rule.name}) matched this prompt — light re-fire. "

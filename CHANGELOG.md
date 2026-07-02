@@ -7,6 +7,24 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02 (latest 5)
+
+### Added
+- **prompt-coach-beta 0.10.0** — new **`nudge_style: "inline"`** mode. The
+  nudge box is rendered as the opening block of Claude's response instead
+  of going to stderr — so the coaching is visible *in your transcript*
+  rather than in the dim hook-stderr area that some TUIs swallow.
+  - Mechanism: `additionalContext` contains a rendering instruction plus
+    the box, telling Claude to emit it verbatim at the start of the reply
+    before addressing the task.
+  - Costs ~50 extra output tokens per fire (small).
+  - Also handles the v0.9 refresher tier — mastered rules render as a
+    single-line callout instead of the full box.
+  - Enable via config or by saying *"set prompt-coach to inline"*.
+- Config: `nudge_style` now accepts `both | silent | log-only | inline`.
+  Default remains `both`; users whose TUI doesn't visibly render hook
+  stderr can flip to `inline` for guaranteed visibility.
+
 ## 2026-07-02 (latest 4)
 
 ### Added
