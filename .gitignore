@@ -21,3 +21,4 @@ node_modules/
 # Python
 __pycache__/
 *.pyc
+.claude/prompt-coach/
