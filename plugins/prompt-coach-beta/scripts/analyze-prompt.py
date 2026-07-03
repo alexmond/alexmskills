@@ -194,6 +194,69 @@ _CONVERSATIONAL_AFFIRM = re.compile(
 )
 _CONVERSATIONAL_PICK = re.compile(r"\b\d+\b|\boption\s+[a-e]\b")
 
+# v0.13.0 — bug-report marker phrases. When present in a prompt, the
+# analyzer flags the PREVIOUS non-conversational prompt's analysis into
+# `.claude/prompt-coach/candidates.jsonl` for later review via the
+# /prompt-coach-beta:report-issue slash command.
+_BUG_REPORT_PHRASE = re.compile(
+    r"\b(coach\s+(that\s+was\s+|was\s+)?wrong|"
+    r"coach\s+missed|"
+    r"coach\s+mistreat(ed)?|"
+    r"coach\s+false\s+positive|"
+    r"coach\s+fp\b|"
+    r"coach\s+shouldn.?t\s+have|"
+    r"coach\s+bug|"
+    r"bad\s+nudge|wrong\s+nudge|"
+    r"report\s+(the\s+)?coach|"
+    r"coach\s+oversight|"
+    r"coach\s+wrong)\b",
+    re.IGNORECASE,
+)
+
+
+def is_bug_report_phrase(prompt: str) -> bool:
+    return bool(_BUG_REPORT_PHRASE.search(prompt))
+
+
+def compute_signature(prompt: str, corrections: list[tuple[str, str]]
+                      ) -> dict:
+    """Compute a structural signature — enough to categorize the prompt
+    class without leaking full content. Used in bug reports (first 5
+    words only, plus these booleans)."""
+    words = prompt.split()
+    pl = prompt.lower()
+    return {
+        "word_count": len(words),
+        "char_count": len(prompt),
+        "first_5_words": " ".join(words[:5]),
+        "starts_with_action": _starts_with_action(prompt),
+        "starts_with_hedge": bool(_HEDGE_PREFIXES.match(pl.strip())),
+        "has_file_ref": bool(re.search(
+            r"\b\w+\.(py|js|ts|tsx|jsx|java|kt|go|rs|md|json|yaml|yml|"
+            r"sh|toml|adoc|rst|html|css|sql)\b|src/|tests?/|lib/", prompt)),
+        "has_ticket_id": bool(re.search(r"\b[A-Z]{2,}-\d+|#\d+", prompt)),
+        "has_backticks": "`" in prompt,
+        "has_url": bool(re.search(r"https?://", prompt)),
+        "has_goal_clause": bool(re.search(
+            r"\b(so that|because|in order to|we (are|have) (fully )?"
+            r"(moved|migrated))\b", pl)),
+        "has_guardrail_clause": bool(re.search(
+            r"\b(don'?t\s+|do\s+not\s+|must\s+not|keep\s+.*\s+"
+            r"(stable|intact|unchanged)|without\s+(breaking|changing))",
+            pl)),
+        "has_dod_marker": bool(re.search(
+            r"\b(until|verify|passes|assert|expect|green|ci)\b", pl)),
+        "has_format_spec": bool(re.search(
+            r"\b(bullet|table|json|markdown|paragraph|numbered|"
+            r"one[- ]liner|one line|yes/no|\d+\s*(items?|points?|bullets?))\b",
+            pl)),
+        "is_question": bool(re.match(
+            r"^\s*(what|how|why|does|is there|are there|do we|do you|"
+            r"can we|should we)\b", pl)),
+        "is_conversational": is_conversational(prompt),
+        "corrections_applied": [f"{o}->{c}" for o, c in corrections],
+    }
+
 
 def is_conversational(prompt: str) -> bool:
     """Detect short-turn responses — approvals, multi-choice picks, continuations —
@@ -2166,6 +2229,43 @@ def pick_praise(positive_fires: list[str], mastery_events: list[str],
 # ---------------------------------------------------------------------------
 
 
+def _flag_previous_for_review(local_dir: Path, mark_prompt: str) -> None:
+    """v0.13.0 — bug-report phrase detected. Find the most recent
+    non-conversational log entry and copy it into candidates.jsonl for
+    later review via /prompt-coach-beta:report-issue."""
+    log = local_dir / "log.md"
+    if not log.exists():
+        return
+    lines = [ln for ln in log.read_text(encoding="utf-8").splitlines()
+             if ln.startswith("- [")]
+    # Walk backwards to find the last substantive (non-conversational,
+    # non-bug-report) entry.
+    target_line: str | None = None
+    for line in reversed(lines):
+        m = re.search(r"outcome=(\S+)", line)
+        if not m:
+            continue
+        outcome = m.group(1)
+        if outcome in ("skipped:conversational",):
+            continue
+        # Also skip the entry for the bug-report phrase itself.
+        pm = re.search(r"prompt=«([^»]*)»", line)
+        if pm and is_bug_report_phrase(pm.group(1)):
+            continue
+        target_line = line
+        break
+    if not target_line:
+        return
+    candidates = local_dir / "candidates.jsonl"
+    entry = {
+        "flagged_at": _now_iso(),
+        "mark_phrase_first_5_words": " ".join(mark_prompt.split()[:5]),
+        "target_log_line": target_line,
+    }
+    with candidates.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
 def append_log(local_dir: Path, entry: dict) -> None:
     log = local_dir / "log.md"
     log.parent.mkdir(parents=True, exist_ok=True)
@@ -2234,6 +2334,12 @@ def main() -> int:
     # Increment prompt counters.
     g["prompt_count"] = int(g.get("prompt_count", 0)) + 1
     l["prompt_count"] = int(l.get("prompt_count", 0)) + 1
+
+    # v0.13.0 — bug-report phrase: user flagged the PREVIOUS prompt's
+    # analysis for review. Append the last non-conversational log entry
+    # (which is the analysis being complained about) to candidates.jsonl.
+    if is_bug_report_phrase(prompt_raw):
+        _flag_previous_for_review(local_dir, prompt_raw)
 
     # Conversational short-circuit — "sure", "publish", "1 and 2", "go for
     # it" etc. are fragments answering an implicit question, not full

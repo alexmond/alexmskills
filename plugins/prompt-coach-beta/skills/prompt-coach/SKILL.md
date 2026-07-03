@@ -194,6 +194,32 @@ and current config. Answers "is this thing actually doing anything?" without ope
 
 Read-only; the command never modifies state.
 
+## Reporting bad calls (v0.13+)
+
+If the coach mistreated a prompt (false positive, false negative, wrong rule, bad wording),
+mark it on the **very next turn** with any of these phrases:
+
+- *"coach that was wrong"*
+- *"coach missed this"*
+- *"coach false positive"*
+- *"bad nudge"* / *"wrong nudge"*
+- *"coach mistreated my prompt"*
+
+The analyzer flags the PRIOR substantive prompt's analysis (not the current complaint) into
+`.claude/prompt-coach/candidates.jsonl`. Later, run:
+
+```
+/prompt-coach-beta:report-issue
+```
+
+The command reads the queue, computes a structural signature (word count, verb-shape,
+has-file-ref, is-question, etc.), redacts to the **first 5 words** of the prompt only, asks
+you for a one-line annotation per case, shows a full preview, and only then files a
+`gh issue create` to `alexmond/alexmskills` with label `prompt-coach` — after you confirm.
+
+**Privacy guarantees**: only first-5-words + structural booleans + your annotation get filed.
+Full prompts stay in `log.md` locally. You see the exact payload before it's posted.
+
 ## Pause / disable (say-it phrases)
 
 - *"Coach pause 10"* — silence nudges for the next 10 prompts. Claude sets `pause_until_prompt` in

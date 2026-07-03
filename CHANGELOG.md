@@ -7,6 +7,35 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03
+
+### Added
+- **prompt-coach-beta 0.13.0** — privacy-safe bug reporting workflow.
+  - **Mark-phrase detection.** Say *"coach that was wrong"* / *"coach
+    missed this"* / *"coach false positive"* / *"bad nudge"* on the turn
+    right after a mistreated prompt. The analyzer flags the PRIOR
+    substantive prompt's analysis (not the complaint itself) into
+    `.claude/prompt-coach/candidates.jsonl`. Twelve trigger phrases,
+    verified against 4 negatives ("this coach is helpful" / "please
+    coach me" don't false-fire).
+  - **`/prompt-coach-beta:report-issue` slash command.** Reads the
+    candidates queue, computes a structural signature per case
+    (word_count, starts_with_action, starts_with_hedge, has_file_ref,
+    has_ticket_id, has_backticks, has_url, has_goal_clause,
+    has_guardrail_clause, has_dod_marker, has_format_spec, is_question,
+    is_conversational, corrections_applied), redacts prompt content to
+    the **first 5 words**, and shows each case as a card. User adds a
+    one-line annotation ("expected no-plan-mode-for-risky to fire") and
+    optionally classifies (false-positive / false-negative / wrong-rule
+    / bad-message / redundant). Full payload preview is shown; only on
+    explicit "yes" does `gh issue create` post to `alexmond/alexmskills`
+    with label `prompt-coach`.
+  - **Privacy invariants** — verified by test: `first_5_words` is
+    exactly 5 words, no full-prompt content leaks into any signature
+    field, full prompts stay in local `log.md`.
+- New `compute_signature(prompt, corrections)` public function on the
+  analyzer for the slash-command to invoke.
+
 ## 2026-07-02 (latest 7)
 
 ### Changed
