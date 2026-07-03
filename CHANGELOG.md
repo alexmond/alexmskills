@@ -7,6 +7,51 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 5)
+
+### Added
+- **prompt-coach-beta 0.17.0** — voice presets + voice source + inline
+  medium/short bug fix. Rolls three things into one release.
+  - **Voice presets (`voice_preset`).** `Rule.nudge` now accepts
+    `str | list[str] | dict[preset → list[str]]` — full backward-compat with
+    v0.16's list form. Two presets ship: `colleague` (default; the current
+    direct-ends-on-a-question voice) and `plain` (simple English, short
+    sentences, no idioms, no jargon — for non-native speakers). L1 + L2 (10
+    rules) ship both presets with 3 variants each = 60 phrasings. L3-L6 (18
+    rules) fall back to `colleague` when `plain` is requested; those variants
+    will be added as evidence surfaces which fire most.
+  - **Voice source (`voice_source`).** Three options for who authors the
+    nudge text at fire time:
+      - `static` (default) — pre-written variants from the catalog; 0 tokens
+      - `llm-compose` — Claude writes fresh, situated to *this* prompt with
+        6 anti-disagreement guardrails baked into the additionalContext:
+        header verbatim, never override the rule, ≤N words per disclosure
+        level, must match preset voice, must end on a concrete ask, prompt
+        shape provided so Claude can situate. Costs +200-800ms and ~150-400
+        output tokens per fire.
+      - `hybrid` — `static` on full fires (deterministic, teaching), 
+        `llm-compose` on medium/short refreshers (livelier when repeating).
+  - **Fixed v0.16 medium/short inline bug** — the medium and short inline
+    context strings referenced "the variant text" but never interpolated
+    the actual picked variant, so Claude improvised from `guidance` alone.
+    Occasionally led to Claude *disagreeing with the rule* ("context
+    resolves this one, proceeding") instead of delivering the coaching.
+    Both paths now embed the picked variant text verbatim; the LLM-compose
+    path is the intentional way to get situated composition, with
+    guardrails that prevent the disagreement mode.
+  - **Emit path logs `p=<preset>:src=<source>`** on every fire outcome,
+    so `/prompt-coach-beta:stats` can mine which combination the user
+    actually converges on.
+  - **Say-it phrases**: *"set prompt-coach voice to plain"*,
+    *"set prompt-coach source to llm-compose"*, *"set prompt-coach source
+    to hybrid"*, etc.
+  - **Verification**: 6 test categories pass — schema resolves all 3 nudge
+    shapes; L3-L6 fall back cleanly when plain requested; `_pick_variant`
+    honors config'd preset; `_resolve_voice_source` correct across all 7
+    voice × level combos; E2E confirms static path embeds variant verbatim
+    at every disclosure level; `llm-compose` emits all 6 guardrails in
+    additionalContext.
+
 ## 2026-07-03 (later 4)
 
 ### Fixed

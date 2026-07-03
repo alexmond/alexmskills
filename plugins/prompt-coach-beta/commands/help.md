@@ -48,6 +48,13 @@ SAY-IT PHRASES (talk to Claude naturally; Claude edits the right file)
     "set prompt-coach to both"        default — stderr box + Claude context
     "reset prompt-coach mode"         drop local override
 
+  Voice (v0.17+):
+    "set prompt-coach voice to colleague"  default — direct, ends on a question
+    "set prompt-coach voice to plain"      simple English for non-native speakers
+    "set prompt-coach source to static"    default — pre-written variants
+    "set prompt-coach source to llm-compose" Claude writes a fresh, situated nudge each fire
+    "set prompt-coach source to hybrid"    static on full fires, llm-compose on refreshers
+
   Pause / disable:
     "coach pause 10"                  silence for the next N prompts
     "coach off <rule-id>"             permanently disable one rule
@@ -85,6 +92,10 @@ CURRENT CONFIG (resolved: default → global → this repo)
     disclosure_medium_at:     <live value>  (fire count → medium box)
     disclosure_short_at:      <live value>  (fire count → one-liner)
 
+  Voice (v0.17+):
+    voice_preset:             <live value>  (colleague | plain)
+    voice_source:             <live value>  (static | llm-compose | hybrid)
+
   Global config file:   ~/.claude/prompt-coach/config.json
   Per-repo config file: .claude/prompt-coach/config.json (per repo)
 
@@ -120,6 +131,20 @@ CONFIG OPTIONS REFERENCE
   silence_duration          How long silence lasts (default: 30 prompts)
   disclosure_medium_at      Fire count in window → medium box (default: 2)
   disclosure_short_at       Fire count in window → one-liner (default: 4)
+
+  Voice (v0.17+):
+  voice_preset              Which set of phrasings the coach draws from:
+                              colleague  — default, direct, ends on a question
+                              plain      — simple English for non-native speakers
+                            L1+L2 ship both presets with 3 variants each; L3-L6
+                            fall back to colleague when plain requested.
+  voice_source              Who authors the nudge text at fire time:
+                              static      — pre-written variants (default; 0 cost)
+                              llm-compose — Claude writes fresh, situated to your
+                                            prompt with 6 guardrails
+                                            (+200-800ms, ~150-400 tokens/fire)
+                              hybrid      — static on full fires, llm-compose on
+                                            medium/short refreshers
 
 ────────────────────────────────────────────────────────────────────
 STATE FILES

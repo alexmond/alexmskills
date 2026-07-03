@@ -119,6 +119,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-03 — **prompt-coach-java-mcp-spec** — living design doc at plugins/prompt-coach-beta/docs/java-mcp-spec.md for future Spring Boot MCP server; multi-user training preqrequisite. Why: chat + telemetry need MCP.
 - 2026-07-03 — **prompt-coach-anti-habituation** — 0.16.0: variant pool (3/rule) + novelty + progressive disclosure + silence-after-saturation + voice rewrite (from technical-manual to colleague-feedback tone). Why: same message every fire.
 - 2026-07-03 — **prompt-coach-doc-drift** — 0.16.1: fixed 3 code paths rendering variant list literal + SKILL.md drift (tier count, no-answer-shape tier, defaults) + help.md v0.16 knobs. Why: doc/code out of sync.
+- 2026-07-03 — **prompt-coach-voice** — 0.17.0: `voice_preset` (colleague|plain, L1+L2 both, L3-L6 fall back) + `voice_source` (static|llm-compose|hybrid, 6 guardrails) + medium/short static bug fix. Why: non-native readers.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

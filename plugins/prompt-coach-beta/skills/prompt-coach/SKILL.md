@@ -169,6 +169,51 @@ nudge box *verbatim* at the very start of its response, then continue with the a
 nudge doesn't substantively apply because prior context resolves the ambiguity, Claude renders the
 block but adds a one-line "(context resolves the ambiguity, proceeding)" note.
 
+## Voice presets & sources (v0.17+)
+
+Two orthogonal config knobs shape *how* the coach talks to you.
+
+### `voice_preset` — personality
+
+Chooses which set of pre-written phrasings the coach draws from.
+
+- `colleague` (default) — friendly, direct, ends on a concrete question. Assumes fluent
+  colloquial English and light idiom. "You said 'fix it' — what's 'it'?"
+- `plain` — simple English, short sentences, no idioms, no jargon. Written for
+  non-native speakers or anyone who prefers explicit phrasing. "Please tell me what
+  'it' or 'this' is. For example: a file name, a PR number, or an error message."
+
+Coverage: L1 + L2 rules (10 rules) ship both presets with 3 variants each = 60
+phrasings. L3–L6 rules currently ship `colleague` only; if you pick `plain`, they
+fall back to `colleague` (no crash, no missing text). L3–L6 `plain` variants will be
+added as evidence surfaces which rules fire most.
+
+Switch it conversationally:
+
+- *"set prompt-coach voice to plain"*
+- *"set prompt-coach voice to colleague"*
+- *"reset prompt-coach voice"*
+
+### `voice_source` — who authors the sentence
+
+Independent of preset. Chooses whether the nudge text is drawn from the static
+catalog or composed fresh by Claude.
+
+| Source | How | Cost per fire | Determinism |
+|---|---|---|---|
+| `static` (default) | Pre-written variants from the catalog. Rotates + follows disclosure levels. | 0 tokens, ~0 ms | Deterministic — same rule, same context → same text (mod novelty rotation) |
+| `llm-compose` | Hook passes rule id + guidance + your prompt shape to Claude in `additionalContext`; Claude writes the nudge fresh, primed to reflect *this specific* prompt with 6 anti-disagreement guardrails. | +200–800 ms, ~150–400 output tokens per fire | Non-deterministic; may feel repetitive-in-a-different-way |
+| `hybrid` | First fire in the window = static preset (deterministic, teaching-focused). Medium/short refreshers = llm-compose (livelier when you've already learned the rule and want a light-touch reminder). | Costs both, sparingly | Mixed |
+
+Anti-disagreement guardrails baked into `llm-compose`: must open with the rule id
+header verbatim, must not override the rule even if context resolves the referent,
+must end on a concrete ask, word-count cap by disclosure level, must match the
+preset's voice.
+
+The `outcome` log line now records preset + source per fire (e.g.
+`nudged:inline:full:v1:p=plain:src=static`) so `/prompt-coach-beta:stats` can
+mine which combination you actually converge on.
+
 ## Anti-habituation (v0.16+)
 
 Same message repeated wears out. The literature (Hattie & Timperley 2007 on feedback wear-out;

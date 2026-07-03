@@ -65,6 +65,13 @@ DEFAULT_CONFIG = {
     "silence_duration": 30,           # prompts — how long to stay silent
     "disclosure_medium_at": 2,        # 2nd fire in window → medium box
     "disclosure_short_at": 4,         # 4th+ fire in window → one-liner
+    # v0.17.0 — voice_preset chooses the coach's personality (which set of
+    # phrasings to draw from). voice_source chooses WHO authors the sentence
+    # at fire time: preset text ("static"), Claude composing fresh
+    # ("llm-compose"), or a mix ("hybrid": static on full, llm-compose on
+    # medium/short so refreshers feel situated).
+    "voice_preset": "colleague",      # "colleague" | "plain"
+    "voice_source": "static",         # "static" | "llm-compose" | "hybrid"
     # Encouragement layer (v0.3+). Sparing praise for the specific positive
     # behaviors mirroring the negative rules — evidence-based defaults tuned
     # for variable-ratio reinforcement without diluting nudges.
@@ -380,27 +387,64 @@ def normalize_prompt(prompt: str, tolerance: int
 # Rule catalog
 # ---------------------------------------------------------------------------
 
+DEFAULT_VOICE_PRESET = "colleague"
+
+
 @dataclass
 class Rule:
     id: str
     tier: int                     # 1 = fundamentals, 2 = intermediate, 3 = advanced
     name: str
-    # v0.16.0 — nudges is a *list* of phrasing variants for anti-habituation
-    # (Hattie & Timperley 2007, Sasse & Rashid 2013 alert fatigue). Selection
-    # rotates with novelty constraint. Fields kept singular in constructor
-    # via `nudge` for back-compat; property `nudges` returns the list.
-    nudge: str | list[str]
+    # v0.16.0 — nudges is a *list* of phrasing variants for anti-habituation.
+    # v0.17.0 — nudges can now be a dict keyed by voice preset name, so the
+    # same rule can carry parallel phrasings for different voices
+    # ("colleague" / "plain" / future presets). Accepted shapes:
+    #   str                     — single variant, treated as `colleague`
+    #   list[str]               — multiple variants, treated as `colleague`
+    #   dict[preset, list[str]] — full preset-keyed catalog
+    # Preset resolution falls back: requested preset → colleague → primary.
+    nudge: str | list[str] | dict[str, list[str]]
     guidance: str                 # short hint for Claude's additionalContext
     sources: list[tuple[str, str]]  # (title, url)
     check: Callable[[str], bool]
 
+    def variants_for(self, preset: str = DEFAULT_VOICE_PRESET) -> list[str]:
+        """Return variant list for the requested preset, with fallback."""
+        n = self.nudge
+        if isinstance(n, str):
+            return [n]
+        if isinstance(n, list):
+            return list(n)
+        if isinstance(n, dict):
+            if preset in n:
+                return list(n[preset])
+            if DEFAULT_VOICE_PRESET in n:
+                return list(n[DEFAULT_VOICE_PRESET])
+            # Last resort: any preset's variants
+            for v in n.values():
+                if v:
+                    return list(v)
+            return []
+        return []
+
+    def primary_nudge_for(self, preset: str = DEFAULT_VOICE_PRESET) -> str:
+        vs = self.variants_for(preset)
+        return vs[0] if vs else ""
+
     @property
     def nudges(self) -> list[str]:
-        return self.nudge if isinstance(self.nudge, list) else [self.nudge]
+        """Backward-compat: default preset (colleague)."""
+        return self.variants_for(DEFAULT_VOICE_PRESET)
 
     @property
     def primary_nudge(self) -> str:
-        return self.nudges[0]
+        return self.primary_nudge_for(DEFAULT_VOICE_PRESET)
+
+    def has_preset(self, preset: str) -> bool:
+        """True if the rule ships variants specifically for this preset."""
+        if isinstance(self.nudge, dict):
+            return preset in self.nudge
+        return preset == DEFAULT_VOICE_PRESET
 
 
 # ---- L1 fundamentals -------------------------------------------------------
@@ -1011,13 +1055,22 @@ RULES: list[Rule] = [
         id="vague-reference",
         tier=1,
         name="Vague reference",
-        nudge=[
-            "You said 'fix it' — what's 'it'? A file, a PR, an error message? "
-            "Point me at the specific thing and I'll go faster.",
-            "The 'it/this/that' is doing a lot of work in that sentence. Which "
-            "file / PR / error are you pointing at?",
-            "One quick thing: what specifically are we working on?",
-        ],
+        nudge={
+            "colleague": [
+                "You said 'fix it' — what's 'it'? A file, a PR, an error message? "
+                "Point me at the specific thing and I'll go faster.",
+                "The 'it/this/that' is doing a lot of work in that sentence. Which "
+                "file / PR / error are you pointing at?",
+                "One quick thing: what specifically are we working on?",
+            ],
+            "plain": [
+                "Please tell me what 'it' or 'this' is. For example: a file name, "
+                "a PR number, or an error message.",
+                "The words 'it' and 'this' can mean many things. Which file or "
+                "which error do you mean?",
+                "What is the exact file or error? A name or a number helps me.",
+            ],
+        },
         guidance=(
             "User's prompt starts with an unresolved pronoun. If context makes the "
             "referent unambiguous, proceed; otherwise ask ONE short clarifying "
@@ -1030,13 +1083,23 @@ RULES: list[Rule] = [
         id="no-definition-of-done",
         tier=1,
         name="No definition of done",
-        nudge=[
-            "How will we know when this is done? A passing test, a specific "
-            "output, a green build?",
-            "Give me a way to check success — 'until pytest passes' or 'when "
-            "the CI is green' or 'the output matches X'.",
-            "Quick: what does 'done' look like here?",
-        ],
+        nudge={
+            "colleague": [
+                "How will we know when this is done? A passing test, a specific "
+                "output, a green build?",
+                "Give me a way to check success — 'until pytest passes' or 'when "
+                "the CI is green' or 'the output matches X'.",
+                "Quick: what does 'done' look like here?",
+            ],
+            "plain": [
+                "How can we check the work is finished? For example: a test "
+                "passes, or the build is green.",
+                "Please tell me one way to check the result is correct. "
+                "A test, a value, or a status is fine.",
+                "What tells you the change is finished? Please say one clear "
+                "sign.",
+            ],
+        },
         guidance=(
             "User's prompt is an action verb with no acceptance criteria. Before "
             "acting, restate your interpretation of 'done' in one sentence, and "
@@ -1049,14 +1112,24 @@ RULES: list[Rule] = [
         id="unbounded-scope",
         tier=1,
         name="Unbounded scope",
-        nudge=[
-            "'All' / 'every' / 'the whole thing' is a lot. Which files or "
-            "module specifically? Or should this be audit-only, no changes?",
-            "That's a big scope. Can we narrow it down — a path, a pattern, a "
-            "specific module?",
-            "Do you want me to actually change everything, or scope this to "
-            "something smaller first?",
-        ],
+        nudge={
+            "colleague": [
+                "'All' / 'every' / 'the whole thing' is a lot. Which files or "
+                "module specifically? Or should this be audit-only, no changes?",
+                "That's a big scope. Can we narrow it down — a path, a pattern, a "
+                "specific module?",
+                "Do you want me to actually change everything, or scope this to "
+                "something smaller first?",
+            ],
+            "plain": [
+                "Words like 'all' or 'every' cover many files. Which files or "
+                "which module should I change?",
+                "Should I really change everything? Or should I only look "
+                "and not change anything?",
+                "Please name one folder, one file type, or one pattern to work "
+                "on. That way I do not change too much.",
+            ],
+        },
         guidance=(
             "User's prompt has an unbounded scope word attached to a mutating "
             "verb. Ask them to constrain (path glob, module, or read-only) BEFORE "
@@ -1069,14 +1142,24 @@ RULES: list[Rule] = [
         id="improve-without-metric",
         tier=1,
         name="Improve without a metric",
-        nudge=[
-            "'Better' / 'faster' / 'cleaner' means different things to different "
-            "people. What are you actually optimizing for — speed (ms), size "
-            "(lines), correctness (tests)?",
-            "How will we measure 'better'? A latency target, a specific test "
-            "passing, a byte count?",
-            "Quick — what's the target? A number or a spec I can aim at?",
-        ],
+        nudge={
+            "colleague": [
+                "'Better' / 'faster' / 'cleaner' means different things to "
+                "different people. What are you actually optimizing for — speed "
+                "(ms), size (lines), correctness (tests)?",
+                "How will we measure 'better'? A latency target, a specific test "
+                "passing, a byte count?",
+                "Quick — what's the target? A number or a spec I can aim at?",
+            ],
+            "plain": [
+                "'Better' can mean many things. Please pick one: faster, "
+                "smaller, more correct, or easier to read.",
+                "How do we measure success? A number is best. For example: "
+                "'under 200 ms' or 'test X passes'.",
+                "What is your target? Please give a number or a rule I can "
+                "aim for.",
+            ],
+        },
         guidance=(
             "User asked for improvement without a measurable target. Either infer "
             "the most likely target from context and STATE it before acting, or "
@@ -1089,15 +1172,27 @@ RULES: list[Rule] = [
         id="missing-guardrails",
         tier=1,
         name="Missing guardrails",
-        nudge=[
-            "You're asking for a big change — refactor / rewrite / migrate — "
-            "but didn't say what to leave alone. What must NOT change? Name "
-            "one thing: the public API, the tests, the file layout.",
-            "Before I touch anything: what's off-limits? Say something like "
-            "'don't break the public API' or 'existing tests must still pass' "
-            "and I'll respect that.",
-            "Quick one before I dig in: anything I should specifically not touch?",
-        ],
+        nudge={
+            "colleague": [
+                "You're asking for a big change — refactor / rewrite / migrate — "
+                "but didn't say what to leave alone. What must NOT change? Name "
+                "one thing: the public API, the tests, the file layout.",
+                "Before I touch anything: what's off-limits? Say something like "
+                "'don't break the public API' or 'existing tests must still pass' "
+                "and I'll respect that.",
+                "Quick one before I dig in: anything I should specifically not "
+                "touch?",
+            ],
+            "plain": [
+                "You want a big change. Please tell me one thing I must not "
+                "change. For example: the public API, or the tests, or the "
+                "file names.",
+                "What must stay the same? Please name one thing. I will keep "
+                "it safe.",
+                "Before I start: is there anything I must not change or "
+                "delete?",
+            ],
+        },
         guidance=(
             "User's prompt has a broad mutating verb and no invariant. State the "
             "invariants you'll preserve (public API, existing tests, file "
@@ -1111,10 +1206,24 @@ RULES: list[Rule] = [
         id="compound-tasks",
         tier=2,
         name="Compound tasks",
-        nudge=(
-            "Three or more action verbs joined by 'and' turn into partial work. "
-            "Split into ordered steps, or say which is P0 and which can wait."
-        ),
+        nudge={
+            "colleague": [
+                "Three-plus verbs in one prompt often mean I'll get halfway through "
+                "and stop. Can we split it? Which is the P0 and which can wait?",
+                "Lot going on in one ask — I'll do better if we order it: first X, "
+                "then Y, then Z. Which should I do first?",
+                "Want me to make a task list first and check with you before "
+                "starting? Multi-step stuff is easier that way.",
+            ],
+            "plain": [
+                "You asked me to do many things. I may do only part of it. "
+                "Please tell me the order, or which one is most important.",
+                "There are many steps in this ask. Should I make a list first, "
+                "so we do not miss any step?",
+                "Please tell me: which step should I do first? I will do them "
+                "one by one.",
+            ],
+        },
         guidance=(
             "User's prompt bundles multiple mutations. Propose an ordered plan "
             "with the smallest independently-verifiable slice first; ask which "
@@ -1127,11 +1236,24 @@ RULES: list[Rule] = [
         id="no-verify-loop",
         tier=2,
         name="No verify loop",
-        nudge=(
-            "You asked for an implementation but not for verification. Add "
-            "'and run tests / confirm build passes / show me the failing case "
-            "reproduces then fixed'."
-        ),
+        nudge={
+            "colleague": [
+                "How do we know the change worked? Add 'and run the tests' or "
+                "'and confirm the build stays green' so we close the loop.",
+                "Implementation without verification is faith-based. Say what "
+                "should be true after — a test passing, a build succeeding, "
+                "an output matching.",
+                "Quick: after I make the change, what should you see to know "
+                "it landed?",
+            ],
+            "plain": [
+                "Please also tell me how to check my work. For example: 'and "
+                "run the tests' or 'and check the build is green'.",
+                "How do I know my change worked? Please say one clear check.",
+                "After I finish, what should you see? A test result, or a "
+                "log line, or a screen output?",
+            ],
+        },
         guidance=(
             "User's prompt implements without verifying. Run the relevant tests / "
             "type-check / build after your change, and report the result even if "
@@ -1144,11 +1266,25 @@ RULES: list[Rule] = [
         id="missing-context-fetch",
         tier=2,
         name="Missing context reference",
-        nudge=(
-            "You referred to 'the failing test' / 'the issue' / 'that error' — "
-            "but didn't cite it. Paste the ID, name, or error text so Claude "
-            "doesn't guess."
-        ),
+        nudge={
+            "colleague": [
+                "You mentioned 'the failing test' / 'the issue' / 'that error' "
+                "without naming it. Paste the ID, test name, or error text — "
+                "then I don't have to guess.",
+                "Which failing test / which issue / which error? A name, a "
+                "number, or the error text saves us a round trip.",
+                "Quick — can you paste the identifier or the error text? "
+                "Faster than me guessing which one you mean.",
+            ],
+            "plain": [
+                "Please tell me the exact test name, or the ticket number, or "
+                "the error text. Then I can find it.",
+                "Which test failed? Which ticket? Please give the name or "
+                "the number.",
+                "Please copy the error message or the ticket ID here. This "
+                "way I know what you mean.",
+            ],
+        },
         guidance=(
             "User referenced an external artifact by role but not by ID. Ask "
             "for the identifier (issue #, test name, error string) before "
@@ -1161,14 +1297,24 @@ RULES: list[Rule] = [
         id="no-answer-shape",
         tier=1,
         name="Information ask without a shape",
-        nudge=[
-            "How do you want the answer shaped? A few bullets, one paragraph, "
-            "yes/no + one line, a table?",
-            "Give me a shape and I'll fit the answer to it — '3 bullets each', "
-            "'under 100 words', 'table with X and Y columns'.",
-            "Quick shape? One-liner, table, bullets — anything works, just save "
-            "me from a wall of text.",
-        ],
+        nudge={
+            "colleague": [
+                "How do you want the answer shaped? A few bullets, one paragraph, "
+                "yes/no + one line, a table?",
+                "Give me a shape and I'll fit the answer to it — '3 bullets each', "
+                "'under 100 words', 'table with X and Y columns'.",
+                "Quick shape? One-liner, table, bullets — anything works, just save "
+                "me from a wall of text.",
+            ],
+            "plain": [
+                "What shape do you want for the answer? For example: 3 bullets, "
+                "one short paragraph, or a table.",
+                "Please pick a format: bullets, table, one line, or yes/no. "
+                "I will match it.",
+                "Please tell me: how long, and what shape? A number of bullets "
+                "or a max word count is fine.",
+            ],
+        },
         guidance=(
             "User asked an information-seeking question without specifying "
             "shape. Pick a compact default upfront (e.g. 'I'll give you 3 "
@@ -1182,10 +1328,25 @@ RULES: list[Rule] = [
         id="no-format-spec",
         tier=2,
         name="No output shape",
-        nudge=(
-            "You asked for a summary / list / report without a shape. Give "
-            "one: '5 bullets', 'table with columns X/Y/Z', 'under 200 words'."
-        ),
+        nudge={
+            "colleague": [
+                "You asked for a summary / list / report but didn't say how "
+                "shaped. Give me one: '5 bullets', 'table with columns X/Y/Z', "
+                "'under 200 words'.",
+                "What shape should the output take? A short bulleted list, a "
+                "table, a paragraph? Different asks want different shapes.",
+                "Quick — how do you want it? Bullets, table, paragraph, "
+                "one-liner?",
+            ],
+            "plain": [
+                "You want a summary or list. Please say how: 5 bullets, or "
+                "a table with columns, or under 200 words.",
+                "What shape should the answer be? For example: a list, a "
+                "table, or a short paragraph.",
+                "Please tell me one format: bullets, table, or short text. "
+                "I will match it.",
+            ],
+        },
         guidance=(
             "User asked for structured output without specifying structure. Pick "
             "a compact default (bullets ≤ 7, or a small table) and STATE it "
@@ -2141,20 +2302,97 @@ def _fires_in_window(gr: dict, current_prompt: int, window: int) -> int:
                if current_prompt - p <= window)
 
 
-def _pick_variant(rule: Rule, gr: dict) -> tuple[int, str]:
+def _pick_variant(rule: Rule, gr: dict, cfg: dict | None = None) -> tuple[int, str]:
     """v0.16.0 — anti-habituation variant picker with novelty constraint.
+    v0.17.0 — takes cfg to know which voice preset's variants to draw from.
     Avoids the last 2 variants used. Returns (index, text)."""
-    variants = rule.nudges
+    preset = (cfg or {}).get("voice_preset", DEFAULT_VOICE_PRESET)
+    variants = rule.variants_for(preset)
+    if not variants:
+        return 0, ""
     if len(variants) == 1:
         return 0, variants[0]
     recent = list(gr.get("recent_variants", []))
-    # Prefer variants NOT recently used.
     candidates = [i for i in range(len(variants)) if i not in recent]
     if not candidates:
         candidates = list(range(len(variants)))
-    # Deterministic rotation over eligible candidates.
     idx = candidates[int(gr.get("fires_total", 0)) % len(candidates)]
     return idx, variants[idx]
+
+
+def _resolve_voice_source(cfg: dict, level: str) -> str:
+    """v0.17.0 — resolve which source of text to use (static | llm-compose)
+    given the config'd voice_source and the current disclosure level.
+
+    - static     → always static preset text
+    - llm-compose → always Claude composes
+    - hybrid     → static on 'full', llm-compose on 'medium'/'short'
+    """
+    vs = cfg.get("voice_source", "static")
+    if vs not in ("static", "llm-compose", "hybrid"):
+        vs = "static"
+    if vs == "hybrid":
+        return "static" if level == "full" else "llm-compose"
+    return vs
+
+
+def _llm_compose_instruction(rule: Rule, level: str, preset: str,
+                             days_since_mastery: int | None,
+                             prompt_preview: str,
+                             is_refresher: bool = False) -> str:
+    """v0.17.0 — build an additionalContext instruction that lets Claude
+    write the nudge text fresh, situated to the user's actual prompt.
+
+    Guardrails baked in to prevent the "disagreement" failure mode:
+      - opens with the rule id header
+      - never overrides the rule's judgment (deliver the coaching even if
+        prior context resolves the specific referent)
+      - ends on a concrete ask when guidance implies one
+      - word-count ceiling per disclosure level
+    """
+    length_cap = {"full": 45, "medium": 25, "short": 15}[level]
+    header = (
+        f"🔄 prompt-coach — refresher on {rule.id} (mastered "
+        f"{days_since_mastery if days_since_mastery is not None else 0}d ago)"
+        if is_refresher else
+        f"🎯 prompt-coach [{'inline' if level == 'full' else 'inline · ' + level}] — {rule.id}"
+    )
+    example_variants = rule.variants_for(preset)[:2]
+    examples_block = ""
+    if example_variants:
+        examples_block = (
+            "  For reference, the preset's static phrasings for this rule "
+            f"(voice: {preset}) are:\n"
+            + "\n".join(f"    - {v!r}" for v in example_variants) + "\n"
+        )
+
+    return (
+        f"[prompt-coach · inline · {level}"
+        f"{' · refresher' if is_refresher else ''} · llm-compose] "
+        f"Rule '{rule.id}' ({rule.name}) matched. Write a **situated** "
+        f"nudge — tailored to the user's actual prompt — and render it "
+        f"as the opening block of your response BEFORE addressing the "
+        f"task.\n\n"
+        f"HARD RULES for the nudge you write:\n"
+        f"  1. Start with EXACTLY this header line as-is: `{header}`\n"
+        f"  2. Follow with ONE blockquote line of coaching. Cap: "
+        f"{length_cap} words.\n"
+        f"  3. DO NOT override the rule. Even if the referent is clear "
+        f"from prior context, still deliver the coaching (add a brief "
+        f"parenthetical 'context resolves this one' if you want, but "
+        f"never skip the coaching itself). The rule fired for a "
+        f"reason.\n"
+        f"  4. Match the voice preset `{preset}`: "
+        f"{'friendly, direct, ends on a concrete question' if preset == 'colleague' else 'simple English, short sentences, no idioms, no jargon'}.\n"
+        f"  5. End on a concrete ask when the guidance implies one "
+        f"(e.g. 'what file?', 'what's off-limits?', 'what does done look "
+        f"like?').\n"
+        f"  6. Prompt shape you're coaching on (first 60 chars): "
+        f"«{prompt_preview[:60]}»\n\n"
+        f"{examples_block}"
+        f"Then answer the user's actual task, normally.\n\n"
+        f"Guidance for shaping the response after the nudge: {rule.guidance}"
+    )
 
 
 def _disclosure_level(gr: dict, current_prompt: int, cfg: dict) -> str:
@@ -2607,9 +2845,15 @@ def main() -> int:
                 outcome = "paused"
             else:
                 # v0.16.0 — pick variant (novelty-aware) and disclosure level.
-                variant_idx, variant_text = _pick_variant(rule, gr)
+                # v0.17.0 — pass cfg so preset selection works.
+                variant_idx, variant_text = _pick_variant(rule, gr, cfg)
                 level = _disclosure_level(gr, current_prompt, cfg)
-                outcome = f"nudged:{cfg['nudge_style']}:{level}:v{variant_idx}"
+                preset = cfg.get("voice_preset", DEFAULT_VOICE_PRESET)
+                source = _resolve_voice_source(cfg, level)
+                outcome = (
+                    f"nudged:{cfg['nudge_style']}:{level}:v{variant_idx}"
+                    f":p={preset}:src={source}"
+                )
 
                 streak = int(g["rules"][chosen].get("clean_streak", 0))
                 if mode == "both":
@@ -2621,28 +2865,46 @@ def main() -> int:
                         box = _box_short(rule, variant_text, mode)
                     print(box, file=sys.stderr, flush=True)
                 if mode == "inline":
-                    # Inline: render the appropriate-length box in-response.
-                    if level == "full":
-                        context_line = _inline_context_for_claude(rule, streak, threshold)
-                        # Update the box in the inline context to use the picked variant
-                        context_line = context_line.replace(rule.primary_nudge, variant_text)
-                    elif level == "medium":
-                        context_line = (
-                            f"[prompt-coach · inline · medium] Rule '{rule.id}' "
-                            f"matched. Render this ONE line at the start of your "
-                            f"response, before addressing the task: "
-                            f"`{_box_medium(rule, variant_text, mode).splitlines()[1]}` "
-                            f"followed by the variant text as a single blockquote. "
-                            f"Guidance: {rule.guidance}"
+                    if source == "llm-compose":
+                        # v0.17.0 — Claude composes situated text with guardrails.
+                        context_line = _llm_compose_instruction(
+                            rule, level, preset, None, prompt_raw,
+                            is_refresher=False,
                         )
-                    else:  # short
-                        context_line = (
-                            f"[prompt-coach · inline · short] Rule '{rule.id}' "
-                            f"matched — you've seen this multiple times recently. "
-                            f"Render ONE compact line at the start: "
-                            f"`🎯 {rule.id} · {variant_text}`. "
-                            f"Don't repeat guidance; brief poke only."
-                        )
+                    else:
+                        # v0.17.0 — static: build the inline instruction from the
+                        # picked variant text, embedding it verbatim so Claude
+                        # renders exactly what the preset says (fixes v0.16 bug
+                        # where medium/short paths left the variant to Claude).
+                        if level == "full":
+                            context_line = _inline_context_for_claude(
+                                rule, streak, threshold)
+                            context_line = context_line.replace(
+                                rule.primary_nudge, variant_text)
+                        elif level == "medium":
+                            context_line = (
+                                f"[prompt-coach · inline · medium] Rule '{rule.id}' "
+                                f"matched. Render EXACTLY this at the start of your "
+                                f"response, before addressing the task, verbatim as "
+                                f"a header line followed by a single blockquote:\n\n"
+                                f"🎯 prompt-coach [inline] — {rule.id}\n\n"
+                                f"> {variant_text}\n\n"
+                                f"Then answer the user's actual question. Do not "
+                                f"substitute or rephrase — copy the blockquote text "
+                                f"verbatim. Guidance for shaping the response: "
+                                f"{rule.guidance}"
+                            )
+                        else:  # short
+                            context_line = (
+                                f"[prompt-coach · inline · short] Rule '{rule.id}' "
+                                f"matched — you've seen this multiple times recently. "
+                                f"Render EXACTLY this ONE compact line at the start "
+                                f"of your response, verbatim:\n\n"
+                                f"🎯 {rule.id} · {variant_text}\n\n"
+                                f"Then answer the user's actual question. Do not "
+                                f"substitute or rephrase — copy the line verbatim. "
+                                f"Brief poke only; skip detailed guidance."
+                            )
                 elif mode in ("both", "silent"):
                     context_line = _context_for_claude(rule)
 
@@ -2688,11 +2950,34 @@ def main() -> int:
                     days_since = max(0, (now_dt - grad_dt).days)
                 except (ValueError, TypeError):
                     pass
+            # v0.17.0 — resolve voice source for the refresher too.
+            # Refreshers count as "short" for source resolution.
+            preset = cfg.get("voice_preset", DEFAULT_VOICE_PRESET)
+            source = _resolve_voice_source(cfg, "short")
             if mode == "both":
                 print(_refresher_box(rule, days_since, mode),
                       file=sys.stderr, flush=True)
             if mode == "inline":
-                context_line = _inline_context_for_claude_refresher(rule, days_since)
+                if source == "llm-compose":
+                    context_line = _llm_compose_instruction(
+                        rule, "short", preset, days_since, prompt_raw,
+                        is_refresher=True,
+                    )
+                else:
+                    # v0.17.0 — static refresher: embed the picked variant text
+                    # verbatim so it renders reliably.
+                    picked = rule.primary_nudge_for(preset)
+                    mastery_line = (f"mastered {days_since}d ago"
+                                    if days_since is not None else "mastered")
+                    context_line = (
+                        f"[prompt-coach · inline · refresher] Mastered rule "
+                        f"'{rule.id}' matched. Render EXACTLY this ONE line at "
+                        f"the start of your response, verbatim:\n\n"
+                        f"🔄 prompt-coach — refresher on {rule.id} "
+                        f"({mastery_line}) — {picked}\n\n"
+                        f"Then answer the user's actual task. Do not rephrase — "
+                        f"copy verbatim. Light re-fire; don't belabor it."
+                    )
             elif mode in ("both", "silent"):
                 context_line = (
                     f"[prompt-coach · refresher] Mastered rule '{rule.id}' "
