@@ -261,6 +261,22 @@ Config keys (all optional; defaults in [`scripts/analyze-prompt.py`](../../scrip
 - If neither happens, the hook may not be registered — check `enabledPlugins` in
   `.claude/settings.json` for `prompt-coach@alexmskills-beta`.
 
+## Future — Java MCP server
+
+The current Python + `UserPromptSubmit` hook is CLI-only. A Java MCP
+server is planned so the coach can run in claude.ai chat, aggregate
+telemetry across users, and support persistent per-user state. Living
+spec: [`docs/java-mcp-spec.md`](../../docs/java-mcp-spec.md) — updated
+on every minor version bump. It captures the target architecture, MCP
+surface, canonical rule catalog format, data model, privacy model, and
+migration path from the current Python plugin.
+
+The prerequisite for building the server is **training data from real
+users, not just Alex**. The `/prompt-coach-beta:report-issue` command
+already produces training-data-shaped payloads (structural signature +
+first-5-words + user annotation) — that's the collection mechanism the
+future server will consume.
+
 ## Design notes
 
 - **Pure heuristics.** Rules are regex + short-window checks; no LLM call per prompt. Cheap,
