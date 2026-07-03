@@ -115,6 +115,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-02 — **prompt-coach-l1-questions** — 0.12.0: no-answer-shape elevated L2→L1 + broadened q regex (do we/are there) + `commit` verb + cap 5→6. Why: 5 info-seeking prompts missed.
 - 2026-07-03 — **prompt-coach-report-issue** — 0.13.0: "coach that was wrong" flags prior prompt; /report-issue command redacts to first-5-words + structural signature; files via gh with preview. Why: user-driven bug loop.
 - 2026-07-03 — **prompt-coach-help** — 0.14.0: /prompt-coach-beta:help card with live version + resolved config + command list + say-it phrases + config reference + state file pointers. Why: discoverability.
+- 2026-07-03 — **prompt-coach-audit-fixes** — 0.15.0: 75-entry log audit → +8 hedges (i think/now/let me/etc.) + `run`,`review` verbs + `check` DoD tightened + broader no-role critique. 5/7 gaps closed. Why: coverage.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

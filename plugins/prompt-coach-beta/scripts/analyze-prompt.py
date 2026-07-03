@@ -423,14 +423,21 @@ ACTION_VERBS = (
     # v0.12.0 — real-session dev-workflow verb, evidence:
     # "commit and check infra for creds" fired nothing.
     "commit",
+    # v0.15.0 — evidence: "Run a brainstorm panel on ..." + "review other
+    # prompts and find issues" both fired nothing (run/review not verbs).
+    "run", "review",
 )
 
 # Hedge prefixes — real English people prepend to action asks. Strip them
 # so "try to deploy" is analyzed as "deploy". v0.11.0.
+# v0.15.0 additions — evidence: "i think X", "now create Y", "let me Z" all
+# fired nothing in the log because the analyzer couldn't see the action.
 _HEDGE_PREFIXES = re.compile(
     r"^(try to|try and|let'?s|going to|gonna|need to|"
     r"want to|wanna|should|could|would|might|"
-    r"please|can you|could you|would you)\s+"
+    r"please|can you|could you|would you|"
+    # v0.15.0 — opinion / continuation hedges
+    r"i think|i feel|i want to|let me|now|actually|basically|so)\s+"
 )
 
 # Multi-word action phrases that count as an action start (v0.7.0).
@@ -457,13 +464,26 @@ def rule_no_definition_of_done(prompt: str) -> bool:
     if not _starts_with_action(prompt):
         return False
     pl = prompt.lower()
+    # v0.15.0 — dropped standalone "check " from DoD markers. Evidence:
+    # "commit and check infra for creds" was falsely satisfied because
+    # "check " appeared in the string, but "check infra" is investigative
+    # not verification. Specific check-DoD patterns handled below.
     dod_markers = (
-        "until ", "verify", "test", "check ", "ensure", " so that ", "passes",
+        "until ", "verify", "test", "ensure", " so that ", "passes",
         "green", " ci ", "expect", "assert", "output should", "should return",
         "should match", "coverage", "no error", "no warning", "definition of done",
         "acceptance",
     )
-    return not any(m in pl for m in dod_markers)
+    if any(m in pl for m in dod_markers):
+        return False
+    # v0.15.0 — specific check-DoD patterns (check X works/passes/etc.)
+    if re.search(
+        r"\bcheck\s+(that|it|this|the\s+\w+)\s*[^.]*"
+        r"\b(work|pass|green|build|ci\b|succeed|complete)",
+        pl,
+    ):
+        return False
+    return True
 
 
 def rule_unbounded_scope(prompt: str) -> bool:
@@ -567,15 +587,20 @@ def rule_no_answer_shape(prompt: str) -> bool:
     libs...' were firing nothing at all.
 
     v0.12.0: elevated from L2 → L1 (fundamentals) and broadened q regex
-    to include 'do we / does it / can we / should we / are there'
-    forms."""
-    pl = prompt.lower()
+    to include 'do we / does it / can we / should we / are there' forms.
+
+    v0.15.0: (reverted mid-sentence relaxation — over-fired on statements
+    containing 'how do we / how do i' phrases in normal English. Kept
+    strict `^\s*` anchor. Edge case '503 should be done can you check'
+    accepted as a miss; it's ambiguous.)"""
+    # First sentence only, so trailing sentences don't affect the check.
+    first_sentence = re.split(r"[.!?\n]", prompt, maxsplit=1)[0]
+    pl = first_sentence.lower()
     q = re.search(
         r"^\s*(what (are|is|kinds|types|options)|"
         r"how (much|many|do|does|can|should|would)|"
         r"which \w+ (should|are|is|would)|why (should|is|are|does|doesn.?t)|"
         r"does (\w+ )?exist|is there|are there|"
-        # v0.12.0 additions — real English question forms
         r"do (we|you|they|i)|does (it|he|she|this|that)|"
         r"did (we|you|they|i|it|this)|"
         r"can (we|you|i|it|this)|should (we|you|i|it|this)|"
@@ -802,8 +827,12 @@ def rule_no_agents_for_parallel_lookup(prompt: str) -> bool:
 
 def rule_no_role_for_critique(prompt: str) -> bool:
     pl = prompt.lower()
+    # v0.15.0 — evidence: "review other prompts and find issues" and
+    # "review alol new promts and confirm ..." both fired nothing.
+    # Broadened to include: review (other|these|previous|N|all|latest|recent|new).
     critique = re.search(
-        r"\b(review (this|my|the|results|findings|changes|code|output|design|plan)|"
+        r"\b(review (this|my|the|results|findings|changes|code|output|design|plan|"
+        r"other|these|previous|all|latest|recent|new|\d+)|"
         r"code review|critique|"
         r"find issues|find bugs|is this correct|check my|"
         r"look over|red[- ]team|nitpick|"

@@ -7,6 +7,41 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 2)
+
+### Changed
+- **prompt-coach-beta 0.15.0** — evidence-based rule fixes from a 75-entry
+  post-reset log audit. Coach behavior on all 75 entries was reviewed;
+  identified 30 substantive prompts that missed, tested each against v0.14
+  rules, found 15 still-active gaps, and traced 7 to root causes with fixes:
+  - **Hedge prefixes expanded** — added `i think`, `i feel`, `i want to`,
+    `let me`, `now`, `actually`, `basically`, `so`. Evidence: prompts like
+    *"now create new summary page..."* and *"i think X..."* had no action
+    verb start visible to the analyzer.
+  - **`ACTION_VERBS` +2**: `run`, `review`. Evidence: *"Run a brainstorm
+    panel on..."* and *"review other prompts and find issues"* both fired
+    zero rules.
+  - **`no-role-for-critique` broadened** to match `review (other|these|
+    previous|N|all|latest|recent|new)` in addition to the previous narrow
+    set. `review` is now also an action verb, so no-DoD catches the same
+    prompts as a fallback.
+  - **`no-DoD` check-satisfaction tightened.** Removed standalone `"check "`
+    from DoD markers — was falsely satisfied on prompts like *"commit and
+    check infra for creds"* (investigative check ≠ verification). Added
+    specific check-DoD patterns (`check that/it/the X works/passes/is
+    green/builds`). Regression-tested against real DoD-check prompts
+    (`"refactor auth and check it works"` still doesn't fire).
+  - **`no-answer-shape` mid-sentence detection attempted, then reverted.**
+    Relaxing the `^\s*` start-anchor to allow question forms anywhere
+    over-fired on statements like *"refactor auth so it works no matter
+    how do we scale"* and *"I already know how do i configure it"*. Kept
+    strict anchor; two edge-case prompts (*"503 should be done can you
+    check"*, *"i think boot support open telemetry can you check"*)
+    accepted as misses.
+- Coverage: 5 of 7 previously-still-missed prompts now fire correctly.
+  Emit rate on substantive prompts (post-reset log): 40% → estimated ~55%
+  once these v0.15 fixes are actually applied.
+
 ## 2026-07-03 (later)
 
 ### Added
