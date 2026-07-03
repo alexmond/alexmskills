@@ -352,6 +352,17 @@ ACTION_VERBS = (
     "move", "open", "close", "branch", "merge", "file", "format",
     "install", "configure", "enable", "disable", "bump", "pin",
     "strip", "gitignore",
+    # v0.11.0 — release-family verbs (evidence: "try to deploy" fired
+    # nothing in real log). Deploys are near-always guardrail-worthy.
+    "deploy", "publish", "release", "ship",
+)
+
+# Hedge prefixes — real English people prepend to action asks. Strip them
+# so "try to deploy" is analyzed as "deploy". v0.11.0.
+_HEDGE_PREFIXES = re.compile(
+    r"^(try to|try and|let'?s|going to|gonna|need to|"
+    r"want to|wanna|should|could|would|might|"
+    r"please|can you|could you|would you)\s+"
 )
 
 # Multi-word action phrases that count as an action start (v0.7.0).
@@ -363,7 +374,13 @@ _MULTIWORD_ACTIONS = re.compile(
 
 def _starts_with_action(prompt: str) -> bool:
     first = _first_line(prompt).lower().lstrip("- *#>")
-    if any(first.startswith(v + " ") for v in ACTION_VERBS):
+    # v0.11.0 — strip hedge prefixes ("try to X", "let's X", "need to X",
+    # "should X"), then re-check for an action verb. Real prompts are
+    # rarely bare imperatives; most start with a hedge word.
+    m = _HEDGE_PREFIXES.match(first)
+    if m:
+        first = first[m.end():]
+    if any(first.startswith(v + " ") or first == v for v in ACTION_VERBS):
         return True
     return bool(_MULTIWORD_ACTIONS.match(first))
 
@@ -422,7 +439,10 @@ def rule_improve_without_metric(prompt: str) -> bool:
 def rule_missing_guardrails(prompt: str) -> bool:
     pl = prompt.lower()
     heavy_action = re.search(
-        r"\b(refactor|rewrite|migrate|move|rename|delete|remove|replace)\b",
+        # v0.11.0 — added deploy/publish/release/ship (deploys are almost
+        # always guardrail-worthy in practice) + reset/wipe/purge.
+        r"\b(refactor|rewrite|migrate|move|rename|delete|remove|replace|"
+        r"deploy|publish|release|ship|reset|wipe|purge)\b",
         pl,
     )
     if not heavy_action:

@@ -7,6 +7,25 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02 (latest 6)
+
+### Added
+- **prompt-coach-beta 0.11.0** — hedge stripping + release-family verbs.
+  Evidence: a real-log prompt `"try to deploy"` fired ZERO rules — a
+  genuinely risky no-DoD, no-guardrail ask that got silently ignored.
+  - **Hedge prefix stripping** in `_starts_with_action` — strips
+    `try to / try and / let's / going to / gonna / need to / want to /
+    wanna / should / could / would / might / please / can you /
+    could you / would you` before checking for an action verb. Real
+    English almost never uses bare imperatives; the coach was missing
+    everything that started with a hedge.
+  - **`ACTION_VERBS` expanded** with the release family: `deploy`,
+    `publish`, `release`, `ship`. Now the "try to deploy" class of
+    prompt correctly fires `no-definition-of-done`.
+  - **`missing-guardrails` heavy_action broadened** to include the
+    release family + `reset`, `wipe`, `purge`. Deploys are near-always
+    guardrail-worthy in practice.
+
 ## 2026-07-02 (latest 5)
 
 ### Added
