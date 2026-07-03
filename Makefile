@@ -1,7 +1,7 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump graduate install-help docs-build
+.PHONY: help validate list bump graduate install-help docs-build dev-link dev-unlink
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -37,6 +37,14 @@ graduate: ## Graduate a -beta plugin to stable: make graduate PLUGIN=prompt-coac
 			'(.plugins[] | select(.name==$$from)) |= (.name=$$to | .source=$$src | del(.category) | .keywords -= ["beta"])' \
 			.claude-plugin/marketplace.json > tmp && mv tmp .claude-plugin/marketplace.json; \
 		echo "Graduated $(PLUGIN) -> $$new. Next: make bump PLUGIN=$$new VERSION=<x.y.z>"
+
+dev-link: ## Symlink a plugin's cache dir to the live source (fast dev loop): make dev-link PLUGIN=<name>
+	@test -n "$(PLUGIN)" || { echo "Usage: make dev-link PLUGIN=<name>"; exit 1; }
+	@bash scripts/dev-link.sh "$(PLUGIN)"
+
+dev-unlink: ## Remove the dev symlink and restore a real cache copy: make dev-unlink PLUGIN=<name>
+	@test -n "$(PLUGIN)" || { echo "Usage: make dev-unlink PLUGIN=<name>"; exit 1; }
+	@bash scripts/dev-link.sh --unlink "$(PLUGIN)"
 
 install-help: ## Print local install/test commands for Claude Code
 	@echo "Test locally (no install):  claude --plugin-dir ./plugins/<name>"

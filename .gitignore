@@ -22,3 +22,8 @@ node_modules/
 __pycache__/
 *.pyc
 .claude/prompt-coach/
+
+# Claude Code lock markers written into plugin dirs when they're symlinked
+# for `make dev-link`. Not source; per-process ephemera.
+plugins/*/.in_use/
+beta/plugins/*/.in_use/
