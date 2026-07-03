@@ -47,6 +47,9 @@ Makefile                          # validate / list / bump helpers
   — what they do), so it reads right seated solo, in a crew, on a panel, or in a sweep. Coverage roles
   use `<dimension>-scout`. Role names are shared across orchestrators (one `skeptic`, one `architect`).
 - **Never push or cut release tags without explicit user confirmation.**
+- **Attribution:** all plugins are original work by the author (MIT, per plugin.json `author`);
+  the roles-plugin personas credit `@nahidulislam404`'s prompt thread as inspiration. This is
+  a public-repo provenance note; don't drop it in a cleanup.
 
 ## Gotchas (load-bearing)
 
@@ -64,6 +67,11 @@ Makefile                          # validate / list / bump helpers
   segment. The site is built/deployed by `alexmond.github.io`, not this repo.
 - **The PreToolUse lint hook enforces the D&L entry format** on any CLAUDE.md edit (date, **topic-tag**,
   ≤200 chars). Malformed entries are rejected — fix and retry.
+- **No separate beta channel.** In-progress plugins live in the stable catalog with a `-beta`
+  suffix in the name (e.g. `prompt-coach-beta`). Graduation renames the directory + updates
+  `marketplace.json`. The two-marketplace setup was retired 2026-07-02 after too many CLI edge
+  cases (bare-string source resolution vs clone root, `sparsePaths` ignored, dual `marketplace.json`
+  confusing install vs reload, `extraKnownMarketplaces` schema drift).
 
 ## How this file evolves (learning mechanism)
 
@@ -79,49 +87,19 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
-- 2026-06-11 — **marketplace** — repo restructured as a plugin marketplace; each skill is its own versioned plugin under `plugins/`. Why: Claude Code versioning is per-plugin, not per-skill.
-- 2026-06-11 — **provenance** — skills curated + generalized from venice-vr, the dev-crew zip, and jhelm / yj-schema-validator / spring-boot-config. Why: real, battle-used sources beat greenfield.
-- 2026-06-11 — **versioning** — `make bump` edits plugin.json + marketplace.json together; `claude plugin tag` cuts `<name>--v<version>` tags. Why: stop the two manifests' versions from drifting.
-- 2026-06-11 — **docs** — Antora component at `docs/` (version `~`); built + deployed by alexmond.github.io to alexmond.org/alexmskills. Why: matches every other alexmond repo.
-- 2026-06-11 — **ci** — `make validate` (pure jq/bash) runs in GitHub Actions on push/PR; no claude CLI needed. Why: reliable validation with zero external deps.
-- 2026-06-11 — **dogfood** — this repo runs evolving-claude-md on its own CLAUDE.md via `.claude/skills/evolving-claude-md` + settings.json hooks. Why: the marketplace should eat its own dog food.
-- 2026-06-11 — **beta-channel** — second marketplace at `beta/` (alexmskills-beta) for unreleased plugins; `make new-beta`/`make promote` move them. Why: ship experiments without polluting stable.
-- 2026-06-12 — **ecosystem-review** — field survey + 1.1.0 improvement plan for dev-crew/brainstorm-panel/senior-prompts. Why: benchmark before iterating. See → docs/decisions/2026-06-12-ecosystem-review.md.
-- 2026-06-12 — **role-system** — roles first-class & evolving; crew/panel registries at `.claude/roles/{crew,panel}.md`; beta `roles` plugin adds shared core + `/roles:as`; senior-prompts absorbed.
-- 2026-06-12 — **escalation** — dev-crew 1.1.0 adds BLOCKED handoff + phase-gate hook + diagnosis ladder (retry → re-tier vs re-role → re-plan → user). Why: stumbling roles had no defined path.
-- 2026-06-12 — **research-discover** — research-sweep 1.1.0 joins the role system as the 'discover' orchestrator: registry `.claude/roles/research.md`, evolving coverage roles, learning. Why: parity with crew/panel.
-- 2026-06-12 — **naming** — convention: orchestrators `<scope>-<team-noun>` (crew/panel/sweep); roles named as personas (noun) not tasks; coverage roles `<dimension>-scout`. Why: catalog looked random.
-- 2026-06-12 — **renames** — `parallel-research-sweep`→`research-sweep`; role personas → crew-aligned nouns (architect/debugger/optimizer/reviewer/refactorer/builder). Why: unify role vocab.
-- 2026-06-12 — **attribution** — roles personas credit @nahidulislam404's prompt thread as inspiration; all plugins are original work by the author (MIT, per plugin.json author). Why: public-repo provenance.
 - 2026-06-21 — **research-sweep-learning** — 1.1.3 adds per-run log, thin-agent diagnosis (slice vs agent), demote/retire rule, `## Research sweep` graduation block. Why: closes the only orchestrator without a log.
 - 2026-06-26 — **evolve-audit** — 1.1.0 adds whole-file size check (25/40 KB), self-report on missing D&L heading, staleness trigger (closes #16). Why: siblings hit size cap; audit stayed silent.
 - 2026-06-27 — **evolve-merge** — 1.1.1 adds *merge same-session clusters* as 4th downward pressure (works pre-14-days when graduation+archive blocked). Why: audit can recommend with no available action.
-- 2026-06-27 — **screenshot-tour** — 1.0.0 new plugin: discover → plan → capture → assemble a deck under `presentation/`. Driver-agnostic (Selenium/Selenide/Playwright/VHS/Freeze). Why: marketplace had single-shot screenshot skills, no product tour.
+- 2026-06-27 — **screenshot-tour** — 1.0.0 new plugin: discover → plan → capture → assemble a deck under `presentation/`; driver-agnostic. Why: no product-tour skill existed.
 - 2026-06-29 — **graduation-layers** — panel/crew 1.2.0 + roles 1.1.0: 3-layer split (registry / shared core / CLAUDE.md repo facts) + `/roles:evolve`. Why: flat graduation broke the role-substrate.
 - 2026-06-29 — **auditable-unanimity** — panel 1.2.1: require `Steelman:` field on R1-unanimous runs (closes #25). Why: 47-run audit showed 30% R1-unanimous, 0 steelmans logged — guard invisible.
 - 2026-06-29 — **marketplace-source** — migrated 12 plugins from broken `{github,path}` to `"./plugins/<name>"` (closes #28). Why: `github` source silently ignores `path`; install was a no-op for every external user.
-- 2026-07-01 — **prompt-coach-beta** — new 0.1.0 beta: UserPromptSubmit hook nudges toward better prompts (11 rules, 3 tiers); global mastery + per-repo overrides; configurable mode. Why: prompt quality drives downstream.
-- 2026-07-01 — **prompt-coach-advanced** — 0.2.0: +13 rules across L3 classical (CoT, few-shot, rubric, uncertainty), L4 goals/loops, L5 tool-native (plan mode, TaskCreate, agents, roles, panel, Workflow). Why: v0.1 missed advanced concepts.
-- 2026-07-01 — **prompt-coach-praise-skills** — 0.4.0: +21 positives (sparing praise per Kohn/Dweck/Fogg) + mastery/first-after-fire + L6 skill-awareness (rule of three). Why: coach should praise + know its ecosystem.
-- 2026-07-02 — **prompt-coach-typo-tolerance** — 0.5.0: Levenshtein pre-pass on ~90 trigger words + adaptive tolerance + fallback-count stats. Why: dyslexic-friendly; rising fallback rate signals catalog gaps.
-- 2026-07-02 — **beta-source-clone-root** — bare-string plugin sources resolve from CLONE ROOT, not the marketplace.json parent. Beta plugins need `./beta/plugins/<n>`. Why: subdir install failed silently.
-- 2026-07-02 — **retire-beta-channel** — dropped beta channel; in-progress plugins now live in stable with `-beta` suffix (prompt-coach-beta, tune-repo-beta). Why: subdir/url/git-subdir workarounds kept multiplying.
-- 2026-07-02 — **prompt-coach-conversational** — 0.6.0: skips analysis on approvals/multi-choice/continuations; praise_ratio default 10→3 for trial visibility. Why: coach misfired on "sure"/"1 and 2".
-- 2026-07-02 — **prompt-coach-evidence-tuned** — 0.7.0: log-mined 34 prompts; inflection guard kills 5/6 bad corrections; +15 action verbs; +L2 no-answer-shape; ratio 3→10. Why: real-session data.
-- 2026-07-02 — **prompt-coach-surfacing** — 0.8.0: /prompt-coach-beta:stats slash command + broadened cited-context/stated-goal + new grounded-scope positive. Why: 0 positives fired in 34 prompts (dark layer).
-- 2026-07-02 — **prompt-coach-refresher** — 0.9.0: mastered rules still evaluate at 50-prompt cooldown; softer refresher box; opt-in auto-demotion on regression. Why: mastery ≠ permanent silence.
-- 2026-07-02 — **prompt-coach-inline** — 0.10.0: nudge_style="inline" renders the nudge as the opening block of Claude's response. Why: TUI hook-stderr rendering is unreliable.
-- 2026-07-02 — **prompt-coach-hedge-stripping** — 0.11.0: strips "try to/let's/need to/should/please/can you" prefixes + adds deploy/publish/release/ship to action verbs. Why: "try to deploy" fired nothing.
-- 2026-07-02 — **prompt-coach-l1-questions** — 0.12.0: no-answer-shape elevated L2→L1 + broadened q regex (do we/are there) + `commit` verb + cap 5→6. Why: 5 info-seeking prompts missed.
-- 2026-07-03 — **prompt-coach-report-issue** — 0.13.0: "coach that was wrong" flags prior prompt; /report-issue command redacts to first-5-words + structural signature; files via gh with preview. Why: user-driven bug loop.
-- 2026-07-03 — **prompt-coach-help** — 0.14.0: /prompt-coach-beta:help card with live version + resolved config + command list + say-it phrases + config reference + state file pointers. Why: discoverability.
-- 2026-07-03 — **prompt-coach-audit-fixes** — 0.15.0: 75-entry log audit → +8 hedges (i think/now/let me/etc.) + `run`,`review` verbs + `check` DoD tightened + broader no-role critique. 5/7 gaps closed. Why: coverage.
-- 2026-07-03 — **prompt-coach-java-mcp-spec** — living design doc at plugins/prompt-coach-beta/docs/java-mcp-spec.md for future Spring Boot MCP server; multi-user training preqrequisite. Why: chat + telemetry need MCP.
-- 2026-07-03 — **prompt-coach-anti-habituation** — 0.16.0: variant pool (3/rule) + novelty + progressive disclosure + silence-after-saturation + voice rewrite (from technical-manual to colleague-feedback tone). Why: same message every fire.
-- 2026-07-03 — **prompt-coach-doc-drift** — 0.16.1: fixed 3 code paths rendering variant list literal + SKILL.md drift (tier count, no-answer-shape tier, defaults) + help.md v0.16 knobs. Why: doc/code out of sync.
-- 2026-07-03 — **prompt-coach-voice** — 0.17.0: `voice_preset` (colleague|plain, L1+L2 both, L3-L6 fall back) + `voice_source` (static|llm-compose|hybrid, 6 guardrails) + medium/short static bug fix. Why: non-native readers.
-- 2026-07-03 — **prompt-coach-config** — 0.18.0: `/prompt-coach-beta:config` w/ show/describe/set/reset/diff/export + CONFIG_SCHEMA metadata (22 keys × 8 categories); deep-merge preserves forward-compat keys. Why: growing knob count.
+- 2026-07-02 — **beta-source-clone-root** — bare-string plugin sources resolve from CLONE ROOT, not the marketplace.json parent (fossil; beta channel retired same day). Why: subdir install failed silently.
+- 2026-07-03 — **prompt-coach-evolution** — full v0.1→v0.18 narrative at docs/decisions/2026-07-03-prompt-coach-evolution.md. Compacts 20 D&L entries. Why: 2-day cluster was overflowing D&L.
 
 ### Historic (older than 14 days · see git log for the build-up)
 
 - 2026-06-11 — **project-goal** — host reusable, self-learning Claude Code skills as a versioned marketplace with Antora docs.
+- 2026-06-11 — **marketplace-shape** — one plugin marketplace, per-plugin versioning; details graduated to Conventions/Gotchas. Why: Claude Code versions per plugin.
+- 2026-06-12 — **ecosystem-review** — 1.1.0 improvement plan → docs/decisions/2026-06-12-ecosystem-review.md. Why: benchmark before iterating.
+- 2026-06-12 — **role-system-shape** — role system first-class across crew/panel/sweep; details graduated to Conventions. Why: unify role vocab.
