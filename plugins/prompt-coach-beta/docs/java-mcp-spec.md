@@ -1,6 +1,6 @@
 # prompt-coach — Java MCP server spec (target architecture)
 
-**Status:** living draft • **Last updated:** with `prompt-coach-beta 0.15.0` • **Owner:** Alex Mondshain
+**Status:** living draft • **Last updated:** with `prompt-coach-beta 0.15.0`
 **Update policy:** review + touch on every minor version bump. Anything that
 would change the MCP surface, data model, or migration path gets logged here
 first.
@@ -11,9 +11,9 @@ The current Python plugin is a `UserPromptSubmit` hook. It works for
 Claude Code CLI, one user, local state only. Future needs the plugin can't
 serve today:
 
-- **Multi-user training data.** Alex is one person; the rule catalog was
-  tuned on Alex's log. Real coverage requires observing many people's
-  prompts, across many repos, across many editing styles.
+- **Multi-user training data.** The rule catalog was tuned on a single
+  maintainer's log. Real coverage requires observing many people's prompts,
+  across many repos, across many editing styles.
 - **claude.ai chat.** The chat product has no `UserPromptSubmit` hook.
   MCP servers *can* be connected to chat, so an MCP-shaped coach reaches
   a much larger surface.
@@ -43,7 +43,8 @@ serve today:
                     ┌────────────▼───────────────────────┐
                     │  prompt-coach-service (Java)        │
                     │  ────────────────────────           │
-                    │  Spring Boot 4.1 (matches Alex's    │
+                    │  Spring Boot 4.1 (matches the       │
+                    │  maintainer's Java stack)           │
                     │  stack) + Reactor + MCP SDK         │
                     │                                     │
                     │  ┌─ MCP tools ────────────────────┐ │
@@ -283,11 +284,12 @@ catalog update PR.
    Zero-behavior-change refactor.
 2. **Java service scaffolding.** Spring Boot 4.1 + MCP SDK. Loads same
    `rules.yaml`. Exposes MCP tools. No consumers yet.
-3. **Parity tests.** For a corpus of 500+ prompts (Alex's log + curated
-   test cases), verify Python and Java produce byte-identical analysis
-   results.
-4. **Alpha: dual-fire mode.** Alex + N consented users run BOTH the
-   Python plugin AND connect to the Java MCP server. Compare outputs.
+3. **Parity tests.** For a corpus of 500+ prompts (the maintainer's log
+   + curated test cases), verify Python and Java produce byte-identical
+   analysis results.
+4. **Alpha: dual-fire mode.** The maintainer + N consented users run
+   BOTH the Python plugin AND connect to the Java MCP server. Compare
+   outputs.
 5. **Cutover.** Java service becomes canonical. Python plugin becomes a
    thin MCP client (calls the server, falls back to local rules if
    offline).
@@ -298,20 +300,20 @@ catalog update PR.
 ## Java implementation notes
 
 **Stack:**
-- Spring Boot 4.1 (matches Alex's other Java projects: `jhelm`, `jvmlens`,
-  `notify4j`, `unitrack`).
+- Spring Boot 4.1 (matches the maintainer's other Java projects in the
+  broader ecosystem).
 - MCP protocol: Java SDK if one exists at build time, else custom
   SSE + JSON-RPC implementation.
 - Regex: **RE2/J** (`com.google.re2j`) — linear-time guarantee, ReDoS-safe.
   Same syntax as `java.util.regex` for the subset we use.
 - Fuzzy matching: **`tdebatty/java-string-similarity`** — Damerau-
-  Levenshtein handles transpositions as 1 edit (Alex's dyslexic-typo
-  scenario benefits).
+  Levenshtein handles transpositions as 1 edit (dyslexic-typo scenarios
+  benefit).
 - Phonetic matching: **`apache commons codec`** — Metaphone /
   DoubleMetaphone. Better than pure Levenshtein for dyslexic misspellings
   like `nite → night`, `foto → photo` that don't reduce cleanly to edit
   distance.
-- Persistence: PostgreSQL 16+. Alex's homelab k3s can host.
+- Persistence: PostgreSQL 16+. Self-hosted k3s deployment supported.
 - Deployment: Docker → k3s. Homelab overlay via `homelab-deploy-overlay`
   skill.
 
@@ -349,5 +351,5 @@ catalog update PR.
 
 ## Update log
 
-- 2026-07-03: initial draft. Motivated by Alex noting future MCP-server
-  plans + need to train on multi-user data.
+- 2026-07-03: initial draft. Motivated by the future MCP-server direction
+  and the need to train on multi-user data.

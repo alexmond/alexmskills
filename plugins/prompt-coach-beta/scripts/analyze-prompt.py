@@ -271,7 +271,7 @@ def compute_signature(prompt: str, corrections: list[tuple[str, str]]
 def is_conversational(prompt: str) -> bool:
     """Detect short-turn responses — approvals, multi-choice picks, continuations —
     where the 'prompt' is really a fragment answering an implicit question and the
-    coaching rules would misfire (Alex's dyslexic 'sure' or '1 and 2 yes 3').
+    coaching rules would misfire (e.g. 'sure', '1 and 2 yes 3', dyslexic variants).
     Skipped prompts still get logged for audit; they do not affect streaks."""
     p = prompt.strip()
     if not p:

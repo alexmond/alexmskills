@@ -31,11 +31,11 @@ unreleased/rolling (no global version).
   - **D. Silence after saturation** — 5+ fires within 30 prompts triggers
     a 30-prompt silence on that rule. Absence is a signal to the user
     that the coaching isn't landing.
-  - **Wife-driven voice rewrite** — original variants sounded like a
-    technical manual ("heavy verbs invite over-reach"; Chesterton's
-    fence). Rewrote all 18 in colleague voice ("You're asking for a big
-    change but didn't say what to leave alone. What must NOT change?").
-    Much more direct, easier to act on.
+  - **Voice rewrite for readability** — the initial variants read like
+    a technical manual ("heavy verbs invite over-reach"; obscure
+    idioms). Rewrote all 18 in a colleague voice ("You're asking for
+    a big change but didn't say what to leave alone. What must NOT
+    change?"). Much more direct, easier to act on.
   - E2E-verified: 7 consecutive fires of vague-reference on a fresh
     state produce {full, full, medium, medium, short, silenced, silenced}
     outcomes with all 3 variants used and no immediate repeats.
@@ -331,8 +331,9 @@ unreleased/rolling (no global version).
 ### Added
 - **prompt-coach 0.5.0** (beta) — **typo tolerance**. A pre-pass normalizes each prompt against a
   curated set of ~90 trigger words drawn from the rule catalog, using a banded Levenshtein edit
-  distance (custom, ~15 lines, zero deps). Dyslexic-friendly by design (Alex is dyslexic; this is
-  the personal use case that motivated it). Only substitutes on a **unique** closest match, and
+  distance (custom, ~15 lines, zero deps). Dyslexic-friendly by design — the coach handles
+  transpositions, dropped letters, and phonetic misspellings gracefully. Only substitutes on a
+  **unique** closest match, and
   uses **adaptive tolerance** (distance-1 for tokens ≤ 6 chars, distance-2 for longer) so
   short-word collisions like `public ↔ rubric` don't produce false corrections. Examples that
   get fixed: `refacotr` → `refactor`, `evrything` → `everything`, `veryfy` → `verify`,

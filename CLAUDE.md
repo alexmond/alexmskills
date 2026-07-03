@@ -92,7 +92,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-06-12 — **research-discover** — research-sweep 1.1.0 joins the role system as the 'discover' orchestrator: registry `.claude/roles/research.md`, evolving coverage roles, learning. Why: parity with crew/panel.
 - 2026-06-12 — **naming** — convention: orchestrators `<scope>-<team-noun>` (crew/panel/sweep); roles named as personas (noun) not tasks; coverage roles `<dimension>-scout`. Why: catalog looked random.
 - 2026-06-12 — **renames** — `parallel-research-sweep`→`research-sweep`; role personas → crew-aligned nouns (architect/debugger/optimizer/reviewer/refactorer/builder). Why: unify role vocab.
-- 2026-06-12 — **attribution** — roles personas credit @nahidulislam404's prompt thread as inspiration; all plugins are Alex's own original work (MIT, per plugin.json author). Why: public-repo provenance.
+- 2026-06-12 — **attribution** — roles personas credit @nahidulislam404's prompt thread as inspiration; all plugins are original work by the author (MIT, per plugin.json author). Why: public-repo provenance.
 - 2026-06-21 — **research-sweep-learning** — 1.1.3 adds per-run log, thin-agent diagnosis (slice vs agent), demote/retire rule, `## Research sweep` graduation block. Why: closes the only orchestrator without a log.
 - 2026-06-26 — **evolve-audit** — 1.1.0 adds whole-file size check (25/40 KB), self-report on missing D&L heading, staleness trigger (closes #16). Why: siblings hit size cap; audit stayed silent.
 - 2026-06-27 — **evolve-merge** — 1.1.1 adds *merge same-session clusters* as 4th downward pressure (works pre-14-days when graduation+archive blocked). Why: audit can recommend with no available action.
@@ -117,7 +117,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-03 — **prompt-coach-help** — 0.14.0: /prompt-coach-beta:help card with live version + resolved config + command list + say-it phrases + config reference + state file pointers. Why: discoverability.
 - 2026-07-03 — **prompt-coach-audit-fixes** — 0.15.0: 75-entry log audit → +8 hedges (i think/now/let me/etc.) + `run`,`review` verbs + `check` DoD tightened + broader no-role critique. 5/7 gaps closed. Why: coverage.
 - 2026-07-03 — **prompt-coach-java-mcp-spec** — living design doc at plugins/prompt-coach-beta/docs/java-mcp-spec.md for future Spring Boot MCP server; multi-user training preqrequisite. Why: chat + telemetry need MCP.
-- 2026-07-03 — **prompt-coach-anti-habituation** — 0.16.0: variant pool (3/rule) + novelty + progressive disclosure + silence-after-saturation. Wife-flagged artificial voice → rewrote all L1 variants. Why: same message every fire.
+- 2026-07-03 — **prompt-coach-anti-habituation** — 0.16.0: variant pool (3/rule) + novelty + progressive disclosure + silence-after-saturation + voice rewrite (from technical-manual to colleague-feedback tone). Why: same message every fire.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

@@ -291,10 +291,11 @@ surface, canonical rule catalog format, data model, privacy model, and
 migration path from the current Python plugin.
 
 The prerequisite for building the server is **training data from real
-users, not just Alex**. The `/prompt-coach-beta:report-issue` command
-already produces training-data-shaped payloads (structural signature +
-first-5-words + user annotation) — that's the collection mechanism the
-future server will consume.
+users at scale**, not a single maintainer's log. The
+`/prompt-coach-beta:report-issue` command already produces
+training-data-shaped payloads (structural signature + first-5-words +
+user annotation) — that's the collection mechanism the future server
+will consume.
 
 ## Design notes
 
