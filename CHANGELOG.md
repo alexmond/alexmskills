@@ -7,6 +7,29 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 4)
+
+### Fixed
+- **prompt-coach-beta 0.16.1** — inline-refresher bug + SKILL.md drift.
+  - Fixed three code paths that rendered `rule.nudge` (now `list[str]`
+    since v0.16.0) as a raw Python list literal instead of picking a
+    variant. Affected: `_refresher_box`, `_inline_context_for_claude`,
+    `_inline_context_for_claude_refresher`. All now use
+    `rule.primary_nudge`; the picked-variant substitution in inline mode
+    keeps working.
+  - **SKILL.md drift cleanup.** Fixed accumulated inconsistencies:
+    tier count 5 → 6, `no-answer-shape` moved from L2 table to L1 table
+    (matches v0.12), `max_active_rules` default 5 → 6, `praise_ratio`
+    default 3 → 10 (matches the v0.7 revert), added `inline` to the
+    consolidated Configuration section, removed the duplicate Configuration
+    block at the bottom, fixed the plugin id in "Verify it's on" from
+    `prompt-coach@alexmskills-beta` to `prompt-coach-beta@alexmskills`
+    (matches the v0.5-era channel retirement).
+  - **help.md config surface updated** to include the v0.16 anti-habituation
+    knobs (`saturation_threshold`, `silence_window`, `silence_duration`,
+    `disclosure_medium_at`, `disclosure_short_at`) in both the CURRENT
+    CONFIG and CONFIG OPTIONS REFERENCE sections.
+
 ## 2026-07-03 (later 3)
 
 ### Added

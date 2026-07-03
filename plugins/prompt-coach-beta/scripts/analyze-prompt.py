@@ -2131,7 +2131,7 @@ def _refresher_box(rule: Rule, days_since_mastery: int | None, mode: str) -> str
                     if days_since_mastery is not None else "mastered")
     return (
         f"🔄 prompt-coach [{mode} · refresher] — {rule.id} ({mastery_line})\n"
-        f"   {rule.nudge}"
+        f"   {rule.primary_nudge}"
     )
 
 
@@ -2233,7 +2233,7 @@ def _inline_context_for_claude(rule: Rule, streak: int, threshold: int) -> str:
     box = (
         f"{bar}\n"
         f"🎯 prompt-coach — {rule.id}: {rule.name}\n\n"
-        f"{rule.nudge}\n\n"
+        f"{rule.primary_nudge}\n\n"
         f"Progress: {streak}/{threshold} clean prompts → mastered\n"
         f"{bar}"
     )
@@ -2257,7 +2257,7 @@ def _inline_context_for_claude_refresher(rule: Rule, days_since: int | None) -> 
     Softer instruction — one-line block, not the full-width box."""
     mastery_line = (f"mastered {days_since}d ago"
                     if days_since is not None else "mastered")
-    line = f"🔄 prompt-coach — refresher on {rule.id} ({mastery_line}) — {rule.nudge}"
+    line = f"🔄 prompt-coach — refresher on {rule.id} ({mastery_line}) — {rule.primary_nudge}"
     return (
         f"[prompt-coach · inline refresher] Mastered rule '{rule.id}' matched. "
         f"Render this ONE line at the start of your response before addressing "

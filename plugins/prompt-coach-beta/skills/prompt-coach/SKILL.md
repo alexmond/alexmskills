@@ -12,8 +12,9 @@ row, at which point the next dormant rule activates. The coach fades as your pro
 
 ## What it watches for
 
-Five tiers of ~5 rules each. Only 5 rules are active at once (`max_active_rules`) —
-lower tiers dominate; as an L1 rule masters, an L2 rule activates in its place, and so on.
+**Six tiers** of ~5 rules each. Only 6 rules are active at once (`max_active_rules`,
+default 6 as of v0.12) — lower tiers dominate; as an L1 rule masters, an L2 rule
+activates in its place, and so on.
 
 **L1 — fundamentals**
 | Rule | Catches |
@@ -23,6 +24,7 @@ lower tiers dominate; as an L1 rule masters, an L2 rule activates in its place, 
 | unbounded-scope | "all / every / entire X" attached to a mutating verb |
 | improve-without-metric | "better / faster / cleaner" with no measurable target |
 | missing-guardrails | Heavy verb (refactor/rewrite/migrate) with no "don't touch X" |
+| no-answer-shape | "What are X" / "how much of Y" question without a format spec (elevated L2→L1 in v0.12) |
 
 **L2 — intermediate**
 | Rule | Catches |
@@ -31,7 +33,6 @@ lower tiers dominate; as an L1 rule masters, an L2 rule activates in its place, 
 | no-verify-loop | Implementation ask with no verification step |
 | missing-context-fetch | "The failing test / the issue" with no identifier |
 | no-format-spec | Ask for summary/list/report with no shape |
-| no-answer-shape | "What are X" / "how much of Y" question without a format spec (v0.7.0) |
 
 **L3 — classical prompting techniques**
 | Rule | Catches |
@@ -129,7 +130,7 @@ Config resolves in order: repo local → user global → default. Keys:
 - `max_active_rules` — never nag on more than this many rules at once (default: 5)
 - `pause_until_prompt` — skip nudging until global `prompt_count` passes this
 - `disabled_rules` — array of rule ids to permanently silence
-- `praise_ratio` — 1 praise per N clean prompts with a positive detection (default: 3, trial-friendly; bump to 8–10 once habits form)
+- `praise_ratio` — 1 praise per N clean prompts with a positive detection (default: 10, Kohn's don't-dilute threshold)
 - `praise_on_mastery` — celebrate when a rule graduates (default: true)
 - `praise_on_first_after_fire` — celebrate immediate corrections (default: true)
 - `disable_praise` — silence all encouragement but keep nudges (default: false)
@@ -262,23 +263,15 @@ Full prompts stay in `log.md` locally. You see the exact payload before it's pos
 └── log.md             # rolling log of nudges + prompt previews
 ```
 
-Config keys (all optional; defaults in [`scripts/analyze-prompt.py`](../../scripts/analyze-prompt.py)):
-
-- `nudge_style` — `"both" | "silent" | "log-only"`
-- `graduation_threshold` — clean prompts in a row → mastered (default: 15)
-- `cooldown_prompts` — minimum prompts between same-rule nudges (default: 5)
-- `max_active_rules` — cap on how many rules can nag at once (default: 5)
-- `pause_until_prompt` — skip nudging until global `prompt_count` passes this
-- `disabled_rules` — array of rule ids to permanently silence
-
 ## Verify it's on
 
 - New prompt should either produce a boxed nudge on stderr (when `nudge_style: both` and a rule
-  fires) or leave `.claude/prompt-coach/log.md` growing.
+  fires), an inline block at the start of Claude's response (when `nudge_style: inline`), or
+  leave `.claude/prompt-coach/log.md` growing (all modes).
 - Global counter: `jq '.prompt_count' ~/.claude/prompt-coach/state.json` should increment per
   prompt.
 - If neither happens, the hook may not be registered — check `enabledPlugins` in
-  `.claude/settings.json` for `prompt-coach@alexmskills-beta`.
+  `.claude/settings.json` for `prompt-coach-beta@alexmskills`.
 
 ## Future — Java MCP server
 

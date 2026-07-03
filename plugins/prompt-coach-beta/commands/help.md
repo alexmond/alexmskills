@@ -65,18 +65,25 @@ SAY-IT PHRASES (talk to Claude naturally; Claude edits the right file)
 ────────────────────────────────────────────────────────────────────
 CURRENT CONFIG (resolved: default → global → this repo)
 
-  nudge_style:              <live value>
-  graduation_threshold:     <live value>  (clean prompts in a row → mastered)
-  cooldown_prompts:         <live value>  (min between same-rule nudges)
-  mastered_cooldown_prompts:<live value>  (min between refresher fires)
-  max_active_rules:         <live value>
-  praise_ratio:             <live value>  (1 praise per N clean prompts w/ positive)
-  praise_on_mastery:        <live value>
-  praise_on_first_after_fire:<live value>
-  disable_praise:           <live value>
-  typo_tolerance:           <live value>  (0 disables normalization)
-  disabled_rules:           <live value>
-  demote_on_regression:     <live value>  (self-healing; off by default)
+  nudge_style:                <live value>
+  graduation_threshold:       <live value>  (clean prompts in a row → mastered)
+  cooldown_prompts:           <live value>  (min between same-rule nudges)
+  mastered_cooldown_prompts:  <live value>  (min between refresher fires)
+  max_active_rules:           <live value>  (default 6)
+  praise_ratio:               <live value>  (1 praise per N clean prompts w/ positive)
+  praise_on_mastery:          <live value>
+  praise_on_first_after_fire: <live value>
+  disable_praise:             <live value>
+  typo_tolerance:             <live value>  (0 disables normalization)
+  disabled_rules:             <live value>
+  demote_on_regression:       <live value>  (self-healing; off by default)
+
+  Anti-habituation (v0.16+):
+    saturation_threshold:     <live value>  (N fires in silence_window → silence)
+    silence_window:           <live value>  (sliding window in prompts)
+    silence_duration:         <live value>  (how long silence lasts)
+    disclosure_medium_at:     <live value>  (fire count → medium box)
+    disclosure_short_at:      <live value>  (fire count → one-liner)
 
   Global config file:   ~/.claude/prompt-coach/config.json
   Per-repo config file: .claude/prompt-coach/config.json (per repo)
@@ -90,22 +97,29 @@ CONFIG OPTIONS REFERENCE
                      log-only — no external output; every fire logged
                      inline   — nudge rendered as opening block of Claude's response
 
-  graduation_threshold    N clean prompts → rule masters (default: 15)
-  cooldown_prompts        Min prompts between same-rule nudges (default: 5)
-  mastered_cooldown_prompts  Refresher cooldown for mastered rules (default: 50; 0=off)
-  max_active_rules        Cap on practicing rules active at once (default: 6)
-  pause_until_prompt      Skip nudging until global prompt_count > this
-  disabled_rules          Array of rule ids to permanently silence
+  graduation_threshold      N clean prompts → rule masters (default: 15)
+  cooldown_prompts          Min prompts between same-rule nudges (default: 5)
+  mastered_cooldown_prompts Refresher cooldown for mastered rules (default: 50; 0=off)
+  max_active_rules          Cap on practicing rules active at once (default: 6)
+  pause_until_prompt        Skip nudging until global prompt_count > this
+  disabled_rules            Array of rule ids to permanently silence
 
-  praise_ratio            1 praise per N clean prompts w/ positive fire (default: 10)
-  praise_on_mastery       Celebrate rule mastery events (default: true)
+  praise_ratio              1 praise per N clean prompts w/ positive fire (default: 10)
+  praise_on_mastery         Celebrate rule mastery events (default: true)
   praise_on_first_after_fire  Praise the immediate correction (default: true)
-  disable_praise          Silence encouragement, keep nudges (default: false)
+  disable_praise            Silence encouragement, keep nudges (default: false)
 
-  typo_tolerance          Levenshtein edit-distance for typo normalization (default: 2)
-  demote_on_regression    Object {enabled, threshold, window} — auto-demote mastered
-                          rules that fire threshold+ times within window prompts.
-                          Off by default.
+  typo_tolerance            Levenshtein edit-distance for typo normalization (default: 2)
+  demote_on_regression      Object {enabled, threshold, window} — auto-demote mastered
+                            rules that fire threshold+ times within window prompts.
+                            Off by default.
+
+  Anti-habituation (v0.16+):
+  saturation_threshold      N fires in silence_window → silence rule (default: 5)
+  silence_window            Sliding window in prompts (default: 30)
+  silence_duration          How long silence lasts (default: 30 prompts)
+  disclosure_medium_at      Fire count in window → medium box (default: 2)
+  disclosure_short_at       Fire count in window → one-liner (default: 4)
 
 ────────────────────────────────────────────────────────────────────
 STATE FILES
