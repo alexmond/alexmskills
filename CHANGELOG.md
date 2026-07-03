@@ -7,6 +7,39 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 6)
+
+### Added
+- **prompt-coach-beta 0.18.0** — `/prompt-coach-beta:config` structured
+  surface. The config catalog grew to 22 keys across 8 categories over
+  v0.5→v0.17; say-it phrases still work for individual settings but the
+  user had no scannable, categorized view. Fixed by adding a
+  `CONFIG_SCHEMA` metadata dict alongside `DEFAULT_CONFIG` — every key
+  carries `{category, type, choices, description, example, since}`.
+  Future options are picked up automatically once they land in the
+  schema, so the dashboard, describer, and validator never drift.
+  - **9 verbs**: `show` (categorized dashboard), `show <category>`,
+    `get`, `describe`, `set`, `reset`, `reset-all`, `diff`, `export`.
+  - **Deep-merge writes** — preserves keys the schema doesn't know
+    about (forward-compat with future versions).
+  - **Schema-driven validation** on `set` — type coercion for
+    `str/int/bool/list[str]/obj`, choice enforcement, clear error
+    messages, exit 2 on bad input.
+  - **8 categories**: output, voice, rule-activation, mastery, praise,
+    typo-tolerance, anti-habituation, llm-fallback.
+  - **Scoped**: `--scope global` (default) or `--scope repo` writes to
+    the right config file. Resolution stays `default → global → repo`.
+  - **`--dry-run`** on set/reset/reset-all previews without touching disk.
+  - **`--json`** flag on show/get/describe/diff for scripting.
+  - **Verified with 18 test categories**: schema coverage (every
+    DEFAULT_CONFIG key has metadata, no orphans), show/describe/get,
+    set with all 5 type coercions incl. 8 bool aliases, invalid-value
+    rejection, scope isolation (repo doesn't leak to global), dry-run,
+    forward-compat key preservation, diff, reset idempotency, export
+    JSON validity, category filter + bad-category exit, reset-all
+    dry-run doesn't delete, --json machine-readable output, and
+    analyze-prompt.py still runs cleanly with the new schema imports.
+
 ## 2026-07-03 (later 5)
 
 ### Added

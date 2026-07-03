@@ -112,6 +112,241 @@ DEFAULT_CONFIG = {
 
 
 # ---------------------------------------------------------------------------
+# CONFIG_SCHEMA — metadata for every DEFAULT_CONFIG key (v0.18+).
+# ---------------------------------------------------------------------------
+# Single source of truth used by scripts/config.py (the /prompt-coach-beta:config
+# slash command) to render the dashboard, describe keys, and validate `set`.
+# Adding a new config option in a future release means one entry here — the
+# dashboard, describer, and validator pick it up automatically.
+#
+# Shape per key:
+#   category:    which group in the dashboard
+#   type:        "str" | "int" | "bool" | "list[str]" | "obj"
+#   choices:     optional list of allowed values (for str with enumerable domain)
+#   description: one-line human explanation
+#   example:     a concrete example value (or None for obvious types)
+#   since:       version string this key was introduced
+
+CONFIG_SCHEMA = {
+    # ── output ──
+    "nudge_style": {
+        "category": "output",
+        "type": "str",
+        "choices": ["both", "silent", "log-only", "inline"],
+        "description": "Where the nudge appears: stderr box + Claude context (both), "
+                       "only Claude (silent), only in the log (log-only), or inline "
+                       "as opening block of Claude's response (inline).",
+        "example": "inline",
+        "since": "0.5.0",
+    },
+    "pause_until_prompt": {
+        "category": "output",
+        "type": "int",
+        "description": "Skip all nudging until global prompt_count exceeds this number. "
+                       "Use to silence the coach for N prompts (say 'coach pause N').",
+        "example": None,
+        "since": "0.5.0",
+    },
+    # ── voice ──
+    "voice_preset": {
+        "category": "voice",
+        "type": "str",
+        "choices": ["colleague", "plain"],
+        "description": "Which phrasing personality: 'colleague' is direct, ends on a "
+                       "question; 'plain' is simple English for non-native speakers. "
+                       "L1+L2 ship both; L3-L6 fall back to colleague.",
+        "example": "plain",
+        "since": "0.17.0",
+    },
+    "voice_source": {
+        "category": "voice",
+        "type": "str",
+        "choices": ["static", "llm-compose", "hybrid"],
+        "description": "Who writes the nudge text: 'static' uses pre-written variants "
+                       "(0 cost, deterministic); 'llm-compose' has Claude write fresh, "
+                       "situated to your prompt with 6 guardrails (+200-800ms, "
+                       "~150-400 tokens/fire); 'hybrid' uses static on full fires and "
+                       "llm-compose on medium/short refreshers.",
+        "example": "llm-compose",
+        "since": "0.17.0",
+    },
+    # ── rule-activation ──
+    "max_active_rules": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "Cap on practicing rules active at once. As lower-tier rules "
+                       "master, higher-tier ones activate up to this cap.",
+        "example": 6,
+        "since": "0.5.0",
+    },
+    "disabled_rules": {
+        "category": "rule-activation",
+        "type": "list[str]",
+        "description": "Rule ids to permanently silence. Say 'coach off <rule-id>' to "
+                       "append or 'coach on <rule-id>' to remove.",
+        "example": ["no-few-shot"],
+        "since": "0.5.0",
+    },
+    "graduation_threshold": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "Number of clean prompts in a row before a rule graduates to "
+                       "mastered.",
+        "example": 15,
+        "since": "0.5.0",
+    },
+    "cooldown_prompts": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "Minimum prompts between two fires of the same practicing rule "
+                       "(anti-nagging cap).",
+        "example": 5,
+        "since": "0.5.0",
+    },
+    # ── mastery ──
+    "mastered_cooldown_prompts": {
+        "category": "mastery",
+        "type": "int",
+        "description": "Cooldown between refresher fires on mastered rules. 10x the "
+                       "practicing cooldown by default. Set to 0 to disable refresher "
+                       "firing (permanent silence on mastered rules).",
+        "example": 50,
+        "since": "0.9.0",
+    },
+    "demote_on_regression": {
+        "category": "mastery",
+        "type": "obj",
+        "description": "Auto-demote a mastered rule that fires threshold+ times within "
+                       "window prompts. Shape: {enabled, threshold, window}. Off by "
+                       "default — surprise reactivation feels punitive.",
+        "example": {"enabled": True, "threshold": 3, "window": 30},
+        "since": "0.9.0",
+    },
+    # ── praise ──
+    "praise_ratio": {
+        "category": "praise",
+        "type": "int",
+        "description": "1 praise per N clean prompts with a positive fire (variable-"
+                       "ratio, Kohn's don't-dilute threshold). Lower = more frequent.",
+        "example": 10,
+        "since": "0.3.0",
+    },
+    "praise_on_mastery": {
+        "category": "praise",
+        "type": "bool",
+        "description": "Celebrate whenever a rule graduates to mastered.",
+        "example": True,
+        "since": "0.3.0",
+    },
+    "praise_on_first_after_fire": {
+        "category": "praise",
+        "type": "bool",
+        "description": "Celebrate when you correct the exact thing you were nudged on "
+                       "in the previous prompt.",
+        "example": True,
+        "since": "0.3.0",
+    },
+    "disable_praise": {
+        "category": "praise",
+        "type": "bool",
+        "description": "Silence all praise but keep nudges. Praise+correction on the "
+                       "same prompt would dilute both (Kohn).",
+        "example": False,
+        "since": "0.3.0",
+    },
+    "praise_novelty_window": {
+        "category": "praise",
+        "type": "int",
+        "description": "Don't repeat the same praise phrasing within N praises.",
+        "example": 5,
+        "since": "0.16.0",
+    },
+    # ── typo-tolerance ──
+    "typo_tolerance": {
+        "category": "typo-tolerance",
+        "type": "int",
+        "description": "Levenshtein distance for typo normalization (0 disables). "
+                       "Adaptive: distance-1 for short tokens (≤6 chars), distance-2 "
+                       "for longer.",
+        "example": 2,
+        "since": "0.5.0",
+    },
+    # ── anti-habituation ──
+    "saturation_threshold": {
+        "category": "anti-habituation",
+        "type": "int",
+        "description": "N fires of the same rule within silence_window prompts triggers "
+                       "silence.",
+        "example": 5,
+        "since": "0.16.0",
+    },
+    "silence_window": {
+        "category": "anti-habituation",
+        "type": "int",
+        "description": "Sliding window in prompts for saturation detection.",
+        "example": 30,
+        "since": "0.16.0",
+    },
+    "silence_duration": {
+        "category": "anti-habituation",
+        "type": "int",
+        "description": "How many prompts a silenced rule stays silent.",
+        "example": 30,
+        "since": "0.16.0",
+    },
+    "disclosure_medium_at": {
+        "category": "anti-habituation",
+        "type": "int",
+        "description": "Fire count in window at which the nudge shrinks to a medium box "
+                       "(no sources, no progress bar).",
+        "example": 2,
+        "since": "0.16.0",
+    },
+    "disclosure_short_at": {
+        "category": "anti-habituation",
+        "type": "int",
+        "description": "Fire count in window at which the nudge shrinks to a one-liner.",
+        "example": 4,
+        "since": "0.16.0",
+    },
+    # ── llm-fallback (stub) ──
+    "llm_fallback": {
+        "category": "llm-fallback",
+        "type": "obj",
+        "description": "Opt-in stub. If enabled AND no rule fired via regex AND the "
+                       "prompt is long, an optional model call would classify against "
+                       "the rule catalog. Deferred until real-use data justifies it.",
+        "example": {"enabled": True, "model": "haiku", "min_words": 20},
+        "since": "0.6.0",
+    },
+}
+
+
+def config_key_source(key: str, global_cfg: dict, repo_cfg: dict) -> str:
+    """v0.18.0 — where did the resolved value come from? Used by /config show."""
+    if key in repo_cfg:
+        return "repo"
+    if key in global_cfg:
+        return "global"
+    return "default"
+
+
+def config_categories() -> list[str]:
+    """v0.18.0 — canonical category order for the dashboard."""
+    seen = []
+    for entry in CONFIG_SCHEMA.values():
+        c = entry["category"]
+        if c not in seen:
+            seen.append(c)
+    return seen
+
+
+def config_keys_in_category(category: str) -> list[str]:
+    """v0.18.0 — every key that lives in the named category."""
+    return [k for k, v in CONFIG_SCHEMA.items() if v["category"] == category]
+
+
+# ---------------------------------------------------------------------------
 # Typo tolerance — Levenshtein-based prompt normalization
 # ---------------------------------------------------------------------------
 

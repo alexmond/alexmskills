@@ -214,6 +214,39 @@ The `outcome` log line now records preset + source per fire (e.g.
 `nudged:inline:full:v1:p=plain:src=static`) so `/prompt-coach-beta:stats` can
 mine which combination you actually converge on.
 
+## Config surface (v0.18+)
+
+The coach's config has grown to 22 keys across 8 categories. `/prompt-coach-beta:config`
+is the structured surface — it reads a `CONFIG_SCHEMA` metadata dict alongside
+`DEFAULT_CONFIG`, so future options are picked up automatically once they land in the
+schema.
+
+```
+/prompt-coach-beta:config                         categorized dashboard
+/prompt-coach-beta:config show <category>         one category only
+/prompt-coach-beta:config get <key>               resolved value
+/prompt-coach-beta:config describe <key>          type, default, choices, since
+/prompt-coach-beta:config set <key> <value>       validate + write
+/prompt-coach-beta:config reset <key>             remove your override
+/prompt-coach-beta:config reset-all               wipe scoped config (confirm!)
+/prompt-coach-beta:config diff                    only what you've changed
+/prompt-coach-beta:config export                  resolved config as JSON
+```
+
+Flags: `--scope global|repo` (default `global`), `--dry-run` (on set/reset), `--json`
+(machine-readable).
+
+**Categories**: `output`, `voice`, `rule-activation`, `mastery`, `praise`,
+`typo-tolerance`, `anti-habituation`, `llm-fallback`.
+
+**Say-it phrases still work** — you can keep saying *"set prompt-coach to inline"*,
+*"coach off no-few-shot"*, etc. Claude routes those to `:config set` under the hood.
+The command is the discoverable path when you don't know what the options are called.
+
+Writes are deep-merged into the target JSON — keys the schema doesn't know about
+(e.g. forward-compat entries from future versions) are preserved, not stripped.
+Invalid values (wrong type, not in `choices`) are rejected with a clear error.
+
 ## Anti-habituation (v0.16+)
 
 Same message repeated wears out. The literature (Hattie & Timperley 2007 on feedback wear-out;

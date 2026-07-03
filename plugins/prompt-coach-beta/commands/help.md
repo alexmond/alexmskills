@@ -33,6 +33,8 @@ COMMANDS
 
   /prompt-coach-beta:stats           Health dashboard — prompts analyzed, emit rate,
                                      top-fired rules, mastery, typo corrections, config
+  /prompt-coach-beta:config          Structured config surface — show / get / describe /
+                                     set / reset / diff / export (v0.18+)
   /prompt-coach-beta:report-issue    File a privacy-safe bug report for prompts the coach
                                      mistreated. Uses candidates.jsonl seeded by the
                                      say-it phrases below.
