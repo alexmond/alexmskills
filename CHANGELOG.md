@@ -7,6 +7,42 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 3)
+
+### Added
+- **prompt-coach-beta 0.16.0** — anti-habituation (variant pool + novelty +
+  progressive disclosure + silence-after-saturation). Motivated by real
+  observation that seeing the exact same nudge text every fire trained the
+  eye to skip it. Literature-backed (Hattie & Timperley 2007, Sasse & Rashid
+  2013, ad-tech creative-wearout research) — variety + frequency capping +
+  escalation is the combination that beats habituation.
+  - **A. Variant pool** — `Rule.nudge` is now `list[str]` (backward-compatible
+    via `Rule.nudges` property). L1 rules ship 3 hand-written variants each
+    in a "colleague giving quick feedback" voice: direct, short, ends on a
+    concrete question. Non-L1 rules keep single-variant for now, grow
+    organically.
+  - **B. Progressive disclosure** — box format depends on
+    `fires_in_last_30_prompts`. First fire: full box (teaching). 2nd-3rd:
+    medium (no sources, no progress line). 4th+: one-liner callout.
+    Reflects "you've seen this, quick reminder."
+  - **C. Novelty constraint** — picker tracks last 2 variant indices per
+    rule; never picks a variant that's in the recent window if others
+    are available.
+  - **D. Silence after saturation** — 5+ fires within 30 prompts triggers
+    a 30-prompt silence on that rule. Absence is a signal to the user
+    that the coaching isn't landing.
+  - **Wife-driven voice rewrite** — original variants sounded like a
+    technical manual ("heavy verbs invite over-reach"; Chesterton's
+    fence). Rewrote all 18 in colleague voice ("You're asking for a big
+    change but didn't say what to leave alone. What must NOT change?").
+    Much more direct, easier to act on.
+  - E2E-verified: 7 consecutive fires of vague-reference on a fresh
+    state produce {full, full, medium, medium, short, silenced, silenced}
+    outcomes with all 3 variants used and no immediate repeats.
+- Config: `saturation_threshold` (5), `silence_window` (30),
+  `silence_duration` (30), `disclosure_medium_at` (2 fires),
+  `disclosure_short_at` (4 fires).
+
 ## 2026-07-03 (later 2)
 
 ### Changed

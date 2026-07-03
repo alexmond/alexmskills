@@ -55,6 +55,16 @@ DEFAULT_CONFIG = {
                                   # with no-answer-shape included)
     "pause_until_prompt": 0,      # user-set: skip nudging until global_prompt_count > this
     "disabled_rules": [],         # user can permanently silence a rule id
+    # v0.16.0 — anti-habituation (variant pool + progressive disclosure +
+    # novelty constraint + silence-after-saturation). Evidence: Hattie &
+    # Timperley 2007 on feedback wear-out; Sasse & Rashid 2013 on alert
+    # fatigue; ad-tech creative-wearout literature. Same message repeated
+    # loses ~40-60% impact after 3-4 exposures.
+    "saturation_threshold": 5,        # 5+ fires in silence_window → silence
+    "silence_window": 30,             # prompts — sliding window for saturation
+    "silence_duration": 30,           # prompts — how long to stay silent
+    "disclosure_medium_at": 2,        # 2nd fire in window → medium box
+    "disclosure_short_at": 4,         # 4th+ fire in window → one-liner
     # Encouragement layer (v0.3+). Sparing praise for the specific positive
     # behaviors mirroring the negative rules — evidence-based defaults tuned
     # for variable-ratio reinforcement without diluting nudges.
@@ -375,10 +385,22 @@ class Rule:
     id: str
     tier: int                     # 1 = fundamentals, 2 = intermediate, 3 = advanced
     name: str
-    nudge: str
+    # v0.16.0 — nudges is a *list* of phrasing variants for anti-habituation
+    # (Hattie & Timperley 2007, Sasse & Rashid 2013 alert fatigue). Selection
+    # rotates with novelty constraint. Fields kept singular in constructor
+    # via `nudge` for back-compat; property `nudges` returns the list.
+    nudge: str | list[str]
     guidance: str                 # short hint for Claude's additionalContext
     sources: list[tuple[str, str]]  # (title, url)
     check: Callable[[str], bool]
+
+    @property
+    def nudges(self) -> list[str]:
+        return self.nudge if isinstance(self.nudge, list) else [self.nudge]
+
+    @property
+    def primary_nudge(self) -> str:
+        return self.nudges[0]
 
 
 # ---- L1 fundamentals -------------------------------------------------------
@@ -989,11 +1011,13 @@ RULES: list[Rule] = [
         id="vague-reference",
         tier=1,
         name="Vague reference",
-        nudge=(
-            "Your first sentence points with 'it/this/that' but doesn't name what. "
-            "Try naming the file, function, PR, or topic — one concrete pointer "
-            "removes an entire class of ambiguity."
-        ),
+        nudge=[
+            "You said 'fix it' — what's 'it'? A file, a PR, an error message? "
+            "Point me at the specific thing and I'll go faster.",
+            "The 'it/this/that' is doing a lot of work in that sentence. Which "
+            "file / PR / error are you pointing at?",
+            "One quick thing: what specifically are we working on?",
+        ],
         guidance=(
             "User's prompt starts with an unresolved pronoun. If context makes the "
             "referent unambiguous, proceed; otherwise ask ONE short clarifying "
@@ -1006,11 +1030,13 @@ RULES: list[Rule] = [
         id="no-definition-of-done",
         tier=1,
         name="No definition of done",
-        nudge=(
-            "You asked for an action but didn't say what 'done' looks like. "
-            "Add one line: which tests pass, which behavior appears, or what "
-            "output shape you expect."
-        ),
+        nudge=[
+            "How will we know when this is done? A passing test, a specific "
+            "output, a green build?",
+            "Give me a way to check success — 'until pytest passes' or 'when "
+            "the CI is green' or 'the output matches X'.",
+            "Quick: what does 'done' look like here?",
+        ],
         guidance=(
             "User's prompt is an action verb with no acceptance criteria. Before "
             "acting, restate your interpretation of 'done' in one sentence, and "
@@ -1023,11 +1049,14 @@ RULES: list[Rule] = [
         id="unbounded-scope",
         tier=1,
         name="Unbounded scope",
-        nudge=(
-            "'All/every/whole' with an action verb is a scope trap. Constrain: "
-            "which files, which module, which pattern — or say 'audit only, no "
-            "changes' if that's the real ask."
-        ),
+        nudge=[
+            "'All' / 'every' / 'the whole thing' is a lot. Which files or "
+            "module specifically? Or should this be audit-only, no changes?",
+            "That's a big scope. Can we narrow it down — a path, a pattern, a "
+            "specific module?",
+            "Do you want me to actually change everything, or scope this to "
+            "something smaller first?",
+        ],
         guidance=(
             "User's prompt has an unbounded scope word attached to a mutating "
             "verb. Ask them to constrain (path glob, module, or read-only) BEFORE "
@@ -1040,11 +1069,14 @@ RULES: list[Rule] = [
         id="improve-without-metric",
         tier=1,
         name="Improve without a metric",
-        nudge=(
-            "'Better/faster/cleaner' means different things to different readers. "
-            "Pin it: 'p95 under 200 ms', 'no cast warnings', 'passes this failing "
-            "test', 'reads in under 20 lines'."
-        ),
+        nudge=[
+            "'Better' / 'faster' / 'cleaner' means different things to different "
+            "people. What are you actually optimizing for — speed (ms), size "
+            "(lines), correctness (tests)?",
+            "How will we measure 'better'? A latency target, a specific test "
+            "passing, a byte count?",
+            "Quick — what's the target? A number or a spec I can aim at?",
+        ],
         guidance=(
             "User asked for improvement without a measurable target. Either infer "
             "the most likely target from context and STATE it before acting, or "
@@ -1057,11 +1089,15 @@ RULES: list[Rule] = [
         id="missing-guardrails",
         tier=1,
         name="Missing guardrails",
-        nudge=(
-            "Heavy verbs (refactor / rewrite / migrate) without a 'do not touch' "
-            "clause invite over-reach. Name one thing that MUST stay stable: API, "
-            "behavior, filenames, tests."
-        ),
+        nudge=[
+            "You're asking for a big change — refactor / rewrite / migrate — "
+            "but didn't say what to leave alone. What must NOT change? Name "
+            "one thing: the public API, the tests, the file layout.",
+            "Before I touch anything: what's off-limits? Say something like "
+            "'don't break the public API' or 'existing tests must still pass' "
+            "and I'll respect that.",
+            "Quick one before I dig in: anything I should specifically not touch?",
+        ],
         guidance=(
             "User's prompt has a broad mutating verb and no invariant. State the "
             "invariants you'll preserve (public API, existing tests, file "
@@ -1125,11 +1161,14 @@ RULES: list[Rule] = [
         id="no-answer-shape",
         tier=1,
         name="Information ask without a shape",
-        nudge=(
-            "'What are X' / 'how much of Y' — you'll get a wall of prose. "
-            "Add a shape: '3-bullet summary each', 'one-liner per', 'under "
-            "100 words', or 'yes/no + one sentence why'."
-        ),
+        nudge=[
+            "How do you want the answer shaped? A few bullets, one paragraph, "
+            "yes/no + one line, a table?",
+            "Give me a shape and I'll fit the answer to it — '3 bullets each', "
+            "'under 100 words', 'table with X and Y columns'.",
+            "Quick shape? One-liner, table, bullets — anything works, just save "
+            "me from a wall of text.",
+        ],
         guidance=(
             "User asked an information-seeking question without specifying "
             "shape. Pick a compact default upfront (e.g. 'I'll give you 3 "
@@ -2096,13 +2135,54 @@ def _refresher_box(rule: Rule, days_since_mastery: int | None, mode: str) -> str
     )
 
 
-def _box(rule: Rule, streak: int, threshold: int, mode: str) -> str:
+def _fires_in_window(gr: dict, current_prompt: int, window: int) -> int:
+    """v0.16.0 — count recent fires within a sliding window of prompts."""
+    return sum(1 for p in gr.get("recent_fire_prompts", [])
+               if current_prompt - p <= window)
+
+
+def _pick_variant(rule: Rule, gr: dict) -> tuple[int, str]:
+    """v0.16.0 — anti-habituation variant picker with novelty constraint.
+    Avoids the last 2 variants used. Returns (index, text)."""
+    variants = rule.nudges
+    if len(variants) == 1:
+        return 0, variants[0]
+    recent = list(gr.get("recent_variants", []))
+    # Prefer variants NOT recently used.
+    candidates = [i for i in range(len(variants)) if i not in recent]
+    if not candidates:
+        candidates = list(range(len(variants)))
+    # Deterministic rotation over eligible candidates.
+    idx = candidates[int(gr.get("fires_total", 0)) % len(candidates)]
+    return idx, variants[idx]
+
+
+def _disclosure_level(gr: dict, current_prompt: int, cfg: dict) -> str:
+    """v0.16.0 — progressive disclosure. Fires in the recent window govern
+    whether to show the full box (teaching), a shorter reminder, or a
+    one-liner. Reflects 'you've seen this; quick reminder'."""
+    fires = _fires_in_window(gr, current_prompt, int(cfg.get("silence_window", 30)))
+    if fires >= int(cfg.get("disclosure_short_at", 4)):
+        return "short"
+    if fires >= int(cfg.get("disclosure_medium_at", 2)):
+        return "medium"
+    return "full"
+
+
+def _is_silenced(gr: dict, current_prompt: int) -> bool:
+    """v0.16.0 — is this rule inside its silence-after-saturation window?"""
+    return current_prompt < int(gr.get("silence_until_prompt", 0))
+
+
+def _box(rule: Rule, variant_text: str, streak: int, threshold: int, mode: str) -> str:
+    """Full box — first fire in a window, or post-silence return.
+    v0.16.0: takes a variant_text explicitly instead of reading rule.nudge."""
     bar = "━" * 70
     lines = [
         bar,
         f"🎯 prompt-coach [{mode}] — {rule.id}: {rule.name}",
         "",
-        rule.nudge,
+        variant_text,
         "",
         "Sources:",
     ]
@@ -2115,6 +2195,24 @@ def _box(rule: Rule, streak: int, threshold: int, mode: str) -> str:
     )
     lines.append(bar)
     return "\n".join(lines)
+
+
+def _box_medium(rule: Rule, variant_text: str, mode: str) -> str:
+    """v0.16.0 — reminder-scale box. No sources, no progress line.
+    Fires 2nd-3rd time in the window."""
+    bar = "━" * 60
+    return (
+        f"{bar}\n"
+        f"🎯 prompt-coach [{mode}] — {rule.id}\n\n"
+        f"{variant_text}\n"
+        f"{bar}"
+    )
+
+
+def _box_short(rule: Rule, variant_text: str, mode: str) -> str:
+    """v0.16.0 — one-line callout. Fires 4th+ time in the window.
+    You've heard this multiple times; brief poke only."""
+    return f"🎯 {rule.id} · {variant_text}"
 
 
 def _context_for_claude(rule: Rule) -> str:
@@ -2490,26 +2588,80 @@ def main() -> int:
         rule = RULES_BY_ID[chosen]
         gr = g["rules"][chosen]
         lr = l["rules"][chosen]
-        gr["last_nudged_at"] = _now_iso()
-        lr["last_nudged_at"] = _now_iso()
-        lr["last_nudged_prompt"] = l["prompt_count"]
-        l["last_nudge_prompt"] = l["prompt_count"]
-        outcome = f"nudged:{cfg['nudge_style']}"
+        current_prompt = g["prompt_count"]
 
-        mode = cfg["nudge_style"]
-        # If we've paused, do not emit — but still record fire above.
-        paused_until = int(cfg.get("pause_until_prompt", 0))
-        if g["prompt_count"] <= paused_until:
-            outcome = "paused"
+        # v0.16.0 — silence-after-saturation check. If this rule has fired
+        # too many times recently and we entered a silence window, skip
+        # emission but still record the fire so state stays honest.
+        if _is_silenced(gr, current_prompt):
+            outcome = "silenced:saturation"
         else:
-            if mode == "both":
+            gr["last_nudged_at"] = _now_iso()
+            lr["last_nudged_at"] = _now_iso()
+            lr["last_nudged_prompt"] = l["prompt_count"]
+            l["last_nudge_prompt"] = l["prompt_count"]
+
+            mode = cfg["nudge_style"]
+            paused_until = int(cfg.get("pause_until_prompt", 0))
+            if g["prompt_count"] <= paused_until:
+                outcome = "paused"
+            else:
+                # v0.16.0 — pick variant (novelty-aware) and disclosure level.
+                variant_idx, variant_text = _pick_variant(rule, gr)
+                level = _disclosure_level(gr, current_prompt, cfg)
+                outcome = f"nudged:{cfg['nudge_style']}:{level}:v{variant_idx}"
+
                 streak = int(g["rules"][chosen].get("clean_streak", 0))
-                print(_box(rule, streak, threshold, mode), file=sys.stderr, flush=True)
-            if mode == "inline":
-                streak = int(g["rules"][chosen].get("clean_streak", 0))
-                context_line = _inline_context_for_claude(rule, streak, threshold)
-            elif mode in ("both", "silent"):
-                context_line = _context_for_claude(rule)
+                if mode == "both":
+                    if level == "full":
+                        box = _box(rule, variant_text, streak, threshold, mode)
+                    elif level == "medium":
+                        box = _box_medium(rule, variant_text, mode)
+                    else:  # short
+                        box = _box_short(rule, variant_text, mode)
+                    print(box, file=sys.stderr, flush=True)
+                if mode == "inline":
+                    # Inline: render the appropriate-length box in-response.
+                    if level == "full":
+                        context_line = _inline_context_for_claude(rule, streak, threshold)
+                        # Update the box in the inline context to use the picked variant
+                        context_line = context_line.replace(rule.primary_nudge, variant_text)
+                    elif level == "medium":
+                        context_line = (
+                            f"[prompt-coach · inline · medium] Rule '{rule.id}' "
+                            f"matched. Render this ONE line at the start of your "
+                            f"response, before addressing the task: "
+                            f"`{_box_medium(rule, variant_text, mode).splitlines()[1]}` "
+                            f"followed by the variant text as a single blockquote. "
+                            f"Guidance: {rule.guidance}"
+                        )
+                    else:  # short
+                        context_line = (
+                            f"[prompt-coach · inline · short] Rule '{rule.id}' "
+                            f"matched — you've seen this multiple times recently. "
+                            f"Render ONE compact line at the start: "
+                            f"`🎯 {rule.id} · {variant_text}`. "
+                            f"Don't repeat guidance; brief poke only."
+                        )
+                elif mode in ("both", "silent"):
+                    context_line = _context_for_claude(rule)
+
+                # v0.16.0 — update variant history + fire prompts for next time.
+                recent_variants = list(gr.get("recent_variants", []))
+                recent_variants.append(variant_idx)
+                gr["recent_variants"] = recent_variants[-2:]  # cap at 2
+                recent_fires = list(gr.get("recent_fire_prompts", []))
+                recent_fires.append(current_prompt)
+                gr["recent_fire_prompts"] = recent_fires[-10:]  # cap at 10
+
+                # v0.16.0 — after emit, check if we've hit saturation.
+                # If so, enter silence for silence_duration prompts.
+                fires_in_window = _fires_in_window(
+                    gr, current_prompt, int(cfg.get("silence_window", 30)))
+                if fires_in_window >= int(cfg.get("saturation_threshold", 5)):
+                    gr["silence_until_prompt"] = (
+                        current_prompt + int(cfg.get("silence_duration", 30))
+                    )
     elif chosen_mastered is not None:
         # v0.9.0 — mastered rule fires: soft refresher, longer cooldown.
         rule = RULES_BY_ID[chosen_mastered]

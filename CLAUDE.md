@@ -117,6 +117,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-03 — **prompt-coach-help** — 0.14.0: /prompt-coach-beta:help card with live version + resolved config + command list + say-it phrases + config reference + state file pointers. Why: discoverability.
 - 2026-07-03 — **prompt-coach-audit-fixes** — 0.15.0: 75-entry log audit → +8 hedges (i think/now/let me/etc.) + `run`,`review` verbs + `check` DoD tightened + broader no-role critique. 5/7 gaps closed. Why: coverage.
 - 2026-07-03 — **prompt-coach-java-mcp-spec** — living design doc at plugins/prompt-coach-beta/docs/java-mcp-spec.md for future Spring Boot MCP server; multi-user training preqrequisite. Why: chat + telemetry need MCP.
+- 2026-07-03 — **prompt-coach-anti-habituation** — 0.16.0: variant pool (3/rule) + novelty + progressive disclosure + silence-after-saturation. Wife-flagged artificial voice → rewrote all L1 variants. Why: same message every fire.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

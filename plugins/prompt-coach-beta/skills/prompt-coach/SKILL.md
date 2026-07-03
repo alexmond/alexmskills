@@ -168,6 +168,25 @@ nudge box *verbatim* at the very start of its response, then continue with the a
 nudge doesn't substantively apply because prior context resolves the ambiguity, Claude renders the
 block but adds a one-line "(context resolves the ambiguity, proceeding)" note.
 
+## Anti-habituation (v0.16+)
+
+Same message repeated wears out. The literature (Hattie & Timperley 2007 on feedback wear-out;
+Sasse & Rashid 2013 on alert fatigue; ad-tech creative-wearout research) converges on **variety
++ frequency capping + escalation** as the combination that keeps coaching salient. The coach
+ships all four:
+
+- **Variant pool** — L1 rules have 3 phrasing variants each, hand-written in a "colleague giving
+  quick feedback" voice. Rotates on each fire.
+- **Novelty constraint** — never repeats a variant within the last 2 fires of the same rule.
+- **Progressive disclosure** — fires_in_window drives format: full box for the first fire,
+  medium box (no sources, no progress line) for the 2nd–3rd, one-liner for the 4th+.
+- **Silence after saturation** — 5 fires within 30 prompts triggers a 30-prompt silence on
+  that rule. Absence is a signal: coaching isn't landing, going quiet is more honest than
+  nagging.
+
+Config knobs: `saturation_threshold` (default 5), `silence_window` (30), `silence_duration`
+(30), `disclosure_medium_at` (2 fires in window), `disclosure_short_at` (4).
+
 ## Mastery ≠ silence (v0.9+)
 
 Mastered rules aren't permanently dormant — they still evaluate every prompt, just emit rarely.
