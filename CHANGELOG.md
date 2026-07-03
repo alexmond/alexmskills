@@ -7,6 +7,16 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later)
+
+### Added
+- **prompt-coach-beta 0.14.0** — `/prompt-coach-beta:help` slash command.
+  Compact dashboard-style help card with the live plugin version, current
+  resolved config values (defaults → global override → per-repo override),
+  the command list (stats / report-issue / help), all say-it phrases
+  (mode/pause/disable/mark-bad-call), the full config option reference,
+  and pointers to state files + docs. Read-only.
+
 ## 2026-07-03
 
 ### Added

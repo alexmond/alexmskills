@@ -1,0 +1,132 @@
+---
+description: Show prompt-coach help — commands, config options, and say-it phrases
+---
+
+# `/prompt-coach-beta:help`
+
+Print a compact help card for the coach. Read the current installed version and resolved
+config to fill in the live values.
+
+## What to do
+
+1. Read `~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/. claude-plugin/plugin.json`
+   (whichever version exists) for `.version` and `.description`.
+2. Resolve current effective config by merging (in order): built-in defaults →
+   `~/.claude/prompt-coach/config.json` → current repo's `.claude/prompt-coach/config.json`
+   (if any).
+3. Render the card below with the live values substituted.
+
+## The card
+
+Render as a fenced block so it presents like a dashboard, under 60 lines.
+
+```
+prompt-coach-beta v<VERSION>
+
+A UserPromptSubmit hook that watches every prompt you send Claude Code and nudges
+you toward better prompting habits. 28 rules across 6 tiers, 22 positive detectors,
+typo tolerance, conversational short-circuit. Rules quietly graduate as you master
+them and fade to occasional refreshers.
+
+────────────────────────────────────────────────────────────────────
+COMMANDS
+
+  /prompt-coach-beta:stats           Health dashboard — prompts analyzed, emit rate,
+                                     top-fired rules, mastery, typo corrections, config
+  /prompt-coach-beta:report-issue    File a privacy-safe bug report for prompts the coach
+                                     mistreated. Uses candidates.jsonl seeded by the
+                                     say-it phrases below.
+  /prompt-coach-beta:help            This card.
+
+────────────────────────────────────────────────────────────────────
+SAY-IT PHRASES (talk to Claude naturally; Claude edits the right file)
+
+  Mode:
+    "set prompt-coach to inline"      nudge renders as opening block of Claude's response
+    "set prompt-coach to silent"      Claude sees, you don't
+    "set prompt-coach to log-only"    nothing external; every fire logged
+    "set prompt-coach to both"        default — stderr box + Claude context
+    "reset prompt-coach mode"         drop local override
+
+  Pause / disable:
+    "coach pause 10"                  silence for the next N prompts
+    "coach off <rule-id>"             permanently disable one rule
+    "coach on <rule-id>"              re-enable it
+    "coach reactivate <rule-id>"      per-repo — re-open a rule that mastered globally
+    "disable praise"                  silence encouragement, keep nudges
+    "praise every N prompts"          set praise_ratio
+
+  Flag a bad call (adds to candidates.jsonl for /report-issue):
+    "coach that was wrong"            flags the PRIOR prompt for review
+    "coach missed this"
+    "coach false positive"
+    "bad nudge" / "wrong nudge"
+
+────────────────────────────────────────────────────────────────────
+CURRENT CONFIG (resolved: default → global → this repo)
+
+  nudge_style:              <live value>
+  graduation_threshold:     <live value>  (clean prompts in a row → mastered)
+  cooldown_prompts:         <live value>  (min between same-rule nudges)
+  mastered_cooldown_prompts:<live value>  (min between refresher fires)
+  max_active_rules:         <live value>
+  praise_ratio:             <live value>  (1 praise per N clean prompts w/ positive)
+  praise_on_mastery:        <live value>
+  praise_on_first_after_fire:<live value>
+  disable_praise:           <live value>
+  typo_tolerance:           <live value>  (0 disables normalization)
+  disabled_rules:           <live value>
+  demote_on_regression:     <live value>  (self-healing; off by default)
+
+  Global config file:   ~/.claude/prompt-coach/config.json
+  Per-repo config file: .claude/prompt-coach/config.json (per repo)
+
+────────────────────────────────────────────────────────────────────
+CONFIG OPTIONS REFERENCE
+
+  nudge_style        both | silent | log-only | inline
+                     both     — boxed nudge on stderr + Claude sees context
+                     silent   — Claude sees, user doesn't
+                     log-only — no external output; every fire logged
+                     inline   — nudge rendered as opening block of Claude's response
+
+  graduation_threshold    N clean prompts → rule masters (default: 15)
+  cooldown_prompts        Min prompts between same-rule nudges (default: 5)
+  mastered_cooldown_prompts  Refresher cooldown for mastered rules (default: 50; 0=off)
+  max_active_rules        Cap on practicing rules active at once (default: 6)
+  pause_until_prompt      Skip nudging until global prompt_count > this
+  disabled_rules          Array of rule ids to permanently silence
+
+  praise_ratio            1 praise per N clean prompts w/ positive fire (default: 10)
+  praise_on_mastery       Celebrate rule mastery events (default: true)
+  praise_on_first_after_fire  Praise the immediate correction (default: true)
+  disable_praise          Silence encouragement, keep nudges (default: false)
+
+  typo_tolerance          Levenshtein edit-distance for typo normalization (default: 2)
+  demote_on_regression    Object {enabled, threshold, window} — auto-demote mastered
+                          rules that fire threshold+ times within window prompts.
+                          Off by default.
+
+────────────────────────────────────────────────────────────────────
+STATE FILES
+
+  Global mastery ledger:  ~/.claude/prompt-coach/state.json
+  Per-repo state:         .claude/prompt-coach/state.json (this repo)
+  Fire log (audit):       .claude/prompt-coach/log.md
+  Bug-report candidates:  .claude/prompt-coach/candidates.jsonl
+
+────────────────────────────────────────────────────────────────────
+DOCS
+
+  Full SKILL.md:  <plugin dir>/skills/prompt-coach/SKILL.md
+  Sources:        <plugin dir>/docs/sources.md — bibliography per rule
+  Marketplace:    alexmond/alexmskills → prompt-coach-beta
+```
+
+## What NOT to do
+
+- Do NOT modify any state or config files as part of `/help`. Read-only.
+- Do NOT enumerate every rule id (28 rules × 2-line description = wall of text). Point at
+  `/prompt-coach-beta:stats` for active rules and mastered rules if the user asks for them.
+- Do NOT run the coach's Python code — the help card is static content + config lookup, not
+  a live analysis.
