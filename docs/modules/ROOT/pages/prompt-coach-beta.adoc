@@ -113,6 +113,69 @@ Switch modes conversationally — Claude edits the config file:
 "reset prompt-coach mode"
 ----
 
+== Voice presets and sources (v0.17+)
+
+Two orthogonal knobs shape *how* the coach talks to you.
+
+`voice_preset` chooses the *personality* — which set of pre-written phrasings the coach draws from:
+
+* `colleague` (default) — friendly, direct, ends on a concrete question. Assumes fluent colloquial English and light idiom. `+"You said 'fix it' — what's 'it'?"+`
+* `plain` — simple English, short sentences, no idioms, no jargon. Written for non-native speakers or anyone who prefers explicit phrasing. `+"Please tell me what 'it' or 'this' is. For example: a file name, a PR number, or an error message."+`
+
+Coverage: L1 + L2 rules (10 rules) ship both presets with 3 variants each. L3–L6 rules currently ship `colleague` only; if you pick `plain`, they fall back to `colleague` (no crash, no missing text).
+
+`voice_source` chooses *who authors the sentence at fire time*, independent of preset:
+
+[cols="1,3,2,2",options="header"]
+|===
+| Source | How | Cost per fire | Determinism
+
+| `static` (default) | Pre-written variants from the catalog. Rotates + follows disclosure levels. | 0 tokens, ~0 ms | Deterministic — same rule, same context → same text (modulo novelty rotation)
+| `llm-compose` | Hook passes rule id + guidance + your prompt shape to Claude in `additionalContext`; Claude writes the nudge fresh, primed to reflect *this specific* prompt with six anti-disagreement guardrails. | +200–800 ms, ~150–400 output tokens | Non-deterministic; may feel repetitive-in-a-different-way
+| `hybrid` | First fire in the window = static preset (deterministic, teaching-focused). Medium/short refreshers = `llm-compose` (livelier when repeating). | Costs both, sparingly | Mixed
+|===
+
+The six anti-disagreement guardrails baked into `llm-compose`: header line verbatim, word-count cap per disclosure level, must not override the rule even if context resolves the referent, must match the preset's voice, must end on a concrete ask when guidance implies one, and prompt shape (first 60 chars) provided so Claude can situate the response.
+
+Switch conversationally:
+
+[source,text]
+----
+"set prompt-coach voice to plain"
+"set prompt-coach source to llm-compose"
+"set prompt-coach source to hybrid"
+----
+
+The `outcome` log line records the combination per fire (e.g. `nudged:inline:full:v1:p=plain:src=static`) so `/prompt-coach-beta:stats` can mine which combination you converge on.
+
+== Config surface (v0.18+)
+
+By v0.18 the coach's config had grown to 22 keys across 8 categories. `+/prompt-coach-beta:config+` is the structured surface — it reads a `CONFIG_SCHEMA` metadata dict alongside `DEFAULT_CONFIG`, so future options are picked up automatically once they land in the schema. The dashboard, describer, and validator never drift.
+
+Nine verbs:
+
+[cols="2,4",options="header"]
+|===
+| Verb | What it does
+| `show` | Categorized dashboard with resolved value + source (default/global/repo) per key
+| `show <category>` | One category only (e.g. `show voice`)
+| `get <key>` | Resolved value only
+| `describe <key>` | Full metadata: type, default, current, choices, example, since-version, description
+| `set <key> <value>` | Validate against schema → deep-merge write to scoped config
+| `reset <key>` | Remove your override, revert to previous layer
+| `reset-all` | Wipe the scoped config file (requires confirmation)
+| `diff` | Show only keys where the resolved value differs from the default
+| `export` | Print the resolved config as JSON (for backup)
+|===
+
+Flags: `--scope global` (default) or `--scope repo` chooses which config file writes go to. `--dry-run` on `set`/`reset`/`reset-all` previews without touching disk. `--json` on `show`/`get`/`describe`/`diff` produces machine-readable output.
+
+Categories: `output`, `voice`, `rule-activation`, `mastery`, `praise`, `typo-tolerance`, `anti-habituation`, `llm-fallback`.
+
+**Say-it phrases still work** — natural language like `+"set prompt-coach to inline"+` or `+"coach off no-few-shot"+` routes to `:config set` under the hood. The command is the discoverable path when you don't know what the options are called; natural language is the fast path when you do.
+
+Writes are deep-merged into the target JSON so keys the schema doesn't know about (forward-compat entries from future versions) are preserved, not stripped. Invalid values are rejected with a clear error message.
+
 == Encouragement layer
 
 The coach also praises the *specific positive behaviors* that mirror the negative rules — 22 positive detectors. Praise is deliberately sparing (default 1 per 10 clean prompts with a positive, plus milestone events on rule mastery and first-after-fire), grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan 2000, Kohn 1993).
@@ -158,6 +221,7 @@ Optional self-healing: `demote_on_regression` auto-demotes a mastered rule that 
 |===
 | Command | What it does
 | `/prompt-coach-beta:stats` | Health dashboard — prompts analyzed, emit rate, top-fired rules, mastery, typo corrections, current config
+| `/prompt-coach-beta:config` | Structured config surface — show / describe / set / reset / diff / export (v0.18+)
 | `/prompt-coach-beta:help` | Compact help card with commands, say-it phrases, and full config reference
 | `/prompt-coach-beta:report-issue` | File a privacy-safe bug report about a prompt the coach mistreated
 | `/prompt-coach-beta:prompt-coach` | Print the full SKILL.md
