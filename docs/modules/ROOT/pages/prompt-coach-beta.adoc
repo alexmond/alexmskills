@@ -1,0 +1,205 @@
+= Prompt Coach (beta)
+:navtitle: prompt-coach-beta
+
+A `UserPromptSubmit` hook that watches every prompt sent to Claude Code and nudges toward better prompting habits — definition-of-done, scoped references, guardrails, verification, and more. Rules quietly graduate once you consistently apply them, so the coach fades as your prompts improve.
+
+The `-beta` suffix is intentional: the plugin ships from the same marketplace as the stable plugins but is signposted as in-progress. It graduates to `prompt-coach` when it earns its stable slot.
+
+== Install
+
+[source,text]
+----
+/plugin marketplace add alexmond/alexmskills
+/plugin install prompt-coach-beta@alexmskills
+/reload-plugins
+----
+
+That's it. No separate channel, no extra configuration. Restart the session so the `UserPromptSubmit` hook registers.
+
+== What it watches for
+
+Six tiers of rules, roughly five each. Only six rules are active at a time (`max_active_rules`, default 6) — lower tiers dominate, and as a rule masters, the next dormant rule activates in its place. When all rules in a tier master, the next tier's rules take their place.
+
+=== L1 — fundamentals
+
+[cols="1,3",options="header"]
+|===
+| Rule | Catches
+| vague-reference | "Fix it" / "improve this" with no named file/function
+| no-definition-of-done | Action verb with no acceptance criteria
+| unbounded-scope | "all / every / entire X" attached to a mutating verb
+| improve-without-metric | "better / faster / cleaner" with no measurable target
+| missing-guardrails | Heavy verb (refactor/rewrite/migrate) with no "don't touch X"
+| no-answer-shape | "What are X" / "how much of Y" question without a format spec
+|===
+
+=== L2 — intermediate
+
+[cols="1,3",options="header"]
+|===
+| Rule | Catches
+| compound-tasks | Three+ action verbs joined by "and"
+| no-verify-loop | Implementation ask with no verification step
+| missing-context-fetch | "The failing test / the issue" with no identifier
+| no-format-spec | Ask for summary/list/report with no shape
+|===
+
+=== L3 — classical prompting techniques
+
+[cols="1,3",options="header"]
+|===
+| Rule | Catches
+| no-adversarial-check | High-stakes ask (security/migration/prod/delete) with no skeptic
+| retry-without-diagnosis | Short "try again" with no new information
+| no-few-shot | "Like X" / "in the style of Y" without an example
+| no-chain-of-thought | Reasoning ask (why/debug/trace) without "think first"
+| no-rubric | Judgment ask ("is this good?") without criteria/axes
+| no-uncertainty-budget | Investigative ask with no "if unsure, say so"
+|===
+
+=== L4 — goals & loops
+
+[cols="1,3",options="header"]
+|===
+| Rule | Catches
+| implicit-goal | Action prompt with no "so that / in order to / why" clause
+| unbounded-iteration | "Keep improving" without a stopping condition
+| no-rubric-for-refine | "Refine this" without naming which axis to improve
+|===
+
+=== L5 — Claude-Code tool-native
+
+[cols="1,3",options="header"]
+|===
+| Rule | Catches
+| no-plan-mode-for-risky | Migration / delete / rewrite ask with no "plan first"
+| no-task-list-for-multi-step | 3+ action verbs without a TaskCreate / checklist ask
+| no-agents-for-parallel-lookup | Multiple independent lookups without parallel agents
+| no-role-for-critique | "Review my X" without invoking a role (skeptic / security / reviewer)
+| no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel
+| no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents
+|===
+
+=== L6 — skill-awareness
+
+[cols="1,3",options="header"]
+|===
+| Rule | Catches
+| no-skill-lookup | "How do I X" / "what's the standard way" without checking existing skills
+| pattern-worth-abstracting | "Again / same as before / yet another" — rule of three, worth a skill?
+| no-skill-composition | Multi-step repeatable ceremony not named as a skill candidate
+|===
+
+== Nudge modes
+
+Four modes control where the nudge appears. Config resolves in order: repo local → user global → default.
+
+[cols="1,2,2",options="header"]
+|===
+| Mode | User sees | Claude sees
+
+| `both` (default) | Boxed nudge on stderr (dim area under prompt) | `additionalContext` with guidance
+| `silent` | Nothing | `additionalContext` with guidance
+| `log-only` | Nothing | Nothing (every fire still logged)
+| `inline` | The boxed nudge is rendered as the opening block of Claude's response | Render instruction + guidance
+|===
+
+Switch modes conversationally — Claude edits the config file:
+
+[source,text]
+----
+"set prompt-coach to inline"
+"set prompt-coach to silent"
+"reset prompt-coach mode"
+----
+
+== Encouragement layer
+
+The coach also praises the *specific positive behaviors* that mirror the negative rules — 22 positive detectors. Praise is deliberately sparing (default 1 per 10 clean prompts with a positive, plus milestone events on rule mastery and first-after-fire), grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan 2000, Kohn 1993).
+
+Design constraints:
+
+* *Never on a nudged prompt.* Praise + correction on the same prompt dilutes both.
+* *Specific, not generic.* Describes what you did, not who you are.
+* *Process, not trait.* Praises the technique.
+* *Variable-ratio.* Intermittent praise stays potent.
+* *Milestone events.* Rule graduating to mastered + first-after-fire always recognized.
+
+== Anti-habituation
+
+Same message repeated wears out. The literature (Hattie & Timperley 2007 on feedback wear-out; Sasse & Rashid 2013 on alert fatigue) converges on *variety + frequency capping + escalation* as the combination that keeps coaching salient. The coach ships all four:
+
+* *Variant pool* — L1 rules have 3 phrasing variants each. Rotates on each fire.
+* *Novelty constraint* — never repeats a variant within the last 2 fires of the same rule.
+* *Progressive disclosure* — first fire in the window shows the full box; 2nd–3rd is a medium reminder; 4th+ is a one-liner.
+* *Silence after saturation* — 5 fires within 30 prompts triggers a 30-prompt silence on that rule. Absence signals that coaching isn't landing.
+
+== Typo tolerance
+
+A pre-pass normalizes each prompt against a curated set of trigger words drawn from the rule catalog. Dyslexic-friendly, transposition-friendly, deterministic (banded Levenshtein, ~1 ms). Corrections happen only when the closest trigger word is uniquely the closest (ties = no correction, so `text` doesn't become `test`), and adaptive tolerance is stricter on short tokens.
+
+Examples: `refacotr` → `refactor`, `evrything` → `everything`, `veryfy` → `verify`, `cleanre` → `cleaner`.
+
+Set `typo_tolerance: 0` to disable.
+
+== Conversational short-circuit
+
+Many prompts in an ongoing conversation aren't full asks — they're approvals (`sure`, `publish`, `go`), multi-choice picks (`1 and 2`, `option a`), or continuations (`continue`, `thanks`). The coach detects these and skips analysis entirely — no rule matching, no praise, no streak updates. Task-notification and system-reminder messages are also short-circuited.
+
+== Mastery ≠ silence
+
+Mastered rules aren't permanently dormant. They still evaluate every prompt, and when only a mastered rule matches, a *refresher* fires: a one-line softer box (`🔄 prompt-coach — refresher on <rule>`) rather than the full nudge. The cooldown for mastered rules is much longer (50 prompts vs 5 for practicing rules). If a mastered rule keeps matching, that's the highest-signal event in the system — evidence that a habit is regressing.
+
+Optional self-healing: `demote_on_regression` auto-demotes a mastered rule that fires threshold+ times within a rolling window. Off by default.
+
+== Slash commands
+
+[cols="1,3",options="header"]
+|===
+| Command | What it does
+| `/prompt-coach-beta:stats` | Health dashboard — prompts analyzed, emit rate, top-fired rules, mastery, typo corrections, current config
+| `/prompt-coach-beta:help` | Compact help card with commands, say-it phrases, and full config reference
+| `/prompt-coach-beta:report-issue` | File a privacy-safe bug report about a prompt the coach mistreated
+| `/prompt-coach-beta:prompt-coach` | Print the full SKILL.md
+|===
+
+== Reporting bad calls
+
+If the coach mistreated a prompt, mark it on the very next turn with any of these phrases:
+
+* "coach that was wrong"
+* "coach missed this"
+* "coach false positive"
+* "bad nudge" / "wrong nudge"
+
+The analyzer flags the *prior* substantive prompt's analysis (not the current complaint) into `.claude/prompt-coach/candidates.jsonl`. Later, run `/prompt-coach-beta:report-issue` to review candidates, add annotations, preview a redacted payload, and (only after explicit confirmation) file a GitHub issue.
+
+*Privacy guarantees:* the report includes a structural signature (word count, question-shape, has-file-ref, etc.), the first 5 words of the prompt only, and your annotation. Full prompt content stays local in `log.md`.
+
+== State layout
+
+[source,text]
+----
+~/.claude/prompt-coach/
+├── config.json        # global config
+└── state.json         # global mastery ledger
+
+<repo>/.claude/prompt-coach/
+├── config.json        # per-repo overrides
+├── state.json         # per-repo fires, reactivations, anti-habituation state
+├── log.md             # rolling log of nudges + prompt previews
+└── candidates.jsonl   # flagged bad-call candidates
+----
+
+== Future — Java MCP server
+
+The current Python + `UserPromptSubmit` hook is CLI-only. A Java MCP server is planned so the coach can run in claude.ai chat, aggregate telemetry across users, and support persistent per-user state. The prerequisite is real training data from many users (not a single maintainer's log). The `report-issue` command already produces training-data-shaped payloads.
+
+The living design spec lives in the repo at `plugins/prompt-coach-beta/docs/java-mcp-spec.md` — MCP surface, canonical rule catalog format, data model, privacy model, and migration path.
+
+== Design notes
+
+* *Pure heuristics.* Rules are regex + short-window checks. No LLM call per prompt. Cheap, deterministic, ~10 ms.
+* *False positives are OK.* Cooldowns prevent pestering; graduation rewards consistent clean prompts even in the face of an over-eager rule.
+* *Sources are diverse.* Each rule cites 2+ sources drawn from Anthropic prompt-engineering docs, Claude Code best practices, OpenAI's prompt guide, Simon Willison's notes, and academic work (Wei et al. 2022 on CoT, Brown et al. 2020 on few-shot, Schulhoff et al. 2024 on prompt patterns).
+* *Beta.* Graduates to `prompt-coach` (drops the suffix, cuts a `1.0.0` release) once it earns its stable slot.

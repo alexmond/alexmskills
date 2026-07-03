@@ -1,7 +1,7 @@
 * xref:index.adoc[Overview]
 * xref:getting-started.adoc[Getting Started]
 * xref:versioning.adoc[Versioning & Maintenance]
-* xref:channels.adoc[Release Channels (stable & beta)]
+* xref:channels.adoc[Marketplace & Beta Plugins]
 * Architecture
 ** xref:role-system.adoc[The Role System]
 * Self-learning skills
@@ -18,5 +18,6 @@
 * Agents & research
 ** xref:review-agents.adoc[Review Agents]
 ** xref:research-sweep.adoc[Research Sweep]
-* Beta channel
+* Beta plugins
+** xref:prompt-coach-beta.adoc[Prompt Coach]
 ** xref:tune-repo.adoc[Tune Repo]

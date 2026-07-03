@@ -1,56 +1,42 @@
-= Release Channels (stable & beta)
+= Marketplace & Beta Plugins
+:navtitle: Marketplace & Beta Plugins
 
-`alexmskills` ships two marketplace channels from one repository:
+`alexmskills` ships from a single marketplace catalog (`.claude-plugin/marketplace.json`). In-progress plugins live alongside stable ones, distinguished by a `-beta` suffix in the name (for example `prompt-coach-beta`). No separate channel, no extra marketplace to opt into — install them the same way as any other plugin.
 
-[cols="1,2,2",options="header"]
+[source,text]
+----
+/plugin marketplace add alexmond/alexmskills
+/plugin install prompt-coach-beta@alexmskills
+----
+
+The `-beta` suffix is intentional: it makes it obvious at install time and in the enabled-plugins list that the plugin is beta quality. When a beta plugin earns its stable slot, it graduates — the directory is renamed, the `-beta` drops from the name and marketplace entry, and the version bumps to `1.0.0`.
+
+== Why one catalog
+
+The two-channel setup (`alexmskills` + `alexmskills-beta`) kept hitting edge cases in the Claude Code CLI — bare-string plugin sources resolving from clone root vs marketplace-parent, `sparsePaths` not being honored, dual `marketplace.json` at repo root vs subdirectory confusing install vs reload, and `extraKnownMarketplaces` requiring per-user opt-in with a schema that kept shifting. One catalog with a suffix convention removes every one of them.
+
+== Current beta plugins
+
+[cols="1,3",options="header"]
 |===
-| Channel | Marketplace | Contents
+| Plugin | What it does
 
-| **stable** | `alexmskills` (`.claude-plugin/marketplace.json`)
-| Released, versioned plugins. What most users install.
+| xref:prompt-coach-beta.adoc[prompt-coach-beta]
+| Watches every prompt and nudges toward better prompting habits — 28 rules across 6 tiers, variant pool + progressive disclosure + silence-after-saturation to avoid habituation, typo tolerance, and evidence-based praise for good behaviors.
 
-| **beta** | `alexmskills-beta` (`beta/.claude-plugin/marketplace.json`)
-| Unreleased and in-progress plugins. Unstable; expect breaking changes.
+| xref:tune-repo.adoc[tune-repo-beta]
+| Audits and tightens a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately.
 |===
 
-The beta channel is a git **subdirectory** (`beta/`) that is its own marketplace root, so both channels
-live on `main` and a plugin is "released" by physically moving it into the stable catalog.
-
-== Opting into beta
-
-Add the beta channel alongside stable via a `git-subdir` source in `.claude/settings.json`:
-
-[source,json]
-----
-{
-  "extraKnownMarketplaces": {
-    "alexmskills-beta": {
-      "source": { "source": "git-subdir", "url": "alexmond/alexmskills", "path": "beta" }
-    }
-  }
-}
-----
-
-Then `+/plugin install <name>@alexmskills-beta+`. To evaluate without installing:
-
-[source,bash]
-----
-claude --plugin-dir ./beta/plugins/<name>
-----
-
-== Authoring & promoting
+== Author workflow
 
 [cols="1,2",options="header"]
 |===
 | Step | Command
 
-| Scaffold a beta plugin | `make new-beta NAME=<name>`
-| Validate both channels | `make validate`
-| Promote beta → stable | `make promote PLUGIN=<name>`
+| Add a new beta plugin | Author under `plugins/<name>-beta/`, register in `.claude-plugin/marketplace.json`.
+| Validate the marketplace | `make validate`
+| Graduate a beta plugin | `make graduate PLUGIN=<name>-beta`
 |===
 
-`make promote` moves `beta/plugins/<name>` → `plugins/<name>`, removes the entry from the beta catalog,
-and adds it to the stable catalog. Afterwards, set a real release version with
-`make bump PLUGIN=<name> VERSION=1.0.0` and add a documentation page.
-
-Beta plugins start at version `0.x` by convention; promotion is the moment they earn a `1.0.0`.
+`make graduate` renames the directory (drops the `-beta` suffix), updates the plugin.json `name`, and rewrites the marketplace entry (drops the `beta` category + keyword). Follow with `make bump PLUGIN=<name> VERSION=1.0.0` to set the release version.
