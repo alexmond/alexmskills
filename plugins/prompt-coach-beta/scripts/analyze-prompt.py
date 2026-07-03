@@ -50,7 +50,9 @@ DEFAULT_CONFIG = {
     "nudge_style": "both",
     "graduation_threshold": 15,   # clean prompts in a row → mastered
     "cooldown_prompts": 5,        # min prompts between same-rule nudges
-    "max_active_rules": 5,        # never nag on more than this many rules at once
+    "max_active_rules": 6,        # never nag on more than this many rules at once
+                                  # (v0.12.0: raised 5→6 to fit the new L1 tier
+                                  # with no-answer-shape included)
     "pause_until_prompt": 0,      # user-set: skip nudging until global_prompt_count > this
     "disabled_rules": [],         # user can permanently silence a rule id
     # Encouragement layer (v0.3+). Sparing praise for the specific positive
@@ -355,6 +357,9 @@ ACTION_VERBS = (
     # v0.11.0 — release-family verbs (evidence: "try to deploy" fired
     # nothing in real log). Deploys are near-always guardrail-worthy.
     "deploy", "publish", "release", "ship",
+    # v0.12.0 — real-session dev-workflow verb, evidence:
+    # "commit and check infra for creds" fired nothing.
+    "commit",
 )
 
 # Hedge prefixes — real English people prepend to action asks. Strip them
@@ -494,13 +499,24 @@ def rule_missing_context_fetch(prompt: str) -> bool:
 
 def rule_no_answer_shape(prompt: str) -> bool:
     """Information-seeking question with no format spec — evidence: real
-    prompts like 'what are lsp servers' and 'how much of github app support
-    do we have?' were firing nothing at all."""
+    prompts like 'what are lsp servers', 'how much of github app support
+    do we have?', 'Do we have enough for release?', and 'Are there java
+    libs...' were firing nothing at all.
+
+    v0.12.0: elevated from L2 → L1 (fundamentals) and broadened q regex
+    to include 'do we / does it / can we / should we / are there'
+    forms."""
     pl = prompt.lower()
     q = re.search(
-        r"^\s*(what (are|is|kinds|types|options)|how (much|many|do|does|can|should|would)|"
+        r"^\s*(what (are|is|kinds|types|options)|"
+        r"how (much|many|do|does|can|should|would)|"
         r"which \w+ (should|are|is|would)|why (should|is|are|does|doesn.?t)|"
-        r"does (\w+ )?exist|is there|are there)\b", pl)
+        r"does (\w+ )?exist|is there|are there|"
+        # v0.12.0 additions — real English question forms
+        r"do (we|you|they|i)|does (it|he|she|this|that)|"
+        r"did (we|you|they|i|it|this)|"
+        r"can (we|you|i|it|this)|should (we|you|i|it|this)|"
+        r"can i|should i)\b", pl)
     if not q:
         return False
     shape = re.search(
@@ -1015,7 +1031,7 @@ RULES: list[Rule] = [
     ),
     Rule(
         id="no-answer-shape",
-        tier=2,
+        tier=1,
         name="Information ask without a shape",
         nudge=(
             "'What are X' / 'how much of Y' — you'll get a wall of prose. "

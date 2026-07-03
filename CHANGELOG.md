@@ -7,6 +7,25 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-02 (latest 7)
+
+### Changed
+- **prompt-coach-beta 0.12.0** — log-mined 34 substantive missed prompts,
+  found three fixable classes still slipping through:
+  - **`no-answer-shape` elevated L2 → L1.** Info-seeking questions
+    without a shape ("what are lsp servers", "Are there java libs...",
+    "Do we have enough for release?") were firing nothing because
+    L2 rules aren't active until L1 rules master. This is a fundamentals
+    issue, not intermediate — belongs in the always-active L1 pool.
+    Five real-log prompts get caught by the tier move.
+  - **`no-answer-shape` q regex broadened** — added `do we/does it/can we/
+    should we/did we/are there` question forms. Real English question
+    shapes; the previous regex only caught `how/what/which/why/does exist`.
+  - **`commit` added to `ACTION_VERBS`** — dev-workflow verb, evidence
+    "commit and check infra for creds" fired nothing.
+  - **`max_active_rules` default 5 → 6** to fit the new 6-rule L1 tier
+    without displacing existing L1 rules. Config-overridable per repo.
+
 ## 2026-07-02 (latest 6)
 
 ### Added
