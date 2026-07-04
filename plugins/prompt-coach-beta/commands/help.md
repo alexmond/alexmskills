@@ -33,13 +33,12 @@ COMMANDS
 
   /prompt-coach-beta:stats           Health dashboard — prompts analyzed, emit rate,
                                      top-fired rules, mastery, typo corrections, config
-  /prompt-coach-beta:daily-review    Cross-repo daily brief — aggregates every
-                                     .claude/prompt-coach/log.md under a search root
-                                     and renders volume / top rules / by-repo / health
-                                     signals for a time window. (v0.21+)
   /prompt-coach-beta:config          Structured config surface — show / get / describe /
                                      set / reset / diff / export / mastery / sources
                                      (v0.18+)
+
+  (Cross-repo daily review moved out in v0.23. Say "log review" or
+   "daily review" to invoke ~/.claude/skills/log-review/ instead.)
   /prompt-coach-beta:report-issue    File a privacy-safe bug report for prompts the coach
                                      mistreated. Uses candidates.jsonl seeded by the
                                      say-it phrases below.

@@ -7,6 +7,52 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 11)
+
+### Removed
+- **prompt-coach-beta 0.23.0** — `/prompt-coach-beta:daily-review`
+  extracted to a standalone user skill at `~/.claude/skills/log-review/`.
+  User asked: "the review should not be shipped to internet, it has
+  private info like repo locations" and clarified "it should be
+  independent skill I run instead of typing review all the time" +
+  "do not save it to plugins, just drop it under ~/.claude".
+  - **Rationale**: the daily-review output contains repo names and
+    per-repo activity. Keeping it inside the coach means the coach
+    generates content that can leak repo topology when pasted into
+    a GitHub commit, issue, or PR. Moving it out enforces the
+    separation the user wanted ("no reference from coach").
+  - **Deleted from prompt-coach-beta**:
+    - `scripts/daily-review.py` (moved + evolved to
+      `~/.claude/skills/log-review/scripts/log-review.py`)
+    - `commands/daily-review.md`
+    - Cross-repo daily review section from SKILL.md (replaced with a
+      short pointer to the new skill's location)
+    - COMMANDS row from help.md (replaced with a "moved out" pointer)
+  - **New user skill** at `~/.claude/skills/log-review/`:
+    - Standalone SKILL.md + `scripts/log-review.py`
+    - **Redacted by default** — repo names become `repo-1`, `repo-2`,
+      … (ordinal by activity rank); rule ids stay in the clear since
+      they're public.
+    - `--show-repos` to reveal real names for local inspection
+    - Watermark migrated: `~/.claude/prompt-coach/daily-review/` →
+      `~/.claude/log-review/` on first run; auto-detects legacy
+      file and copies it over
+    - Invocation: user says "log review" / "daily review" / "what's
+      new" — Claude picks up the skill from the available-skills
+      list (no plugin registration needed)
+    - New `--today` flag (was implicit default; now explicit)
+  - **Verification** (6 categories):
+    - Watermark migration: legacy v0.22 file copied to new location
+    - Default redaction: grep for real repo names (alexmskills,
+      lab-services, builder, unitrack, jhelm, alexmond.github.io,
+      promotion, refinej, jvmlens, incubator) in default output →
+      0 leaks
+    - `--show-repos` reveals real names as expected
+    - `--json` redacted: keys are `repo-1`, `repo-2`, ..., search
+      root is null
+    - `--json --show-repos`: real names + search root exposed
+    - Redaction map is stable within a run (repo-1 = most active)
+
 ## 2026-07-03 (later 10)
 
 ### Added
