@@ -314,8 +314,7 @@ catalog update PR.
   like `nite → night`, `foto → photo` that don't reduce cleanly to edit
   distance.
 - Persistence: PostgreSQL 16+. Self-hosted k3s deployment supported.
-- Deployment: Docker → k3s. Homelab overlay via `homelab-deploy-overlay`
-  skill.
+- Deployment: Docker → k3s.
 
 **Non-goals for v1:**
 - Live rule editing via UI (rules stay in YAML + git).

@@ -43,10 +43,8 @@ unreleased/rolling (no global version).
     - New `--today` flag (was implicit default; now explicit)
   - **Verification** (6 categories):
     - Watermark migration: legacy v0.22 file copied to new location
-    - Default redaction: grep for real repo names (alexmskills,
-      lab-services, builder, unitrack, jhelm, alexmond.github.io,
-      promotion, refinej, jvmlens, incubator) in default output →
-      0 leaks
+    - Default redaction: grep for a fleet of real repo basenames in
+      the default output → 0 leaks
     - `--show-repos` reveals real names as expected
     - `--json` redacted: keys are `repo-1`, `repo-2`, ..., search
       root is null
@@ -850,7 +848,7 @@ unreleased/rolling (no global version).
   within ~48h) into one consolidated entry without claiming the pattern has stabilized — keeps
   the load-bearing whys, splits per-aspect detail out to `docs/decisions/{date}-{topic}.md` if
   still wanted, and is reversible (split a sub-decision back out via strike-through follow-up
-  if it evolves independently). Discovered while compacting `jvmlens`'s 37-entry / 25 KB log.
+  if it evolves independently). Discovered while compacting a sibling repo's 37-entry / 25 KB log.
 
 ## 2026-06-26
 

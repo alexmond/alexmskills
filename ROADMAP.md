@@ -45,9 +45,9 @@ excluded):
 
 | Source | Candidate | What it gives | Reuse | Channel |
 |---|---|---|---|---|
-| refinej | **`add-engine-op`** | keep N parallel implementations in sync behind one interface + a contract test | HIGH | beta |
-| refinej | **issue lifecycle** (`new-ticket` / `close-ticket`) | GitHub issue create/close with auto-labels + milestones — could extend `implement-issue` | MED-HIGH | beta |
-| refinej | `implement` | module-placement + style-guided implementation (overlaps `implement-issue`; fold the best bits) | MED | — |
+| (private repo) | **`add-engine-op`** | keep N parallel implementations in sync behind one interface + a contract test | HIGH | beta |
+| (private repo) | **issue lifecycle** (`new-ticket` / `close-ticket`) | GitHub issue create/close with auto-labels + milestones — could extend `implement-issue` | MED-HIGH | beta |
+| (private repo) | `implement` | module-placement + style-guided implementation (overlaps `implement-issue`; fold the best bits) | MED | — |
 | unitrack | **PROFILE.md template** | documents a dev-crew roster + per-role tiers + pre-arm candidates — fold into `dev-crew` templates | MED | — |
 | jsupervisor | Java 21 async-test rule | Awaitility async-assertion pattern — extend `maven-quality` | LOW | — |
 

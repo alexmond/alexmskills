@@ -39,7 +39,7 @@ The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the
 
 == What's new in 1.1.1
 
-* *Merge as the fourth downward pressure* — SKILL.md now documents merging same-session same-area clusters (phased rollouts `e2a`/`e2b`/`e3`/`e4`; multi-aspect bursts within ~48h) as the compaction lever that works *pre-14-days*. Graduation and quarterly archive both require old entries; merge does not. Discovered while compacting jvmlens's 37-entry log when the audit fired "RECOMMENDED" but every documented pressure was blocked.
+* *Merge as the fourth downward pressure* — SKILL.md now documents merging same-session same-area clusters (phased rollouts `e2a`/`e2b`/`e3`/`e4`; multi-aspect bursts within ~48h) as the compaction lever that works *pre-14-days*. Graduation and quarterly archive both require old entries; merge does not. Discovered while compacting a sibling repo's 37-entry log when the audit fired "RECOMMENDED" but every documented pressure was blocked.
 
 == What's new in 1.1.0
 
