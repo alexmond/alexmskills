@@ -97,6 +97,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-02 — **beta-source-clone-root** — bare-string plugin sources resolve from CLONE ROOT, not the marketplace.json parent (fossil; beta channel retired same day). Why: subdir install failed silently.
 - 2026-07-03 — **prompt-coach-evolution** — full v0.1→v0.18 narrative at docs/decisions/2026-07-03-prompt-coach-evolution.md. Compacts 20 D&L entries. Why: 2-day cluster was overflowing D&L.
 - 2026-07-03 — **prompt-coach-options-mastery** — 0.19.0: `:config options <key>` (per-choice explanations); `quick`/`full` interactive flows via AskUserQuestion; `mastery` dashboard + `mastery-reset[-all]`. Why: discoverability + reset path.
+- 2026-07-03 — **prompt-coach-anthropic-align** — 0.20.0: 6 new rules (xml-tags/classical-role/test-goalseeking/verify-claim/overthinking/edit-preference) + `anthropic_ref` field + `:config sources` verb. 25/34 rules linked. Why: audit-driven coverage.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

@@ -649,6 +649,13 @@ class Rule:
     guidance: str                 # short hint for Claude's additionalContext
     sources: list[tuple[str, str]]  # (title, url)
     check: Callable[[str], bool]
+    # v0.20.0 — canonical Anthropic prompt-engineering guide section this rule
+    # traces to. None = no upstream mapping (Claude-Code-specific rules like
+    # no-skill-lookup have no Anthropic-guide equivalent). Format: section
+    # slug from platform.claude.com/docs/en/build-with-claude/prompt-engineering/
+    # claude-prompting-best-practices — used by /prompt-coach-beta:config
+    # sources <rule-id> to surface a traceable citation.
+    anthropic_ref: str | None = None
 
     def variants_for(self, preset: str = DEFAULT_VOICE_PRESET) -> list[str]:
         """Return variant list for the requested preset, with fallback."""
@@ -1238,6 +1245,174 @@ def rule_no_workflow_for_fanout(prompt: str) -> bool:
     return not bool(workflow)
 
 
+# ---- v0.20.0 — new rules covering Anthropic-guide gaps ---------------------
+
+def rule_no_xml_structure(prompt: str) -> bool:
+    """v0.20.0 — flag prompts with substantial pasted content (code fence or
+    ≥7-line indented block) that don't use XML-style tags to delimit it.
+    Fires only when there's *both* significant pasted content AND no tags —
+    short asks with a one-line snippet are unaffected."""
+    # Indented-block content: 7+ consecutive lines starting with 4 spaces or tab
+    lines = prompt.splitlines()
+    max_indented_run = 0
+    run = 0
+    for line in lines:
+        if line.startswith("    ") or line.startswith("\t"):
+            run += 1
+            max_indented_run = max(max_indented_run, run)
+        else:
+            run = 0
+    # Code-fence content: 7+ lines between triple backticks
+    fence_lines = 0
+    in_fence = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            fence_lines += 1
+    substantial_paste = max_indented_run >= 7 or fence_lines >= 7
+    if not substantial_paste:
+        return False
+    # Any XML-style tag: <foo> </foo> <foo/> <foo attr="x">
+    # We're liberal here — a single tag is enough to say "user is aware of the technique"
+    has_tag = re.search(r"<[a-z][\w-]*(?:\s+[^>]*)?>", prompt, re.IGNORECASE)
+    return not bool(has_tag)
+
+
+def rule_no_classical_role(prompt: str) -> bool:
+    """v0.20.0 — flag CRITIQUE / REVIEW / AUDIT / SECURITY asks that don't
+    invoke a role. Distinct from `no-role-for-critique` (which nudges toward
+    Claude Code's /roles:as); this is the classical prompt technique of 'You
+    are a senior X' inline. Fires only on medium-long prompts (>15 words) so
+    it doesn't catch quick asks."""
+    words = prompt.split()
+    if len(words) < 15:
+        return False
+    pl = prompt.lower()
+    high_stakes = re.search(
+        r"\b(review|audit|critique|evaluate|assess|analyze the|"
+        r"security review|threat model|design review|architecture review|"
+        r"code review)\b", pl)
+    if not high_stakes:
+        return False
+    has_role = re.search(
+        r"\byou are (?:a|an|the|acting)\b|"
+        r"\bact as (?:a|an|the)\b|"
+        r"\byour role is\b|"
+        r"\bpretend (?:you'?re|you are)\b|"
+        r"\bfrom the perspective of\b|"
+        r"\bassume you'?re\b|"
+        r"\btake the role of\b|"
+        r"\b/roles?:as\b", pl)
+    return not bool(has_role)
+
+
+_OVERTHINKING_MARKERS = [
+    r"\bmake sure (?:to|that|you)\b",
+    r"\bbe (?:very |extra |especially )?careful\b",
+    r"\bplease also\b",
+    r"\bdon'?t forget (?:to )?\b",
+    r"\bremember to\b",
+    r"\balso (?:make sure|remember|note|ensure)\b",
+    r"\bfurthermore\b",
+    r"\bin addition,\b",
+    r"\bit is (?:very |extremely |critical(?:ly)? )?important\b",
+    r"\babsolutely (?:must|need|have to)\b",
+    r"\bevery (?:single )?(?:file|line|method|function|case)\b",
+    r"\bexhaustively\b",
+    r"\bthoroughly\b.*\bthoroughly\b",
+    r"\bplease ensure\b",
+]
+
+
+def rule_overthinking_warning(prompt: str) -> bool:
+    """v0.20.0 — flag prompts stacked with elaboration/thoroughness markers
+    that push Claude toward over-scoped, over-cautious work. Anthropic's guide
+    explicitly warns about this. Conservative: fires only on ≥3 markers AND
+    prompt ≥60 words (long enough to be over-elaborated; short careful prompts with a few caveats are legitimate)."""
+    words = prompt.split()
+    if len(words) < 60:
+        return False
+    pl = prompt.lower()
+    hits = sum(1 for pat in _OVERTHINKING_MARKERS if re.search(pat, pl))
+    return hits >= 3
+
+
+def rule_test_goalseeking(prompt: str) -> bool:
+    """v0.20.0 — flag prompts that ask for test-passing without correctness
+    intent. Anthropic's guide has a whole section on this failure mode. Fires
+    on 'make the tests pass' / 'fix the tests' / 'get CI green' without any
+    correctness signal ('actually work', 'the bug', 'the real issue')."""
+    pl = prompt.lower()
+    goalseek = re.search(
+        r"\b(make (?:the )?tests? (?:pass|green)|"
+        r"get (?:the )?tests? (?:passing|green)|"
+        r"fix (?:the )?(?:broken )?tests?\b|"
+        r"(?:make|get) ci (?:green|pass|passing)|"
+        r"just (?:need|want) (?:the )?(?:tests? |ci )?to pass)\b", pl)
+    if not goalseek:
+        return False
+    correctness = re.search(
+        r"\b(actually works?|actually correct|"
+        r"real (?:bug|issue|cause)|"
+        r"root cause|underlying|fix the bug|fix the issue|"
+        r"not (?:just|only) (?:pass|green)|"
+        r"correctness|verify (?:the|it) works?)\b", pl)
+    return not bool(correctness)
+
+
+def rule_no_verify_before_claim(prompt: str) -> bool:
+    """v0.20.0 — flag asks that request an ASSERTION about code/state
+    ('does X exist', 'is Y used', 'which files reference Z') without asking
+    for the receipt (file:line, quoted source). Anthropic's hallucination
+    guardrail for agentic coding. Distinct from `no-uncertainty-budget`
+    (which is about admitting uncertainty); this is about demanding evidence
+    BEFORE accepting the answer."""
+    pl = prompt.lower()
+    assertion_ask = re.search(
+        r"\b(does (?:it|this|that|the [a-z]+) (?:exist|use|call|reference|handle|support)|"
+        r"is (?:it|this|the [a-z]+) (?:used|called|referenced|handled|supported|imported)|"
+        r"which (?:files?|modules?|packages?|functions?|methods?) (?:use|reference|import|call|touch)|"
+        r"where (?:is|does) (?:the |this )?[a-z]+ (?:defined|used|called|handled)|"
+        r"are there any (?:files?|places?|callers?|usages?))\b", pl)
+    if not assertion_ask:
+        return False
+    receipt = re.search(
+        r"\b(with (?:the )?(?:file|line|path|code|snippet)|"
+        r"cite|show me the (?:code|line|file|path)|"
+        r"file:line|line numbers?|"
+        r"quote the|paste the|"
+        r"prove it|proof|evidence|"
+        r"before (?:saying|claiming|answering))\b", pl)
+    return not bool(receipt)
+
+
+def rule_no_edit_preference(prompt: str) -> bool:
+    """v0.20.0 — flag 'create X' / 'write a new Y' prompts that don't state
+    an edit-existing preference. Anthropic's 'Reduce file creation' section
+    calls this out for agentic coding. Fires on create/write/make + new file
+    types when there's no signal that the user prefers editing existing code."""
+    pl = prompt.lower()
+    creation_ask = re.search(
+        r"\b(create|write|add|make)\s+(?:a\s+)?"
+        r"(?:new\s+)?"
+        r"(script|helper|utility|util|file|module|class|component|"
+        r"function|method|package|library|program|tool|wrapper)\b", pl)
+    if not creation_ask:
+        return False
+    edit_pref = re.search(
+        r"\b(prefer(?:red)? (?:to )?(?:edit|update|extend|modify|reuse)|"
+        r"only if (?:none|no|there'?s no)|"
+        r"if (?:one )?(?:doesn'?t|does not) (?:already )?exist|"
+        r"reuse existing|extend (?:the )?existing|"
+        r"edit (?:the )?existing|update (?:the )?existing|"
+        r"instead of creating|"
+        r"unless there'?s (?:a|an|already))\b", pl)
+    return not bool(edit_pref)
+
+
 # ---- Catalog ---------------------------------------------------------------
 
 SRC_ANTHROPIC_BE_CLEAR = ("Anthropic — Be clear and direct",
@@ -1264,6 +1439,38 @@ SRC_BROWN_FEWSHOT = ("Brown et al. — Language models are few-shot learners (20
                      "https://arxiv.org/abs/2005.14165")
 SRC_CC_HOOKS = ("Claude Code — Hooks, subagents, and the Task tool",
                 "https://docs.anthropic.com/en/docs/claude-code/hooks")
+
+# v0.20.0 — Anthropic prompting-best-practices sections (fetched 2026-07-03,
+# platform.claude.com is the current stable host; docs.anthropic.com still
+# 301-redirects).
+_ANTHROPIC_BEST = ("https://platform.claude.com/docs/en/build-with-claude/"
+                   "prompt-engineering/claude-prompting-best-practices")
+SRC_ANTHROPIC_XML = ("Anthropic — Structure prompts with XML tags",
+                     f"{_ANTHROPIC_BEST}#structure-prompts-with-xml-tags")
+SRC_ANTHROPIC_ROLE = ("Anthropic — Give Claude a role",
+                      f"{_ANTHROPIC_BEST}#give-claude-a-role")
+SRC_ANTHROPIC_OVERTHINK = ("Anthropic — Overthinking and excessive thoroughness",
+                           f"{_ANTHROPIC_BEST}#overthinking-and-excessive-thoroughness")
+SRC_ANTHROPIC_OVEREAGER = ("Anthropic — Overeagerness in agentic systems",
+                           f"{_ANTHROPIC_BEST}#overeagerness")
+SRC_ANTHROPIC_TESTGAME = ("Anthropic — Avoid focusing on passing tests and hard-coding",
+                          f"{_ANTHROPIC_BEST}#avoid-focusing-on-passing-tests-and-hard-coding")
+SRC_ANTHROPIC_HALLUCINATE = ("Anthropic — Minimizing hallucinations in agentic coding",
+                             f"{_ANTHROPIC_BEST}#minimizing-hallucinations-in-agentic-coding")
+SRC_ANTHROPIC_FILECREATE = ("Anthropic — Reduce file creation in agentic coding",
+                            f"{_ANTHROPIC_BEST}#reduce-file-creation-in-agentic-coding")
+SRC_ANTHROPIC_CONTEXT = ("Anthropic — Add context to improve performance",
+                         f"{_ANTHROPIC_BEST}#add-context-to-improve-performance")
+SRC_ANTHROPIC_FORMAT = ("Anthropic — Control the format of responses",
+                        f"{_ANTHROPIC_BEST}#control-the-format-of-responses")
+SRC_ANTHROPIC_VERBOSITY = ("Anthropic — Communication style and verbosity",
+                           f"{_ANTHROPIC_BEST}#communication-style-and-verbosity")
+SRC_ANTHROPIC_PARALLEL = ("Anthropic — Optimize parallel tool calling",
+                          f"{_ANTHROPIC_BEST}#optimize-parallel-tool-calling")
+SRC_ANTHROPIC_SUBAGENT = ("Anthropic — Subagent orchestration",
+                          f"{_ANTHROPIC_BEST}#subagent-orchestration")
+SRC_ANTHROPIC_AUTONOMY = ("Anthropic — Balancing autonomy and safety",
+                          f"{_ANTHROPIC_BEST}#balancing-autonomy-and-safety")
 
 # Encouragement layer sources (v0.3+)
 SRC_MUELLER_DWECK = ("Mueller & Dweck — Praise for intelligence can undermine motivation (1998)",
@@ -1320,6 +1527,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_BE_CLEAR, SRC_CC_BESTPRACTICE],
         check=rule_vague_reference,
+        anthropic_ref="be-clear-and-direct",
     ),
     Rule(
         id="no-definition-of-done",
@@ -1349,6 +1557,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_BE_CLEAR, SRC_CC_BESTPRACTICE, SRC_SIMONW],
         check=rule_no_definition_of_done,
+        anthropic_ref="be-clear-and-direct",
     ),
     Rule(
         id="unbounded-scope",
@@ -1379,6 +1588,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_OVERVIEW, SRC_CC_BESTPRACTICE],
         check=rule_unbounded_scope,
+        anthropic_ref="be-clear-and-direct",
     ),
     Rule(
         id="improve-without-metric",
@@ -1409,6 +1619,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_BE_CLEAR, SRC_OPENAI_GUIDE, SRC_PROMPT_REPORT],
         check=rule_improve_without_metric,
+        anthropic_ref="be-clear-and-direct",
     ),
     Rule(
         id="missing-guardrails",
@@ -1473,6 +1684,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_CHAIN, SRC_PROMPT_REPORT],
         check=rule_compound_tasks,
+        anthropic_ref="chain-complex-prompts",
     ),
     Rule(
         id="no-verify-loop",
@@ -1534,6 +1746,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_BE_CLEAR, SRC_CC_BESTPRACTICE],
         check=rule_missing_context_fetch,
+        anthropic_ref="add-context-to-improve-performance",
     ),
     Rule(
         id="no-answer-shape",
@@ -1565,6 +1778,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_OPENAI_GUIDE, SRC_ANTHROPIC_OVERVIEW, SRC_ANTHROPIC_BE_CLEAR],
         check=rule_no_answer_shape,
+        anthropic_ref="control-the-format-of-responses",
     ),
     Rule(
         id="no-format-spec",
@@ -1596,6 +1810,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_OPENAI_GUIDE, SRC_ANTHROPIC_OVERVIEW],
         check=rule_no_format_spec,
+        anthropic_ref="control-the-format-of-responses",
     ),
     # ---- L3 ----
     Rule(
@@ -1614,6 +1829,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_CHAIN, SRC_PROMPT_REPORT, SRC_SIMONW],
         check=rule_no_adversarial_check,
+        anthropic_ref="give-claude-a-role",
     ),
     Rule(
         id="retry-without-diagnosis",
@@ -1647,6 +1863,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_MULTISHOT, SRC_BROWN_FEWSHOT, SRC_PROMPT_REPORT],
         check=rule_no_few_shot,
+        anthropic_ref="use-examples-effectively",
     ),
     Rule(
         id="no-chain-of-thought",
@@ -1664,6 +1881,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_COT, SRC_WEI_COT, SRC_PROMPT_REPORT],
         check=rule_no_chain_of_thought,
+        anthropic_ref="leverage-thinking-interleaved-thinking-capabilities",
     ),
     Rule(
         id="no-rubric",
@@ -1699,6 +1917,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_BE_CLEAR, SRC_SIMONW, SRC_CC_BESTPRACTICE],
         check=rule_no_uncertainty_budget,
+        anthropic_ref="minimizing-hallucinations-in-agentic-coding",
     ),
     # ---- L4 goals & loops ----
     Rule(
@@ -1718,6 +1937,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_BE_CLEAR, SRC_CC_BESTPRACTICE, SRC_PROMPT_REPORT],
         check=rule_implicit_goal,
+        anthropic_ref="be-clear-and-direct",
     ),
     Rule(
         id="unbounded-iteration",
@@ -1736,6 +1956,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_CHAIN, SRC_PROMPT_REPORT, SRC_SIMONW],
         check=rule_unbounded_iteration,
+        anthropic_ref="overthinking-and-excessive-thoroughness",
     ),
     Rule(
         id="no-rubric-for-refine",
@@ -1772,6 +1993,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_CC_BESTPRACTICE, SRC_CC_HOOKS, SRC_ANTHROPIC_CHAIN],
         check=rule_no_plan_mode_for_risky,
+        anthropic_ref="balancing-autonomy-and-safety",
     ),
     Rule(
         id="no-task-list-for-multi-step",
@@ -1790,6 +2012,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_CC_BESTPRACTICE, SRC_CC_HOOKS],
         check=rule_no_task_list_for_multi_step,
+        anthropic_ref="chain-complex-prompts",
     ),
     Rule(
         id="no-agents-for-parallel-lookup",
@@ -1807,6 +2030,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_CC_BESTPRACTICE, SRC_CC_HOOKS],
         check=rule_no_agents_for_parallel_lookup,
+        anthropic_ref="optimize-parallel-tool-calling",
     ),
     Rule(
         id="no-role-for-critique",
@@ -1825,6 +2049,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_CC_BESTPRACTICE, SRC_ANTHROPIC_CHAIN, SRC_SIMONW],
         check=rule_no_role_for_critique,
+        anthropic_ref="give-claude-a-role",
     ),
     Rule(
         id="no-panel-for-contested-design",
@@ -1860,6 +2085,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_CC_BESTPRACTICE, SRC_CC_HOOKS],
         check=rule_no_workflow_for_fanout,
+        anthropic_ref="subagent-orchestration",
     ),
     # ---- L6 skill-awareness ----
     Rule(
@@ -1917,6 +2143,234 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_MCILROY_UNIX, SRC_ANTHROPIC_SKILLS, SRC_FOWLER_REFACTOR],
         check=rule_no_skill_composition,
+    ),
+    # ---- v0.20.0 — Anthropic-guide gap closers ----
+    Rule(
+        id="no-xml-structure",
+        tier=3,
+        name="Pasted content without XML tags",
+        nudge={
+            "colleague": [
+                "That's a big chunk of code/data in the prompt. Wrap it in "
+                "`<code>…</code>` or `<data>…</data>` (or similar) so I don't "
+                "have to guess where content ends and instructions begin.",
+                "For pastes this size, XML tags help: `<logs>…</logs>`, "
+                "`<code>…</code>`, `<constraints>…</constraints>`. Try one and "
+                "the ambiguity between reference material and the actual ask "
+                "goes away.",
+                "Long paste + inline instructions is where Claude misparses. "
+                "Fence with `<tag>…</tag>` and it stays clean.",
+            ],
+            "plain": [
+                "You pasted a lot of code or data. Please put it inside XML "
+                "tags. For example: `<code>…</code>` or `<logs>…</logs>`. This "
+                "helps me tell content and instructions apart.",
+                "Big paste needs a tag around it. Try `<code>` before and "
+                "`</code>` after, or `<data>` and `</data>`. Then I can find "
+                "the ask more easily.",
+                "Please add a simple XML tag around the pasted part. Like "
+                "`<code>` at the start and `</code>` at the end.",
+            ],
+        },
+        guidance=(
+            "User pasted substantial content (≥8 lines of code fence or "
+            "indented block) without XML tags. Suggest wrapping it — Anthropic "
+            "recommends XML delimiters for reliable parsing of long reference "
+            "content. Names the specific tags that fit the material."
+        ),
+        sources=[SRC_ANTHROPIC_XML, SRC_ANTHROPIC_BE_CLEAR, SRC_CC_BESTPRACTICE],
+        check=rule_no_xml_structure,
+        anthropic_ref="structure-prompts-with-xml-tags",
+    ),
+    Rule(
+        id="no-classical-role",
+        tier=3,
+        name="Critique/review ask without a role",
+        nudge={
+            "colleague": [
+                "Review / audit / critique asks land harder when you name the "
+                "reviewer. Try 'You are a senior security engineer…' at the "
+                "top — the persona shapes what gets flagged.",
+                "Who's reviewing? 'You are a staff engineer skeptical of X' "
+                "shifts what Claude looks for. Different role, different "
+                "findings.",
+                "Quick — what role should Claude take here? Skeptic, security, "
+                "performance? Naming it lifts the review quality noticeably.",
+            ],
+            "plain": [
+                "You asked for a review or audit. Please tell me what kind of "
+                "reviewer to be. For example: 'You are a security engineer' "
+                "or 'You are a senior architect'. This changes what I look for.",
+                "Which role should I take for this review? Security? "
+                "Performance? Please add one line at the start: 'You are a …'.",
+                "Please give me a role. For example: 'Act as a senior "
+                "reviewer' or 'You are a skeptic'. Then I know how to check.",
+            ],
+        },
+        guidance=(
+            "User asked for review / audit / critique in a medium-long prompt "
+            "with no 'you are a X' role framing. Suggest a role that fits the "
+            "domain (security, performance, correctness, etc.). Distinct from "
+            "the Claude-Code `/roles:as` rule — this is the classical inline "
+            "role-priming technique."
+        ),
+        sources=[SRC_ANTHROPIC_ROLE, SRC_CC_BESTPRACTICE, SRC_PROMPT_REPORT],
+        check=rule_no_classical_role,
+        anthropic_ref="give-claude-a-role",
+    ),
+    Rule(
+        id="test-goalseeking",
+        tier=3,
+        name="Test-passing without correctness",
+        nudge={
+            "colleague": [
+                "'Make the tests pass' with no mention of the actual bug is "
+                "an invitation to game the tests. Say what SHOULD be true "
+                "(correctness / behavior / invariant) — the passing tests "
+                "become a check, not the goal.",
+                "Careful — 'get CI green' + no root-cause language often "
+                "produces test-mocking, `pytest.skip`, or hard-coded returns "
+                "that pass without fixing anything. Add 'and actually fix "
+                "the underlying bug'.",
+                "One quick add: what's the ACTUAL correctness bar? 'Tests "
+                "pass' is a side effect; 'X handles Y correctly' is the goal.",
+            ],
+            "plain": [
+                "You asked me to make tests pass. Please also tell me what "
+                "the real fix is. For example: 'fix the bug where X returns "
+                "the wrong value'. Passing tests alone can hide real bugs.",
+                "'Make tests green' is not the same as fixing the code. "
+                "Please tell me what should really work. What is the correct "
+                "behavior?",
+                "Please add the real goal. For example: 'the function should "
+                "return X for input Y'. Then passing tests actually mean the "
+                "code is right.",
+            ],
+        },
+        guidance=(
+            "User asked to 'make tests pass' / 'fix broken tests' / 'get CI "
+            "green' without stating the correctness intent. Anthropic's guide "
+            "flags this as a hallucination/gaming vector: Claude may skip, "
+            "mock, or hard-code around real bugs. Reframe the ask around what "
+            "SHOULD be true; use tests as verification, not the goal."
+        ),
+        sources=[SRC_ANTHROPIC_TESTGAME, SRC_ANTHROPIC_HALLUCINATE, SRC_CC_BESTPRACTICE],
+        check=rule_test_goalseeking,
+        anthropic_ref="avoid-focusing-on-passing-tests-and-hard-coding",
+    ),
+    Rule(
+        id="no-verify-before-claim",
+        tier=3,
+        name="Assertion ask without evidence demand",
+        nudge={
+            "colleague": [
+                "'Does X exist / is Y used / which files reference Z' answers "
+                "well when you demand the receipt. Add 'with file:line' or "
+                "'quote the code' — kills the confident-hallucination class.",
+                "For 'is this really used?' questions, ask for the citation "
+                "up front: 'show me the file and line' or 'paste the exact "
+                "call site'. Otherwise Claude may confidently guess.",
+                "Small add that changes the answer quality: 'with references' "
+                "or 'point me at the specific line'. Assertions without "
+                "receipts are where hallucinations hide.",
+            ],
+            "plain": [
+                "You asked a question about the code. Please also ask for "
+                "proof. For example: 'show me the file and line number' or "
+                "'quote the code'. This helps me not make things up.",
+                "Ask me to prove it. For example: 'with file:line' or 'paste "
+                "the code that shows this'. Then you can check my answer.",
+                "Please add 'show me the file and line' to your question. "
+                "This way I give you a real answer, not a guess.",
+            ],
+        },
+        guidance=(
+            "User asked an assertion-shaped question about the workspace "
+            "('does X exist', 'is Y used', 'which files reference Z') without "
+            "demanding receipts (file:line, quoted code). This is where "
+            "hallucinations hide in agentic coding. When answering, cite "
+            "concrete file paths and line ranges; if you can't find evidence, "
+            "say so explicitly rather than inferring."
+        ),
+        sources=[SRC_ANTHROPIC_HALLUCINATE, SRC_CC_BESTPRACTICE, SRC_SIMONW],
+        check=rule_no_verify_before_claim,
+        anthropic_ref="minimizing-hallucinations-in-agentic-coding",
+    ),
+    Rule(
+        id="overthinking-warning",
+        tier=4,
+        name="Over-elaborated ask",
+        nudge={
+            "colleague": [
+                "Lots of 'make sure to / be very careful / please also' — "
+                "that stack usually pushes Claude into slow, over-scoped "
+                "work. Anthropic's guide flags this. Consider trimming to "
+                "the ONE thing that actually matters.",
+                "You've layered a lot of caveats. Each one costs breadth and "
+                "adds surface for over-elaboration. Which two constraints "
+                "are load-bearing? Drop the rest.",
+                "Long, careful prompt with lots of hedges — Claude will match "
+                "the energy and over-scope. Trim to the minimum spec that "
+                "still gets you the outcome you want.",
+            ],
+            "plain": [
+                "Your prompt has many careful words like 'please also' and "
+                "'make sure'. This can make me do too much or worry too much. "
+                "Please pick the most important 1-2 things.",
+                "You added many 'must do' items. Some are not needed. Please "
+                "keep only the ones that really matter. I will do them well.",
+                "Too many careful notes can slow me down. Please tell me "
+                "just the 1 or 2 things that matter most. I will focus there.",
+            ],
+        },
+        guidance=(
+            "User's prompt has 3+ overthinking/thoroughness markers ('make "
+            "sure to', 'be very careful', 'please also', 'every single', "
+            "etc.) in a long prompt. Anthropic's guide flags this as a "
+            "wasteful pattern — Claude matches the energy and over-scopes. "
+            "Push toward the smallest ask that still gets the outcome."
+        ),
+        sources=[SRC_ANTHROPIC_OVERTHINK, SRC_ANTHROPIC_OVEREAGER, SRC_CC_BESTPRACTICE],
+        check=rule_overthinking_warning,
+        anthropic_ref="overthinking-and-excessive-thoroughness",
+    ),
+    Rule(
+        id="no-edit-preference",
+        tier=6,
+        name="Create-new without edit-existing preference",
+        nudge={
+            "colleague": [
+                "'Create a script/helper/file' without 'unless one exists' "
+                "usually spawns a fresh file when an existing one could be "
+                "extended. Add: 'prefer editing existing files; create new "
+                "only if none fits'.",
+                "For agentic coding, Anthropic recommends flagging edit-vs-"
+                "create explicitly. Say 'prefer to reuse or extend' and the "
+                "surface area of the change goes down.",
+                "Small add that shrinks the diff: 'edit existing files if "
+                "possible, only create new if nothing fits'. Otherwise "
+                "expect a new file.",
+            ],
+            "plain": [
+                "You asked me to make a new file or helper. Please also say: "
+                "'only make new files if none of the current ones fit'. "
+                "Then I will try to edit an existing file first.",
+                "Please add: 'prefer editing existing files'. This helps me "
+                "not make too many new files.",
+                "Small note: please say if I can edit an existing file "
+                "instead of making a new one. I usually prefer editing.",
+            ],
+        },
+        guidance=(
+            "User asked to create a new file/script/helper without stating an "
+            "edit-existing preference. Anthropic's 'Reduce file creation' "
+            "guidance is explicit: prefer editing. Before creating anything, "
+            "look for an existing file that could be extended; only create "
+            "new if nothing fits."
+        ),
+        sources=[SRC_ANTHROPIC_FILECREATE, SRC_CC_BESTPRACTICE, SRC_MCILROY_UNIX],
+        check=rule_no_edit_preference,
+        anthropic_ref="reduce-file-creation-in-agentic-coding",
     ),
 ]
 

@@ -7,6 +7,70 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 8)
+
+### Added
+- **prompt-coach-beta 0.20.0** — align with Anthropic's live prompt
+  engineering best-practices guide. Two-part change: 6 new rules
+  closing gaps in the coach's coverage, and a new `sources` verb
+  that surfaces the citation trail per rule.
+  - **6 new rules** covering high-value techniques Anthropic emphasizes
+    that the coach didn't catch:
+    - **`no-xml-structure`** (L3) — fires when a prompt pastes ≥7 lines
+      of code (fence or indented block) without XML-style delimiters.
+      Anthropic's `structure-prompts-with-xml-tags`.
+    - **`no-classical-role`** (L3) — fires on critique/review/audit
+      asks (>15 words) that don't invoke a role via "you are a X". The
+      classical inline role-priming technique, distinct from
+      `no-role-for-critique` (which flags absence of `/roles:as`).
+      Anthropic's `give-claude-a-role`.
+    - **`test-goalseeking`** (L3) — fires on "make tests pass" / "get
+      CI green" without correctness intent. Anthropic explicitly warns
+      about this as a gaming/hallucination vector. `avoid-focusing-on-
+      passing-tests-and-hard-coding`.
+    - **`no-verify-before-claim`** (L3) — fires on assertion-shaped
+      questions ("does X exist", "which files use Y") that don't demand
+      the receipt (file:line, quoted code). Distinct from
+      `no-uncertainty-budget` (which is about admitting uncertainty).
+      `minimizing-hallucinations-in-agentic-coding`.
+    - **`overthinking-warning`** (L4) — fires on ≥60-word prompts with
+      3+ elaboration/thoroughness markers ("make sure to", "be very
+      careful", "please also", "furthermore", etc.). The inverse of the
+      coach's usual push-toward-more-structure direction. Anthropic's
+      `overthinking-and-excessive-thoroughness`.
+    - **`no-edit-preference`** (L6) — fires on "create/write/make new
+      script/helper/file" without an edit-existing preference stated.
+      `reduce-file-creation-in-agentic-coding`.
+  - **`Rule.anthropic_ref` field**: every rule now optionally carries
+    a section slug from Anthropic's prompting-best-practices page.
+    25/34 rules link to a canonical Anthropic-guide section; 9 are
+    Claude-Code-specific or novel coach concepts with no direct
+    upstream mapping.
+  - **`/prompt-coach-beta:config sources`** — new verb that shows the
+    citation mapping. No arg: full overview (linked + unlinked, base
+    URL). With rule id: per-rule detail card (anthropic_ref, cited
+    sources, URLs). `--json` for scripting.
+  - **13 new source constants** added for Anthropic's live catalog:
+    `SRC_ANTHROPIC_XML`, `SRC_ANTHROPIC_ROLE`, `SRC_ANTHROPIC_OVERTHINK`,
+    `SRC_ANTHROPIC_OVEREAGER`, `SRC_ANTHROPIC_TESTGAME`,
+    `SRC_ANTHROPIC_HALLUCINATE`, `SRC_ANTHROPIC_FILECREATE`,
+    `SRC_ANTHROPIC_CONTEXT`, `SRC_ANTHROPIC_FORMAT`,
+    `SRC_ANTHROPIC_VERBOSITY`, `SRC_ANTHROPIC_PARALLEL`,
+    `SRC_ANTHROPIC_SUBAGENT`, `SRC_ANTHROPIC_AUTONOMY`. All point at
+    `platform.claude.com` section anchors (current stable host).
+  - **Conservative-by-default triggers**. Each new rule was written
+    with tight regex heuristics and validated with 2 trigger examples
+    + 3 non-trigger examples. Thresholds tuned after initial run:
+    - no-xml-structure: paste ≥7 lines (was 8; 7 catches user-real 
+      snippets like 7-line functions)
+    - overthinking-warning: prompt ≥60 words + 3 markers (was 100)
+    - test-goalseeking: added "get ci green" variant
+  - **Voice presets**: all 6 new rules ship both `colleague` and
+    `plain` variants (3 each) so they inherit v0.17's non-native-
+    speaker support automatically.
+  - **34 rules total** (was 28); **25 linked to Anthropic sections**;
+    all new rules include the anthropic_ref field.
+
 ## 2026-07-03 (later 7)
 
 ### Added

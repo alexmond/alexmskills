@@ -594,6 +594,92 @@ def cmd_mastery_reset(cwd: Path, rule_id: str, dry_run: bool = False) -> int:
     return 0
 
 
+_ANTHROPIC_BASE_URL = ("https://platform.claude.com/docs/en/build-with-claude/"
+                       "prompt-engineering/claude-prompting-best-practices")
+
+
+def cmd_sources(cwd: Path, rule_id: str | None = None,
+                as_json: bool = False) -> int:
+    """v0.20.0 — surface the citation trail for a rule (or the full mapping).
+    Shows every source cited by the rule + the canonical Anthropic-guide
+    section slug (if any) with its URL — enables 'why does this rule exist?'
+    trace back to authoritative material."""
+    # No arg: summary — list every rule with its anthropic_ref
+    if rule_id is None:
+        rules_by_ref: dict[str | None, list[str]] = {}
+        for rule in RULES:
+            rules_by_ref.setdefault(rule.anthropic_ref, []).append(rule.id)
+        if as_json:
+            out = {
+                "linked": {ref: rules
+                            for ref, rules in rules_by_ref.items() if ref},
+                "unlinked": rules_by_ref.get(None, []),
+                "anthropic_base_url": _ANTHROPIC_BASE_URL,
+            }
+            print(json.dumps(out, indent=2))
+            return 0
+        linked_count = sum(1 for r in RULES if r.anthropic_ref)
+        total = len(RULES)
+        print(f"prompt-coach-beta — sources mapping ({linked_count}/{total} "
+              f"rules link to an Anthropic-guide section)")
+        print(f"  Anthropic guide: {_ANTHROPIC_BASE_URL}")
+        print()
+        for ref in sorted(k for k in rules_by_ref if k is not None):
+            print(f"── {ref} " + "─" * max(4, 60 - len(ref)))
+            for rid in sorted(rules_by_ref[ref]):
+                print(f"  · {rid}")
+            print()
+        unlinked = rules_by_ref.get(None, [])
+        if unlinked:
+            print(f"── no Anthropic-guide mapping ({len(unlinked)} rules) "
+                  + "─" * max(4, 40 - len(str(len(unlinked)))))
+            print("  (Claude-Code-specific rules or novel coach concepts)")
+            for rid in sorted(unlinked):
+                print(f"  · {rid}")
+            print()
+        print("Per-rule detail: /prompt-coach-beta:config sources <rule-id>")
+        return 0
+
+    # Single-rule detail
+    rule = next((r for r in RULES if r.id == rule_id), None)
+    if rule is None:
+        print(f"unknown rule id: {rule_id}", file=sys.stderr)
+        print(f"  Run `/prompt-coach-beta:config sources` for the full list.",
+              file=sys.stderr)
+        return 2
+
+    if as_json:
+        out = {
+            "id": rule.id,
+            "tier": rule.tier,
+            "name": rule.name,
+            "anthropic_ref": rule.anthropic_ref,
+            "anthropic_url": (f"{_ANTHROPIC_BASE_URL}#{rule.anthropic_ref}"
+                              if rule.anthropic_ref else None),
+            "sources": [{"title": t, "url": u} for t, u in rule.sources],
+        }
+        print(json.dumps(out, indent=2))
+        return 0
+
+    print(f"── sources for {rule.id} " + "─" * max(4, 55 - len(rule.id)))
+    print(f"  tier:  L{rule.tier}")
+    print(f"  name:  {rule.name}")
+    print()
+    if rule.anthropic_ref:
+        print(f"  Anthropic guide (canonical upstream):")
+        print(f"    section: {rule.anthropic_ref}")
+        print(f"    url:     {_ANTHROPIC_BASE_URL}#{rule.anthropic_ref}")
+    else:
+        print(f"  Anthropic guide: (no direct mapping — coach-specific or "
+              f"Claude-Code tool-native)")
+    print()
+    print(f"  Cited sources ({len(rule.sources)}):")
+    for title, url in rule.sources:
+        print(f"    · {title}")
+        print(f"      {url}")
+    return 0
+
+
 def cmd_mastery_reset_all(cwd: Path, dry_run: bool = False) -> int:
     """v0.19.0 — reset EVERY rule's mastery + streak. Preserves prompt_count
     and any non-rule top-level state (like anti-habituation window state)."""
@@ -653,6 +739,8 @@ def _main(argv: list[str]) -> int:
     sub.add_parser("mastery")
     sub.add_parser("mastery-reset").add_argument("rule_id")
     sub.add_parser("mastery-reset-all")
+    s_sources = sub.add_parser("sources")
+    s_sources.add_argument("rule_id", nargs="?", default=None)
 
     args = p.parse_args(argv)
     cwd = Path(args.cwd) if args.cwd else Path.cwd()
@@ -682,6 +770,8 @@ def _main(argv: list[str]) -> int:
         return cmd_mastery_reset(cwd, args.rule_id, args.dry_run)
     if verb == "mastery-reset-all":
         return cmd_mastery_reset_all(cwd, args.dry_run)
+    if verb == "sources":
+        return cmd_sources(cwd, args.rule_id, args.as_json)
     print(f"unknown verb: {verb}", file=sys.stderr)
     return 2
 
