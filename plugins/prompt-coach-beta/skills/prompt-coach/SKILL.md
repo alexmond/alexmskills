@@ -48,11 +48,15 @@ The nudge is a suggestion, not a block — Claude answers your prompt normally a
 
 Claude edits your config file when you say any of these:
 
-**Modes** — where the nudge appears:
-- *"set prompt-coach to inline"* — nudge is rendered as the opening block of Claude's response (best for TUIs that don't show stderr)
-- *"set prompt-coach to silent"* — Claude sees the nudge context, you don't
-- *"set prompt-coach to log-only"* — every fire logged, nothing shown
-- *"set prompt-coach to both"* — default: stderr box + Claude sees it
+**On/off** (v0.29+):
+- *"disable prompt-coach"* / *"turn coach off"* — full silence in this scope (`enabled: false`)
+- *"enable prompt-coach"* — turn it back on
+- *"coach pause 10"* — temporary silence for 10 prompts
+
+(Rendering is always inline as of v0.29 — the pre-v0.29 `nudge_style` options
+`both` / `silent` / `log-only` are silently ignored. Inline was the only mode
+that worked reliably in a Claude Code CLI environment; the rest were dead
+surface.)
 
 **Voice** — how nudges are phrased:
 - *"set prompt-coach voice to plain"* — simple English, short sentences, no idioms (non-native friendly)
@@ -73,10 +77,11 @@ If English is a second language:
 "set prompt-coach voice to plain"
 ```
 
-If you want nudges rendered inline in Claude's response (not stderr box):
+To fully disable the coach in this repo/scope:
 ```
-"set prompt-coach to inline"
+"disable prompt-coach"
 ```
+(Coach is inline-only as of v0.29 — no need to pick a rendering mode.)
 
 If you're being nudged too often:
 ```

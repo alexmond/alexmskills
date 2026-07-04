@@ -40,14 +40,14 @@ GLOBAL_STATE = GLOBAL_DIR / "state.json"
 GLOBAL_CONFIG = GLOBAL_DIR / "config.json"
 
 DEFAULT_CONFIG = {
-    # nudge_style: one of —
-    #   "both"     stderr box + Claude sees (default). Requires TUI to render hook stderr.
-    #   "silent"   Claude sees, user doesn't. Good after you've internalized rules.
-    #   "log-only" nothing external; every fire only recorded in log.md.
-    #   "inline"   the nudge is instructed to Claude to render as the opening
-    #              block of its response. Most visible — nudge lives in your
-    #              transcript. Adds ~50 output tokens per fire.
-    "nudge_style": "both",
+    # v0.29.0 — rendering simplified. The coach always renders inline
+    # (as the opening block of Claude's response). The pre-v0.29
+    # `nudge_style` config (both/silent/log-only/inline) is silently
+    # ignored — inline is the only rendering that actually works in
+    # a Claude Code CLI environment. Use `enabled: false` to silence
+    # the coach entirely for this scope; `pause_until_prompt` still
+    # works for temporary silence.
+    "enabled": True,
     "graduation_threshold": 15,   # clean prompts in a row → mastered
     # v0.27.0 — evidence requirement for mastery. A rule that hits
     # graduation_threshold with fires_total below this value transitions to
@@ -145,19 +145,18 @@ DEFAULT_CONFIG = {
 
 CONFIG_SCHEMA = {
     # ── output ──
-    "nudge_style": {
+    "enabled": {
         "category": "output",
-        "type": "str",
-        "choices": ["both", "silent", "log-only", "inline"],
-        "choice_descriptions": {
-            "both": "Boxed nudge on stderr (dim area under prompt) + Claude sees it in additionalContext. The default; requires your TUI to render hook stderr for you to see the box.",
-            "silent": "Claude sees the nudge context, you don't. Good after you've internalized the rules — Claude still factors them in.",
-            "log-only": "Nothing external at all; every fire is recorded in .claude/prompt-coach/log.md. For weekly-review discipline.",
-            "inline": "Claude renders the boxed nudge as the opening block of its response. Most visible — nudge lives in your transcript. +~50 output tokens/fire.",
-        },
-        "description": "Where the nudge appears.",
-        "example": "inline",
-        "since": "0.5.0",
+        "type": "bool",
+        "description": "Master switch (v0.29+). When false, the coach's "
+                       "UserPromptSubmit hook returns immediately without "
+                       "analyzing, logging, or emitting. Use `pause_until_prompt` "
+                       "for temporary silence; use `enabled=false` to fully "
+                       "disable the coach for this scope. Rendering is always "
+                       "inline as of v0.29 — the pre-v0.29 nudge_style options "
+                       "(both/silent/log-only) are silently ignored.",
+        "example": True,
+        "since": "0.29.0",
     },
     "pause_until_prompt": {
         "category": "output",
@@ -3931,8 +3930,14 @@ def main() -> int:
     cwd = Path(payload.get("cwd") or os.getcwd())
 
     cfg = resolve_config(cwd)
-    if cfg.get("nudge_style") not in ("both", "silent", "log-only", "inline"):
-        cfg["nudge_style"] = "both"
+    # v0.29.0 — master switch. When disabled, do nothing.
+    if not bool(cfg.get("enabled", True)):
+        return 0
+    # v0.29.0 — nudge_style is no longer read; rendering is always inline.
+    # Legacy configs may still have `nudge_style: <anything>` set; ignore it.
+    # For internal outcome-string compatibility (log-review, stats parse
+    # `nudged:<style>:...`), we keep the placeholder "inline" hardcoded.
+    cfg["nudge_style"] = "inline"
 
     g = load_json(GLOBAL_STATE, blank_global_state())
     # Repair state schemas across upgrades.

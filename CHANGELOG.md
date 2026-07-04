@@ -7,6 +7,44 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-04 (later 5)
+
+### Changed
+- **prompt-coach-beta 0.29.0** — nudge_style deleted, rendering always
+  inline, new master `enabled` switch. User: "no need for mode, always
+  inline, none other work." Right — inline is the only rendering that
+  worked reliably in a Claude Code CLI; `both` (stderr box), `silent`
+  (Claude sees, user doesn't), and `log-only` were dead surface.
+  - **Config surface shrinks**:
+    - Removed: `nudge_style` from `DEFAULT_CONFIG` and `CONFIG_SCHEMA`.
+    - Added: `enabled` (bool, default True) in the same slot. When
+      false, the hook returns immediately — no analysis, no logging,
+      no output. Use `pause_until_prompt` for temporary silence;
+      `enabled: false` for durable silence.
+  - **`main()` short-circuit** for `enabled: false` at the top,
+    before any state load. Zero cost when disabled.
+  - **Rendering hardcoded to inline** — the pre-v0.29 rendering
+    branches (`if mode == "both"` stderr calls, `if mode == "silent"`
+    context-only path) are still in the code but unreachable now
+    that `cfg["nudge_style"]` is hardcoded to `"inline"` right after
+    the enabled check. Cleanup of the dead branches lands in a
+    future release; this shipment is a surface-area deletion, not a
+    refactor.
+  - **Legacy config compat**: if `~/.claude/prompt-coach/config.json`
+    contains `nudge_style: <anything>`, it's silently ignored. No
+    warning, no error, no forced migration — the user's inline output
+    keeps working.
+  - **Outcome format stability**: the log's `outcome=` field still
+    reads `nudged:inline:full:v1:p=colleague:src=static` (with "inline"
+    hardcoded), preserving the log-review + stats regex.
+  - **Say-it phrases updated**: SKILL.md's Quick Start and help.md's
+    intro replace the 4-mode "set prompt-coach to X" cheatsheet with
+    two on/off phrases + a pointer at `pause_until_prompt`.
+  - **4 tests pass**: analyzer runs cleanly on fresh install with
+    `enabled: true` default; `enabled: false` short-circuits cleanly
+    (no state written); legacy `nudge_style: "log-only"` config is
+    ignored (inline still renders); marketplace validates.
+
 ## 2026-07-04 (later 4)
 
 ### Added

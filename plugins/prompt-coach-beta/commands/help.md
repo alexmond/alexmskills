@@ -55,12 +55,11 @@ COMMANDS
 ────────────────────────────────────────────────────────────────────
 SAY-IT PHRASES (talk to Claude naturally; Claude edits the right file)
 
-  Mode:
-    "set prompt-coach to inline"      nudge renders as opening block of Claude's response
-    "set prompt-coach to silent"      Claude sees, you don't
-    "set prompt-coach to log-only"    nothing external; every fire logged
-    "set prompt-coach to both"        default — stderr box + Claude context
-    "reset prompt-coach mode"         drop local override
+  On/off (v0.29+ — rendering is always inline):
+    "disable prompt-coach"            set enabled: false in this scope
+    "enable prompt-coach"             set enabled: true in this scope
+    "coach pause 10"                  temporary silence for N prompts
+    "reset prompt-coach mode"         drop local override (legacy — no-op post-v0.29)
 
   Voice (v0.17+):
     "set prompt-coach voice to colleague"  default — direct, ends on a question
