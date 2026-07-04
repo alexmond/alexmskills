@@ -56,6 +56,15 @@ DEFAULT_CONFIG = {
     # revert to v0.26 behavior (mastery on clean_streak alone). Set higher
     # (e.g. 3) for stricter mastery — only rules with real evidence graduate.
     "min_fires_for_mastery": 1,
+    # v0.28.0 — proactive tips (advanced-technique suggestions). Distinct
+    # from rules (which fire on problems in the prompt). Tips fire on-topic
+    # for a technique the user could try. Two firing modes:
+    #   * matching: heuristic matches + cooldown clear + ratio hit
+    #   * graduation-unlock: paired to a mastered rule; fires once when
+    #     the rule graduates. Baked-in learning sequence.
+    "tips_enabled": True,
+    "tip_cooldown_prompts": 100,   # min prompts between two fires of the same tip
+    "tip_ratio": 5,                # 1 in N matching opportunities fires (variable-ratio)
     "cooldown_prompts": 5,        # min prompts between same-rule nudges
     "max_active_rules": 6,        # never nag on more than this many rules at once
                                   # (v0.12.0: raised 5→6 to fit the new L1 tier
@@ -219,6 +228,34 @@ CONFIG_SCHEMA = {
                        "to v0.26 behavior. Set to 3+ for stricter mastery.",
         "example": 1,
         "since": "0.27.0",
+    },
+    "tips_enabled": {
+        "category": "output",
+        "type": "bool",
+        "description": "Enable proactive tips (v0.28+): 💡 suggestions pointing at "
+                       "advanced techniques you could try. Distinct from rules which "
+                       "fire on prompt problems — tips fire on-topic for techniques "
+                       "you haven't used. Fires on matching prompts (rate-limited) "
+                       "and on rule masteries (paired scaffolding).",
+        "example": True,
+        "since": "0.28.0",
+    },
+    "tip_cooldown_prompts": {
+        "category": "output",
+        "type": "int",
+        "description": "Minimum prompts between two fires of the same tip (v0.28+). "
+                       "Anti-nagging cap; the coach shouldn't remind you about the "
+                       "same technique every few prompts.",
+        "example": 100,
+        "since": "0.28.0",
+    },
+    "tip_ratio": {
+        "category": "output",
+        "type": "int",
+        "description": "Variable-ratio: 1 in N matching + cooldown-clear opportunities "
+                       "actually fires a tip (v0.28+). Lower = more frequent tips.",
+        "example": 5,
+        "since": "0.28.0",
     },
     "cooldown_prompts": {
         "category": "rule-activation",
@@ -2525,6 +2562,314 @@ RULES: list[Rule] = [
 ]
 
 RULES_BY_ID = {r.id: r for r in RULES}
+
+
+# ---------------------------------------------------------------------------
+# v0.28.0 — Proactive tips (advanced-technique suggestions)
+# ---------------------------------------------------------------------------
+# Rules are reactive: they fire when your prompt has a problem. Tips are
+# proactive: they fire when your prompt is on-topic for an advanced technique
+# you could have used to get a better result. Tips never dispute your prompt
+# — they suggest an addition next time.
+#
+# Firing:
+#   - Only when NO rule fired this prompt (nudge wins over tip)
+#   - Rate-limited: per-tip cooldown of `tip_cooldown_prompts` prompts
+#   - Variable-ratio: 1 out of `tip_ratio` matching prompts fires (Skinner)
+#   - Skipped: conversational, picker-answer, task-notification prompts
+#
+# Visual: 💡 (light bulb) — distinct from 🎯 (rules) and ✨ (praise).
+# Log outcome: `tipped:<style>:<tip-id>`
+
+@dataclass
+class Tip:
+    id: str                              # kebab-case, prefixed 'tip-'
+    technique: str                       # short name of the technique
+    body: str                            # colleague-voice suggestion with concrete example
+    guidance: str                        # short hint for Claude's additionalContext
+    sources: list[tuple[str, str]]       # (title, url)
+    check: Callable[[str], bool]         # heuristic: is this prompt on-topic?
+
+
+def _tip_few_shot_check(prompt: str) -> bool:
+    pl = prompt.lower()
+    words = pl.split()
+    if len(words) < 8:
+        return False
+    # Support "write me a X" (with "me") and "write a X" (without)
+    creative_action = re.search(
+        r"\b(write|generate|create|draft|compose|come up with)\s+"
+        r"(?:me\s+)?"
+        r"(?:a\s+|an\s+|some\s+)?"
+        r"(poem|blog\s+post|essay|description|name|slogan|tagline|"
+        r"headline|caption|story|paragraph|summary|title)\b", pl)
+    if not creative_action:
+        return False
+    # Already has an example — no tip needed
+    if re.search(r"\b(like this|for example|example:|e\.g\.\b|"
+                  r"in the style of)\b", pl):
+        return False
+    return True
+
+
+def _tip_xml_tags_check(prompt: str) -> bool:
+    # Small paste (3-6 lines of code fence or indented) that no-xml-structure
+    # (which requires ≥7) doesn't catch. Meaningful enough to benefit from
+    # delimiting but currently unwrapped.
+    lines = prompt.splitlines()
+    max_indented_run = 0
+    run = 0
+    for line in lines:
+        if line.startswith("    ") or line.startswith("\t"):
+            run += 1
+            max_indented_run = max(max_indented_run, run)
+        else:
+            run = 0
+    fence_lines = 0
+    in_fence = False
+    for line in lines:
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            fence_lines += 1
+    paste = max(max_indented_run, fence_lines)
+    if not (3 <= paste <= 6):
+        return False
+    has_tag = re.search(r"<[a-z][\w-]*(?:\s+[^>]*)?>", prompt, re.IGNORECASE)
+    return not bool(has_tag)
+
+
+def _tip_classical_role_check(prompt: str) -> bool:
+    words = prompt.split()
+    # Fires on SHORT review asks (5-14 words) that no-classical-role skips.
+    if not (5 <= len(words) < 15):
+        return False
+    pl = prompt.lower()
+    is_review = re.search(r"\b(review|audit|critique|check|look at)\b", pl)
+    if not is_review:
+        return False
+    has_role = re.search(
+        r"\b(you are (?:a|an|the)|act as|your role is|"
+        r"take the role of|pretend you'?re)\b", pl)
+    return not bool(has_role)
+
+
+def _tip_plan_mode_check(prompt: str) -> bool:
+    words = prompt.split()
+    # 4-14 words: too short for no-plan-mode-for-risky (which wants more
+    # context) but risky enough to benefit from a plan-first suggestion.
+    if not (4 <= len(words) < 15):
+        return False
+    pl = prompt.lower()
+    risky = re.search(
+        r"\b(refactor|rewrite|migrate|delete\s+all|drop\s+(table|column)|"
+        r"deploy\s+to\s+prod|schema\s+change)\b", pl)
+    if not risky:
+        return False
+    has_plan = re.search(r"\b(plan (?:first|it|this)|propose (?:a )?plan|"
+                          r"/plan|first (?:propose|sketch))\b", pl)
+    return not bool(has_plan)
+
+
+def _tip_chain_of_thought_check(prompt: str) -> bool:
+    words = prompt.split()
+    if len(words) < 6:
+        return False
+    pl = prompt.lower()
+    # Explanation / reasoning ask that no-chain-of-thought (which requires
+    # specific reasoning verbs like "debug"/"trace") doesn't catch.
+    is_explain = re.search(
+        r"\b(explain\s+why|walk me through|help me understand|"
+        r"how does this|why is|why does)\b", pl)
+    if not is_explain:
+        return False
+    has_cot = re.search(r"\b(think (?:it |this )?through|step by step|"
+                         r"reason (?:step by step|carefully)|"
+                         r"take your time)\b", pl)
+    return not bool(has_cot)
+
+
+def _tip_verify_loop_check(prompt: str) -> bool:
+    # Small implementation ask (4-14 words) where no-verify-loop's threshold
+    # doesn't apply. Anything shorter is likely a followup; anything longer
+    # is caught by the L2 rule.
+    words = prompt.split()
+    if not (4 <= len(words) < 15):
+        return False
+    pl = prompt.lower()
+    impl = re.search(
+        r"\b(implement|add|create|write|build)\b.*"
+        r"\b(function|method|endpoint|route|handler|class|component)\b",
+        pl)
+    if not impl:
+        return False
+    verify = re.search(
+        r"\b(run (?:the )?tests|and (?:the )?tests? pass|verify|confirm|"
+        r"until (?:it )?works)\b", pl)
+    return not bool(verify)
+
+
+TIPS: list[Tip] = [
+    Tip(
+        id="tip-few-shot",
+        technique="Show an example",
+        body=(
+            "Creative generation lands better with a 1-2 line example of the "
+            "style you want. Try adding `like this: <sample>` or `in the "
+            "style of <thing>` — few-shot beats description almost every time."
+        ),
+        guidance=(
+            "User asked for creative generation without an example. In your "
+            "response, either (a) produce your best guess and note that a "
+            "sample would tighten the aim, or (b) ask for one short example "
+            "of the style they want before generating."
+        ),
+        sources=[SRC_ANTHROPIC_MULTISHOT, SRC_BROWN_FEWSHOT],
+        check=_tip_few_shot_check,
+    ),
+    Tip(
+        id="tip-xml-tags",
+        technique="Delimit pasted content with XML tags",
+        body=(
+            "Even short pastes read cleaner in `<code>...</code>` or "
+            "`<data>...</data>` tags — clear boundary between content and "
+            "instructions. Optional for a 3-line snippet, but the habit "
+            "scales."
+        ),
+        guidance=(
+            "User pasted a small block without XML delimiters. In your "
+            "response, treat the paste correctly; you don't need to demand "
+            "tags on this ask, just note the technique."
+        ),
+        sources=[SRC_ANTHROPIC_XML],
+        check=_tip_xml_tags_check,
+    ),
+    Tip(
+        id="tip-classical-role",
+        technique="Give the reviewer a role",
+        body=(
+            "Short review asks are hit-or-miss without a role. Add one line "
+            "at the top: `you are a senior security engineer` (or "
+            "`performance-obsessed`, `skeptical of premature abstraction`) — "
+            "the persona shapes what gets caught."
+        ),
+        guidance=(
+            "User asked for a review without invoking a role. Do the review "
+            "normally; suggest role-priming as a next-time habit, don't "
+            "block."
+        ),
+        sources=[SRC_ANTHROPIC_ROLE],
+        check=_tip_classical_role_check,
+    ),
+    Tip(
+        id="tip-plan-mode",
+        technique="Sketch the plan first for risky changes",
+        body=(
+            "Refactors / migrations / deletes usually benefit from a plan "
+            "pass before code. Try: `propose a plan first (don't touch "
+            "code), then I'll green-light`. Or use `/plan` if your CLI has "
+            "it."
+        ),
+        guidance=(
+            "User asked for a risky change in a short prompt. Consider "
+            "proposing a plan first even though they didn't ask for it, "
+            "or ask if they want a plan pass before you dive in."
+        ),
+        sources=[SRC_ANTHROPIC_AUTONOMY, SRC_CC_BESTPRACTICE],
+        check=_tip_plan_mode_check,
+    ),
+    Tip(
+        id="tip-chain-of-thought",
+        technique="Ask for step-by-step reasoning",
+        body=(
+            "For explanation / why questions, add `think it through step "
+            "by step` — chain-of-thought is a well-known accuracy lift on "
+            "reasoning tasks. Costs a bit more output; pays off in "
+            "correctness."
+        ),
+        guidance=(
+            "User asked an explanation question without a think-first "
+            "clause. Answer thoroughly; walking through your reasoning "
+            "explicitly is worth doing here even if they didn't ask."
+        ),
+        sources=[SRC_ANTHROPIC_COT, SRC_WEI_COT],
+        check=_tip_chain_of_thought_check,
+    ),
+    Tip(
+        id="tip-verify-loop",
+        technique="Add a verification step",
+        body=(
+            "For implementation asks, add `and run the tests` or `and "
+            "confirm the build stays green`. Closes the loop — no ambiguity "
+            "about whether the change actually works."
+        ),
+        guidance=(
+            "User asked for an implementation without a verification "
+            "clause. After the change, run the relevant tests / type-check "
+            "/ build and report the result even if not asked."
+        ),
+        sources=[SRC_CC_BESTPRACTICE, SRC_ANTHROPIC_BE_CLEAR],
+        check=_tip_verify_loop_check,
+    ),
+]
+
+TIPS_BY_ID = {t.id: t for t in TIPS}
+
+# v0.28.0 — Mode B: graduation-triggered scaffolding. When an L1/L2 rule
+# masters, unlock a paired tip pointing at a related next-level technique.
+# The learning sequence is baked in here — fundamentals mastered ⇒ nudge
+# toward advanced technique they haven't tried yet.
+_TIP_ON_MASTERY: dict[str, str] = {
+    "vague-reference":         "tip-few-shot",
+    "no-definition-of-done":   "tip-verify-loop",
+    "missing-guardrails":      "tip-plan-mode",
+    "unbounded-scope":         "tip-chain-of-thought",
+    "improve-without-metric":  "tip-classical-role",
+    "no-answer-shape":         "tip-xml-tags",
+}
+
+
+def _pick_matching_tip(prompt: str, cfg: dict, g: dict) -> str | None:
+    """v0.28.0 — Mode A: standalone matching. Returns the id of a tip whose
+    heuristic matches the prompt AND is off cooldown AND wins the variable-
+    ratio dice roll. None otherwise.
+
+    Never fires when a rule already fired on this prompt (nudge > tip);
+    caller enforces that by only calling when nothing else fired.
+    """
+    if not bool(cfg.get("tips_enabled", True)):
+        return None
+    cooldown = int(cfg.get("tip_cooldown_prompts", 100))
+    ratio = max(1, int(cfg.get("tip_ratio", 5)))
+    prompt_count = int(g.get("prompt_count", 0))
+    tips_state = g.setdefault("tips", {})
+    for tip in TIPS:
+        if not tip.check(prompt):
+            continue
+        st = tips_state.get(tip.id, {}) or {}
+        last = int(st.get("last_fired_prompt", 0))
+        if last > 0 and prompt_count - last < cooldown:
+            continue
+        # Variable-ratio: fires every ratio-th matching + cooldown-clear
+        # opportunity per tip. Uses fires_total as the counter so it's
+        # deterministic per tip.
+        opportunity = int(st.get("opportunities_total", 0)) + 1
+        st["opportunities_total"] = opportunity
+        tips_state[tip.id] = st
+        if opportunity % ratio == 0:
+            return tip.id
+    return None
+
+
+def _record_tip_fire(g: dict, tip_id: str) -> None:
+    """Track that a tip fired for cooldown + stats."""
+    tips_state = g.setdefault("tips", {})
+    st = tips_state.get(tip_id, {}) or {}
+    st["fires_total"] = int(st.get("fires_total", 0)) + 1
+    st["last_fired_at"] = _now_iso()
+    st["last_fired_prompt"] = int(g.get("prompt_count", 0))
+    tips_state[tip_id] = st
 RULE_ORDER = [r.id for r in RULES]  # tier-then-declaration order
 
 
@@ -4032,6 +4377,69 @@ def main() -> int:
     # Remember which rules fired THIS prompt so next prompt's "first-after-fire"
     # praise can trigger.
     l["last_prompt_fired_rules"] = list(fired)
+
+    # v0.28.0 — proactive tips. Two firing modes:
+    #   Mode B (graduation-unlock): rule masters → fire paired tip on same
+    #     turn (learning-sequence scaffolding). Priority over Mode A.
+    #   Mode A (matching): heuristic on prompt + cooldown + variable-ratio.
+    #     Only if nothing else fired (nudge/refresher/praise) so the coach
+    #     doesn't stack advice.
+    fired_tip_id: str | None = None
+    fired_tip_mode: str | None = None
+    if cfg.get("tips_enabled", True):
+        # Mode B: paired to a mastery event that happened this turn
+        for mastered_rid in mastery_events:
+            paired = _TIP_ON_MASTERY.get(mastered_rid)
+            if paired and paired in TIPS_BY_ID:
+                fired_tip_id = paired
+                fired_tip_mode = "graduation-unlock"
+                break
+        # Mode A: on-topic heuristic — only if nothing above emitted anything
+        if fired_tip_id is None and outcome == "no-emit" and not nudged_this_prompt:
+            candidate = _pick_matching_tip(prompt, cfg, g)
+            if candidate:
+                fired_tip_id = candidate
+                fired_tip_mode = "match"
+
+    if fired_tip_id:
+        tip = TIPS_BY_ID[fired_tip_id]
+        _record_tip_fire(g, fired_tip_id)
+        mode = cfg["nudge_style"]
+        # If a rule already emitted (nudge / praise), don't overwrite the
+        # outcome — record the tip as an additional log field. But if
+        # outcome is "no-emit", promote to tipped:<mode>:<tip-id>.
+        if outcome == "no-emit":
+            outcome = f"tipped:{mode}:{fired_tip_id}:{fired_tip_mode}"
+        # Render tip
+        bar = "━" * 60
+        tip_box = (
+            f"{bar}\n"
+            f"💡 prompt-coach tip — {fired_tip_id}: {tip.technique}\n\n"
+            f"{tip.body}\n"
+            f"{bar}"
+        )
+        if mode == "both":
+            print(tip_box, file=sys.stderr, flush=True)
+        if mode in ("both", "silent"):
+            # Only overwrite context_line if nothing else set it
+            if context_line is None:
+                context_line = (
+                    f"[prompt-coach · tip] Rule '{fired_tip_id}' "
+                    f"({tip.technique}) suggests: {tip.body}\n\n"
+                    f"Guidance: {tip.guidance}"
+                )
+        elif mode == "inline":
+            # Inline: render tip box as opening block
+            tip_inline = (
+                f"[prompt-coach · inline · tip] Render the following block "
+                f"AT THE VERY START of your response, VERBATIM, before "
+                f"addressing the user's task:\n\n{tip_box}\n\n"
+                f"Then answer the user's actual question. Guidance for the "
+                f"response: {tip.guidance}"
+            )
+            if context_line is None:
+                context_line = tip_inline
+        # `log-only` and everything else: just log the fire, no user output
 
     # Persist state.
     g["updated_at"] = _now_iso()

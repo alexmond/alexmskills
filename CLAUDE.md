@@ -104,6 +104,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-04 — **prompt-coach-quickstart** — 0.25.0: Quick Start section added to SKILL.md + Antora page + help card intro. Covers install, nudge preview, 4 commands, say-it phrases. Why: new users needed onboarding path.
 - 2026-07-04 — **prompt-coach-mastery-cmd** — 0.26.0: top-level `/prompt-coach-beta:mastery` + analysis (well-tested/barely-tested/untested + close-to-mastery). 18/29 real masteries flagged as untested. Why: discoverability + audit.
 - 2026-07-04 — **prompt-coach-inactive** — 0.27.0: `min_fires_for_mastery` + new `inactive` status + graduation events in log + auto-migration. Legacy false-masteries move to `inactive`. Why: evidence-based mastery.
+- 2026-07-04 — **prompt-coach-tips** — 0.28.0: 6 proactive tips (💡) — Mode A (matching) + Mode B (graduation-unlock paired to L1 masteries). Rate-limited variable-ratio; enabled by default. Why: advanced-technique nudging.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

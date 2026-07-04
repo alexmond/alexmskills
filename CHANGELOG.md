@@ -7,6 +7,62 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-04 (later 4)
+
+### Added
+- **prompt-coach-beta 0.28.0** — proactive tips (advanced-technique
+  suggestions). User: "some of more advance concept will not fire if
+  a user did not provide complex enough prompt, we need not just a
+  correction on the prompts but also a nudge to a more advanced
+  prompting." Confirmed: enable by default; ship BOTH standalone
+  matching (Option A) AND graduation-triggered scaffolding (Option B).
+  - **`Tip` dataclass** parallel to `Rule` — id, technique, body,
+    guidance, sources, check callable. Distinct from rules by intent:
+    rules fire on prompt problems; tips fire on-topic for techniques
+    the user could try.
+  - **6 tips catalog**:
+    - `tip-few-shot` — creative generation without an example
+    - `tip-xml-tags` — small paste (3-6 lines) without delimiters
+    - `tip-classical-role` — short review ask without role
+    - `tip-plan-mode` — short risky-action ask without a plan clause
+    - `tip-chain-of-thought` — explanation/why question without think-first
+    - `tip-verify-loop` — small implementation ask without verification
+  - **Mode A (matching)** — heuristic on the prompt: fires if
+    on-topic + cooldown clear + variable-ratio dice roll hit
+    (`tip_ratio=5` default: 1 in 5 opportunities). Only fires when NO
+    rule fired this prompt (nudge > tip).
+  - **Mode B (graduation-unlock)** — `_TIP_ON_MASTERY` map pairs
+    each L1 rule to a next-level technique tip. When the rule masters,
+    the paired tip fires the same turn regardless of prompt content.
+    Learning-sequence scaffolding baked in:
+    ```
+    vague-reference        → tip-few-shot
+    no-definition-of-done  → tip-verify-loop
+    missing-guardrails     → tip-plan-mode
+    unbounded-scope        → tip-chain-of-thought
+    improve-without-metric → tip-classical-role
+    no-answer-shape        → tip-xml-tags
+    ```
+  - **Visual treatment**: 💡 (light bulb) — distinct from 🎯 (rules)
+    and ✨ (praise). Same inline / stderr / silent / log-only modes
+    as rules.
+  - **State tracking**: per-tip `fires_total`, `last_fired_at`,
+    `last_fired_prompt`, `opportunities_total` in global state
+    under `tips.<id>`.
+  - **Config**: `tips_enabled` (default `True`),
+    `tip_cooldown_prompts` (100), `tip_ratio` (5). Standard
+    CONFIG_SCHEMA entries so /config options / describe / set /
+    reset all work.
+  - **Log format**: `outcome=tipped:<mode>:<tip-id>:<match|graduation-unlock>`
+    when the tip is the only thing that fired. When a nudge OR
+    mastery-triggered tip fires alongside a rule, the rule's outcome
+    stays authoritative (tip is a state-side event).
+  - **7 test categories**: TIPS catalog present, heuristics correctly
+    trigger + don't false-positive (12 test prompts), Mode B fires
+    paired tip on graduation, Mode A fires on matching prompts when
+    no rule catches, cooldown prevents back-to-back fires,
+    tips_enabled=false silences everything, marketplace validates.
+
 ## 2026-07-04 (later 3)
 
 ### Added
