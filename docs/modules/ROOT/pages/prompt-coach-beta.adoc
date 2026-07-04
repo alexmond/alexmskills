@@ -55,6 +55,10 @@ Six tiers of rules, roughly five each. Only six rules are active at a time (`max
 | no-chain-of-thought | Reasoning ask (why/debug/trace) without "think first"
 | no-rubric | Judgment ask ("is this good?") without criteria/axes
 | no-uncertainty-budget | Investigative ask with no "if unsure, say so"
+| no-xml-structure *(v0.20+)* | ≥7-line paste (code fence or indented block) without `<code>` / `<data>` / `<logs>` tags
+| no-classical-role *(v0.20+)* | Review / audit / critique ask (>15 words) without "You are a X" / "act as"
+| test-goalseeking *(v0.20+)* | "Make tests pass" / "get CI green" without a stated correctness intent
+| no-verify-before-claim *(v0.20+)* | "Does X exist?" / "which files use Y?" without demanding file:line receipts
 |===
 
 === L4 — goals & loops
@@ -65,6 +69,7 @@ Six tiers of rules, roughly five each. Only six rules are active at a time (`max
 | implicit-goal | Action prompt with no "so that / in order to / why" clause
 | unbounded-iteration | "Keep improving" without a stopping condition
 | no-rubric-for-refine | "Refine this" without naming which axis to improve
+| overthinking-warning *(v0.20+)* | ≥60-word prompt with 3+ "make sure to / be very careful / please also / furthermore" elaboration markers
 |===
 
 === L5 — Claude-Code tool-native
@@ -88,6 +93,7 @@ Six tiers of rules, roughly five each. Only six rules are active at a time (`max
 | no-skill-lookup | "How do I X" / "what's the standard way" without checking existing skills
 | pattern-worth-abstracting | "Again / same as before / yet another" — rule of three, worth a skill?
 | no-skill-composition | Multi-step repeatable ceremony not named as a skill candidate
+| no-edit-preference *(v0.20+)* | "Create a new file/script/helper" without an edit-existing preference
 |===
 
 == Nudge modes
@@ -176,6 +182,50 @@ Categories: `output`, `voice`, `rule-activation`, `mastery`, `praise`, `typo-tol
 
 Writes are deep-merged into the target JSON so keys the schema doesn't know about (forward-compat entries from future versions) are preserved, not stripped. Invalid values are rejected with a clear error message.
 
+=== Options, interactive flows, and mastery (v0.19+)
+
+Four more verbs joined `:config` in v0.19:
+
+[cols="2,4",options="header"]
+|===
+| Verb | What it does
+| `options <key>` | Enumerates legal values for a key with per-choice explanations. For enums (`nudge_style`, `voice_preset`, `voice_source`), lists each choice + what it does. For int/bool/list keys, shows type + current + default + example + description.
+| `quick` | Interactive multi-choice picker for the ~4 categorical settings (`voice_preset`, `voice_source`, `nudge_style`, `praise_ratio`). Claude walks you through with `AskUserQuestion`; each answer routes to `:config set`.
+| `full` | Same interactive pattern for every schema key. Enums → picker; numeric/bool → keep-current / type-new / reset-to-default. Longer flow; you can skip categories.
+| `mastery` | Dashboard: mastered rules (with mastery date), in-progress rules (fires_total > 0, sorted by streak descending so closest-to-mastery shows first), dormant count by tier.
+| `mastery-reset <rule-id>` | Zeros fires_total, clean_streak, status, mastered_at for one rule. Preserves `prompt_count` + other rules + non-schema keys. Dry-run preview first.
+| `mastery-reset-all` | Same across every rule with accumulated state. Preserves `prompt_count`. Dry-run preview first.
+|===
+
+Under the hood, enum keys in `CONFIG_SCHEMA` now carry an optional `choice_descriptions` dict — same forward-compat pattern as v0.18. Adding a new enum config means adding a `choice_descriptions` dict; `options` and `quick` pick it up automatically.
+
+== Anthropic guide alignment (v0.20+)
+
+v0.20 aligns the coach with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Two-part change:
+
+**Six new rules** closing high-value gaps in the coach's coverage:
+
+* `no-xml-structure` (L3) — flags ≥7-line pastes without `<code>` / `<data>` / `<logs>` delimiters. Anthropic: `structure-prompts-with-xml-tags`.
+* `no-classical-role` (L3) — flags critique/review/audit asks (>15 words) that don't invoke a role via "you are a X". Distinct from `no-role-for-critique` which flags the Claude Code `/roles:as` variant. Anthropic: `give-claude-a-role`.
+* `test-goalseeking` (L3) — flags "make tests pass" / "get CI green" / "fix broken tests" without stated correctness intent. Anthropic explicitly calls this out as a gaming/hallucination vector. `avoid-focusing-on-passing-tests-and-hard-coding`.
+* `no-verify-before-claim` (L3) — flags assertion-shaped questions ("does X exist", "which files use Y") that don't demand receipts (file:line, quoted code). Distinct from `no-uncertainty-budget`, which is about admitting uncertainty; this is about demanding evidence. `minimizing-hallucinations-in-agentic-coding`.
+* `overthinking-warning` (L4) — the inverse of the coach's usual push-toward-more-structure direction. Fires on ≥60-word prompts with 3+ elaboration markers ("make sure to", "be very careful", "please also", "furthermore", etc.). `overthinking-and-excessive-thoroughness`.
+* `no-edit-preference` (L6) — flags "create/write/make new script/helper/file" without an edit-existing preference. `reduce-file-creation-in-agentic-coding`.
+
+**`Rule.anthropic_ref` field.** Every rule now optionally carries a section slug from Anthropic's page. 25 of the 34 shipped rules link to a canonical section; 9 are Claude-Code-specific or novel coach concepts with no direct upstream mapping.
+
+**`/prompt-coach-beta:config sources`** — new verb that surfaces the citation trail:
+
+[cols="2,4",options="header"]
+|===
+| Form | What it shows
+| `sources` (no arg) | Overview: base URL + every rule grouped by its `anthropic_ref`, plus a separate section for unlinked rules. Header notes coverage (e.g. "25/34 rules link to an Anthropic-guide section").
+| `sources <rule-id>` | Per-rule detail: tier, name, `anthropic_ref` slug + full URL to the exact section anchor, and the full list of cited sources (titles + URLs).
+| `--json sources` / `--json sources <rule-id>` | Machine-readable equivalents for scripting.
+|===
+
+Enables tracing *"why does this rule exist?"* back to Anthropic's authoritative material in one command.
+
 == Encouragement layer
 
 The coach also praises the *specific positive behaviors* that mirror the negative rules — 22 positive detectors. Praise is deliberately sparing (default 1 per 10 clean prompts with a positive, plus milestone events on rule mastery and first-after-fire), grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan 2000, Kohn 1993).
@@ -221,7 +271,7 @@ Optional self-healing: `demote_on_regression` auto-demotes a mastered rule that 
 |===
 | Command | What it does
 | `/prompt-coach-beta:stats` | Health dashboard — prompts analyzed, emit rate, top-fired rules, mastery, typo corrections, current config
-| `/prompt-coach-beta:config` | Structured config surface — show / describe / set / reset / diff / export (v0.18+)
+| `/prompt-coach-beta:config` | Structured config surface — show / describe / options / set / reset / diff / export / mastery / mastery-reset / mastery-reset-all / sources (v0.18–v0.20)
 | `/prompt-coach-beta:help` | Compact help card with commands, say-it phrases, and full config reference
 | `/prompt-coach-beta:report-issue` | File a privacy-safe bug report about a prompt the coach mistreated
 | `/prompt-coach-beta:prompt-coach` | Print the full SKILL.md
