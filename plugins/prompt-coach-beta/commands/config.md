@@ -21,16 +21,37 @@ since-version) so new options are picked up automatically when they're added.
 
 2. Parse the user's input after `/prompt-coach-beta:config`:
 
+   Direct verbs (run the script and render its output):
+
    - `<empty>` or `show` → run `python3 <path> show` in the current cwd
    - `show <category>` → `python3 <path> show <category>` (categories: output, voice, rule-activation, mastery, praise, typo-tolerance, anti-habituation, llm-fallback)
    - `get <key>` → `python3 <path> get <key>`
    - `describe <key>` → `python3 <path> describe <key>`
+   - `options <key>` → `python3 <path> options <key>` (lists legal values with per-choice explanations)
    - `set <key> <value>` → `python3 <path> set <key> <value> --scope <scope>`
      (scope defaults to `global` unless the user says "in this repo" / "for this repo" → then `--scope repo`)
    - `reset <key>` → `python3 <path> reset <key> --scope <scope>`
    - `reset-all` → `python3 <path> reset-all --scope <scope>` (require explicit confirmation before running without `--dry-run`)
    - `diff` → `python3 <path> diff`
    - `export` → `python3 <path> export`
+   - `mastery` → `python3 <path> mastery` (dashboard of mastered / in-progress / dormant rules)
+   - `mastery-reset <rule-id>` → `python3 <path> mastery-reset <rule-id>` (dry-run once first)
+   - `mastery-reset-all` → `python3 <path> mastery-reset-all` (dry-run once first, require explicit confirmation)
+
+   **Interactive flows (Claude-orchestrated via AskUserQuestion):**
+
+   - `quick` → walk the user through the ~4 categorical settings (`voice_preset`, `voice_source`, `nudge_style`, `praise_ratio`) with multiple-choice pickers. For each key:
+     1. Run `python3 <path> options <key> --json` to get the current value + choices + descriptions
+     2. Present via AskUserQuestion, header ≤12 chars (e.g. "Voice"), each option's label = the value, description = the first ~60 chars of the choice_description
+     3. If the user picks a value different from current, run `python3 <path> set <key> <picked> --scope global`
+     4. If they skip (choose "Other" and type nothing) or pick current, do nothing for that key
+   - `full` → same pattern but walk EVERY schema key. For enums use AskUserQuestion. For int/bool ask a single AskUserQuestion with options ["Keep current: X", "Type a new value", "Reset to default (Y)"]. If they choose "Type a new value", ask in a follow-up. Skip keys where their current value already matches the default AND they haven't asked for a full walk-through explicitly. This is a longer flow — offer to skip categories the user isn't interested in.
+
+3. Common flags:
+
+   - `--dry-run` on set/reset/reset-all/mastery-reset* → show what would change without writing
+   - `--scope global` (default) or `--scope repo` → which config file
+   - `--json` → machine-readable output (for scripting)
 
 3. Common flags:
 
@@ -51,11 +72,17 @@ to the appropriate command:
 | "show me the config" / "what are the current settings" | `show` |
 | "what's <key>" / "current <key>" | `get <key>` |
 | "explain <key>" / "what does <key> do" | `describe <key>` |
+| "what options are there for <key>" / "what modes exist" | `options <key>` |
 | "set <key> to <value>" / "change <key> to <value>" | `set <key> <value>` |
 | "reset <key>" / "unset <key>" / "clear my <key> override" | `reset <key>` |
 | "show me what I've changed" / "list overrides" | `diff` |
 | "back up my config" / "print my resolved config" | `export` |
 | "start over" / "reset everything" | `reset-all` (require confirmation!) |
+| "walk me through settings" / "help me pick" / "quick setup" | `quick` (interactive) |
+| "walk me through everything" / "configure everything" | `full` (interactive, longer) |
+| "show me my mastery" / "what have I mastered" / "how am I doing" | `mastery` |
+| "reset my mastery on <rule>" / "reset <rule> mastery" | `mastery-reset <rule>` |
+| "reset all my mastery" / "start mastery over" | `mastery-reset-all` (require confirmation!) |
 
 ## Safety
 

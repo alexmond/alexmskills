@@ -29,6 +29,7 @@ import importlib.util
 import json
 import os
 import sys
+import textwrap
 from pathlib import Path
 
 # ── Locate + import the sibling analyzer for CONFIG_SCHEMA/DEFAULT_CONFIG ────
@@ -44,6 +45,7 @@ _spec.loader.exec_module(_analyzer)
 
 CONFIG_SCHEMA = _analyzer.CONFIG_SCHEMA
 DEFAULT_CONFIG = _analyzer.DEFAULT_CONFIG
+RULES = _analyzer.RULES
 config_key_source = _analyzer.config_key_source
 config_categories = _analyzer.config_categories
 config_keys_in_category = _analyzer.config_keys_in_category
@@ -355,6 +357,278 @@ def cmd_export(cwd: Path, as_json: bool = True) -> int:
     return 0
 
 
+# ── v0.19.0: options + mastery ──────────────────────────────────────────────
+
+def cmd_options(cwd: Path, key: str, as_json: bool = False) -> int:
+    """v0.19.0 — enumerate the legal values for a key with per-choice
+    explanations. For enums: one line per choice with its description.
+    For int/bool/list/obj: current + default + example + description."""
+    if key not in CONFIG_SCHEMA:
+        print(f"unknown key: {key}", file=sys.stderr)
+        return 2
+    entry = CONFIG_SCHEMA[key]
+    current = _resolved_value(key, cwd)
+    default = DEFAULT_CONFIG.get(key)
+    _, gcfg, rcfg = _resolve(cwd)
+    source = config_key_source(key, gcfg, rcfg)
+    choices = entry.get("choices")
+    choice_descriptions = entry.get("choice_descriptions", {})
+
+    if as_json:
+        body = {
+            "key": key,
+            "type": entry["type"],
+            "current": current,
+            "default": default,
+            "source": source,
+        }
+        if choices:
+            body["options"] = [
+                {
+                    "value": c,
+                    "description": choice_descriptions.get(c, ""),
+                    "is_current": c == current,
+                    "is_default": c == default,
+                }
+                for c in choices
+            ]
+        else:
+            body["example"] = entry.get("example")
+            body["description"] = entry["description"]
+        print(json.dumps(body, indent=2))
+        return 0
+
+    print(f"── options for {key} " + "─" * max(4, 60 - len(key)))
+    print(f"  type:      {entry['type']}")
+    print(f"  current:   {_fmt_value(current)}  [{source}]")
+    print(f"  default:   {_fmt_value(default)}")
+    print()
+    if choices:
+        for c in choices:
+            marker = ""
+            if c == current: marker += " ← current"
+            if c == default and c != current: marker += " (default)"
+            elif c == default and c == current: marker = " ← current (default)"
+            print(f"  * {c}{marker}")
+            desc = choice_descriptions.get(c)
+            if desc:
+                # textwrap handles short tokens correctly (my ad-hoc wrapper
+                # in v0.19 glued "+context" and "anti-disagreementguardrails"
+                # because a solo short token was concatenated without space).
+                for line in textwrap.wrap(desc, width=74,
+                                          initial_indent="    ",
+                                          subsequent_indent="    "):
+                    print(line)
+            print()
+        print(f"  Set with: /prompt-coach-beta:config set {key} <value>")
+        print(f"  Reset:    /prompt-coach-beta:config reset {key}")
+    else:
+        if entry.get("example") is not None:
+            print(f"  example:   {_fmt_value(entry['example'])}")
+        print()
+        print(f"  {entry['description']}")
+        print()
+        print(f"  Set with: /prompt-coach-beta:config set {key} <value>")
+        print(f"  Reset:    /prompt-coach-beta:config reset {key}")
+    return 0
+
+
+def _global_state_path() -> Path:
+    return Path.home() / ".claude" / "prompt-coach" / "state.json"
+
+
+def _rule_ids_by_tier() -> dict[int, list[str]]:
+    """Group all shipped rule ids by tier from the RULES list."""
+    out: dict[int, list[str]] = {}
+    for r in RULES:
+        out.setdefault(r.tier, []).append(r.id)
+    return out
+
+
+def _rule_id_set() -> set[str]:
+    return {r.id for r in RULES}
+
+
+def _mastery_snapshot() -> dict:
+    """Read global state.json and classify every shipped rule."""
+    state = _load_json(_global_state_path())
+    rules_state = state.get("rules", {}) if isinstance(state, dict) else {}
+    prompt_count = state.get("prompt_count", 0) if isinstance(state, dict) else 0
+
+    mastered, in_progress, dormant = [], [], []
+    for rule in RULES:
+        rs = rules_state.get(rule.id, {}) or {}
+        status = rs.get("status", "practicing")
+        fires_total = int(rs.get("fires_total", 0))
+        clean_streak = int(rs.get("clean_streak", 0))
+        mastered_at = rs.get("mastered_at")
+        item = {
+            "id": rule.id,
+            "tier": rule.tier,
+            "name": rule.name,
+            "fires_total": fires_total,
+            "clean_streak": clean_streak,
+            "status": status,
+            "mastered_at": mastered_at,
+        }
+        if status == "mastered":
+            mastered.append(item)
+        elif fires_total > 0 or clean_streak > 0:
+            in_progress.append(item)
+        else:
+            dormant.append(item)
+    return {
+        "prompt_count": prompt_count,
+        "mastered": mastered,
+        "in_progress": in_progress,
+        "dormant": dormant,
+        "totals": {
+            "mastered": len(mastered),
+            "in_progress": len(in_progress),
+            "dormant": len(dormant),
+            "all": len(RULES),
+        },
+    }
+
+
+def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
+    """v0.19.0 — mastery dashboard: mastered / in-progress / dormant counts,
+    with per-rule details for the first two groups."""
+    snap = _mastery_snapshot()
+    if as_json:
+        print(json.dumps(snap, indent=2))
+        return 0
+
+    t = snap["totals"]
+    print(f"prompt-coach-beta — mastery snapshot")
+    print(f"  Global state:  {_global_state_path()} "
+          f"{'(present)' if _global_state_path().exists() else '(none — no fires yet)'}")
+    print(f"  Total prompts analyzed: {snap['prompt_count']}")
+    print(f"  Rules: {t['mastered']} mastered · {t['in_progress']} in progress · "
+          f"{t['dormant']} dormant / {t['all']} shipped")
+    print()
+
+    if snap["mastered"]:
+        print("── mastered ─────────────────────────────────────────────")
+        for r in sorted(snap["mastered"], key=lambda x: (x["tier"], x["id"])):
+            date = r["mastered_at"] or "unknown date"
+            print(f"  ✓ L{r['tier']}  {r['id']:32s}  "
+                  f"fires_total={r['fires_total']:<3d} mastered {date}")
+        print()
+
+    if snap["in_progress"]:
+        print("── in progress (fires > 0, not yet mastered) ────────────")
+        # Sort by clean_streak descending to surface the closest-to-mastery first
+        for r in sorted(snap["in_progress"],
+                        key=lambda x: (-x["clean_streak"], x["tier"], x["id"])):
+            print(f"  · L{r['tier']}  {r['id']:32s}  "
+                  f"fires_total={r['fires_total']:<3d} "
+                  f"clean_streak={r['clean_streak']:<3d}")
+        print()
+
+    if snap["dormant"]:
+        # List by tier count, don't enumerate 20+ ids
+        by_tier: dict[int, int] = {}
+        for r in snap["dormant"]:
+            by_tier[r["tier"]] = by_tier.get(r["tier"], 0) + 1
+        print(f"── dormant ({t['dormant']} rules never fired) ──────────")
+        for tier in sorted(by_tier):
+            print(f"     L{tier}: {by_tier[tier]} rule(s)")
+        print()
+
+    print("Reset one rule:    /prompt-coach-beta:config mastery-reset <rule-id>")
+    print("Reset everything:  /prompt-coach-beta:config mastery-reset-all")
+    return 0
+
+
+def _reset_rule_state(state: dict, rule_id: str) -> dict:
+    """Zero fires_total, clean_streak, status, mastered_at for one rule."""
+    rules = state.setdefault("rules", {})
+    prev = rules.get(rule_id, {}).copy()
+    rules[rule_id] = {
+        "fires_total": 0,
+        "clean_streak": 0,
+        "status": "practicing",
+        "mastered_at": None,
+        # Preserve any coach-internal fields the schema doesn't know about,
+        # except the ones we explicitly reset.
+        **{k: v for k, v in rules.get(rule_id, {}).items()
+           if k not in ("fires_total", "clean_streak", "status",
+                        "mastered_at", "recent_variants",
+                        "recent_fire_prompts", "silence_until_prompt")},
+    }
+    return prev
+
+
+def cmd_mastery_reset(cwd: Path, rule_id: str, dry_run: bool = False) -> int:
+    """v0.19.0 — reset a single rule's mastery + fires + streak state."""
+    if rule_id not in _rule_id_set():
+        print(f"unknown rule id: {rule_id}", file=sys.stderr)
+        print(f"  {len(RULES)} rules shipped. Run "
+              "`/prompt-coach-beta:config mastery` to see all ids.",
+              file=sys.stderr)
+        return 2
+    state_path = _global_state_path()
+    if not state_path.exists():
+        print(f"no state file yet ({state_path}) — nothing to reset")
+        return 0
+    state = _load_json(state_path)
+    rules = state.get("rules", {}) if isinstance(state, dict) else {}
+    current = rules.get(rule_id, {})
+    if not current or (current.get("fires_total", 0) == 0
+                       and current.get("clean_streak", 0) == 0
+                       and current.get("status", "practicing") == "practicing"):
+        print(f"nothing to reset — {rule_id} has no accumulated state")
+        return 0
+    if dry_run:
+        print(f"[dry-run] would reset {rule_id}:")
+        print(f"  fires_total: {current.get('fires_total', 0)} → 0")
+        print(f"  clean_streak: {current.get('clean_streak', 0)} → 0")
+        print(f"  status: {current.get('status', 'practicing')} → practicing")
+        if current.get("mastered_at"):
+            print(f"  mastered_at: {current.get('mastered_at')} → null")
+        return 0
+    _reset_rule_state(state, rule_id)
+    _save_json(state_path, state)
+    print(f"reset {rule_id} — fires_total=0, clean_streak=0, status=practicing")
+    return 0
+
+
+def cmd_mastery_reset_all(cwd: Path, dry_run: bool = False) -> int:
+    """v0.19.0 — reset EVERY rule's mastery + streak. Preserves prompt_count
+    and any non-rule top-level state (like anti-habituation window state)."""
+    state_path = _global_state_path()
+    if not state_path.exists():
+        print(f"no state file yet ({state_path}) — nothing to reset")
+        return 0
+    state = _load_json(state_path)
+    rules = state.get("rules", {}) if isinstance(state, dict) else {}
+    non_default = [rid for rid, rs in rules.items()
+                   if rs.get("fires_total", 0) > 0
+                   or rs.get("clean_streak", 0) > 0
+                   or rs.get("status", "practicing") != "practicing"]
+    if not non_default:
+        print("nothing to reset — no rule has accumulated state")
+        return 0
+    if dry_run:
+        print(f"[dry-run] would reset {len(non_default)} rule(s):")
+        for rid in non_default:
+            rs = rules[rid]
+            summary = (f"fires={rs.get('fires_total', 0)} "
+                       f"streak={rs.get('clean_streak', 0)} "
+                       f"status={rs.get('status', 'practicing')}")
+            print(f"  {rid:32s} {summary}")
+        print()
+        print("  prompt_count and other non-rule state will be preserved.")
+        return 0
+    for rid in non_default:
+        _reset_rule_state(state, rid)
+    _save_json(state_path, state)
+    print(f"reset {len(non_default)} rule(s) — all mastery + streak state cleared")
+    print(f"  prompt_count preserved: {state.get('prompt_count', 0)}")
+    return 0
+
+
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
 def _main(argv: list[str]) -> int:
@@ -370,11 +644,15 @@ def _main(argv: list[str]) -> int:
     sub.add_parser("show").add_argument("category", nargs="?", default=None)
     sub.add_parser("get").add_argument("key")
     sub.add_parser("describe").add_argument("key")
+    sub.add_parser("options").add_argument("key")
     s = sub.add_parser("set"); s.add_argument("key"); s.add_argument("value")
     sub.add_parser("reset").add_argument("key")
     sub.add_parser("reset-all")
     sub.add_parser("diff")
     sub.add_parser("export")
+    sub.add_parser("mastery")
+    sub.add_parser("mastery-reset").add_argument("rule_id")
+    sub.add_parser("mastery-reset-all")
 
     args = p.parse_args(argv)
     cwd = Path(args.cwd) if args.cwd else Path.cwd()
@@ -396,6 +674,14 @@ def _main(argv: list[str]) -> int:
         return cmd_diff(cwd, args.as_json)
     if verb == "export":
         return cmd_export(cwd, args.as_json)
+    if verb == "options":
+        return cmd_options(cwd, args.key, args.as_json)
+    if verb == "mastery":
+        return cmd_mastery(cwd, args.as_json)
+    if verb == "mastery-reset":
+        return cmd_mastery_reset(cwd, args.rule_id, args.dry_run)
+    if verb == "mastery-reset-all":
+        return cmd_mastery_reset_all(cwd, args.dry_run)
     print(f"unknown verb: {verb}", file=sys.stderr)
     return 2
 

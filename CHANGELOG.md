@@ -7,6 +7,53 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 7)
+
+### Added
+- **prompt-coach-beta 0.19.0** — `/prompt-coach-beta:config` grew four
+  new verbs to answer "what options exist?" and "how am I doing?"
+  without needing to already know the answer.
+  - **`options <key>`** — enumerates legal values with per-choice
+    explanations. For enums (`nudge_style`, `voice_preset`,
+    `voice_source`), lists each choice and what it does. For int/bool/
+    list keys, shows current + default + example + description.
+    Available in `--json` for the interactive flows.
+  - **`quick` interactive flow** — orchestrated by the slash command
+    file. Claude reads `options --json` for each of the categorical
+    settings and presents `AskUserQuestion` pickers. Each answer routes
+    to `:config set`.
+  - **`full` interactive flow** — same pattern across every schema
+    key. Enum keys → picker; int/bool → keep-current/type-new/reset-to-
+    default. Longer flow; user can skip categories.
+  - **`mastery`** — reads global `state.json` and renders a dashboard:
+    mastered rules (with mastery date), in-progress rules (fires_total
+    > 0, sorted by streak descending so closest-to-mastery surfaces
+    first), dormant count by tier.
+  - **`mastery-reset <rule-id>`** — zeros fires_total, clean_streak,
+    status, mastered_at for one rule. Preserves prompt_count + other
+    rules + non-schema keys. Dry-run preview first.
+  - **`mastery-reset-all`** — same across every rule with accumulated
+    state. Preserves prompt_count. Dry-run preview first.
+  - **Schema addition**: enum entries in `CONFIG_SCHEMA` now carry an
+    optional `choice_descriptions: dict[str, str]` — backward-compat
+    (missing = no descriptions, still works). `nudge_style`,
+    `voice_preset`, `voice_source` populated.
+  - **Bug fix**: initial word-wrap for choice descriptions glued short
+    tokens together (`+context`, `anti-disagreementguardrails`).
+    Replaced with `textwrap.wrap()` for correctness.
+  - **17 test categories verified**: schema coverage of new
+    choice_descriptions, options for enum keys shows all choices +
+    descriptions + current marker, options for int/bool shows
+    default/example/description, options --json produces structured
+    output with is_current/is_default flags, options for unknown key
+    → exit 2, mastery on empty state (no state.json), mastery with
+    populated state (mastered + in-progress + dormant counts + mastery
+    dates), mastery --json, mastery-reset dry-run + actual with
+    preservation checks, mastery-reset unknown-rule → exit 2, mastery-
+    reset idempotent on clean rule, mastery-reset-all dry-run + actual
+    with prompt_count preservation, backward-compat of existing verbs
+    (show/describe/diff), analyze-prompt.py regression, E2E fire → mastery.
+
 ## 2026-07-03 (later 6)
 
 ### Added

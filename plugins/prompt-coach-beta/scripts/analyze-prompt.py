@@ -133,9 +133,13 @@ CONFIG_SCHEMA = {
         "category": "output",
         "type": "str",
         "choices": ["both", "silent", "log-only", "inline"],
-        "description": "Where the nudge appears: stderr box + Claude context (both), "
-                       "only Claude (silent), only in the log (log-only), or inline "
-                       "as opening block of Claude's response (inline).",
+        "choice_descriptions": {
+            "both": "Boxed nudge on stderr (dim area under prompt) + Claude sees it in additionalContext. The default; requires your TUI to render hook stderr for you to see the box.",
+            "silent": "Claude sees the nudge context, you don't. Good after you've internalized the rules — Claude still factors them in.",
+            "log-only": "Nothing external at all; every fire is recorded in .claude/prompt-coach/log.md. For weekly-review discipline.",
+            "inline": "Claude renders the boxed nudge as the opening block of its response. Most visible — nudge lives in your transcript. +~50 output tokens/fire.",
+        },
+        "description": "Where the nudge appears.",
         "example": "inline",
         "since": "0.5.0",
     },
@@ -152,9 +156,11 @@ CONFIG_SCHEMA = {
         "category": "voice",
         "type": "str",
         "choices": ["colleague", "plain"],
-        "description": "Which phrasing personality: 'colleague' is direct, ends on a "
-                       "question; 'plain' is simple English for non-native speakers. "
-                       "L1+L2 ship both; L3-L6 fall back to colleague.",
+        "choice_descriptions": {
+            "colleague": "Direct, colloquial, ends on a concrete question. 'You said fix it — what is it?' Assumes fluent English + light idiom.",
+            "plain": "Simple English, short sentences, no idioms, no jargon. For non-native speakers or anyone who prefers explicit. L1+L2 rules covered; L3-L6 fall back to colleague.",
+        },
+        "description": "Which phrasing personality the coach uses.",
         "example": "plain",
         "since": "0.17.0",
     },
@@ -162,11 +168,12 @@ CONFIG_SCHEMA = {
         "category": "voice",
         "type": "str",
         "choices": ["static", "llm-compose", "hybrid"],
-        "description": "Who writes the nudge text: 'static' uses pre-written variants "
-                       "(0 cost, deterministic); 'llm-compose' has Claude write fresh, "
-                       "situated to your prompt with 6 guardrails (+200-800ms, "
-                       "~150-400 tokens/fire); 'hybrid' uses static on full fires and "
-                       "llm-compose on medium/short refreshers.",
+        "choice_descriptions": {
+            "static": "Pre-written variants from the catalog. 0 cost, deterministic (same rule + context → same text, mod novelty rotation).",
+            "llm-compose": "Claude writes the nudge fresh, situated to YOUR prompt, with 6 anti-disagreement guardrails. +200-800ms, ~150-400 output tokens per fire.",
+            "hybrid": "Static on full fires (deterministic teaching moment). Llm-compose on medium/short refreshers (livelier when repeating).",
+        },
+        "description": "Who authors the nudge sentence at fire time.",
         "example": "llm-compose",
         "since": "0.17.0",
     },

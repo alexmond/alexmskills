@@ -214,6 +214,33 @@ The `outcome` log line now records preset + source per fire (e.g.
 `nudged:inline:full:v1:p=plain:src=static`) so `/prompt-coach-beta:stats` can
 mine which combination you actually converge on.
 
+## Options + interactive flows + mastery (v0.19+)
+
+Three additions on top of v0.18's `:config`:
+
+- `+/prompt-coach-beta:config options <key>+` — enumerates legal values for a key
+  with per-choice explanations. For enums like `voice_source`, lists each choice
+  and what it does. For int/bool/list, shows current + default + example +
+  description. Answers *"what modes exist?"* without needing to already know.
+- `+/prompt-coach-beta:config quick+` — interactive multi-choice picker for the
+  ~4 categorical settings (`voice_preset`, `voice_source`, `nudge_style`,
+  `praise_ratio`). Claude walks you through with AskUserQuestion; each answer
+  routes to `:config set`.
+- `+/prompt-coach-beta:config full+` — same pattern for every schema key. Enum
+  keys → picker; numeric/bool → "keep current / type new value / reset to
+  default". Longer flow; you can skip categories.
+- `+/prompt-coach-beta:config mastery+` — dashboard of rule states: *mastered*
+  (with mastery date), *in-progress* (fires_total > 0, streak/threshold),
+  *dormant* count by tier. Answers *"how am I doing?"*.
+- `+/prompt-coach-beta:config mastery-reset <rule-id>+` — resets one rule's
+  fires/streak/status/mastered_at (dry-run first).
+- `+/prompt-coach-beta:config mastery-reset-all+` — wipes all rule state
+  (preserves `prompt_count` and non-rule state; dry-run first).
+
+Under the hood, enum keys now carry `choice_descriptions` in `CONFIG_SCHEMA` —
+same forward-compat pattern as v0.18. Adding a new enum config means adding a
+`choice_descriptions` dict; `options` picks it up automatically.
+
 ## Config surface (v0.18+)
 
 The coach's config has grown to 22 keys across 8 categories. `/prompt-coach-beta:config`
