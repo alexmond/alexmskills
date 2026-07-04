@@ -7,6 +7,62 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-04
+
+### Added
+- **prompt-coach-beta 0.24.0** — transcript-aware picker-answer skip.
+  User asked: "when Claude asks me multiple choice questions I have no
+  way of adapting my prompt but it still triggers a nudge" (and the
+  same for pre-drafted continuations). The picked option's text became
+  the effective prompt, so any rule the option label happened to match
+  fired — a class of false positive the user couldn't route around.
+  - **New function `picker_answer_reason(cwd)`** — reads the current
+    session transcript at `~/.claude/projects/<slug>/<session>.jsonl`
+    (found by cwd-slug + most-recent mtime), tails the last 80 lines,
+    walks back to the last `type: assistant` entry, and returns:
+    - `"multi-choice-answer"` if the assistant turn contained an
+      `AskUserQuestion` tool_use block (definitive)
+    - `"option-list-answer"` if the assistant text contained `?` or
+      `:` followed by a bulleted/numbered/lettered list with ≥2 items
+      (heuristic — catches pre-drafted continuations the model writes
+      inline)
+    - `None` otherwise
+  - **Integrated into `main()`** just after `is_conversational()` —
+    same short-circuit pattern. Logs `outcome=skipped:multi-choice-
+    answer` or `outcome=skipped:option-list-answer`.
+  - **Never raises** — a missing/broken transcript, permission error,
+    or malformed JSON resolves to `None` so the coach continues to
+    analyze prompts normally. A stale lookup can never block a real
+    prompt.
+  - **Efficient tail-read** — transcripts are 15+ MB in long sessions;
+    `_tail_lines()` seeks in 8 KB chunks from EOF instead of reading
+    the whole file.
+  - **`/report-issue` and `/stats` also ignore these outcomes** — the
+    same `outcome in (skipped:conversational, skipped:multi-choice-
+    answer, skipped:option-list-answer)` check that filtered the bug-
+    report queue now filters the picker skips too.
+  - **10 test categories verified**:
+    1. Transcript path lookup finds the current session
+    2. `_tail_lines()` reads 20 lines cleanly from a 15 MB file
+    3. `_last_assistant_turn()` returns a real entry
+    4. **Replay of 17 real AskUserQuestion turns from this session's
+       transcript → all 17 classified as `multi-choice-answer`**
+    5. Option-list heuristic catches `?` + bullets, `?` + numbered,
+       and `:` + lettered forms
+    6. Non-picker turns (plain prose, single-line colon, non-
+       AskUserQuestion tool_use like Bash) → not flagged
+    7. Missing transcript → None (graceful)
+    8. E2E: prompt "fix it" with prior AskUserQuestion in transcript
+       → `skipped:multi-choice-answer` (not a nudge)
+    9. E2E control: same prompt with NO prior picker → coach fires
+       normally (no false skip)
+    10. Marketplace validates
+  - **False-positive trade-off**: the option-list heuristic will also
+    match assistant summaries that end with a bulleted list (e.g.
+    "Verification steps: - X - Y - Z"). The coach may miss a nudge on
+    a real prompt that follows such a summary — accepted trade-off
+    because false SKIPS are far less costly than false FIRES.
+
 ## 2026-07-03 (later 11)
 
 ### Removed

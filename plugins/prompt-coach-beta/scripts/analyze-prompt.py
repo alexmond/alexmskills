@@ -544,6 +544,138 @@ def is_conversational(prompt: str) -> bool:
     return False
 
 
+# ── v0.24.0 — transcript-aware picker-answer detection ─────────────────────
+# When Claude's previous turn asked a multiple-choice question (via
+# AskUserQuestion) or was drafted-for-you continuation, the user's next
+# prompt is really a picker answer, not their fresh authored ask — so any
+# rule the answer text happens to match is a false positive. Reading the
+# session transcript catches this deterministically for AskUserQuestion and
+# heuristically for prefilled option-list continuations.
+
+_CLAUDE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
+
+# Only tail the last N lines of the transcript — the last assistant turn
+# is always in the very recent tail, and transcripts can be 15+ MB.
+_TRANSCRIPT_TAIL_LINES = 80
+
+# Heuristic marker for a prefilled option-list continuation: a `?` or `:`
+# followed by a run of bulleted or numbered lines. Requires ≥2 options; a
+# single `- foo` after a `?` is too permissive. The `:` alternative catches
+# imperative prefills like "Pick one:", "Choose one:", "Options:" — which
+# is how the model often prefixes a pre-drafted picker.
+_OPTION_LIST_RE = re.compile(
+    r"[?:][\s\S]{0,2000}?"
+    r"(?:^\s*(?:[-*•]|\d+\.|\(?[a-eA-E]\))\s+.+\n){2,}",
+    re.MULTILINE,
+)
+
+
+def _current_transcript_path(cwd: Path) -> Path | None:
+    """Return the most-recently-modified transcript file for the cwd's
+    session directory, or None. The directory-naming convention is a
+    slash-to-dash slug of the absolute cwd. Handles missing directories
+    gracefully so a stale/broken lookup can never block a user prompt."""
+    try:
+        slug = str(cwd.resolve()).replace("/", "-")
+        d = _CLAUDE_PROJECTS_DIR / slug
+        if not d.exists():
+            return None
+        transcripts = list(d.glob("*.jsonl"))
+        if not transcripts:
+            return None
+        return max(transcripts, key=lambda p: p.stat().st_mtime)
+    except (OSError, ValueError):
+        return None
+
+
+def _tail_lines(path: Path, n: int) -> list[str]:
+    """Read the last n lines of a file efficiently by seeking near EOF."""
+    try:
+        size = path.stat().st_size
+        # For small files just read everything.
+        if size < 128 * 1024:
+            return path.read_text(errors="replace").splitlines()[-n:]
+        # For large files, seek backwards in 8 KB chunks until we have n newlines.
+        chunk = 8192
+        offset = size
+        buf = b""
+        with path.open("rb") as f:
+            while offset > 0 and buf.count(b"\n") < n + 1:
+                read_size = min(chunk, offset)
+                offset -= read_size
+                f.seek(offset)
+                buf = f.read(read_size) + buf
+        text = buf.decode("utf-8", errors="replace")
+        return text.splitlines()[-n:]
+    except OSError:
+        return []
+
+
+def _last_assistant_turn(cwd: Path) -> dict | None:
+    """Locate the most recent `type: assistant` entry in the current
+    transcript. Returns the parsed JSON dict, or None if nothing found."""
+    t = _current_transcript_path(cwd)
+    if not t:
+        return None
+    for line in reversed(_tail_lines(t, _TRANSCRIPT_TAIL_LINES)):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if entry.get("type") == "assistant":
+            return entry
+    return None
+
+
+def _picker_reason(entry: dict) -> str | None:
+    """Classify an assistant turn as a picker turn:
+    'multi-choice-answer' → AskUserQuestion tool_use present (definitive)
+    'option-list-answer'  → text ends with `?` followed by a bulleted/
+                            numbered list (heuristic; catches prefilled
+                            continuations that the model drafts inline)
+    None                  → not a picker turn
+    """
+    content = entry.get("message", {}).get("content", [])
+    if not isinstance(content, list):
+        return None
+    text_chunks: list[str] = []
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        if (block.get("type") == "tool_use"
+                and block.get("name") == "AskUserQuestion"):
+            return "multi-choice-answer"
+        if block.get("type") == "text":
+            t = block.get("text", "")
+            if isinstance(t, str):
+                text_chunks.append(t)
+    text = "\n".join(text_chunks)
+    if text and _OPTION_LIST_RE.search(text):
+        return "option-list-answer"
+    return None
+
+
+def picker_answer_reason(cwd: Path) -> str | None:
+    """Public entry point: check the most-recent assistant turn in the
+    current transcript. Returns a picker-reason string ('multi-choice-answer'
+    / 'option-list-answer') if the last turn was a picker turn, else None.
+    Never raises — a missing/broken transcript resolves to None so the
+    coach continues to analyze prompts normally."""
+    try:
+        entry = _last_assistant_turn(cwd)
+    except Exception:
+        return None
+    if not entry:
+        return None
+    try:
+        return _picker_reason(entry)
+    except Exception:
+        return None
+
+
 def _match_case(pattern: str, target: str) -> str:
     """Approximate the original token's capitalization on the corrected word."""
     if not pattern:
@@ -3307,7 +3439,9 @@ def _flag_previous_for_review(local_dir: Path, mark_prompt: str) -> None:
         if not m:
             continue
         outcome = m.group(1)
-        if outcome in ("skipped:conversational",):
+        if outcome in ("skipped:conversational",
+                        "skipped:multi-choice-answer",
+                        "skipped:option-list-answer"):
             continue
         # Also skip the entry for the bug-report phrase itself.
         pm = re.search(r"prompt=«([^»]*)»", line)
@@ -3420,6 +3554,33 @@ def main() -> int:
             "chosen": None,
             "praise": None,
             "outcome": "skipped:conversational",
+            "prompt": prompt_raw[:400],
+            "corrections": [],
+        })
+        return 0
+
+    # v0.24.0 — transcript-aware picker-answer short-circuit.
+    # If the last assistant turn was an AskUserQuestion (definitive) or a
+    # `?` followed by a bulleted/numbered list (heuristic — catches
+    # prefilled-continuation cases), the user's next prompt is really an
+    # answer to that picker, not their fresh authored ask. Any rule the
+    # answer text happens to match is a false positive. Never raises;
+    # missing/broken transcript resolves to None so the coach continues
+    # to analyze prompts normally.
+    picker_reason = picker_answer_reason(cwd)
+    if picker_reason:
+        g["updated_at"] = _now_iso()
+        l["updated_at"] = _now_iso()
+        save_json(GLOBAL_STATE, g)
+        save_json(local_dir / "state.json", l)
+        append_log(local_dir, {
+            "t": _now_iso(),
+            "fired": [],
+            "positive_fires": [],
+            "mastery_events": [],
+            "chosen": None,
+            "praise": None,
+            "outcome": f"skipped:{picker_reason}",
             "prompt": prompt_raw[:400],
             "corrections": [],
         })
