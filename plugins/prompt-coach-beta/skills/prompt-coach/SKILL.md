@@ -5,6 +5,93 @@ description: A hook-driven coach that watches your prompts to Claude Code and nu
 
 # prompt-coach (beta)
 
+## Quick start (v0.25+)
+
+### 60-second setup
+
+```
+/plugin marketplace add alexmond/alexmskills
+/plugin install prompt-coach-beta@alexmskills
+/reload-plugins
+```
+
+Restart the session so the `UserPromptSubmit` hook registers. Then just prompt Claude normally — the coach analyzes every prompt in the background and nudges when a rule matches.
+
+### What you'll see when a rule fires
+
+A box appears above Claude's response with the rule id and a coaching hint:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 prompt-coach — vague-reference: Vague reference
+
+The 'it/this/that' is doing a lot of work in that sentence. Which
+file / PR / error are you pointing at?
+
+Progress: 0/15 clean prompts → mastered
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+The nudge is a suggestion, not a block — Claude answers your prompt normally after it. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a row (default 15), then the next dormant rule activates in its place.
+
+### The 4 slash commands
+
+| Command | When to use |
+|---|---|
+| `/prompt-coach-beta:stats` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status. |
+| `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `set`, `describe`, `options`, `mastery`, `sources`, `diff`, `export`, `reset`. |
+| `/prompt-coach-beta:help` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet. |
+| `/prompt-coach-beta:report-issue` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only). |
+
+### Say-it phrases (natural language)
+
+Claude edits your config file when you say any of these:
+
+**Modes** — where the nudge appears:
+- *"set prompt-coach to inline"* — nudge is rendered as the opening block of Claude's response (best for TUIs that don't show stderr)
+- *"set prompt-coach to silent"* — Claude sees the nudge context, you don't
+- *"set prompt-coach to log-only"* — every fire logged, nothing shown
+- *"set prompt-coach to both"* — default: stderr box + Claude sees it
+
+**Voice** — how nudges are phrased:
+- *"set prompt-coach voice to plain"* — simple English, short sentences, no idioms (non-native friendly)
+- *"set prompt-coach voice to colleague"* — default: direct, ends on a question
+
+**Pause / disable:**
+- *"coach pause 10"* — silence nudges for the next 10 prompts
+- *"coach off <rule-id>"* — permanently disable one rule
+- *"coach on <rule-id>"* — re-enable it
+
+**Bug reporting:**
+- *"coach that was wrong"* — flag the PRIOR prompt for `/report-issue`
+
+### First-day tweaks
+
+If English is a second language:
+```
+"set prompt-coach voice to plain"
+```
+
+If you want nudges rendered inline in Claude's response (not stderr box):
+```
+"set prompt-coach to inline"
+```
+
+If you're being nudged too often:
+```
+"show me prompt-coach mastery"        (dashboard of practicing vs mastered rules)
+"coach off <rule-that-keeps-firing>"  (permanent silence per rule)
+"coach pause 10"                      (silence everything for 10 prompts)
+```
+
+### Companion skill: log-review
+
+For cross-repo analytics of coach activity, say **"log review"** or **"daily review"**. That invokes the standalone `log-review` skill at `~/.claude/skills/log-review/` (redacted-by-default output, safe to paste anywhere).
+
+---
+
+## How it works
+
 A `UserPromptSubmit` hook analyzes every prompt you send Claude Code, matches it against a small
 catalog of prompting-best-practice rules, and — at most once per prompt, with per-rule cooldowns —
 emits a short nudge. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a

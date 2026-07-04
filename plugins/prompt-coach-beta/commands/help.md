@@ -24,9 +24,14 @@ Render as a fenced block so it presents like a dashboard, under 60 lines.
 prompt-coach-beta v<VERSION>
 
 A UserPromptSubmit hook that watches every prompt you send Claude Code and nudges
-you toward better prompting habits. 28 rules across 6 tiers, 22 positive detectors,
-typo tolerance, conversational short-circuit. Rules quietly graduate as you master
-them and fade to occasional refreshers.
+you toward better prompting habits. 34 rules across 6 tiers, 22 positive detectors,
+typo tolerance, conversational + picker-answer short-circuit. Rules quietly
+graduate as you master them and fade to occasional refreshers.
+
+New to the coach? See SKILL.md's "Quick start" section — a 60-second setup,
+what a nudge looks like, the four slash commands, and the most-used say-it
+phrases. Path:
+  ~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/skills/prompt-coach/SKILL.md
 
 ────────────────────────────────────────────────────────────────────
 COMMANDS

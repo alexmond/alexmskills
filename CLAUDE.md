@@ -101,6 +101,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-03 — **prompt-coach-daily-review** — 0.21.0/0.22.0: `/prompt-coach-beta:daily-review` reads every repo's log.md + watermark for "since last review". Superseded by log-review skill (0.23.0). Why: cross-repo temporal analytics.
 - 2026-07-03 — **log-review-extract** — 0.23.0: daily-review moved to `~/.claude/skills/log-review/`. Redacted by default; watermark auto-migrates. Why: coach output shouldn't leak repo names to GitHub.
 - 2026-07-04 — **prompt-coach-picker-skip** — 0.24.0: reads session transcript, skips AskUserQuestion answers + `?`/`:`+list prefills. 17/17 real turns caught. Why: picker answers can't be rephrased to dodge a rule.
+- 2026-07-04 — **prompt-coach-quickstart** — 0.25.0: Quick Start section added to SKILL.md + Antora page + help card intro. Covers install, nudge preview, 4 commands, say-it phrases. Why: new users needed onboarding path.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

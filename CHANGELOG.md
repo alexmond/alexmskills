@@ -7,6 +7,36 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-04 (later)
+
+### Added
+- **prompt-coach-beta 0.25.0** — Quick Start documentation. User asked
+  for a "quick start document section for setup and main functions".
+  Added to three places so it surfaces wherever someone discovers the
+  coach:
+  - **`skills/prompt-coach/SKILL.md`**: new "Quick start (v0.25+)"
+    section at the very top (right after the H1), covering:
+    - 60-second setup (marketplace add + install + reload-plugins)
+    - What you'll see when a rule fires (the actual box)
+    - The four slash commands (`stats` / `config` / `help` /
+      `report-issue`) with "when to use" hints
+    - Say-it phrases grouped by category (modes, voice, pause/
+      disable, bug reporting)
+    - First-day tweaks for common situations (non-native, inline
+      preference, nudged-too-often)
+    - Pointer at the companion `log-review` skill
+  - **`docs/modules/ROOT/pages/prompt-coach-beta.adoc`**: same
+    content in Antora format so it publishes to
+    alexmond.org/alexmskills/prompt-coach-beta/. Placed between
+    Install and What-it-watches-for.
+  - **`commands/help.md`**: updated the intro to mention the
+    Quick Start section + point at its path in the plugin cache.
+  - Also refreshed the rule count in the help card intro from
+    "28 rules" to "34 rules" (v0.20 added 6) and mentioned
+    "picker-answer short-circuit" (v0.24 addition) alongside
+    conversational.
+- No code changes; docs-only release.
+
 ## 2026-07-04
 
 ### Added
