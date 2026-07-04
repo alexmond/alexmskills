@@ -450,12 +450,16 @@ def _rule_id_set() -> set[str]:
 
 
 def _mastery_snapshot() -> dict:
-    """Read global state.json and classify every shipped rule."""
+    """Read global state.json and classify every shipped rule.
+    v0.27.0 — `inactive` is now a formal status (rule graduated with 0
+    fires: didn't apply to the user's patterns rather than truly mastered).
+    Reported as its own category so the mastered count reflects real
+    learning."""
     state = _load_json(_global_state_path())
     rules_state = state.get("rules", {}) if isinstance(state, dict) else {}
     prompt_count = state.get("prompt_count", 0) if isinstance(state, dict) else 0
 
-    mastered, in_progress, dormant = [], [], []
+    mastered, inactive, in_progress, dormant = [], [], [], []
     for rule in RULES:
         rs = rules_state.get(rule.id, {}) or {}
         status = rs.get("status", "practicing")
@@ -473,6 +477,8 @@ def _mastery_snapshot() -> dict:
         }
         if status == "mastered":
             mastered.append(item)
+        elif status == "inactive":
+            inactive.append(item)
         elif fires_total > 0 or clean_streak > 0:
             in_progress.append(item)
         else:
@@ -480,10 +486,12 @@ def _mastery_snapshot() -> dict:
     return {
         "prompt_count": prompt_count,
         "mastered": mastered,
+        "inactive": inactive,
         "in_progress": in_progress,
         "dormant": dormant,
         "totals": {
             "mastered": len(mastered),
+            "inactive": len(inactive),
             "in_progress": len(in_progress),
             "dormant": len(dormant),
             "all": len(RULES),
@@ -544,9 +552,27 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
     print(f"  Global state:  {_global_state_path()} "
           f"{'(present)' if _global_state_path().exists() else '(none — no fires yet)'}")
     print(f"  Total prompts analyzed: {snap['prompt_count']}")
-    print(f"  Rules: {t['mastered']} mastered · {t['in_progress']} in progress · "
-          f"{t['dormant']} dormant / {t['all']} shipped")
+    inactive_str = (f" · {t['inactive']} inactive"
+                    if t.get("inactive", 0) > 0 else "")
+    print(f"  Rules: {t['mastered']} mastered · {t['in_progress']} in progress"
+          f"{inactive_str} · {t['dormant']} dormant / {t['all']} shipped")
     print()
+
+    if snap.get("inactive"):
+        # Show inactive as its own section — helps users see rules that
+        # graduated on clean_streak alone (didn't apply to their patterns)
+        # separately from real masteries.
+        print(f"── inactive ({t['inactive']} rules graduated with 0 fires; "
+              f"probably don't apply) ")
+        by_tier: dict[int, list] = {}
+        for r in snap["inactive"]:
+            by_tier.setdefault(r["tier"], []).append(r["id"])
+        for tier in sorted(by_tier):
+            ids = sorted(by_tier[tier])
+            shown = ", ".join(ids[:4])
+            more = f", …+{len(ids) - 4}" if len(ids) > 4 else ""
+            print(f"     L{tier}: {shown}{more}")
+        print()
 
     if snap["mastered"]:
         print("── mastered ─────────────────────────────────────────────")

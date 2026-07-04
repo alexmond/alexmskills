@@ -7,6 +7,69 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-04 (later 3)
+
+### Added
+- **prompt-coach-beta 0.27.0** — evidence-based mastery + `inactive`
+  status + graduation event logging. User: "it feels like we need
+  better protection against false mastery, something is missing here
+  either detection or false counting; it also can't be clearly
+  concluded from the logs why certain mastery is matured."
+  - **`min_fires_for_mastery` config** (default 1). Graduation now
+    requires both `clean_streak >= graduation_threshold` AND
+    `fires_total >= min_fires_for_mastery`. Set to 0 to revert to v0.26
+    behavior; set higher (3+) for stricter mastery.
+  - **New formal status: `inactive`**. Rules that hit
+    `graduation_threshold` clean prompts with `fires_total == 0`
+    transition to `inactive` instead of `mastered`. Semantic: "rule
+    doesn't apply to your patterns" rather than "you internalized it".
+    - Frees the active-rules slot (like `mastered` does), so higher-
+      tier rules can activate
+    - Does NOT count as mastery, does NOT get refresher fires
+    - Rules with `1 <= fires_total < min_fires_for_mastery` stay
+      `practicing` (evidence exists but insufficient for mastery)
+  - **Graduation event logging** — every status transition writes a
+    line to `log.md`:
+    ```
+    - [ts] event=graduation rule=<id> from=<prev> to=<new> fires_total=<n> clean_streak=<n>
+    ```
+    Grep `event=graduation` in any repo's log to audit the mastery
+    timeline. First-time answer to "why did this rule master?"
+  - **Auto-migration** on first v0.27 run. Rules currently
+    `status="mastered"` with `fires_total == 0` transition to
+    `inactive`. Non-destructive: `fires_total` and `clean_streak` stay
+    put; only `status` changes. Each migrated rule gets a graduation
+    event logged (`from=mastered to=inactive`) so the audit trail is
+    preserved. Idempotent via `g["v27_migration_done"]` marker.
+  - **`_mastery_snapshot()` extended** — new `inactive` category
+    alongside `mastered`, `in_progress`, `dormant`. Totals include
+    `inactive` count.
+  - **`cmd_mastery` output** — shows `inactive` as its own section
+    with per-tier breakdown so users see rules that graduated on
+    clean_streak alone (don't apply) separately from real masteries.
+    Header line updated: `Rules: N mastered · N in progress · N
+    inactive · N dormant / N shipped`.
+  - **`active_rules_split()` updated** — `inactive` rules are
+    excluded from the practicing pool (same as `mastered`) so they
+    don't block newer rules from activating. But they don't
+    participate in mastered refreshers either.
+  - **6 test categories verified**:
+    1. New rule with 15 clean prompts + 0 fires → `inactive` (not
+       `mastered`). 6 rules correctly transitioned on real analyzer
+       runs.
+    2. Graduation events logged with `event=graduation rule=... 
+       from=... to=... fires_total=... clean_streak=...` format.
+    3. Auto-migration on first run: legit masteries preserved,
+       `mastered`-with-0-fires rules transitioned to `inactive`,
+       migration marker set (idempotent), migration events logged.
+    4. `min_fires_for_mastery=3` config: rule with 2 fires + 20 clean
+       stays `practicing` (has evidence, but below threshold).
+       Correctly does NOT go to `inactive` (fires > 0) or `mastered`
+       (fires < min).
+    5. Marketplace validates.
+    6. `cmd_mastery` renders the new `inactive` section with per-tier
+       breakdown.
+
 ## 2026-07-04 (later 2)
 
 ### Added

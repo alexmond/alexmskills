@@ -49,6 +49,13 @@ DEFAULT_CONFIG = {
     #              transcript. Adds ~50 output tokens per fire.
     "nudge_style": "both",
     "graduation_threshold": 15,   # clean prompts in a row → mastered
+    # v0.27.0 — evidence requirement for mastery. A rule that hits
+    # graduation_threshold with fires_total below this value transitions to
+    # `inactive` (rule doesn't apply to the user's patterns) instead of
+    # `mastered`. Default 1 = "must have fired at least once". Set to 0 to
+    # revert to v0.26 behavior (mastery on clean_streak alone). Set higher
+    # (e.g. 3) for stricter mastery — only rules with real evidence graduate.
+    "min_fires_for_mastery": 1,
     "cooldown_prompts": 5,        # min prompts between same-rule nudges
     "max_active_rules": 6,        # never nag on more than this many rules at once
                                   # (v0.12.0: raised 5→6 to fit the new L1 tier
@@ -201,6 +208,17 @@ CONFIG_SCHEMA = {
                        "mastered.",
         "example": 15,
         "since": "0.5.0",
+    },
+    "min_fires_for_mastery": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "Evidence requirement for mastery (v0.27+). A rule that hits "
+                       "graduation_threshold with fires_total below this transitions "
+                       "to `inactive` (rule doesn't apply) instead of `mastered`. "
+                       "Default 1: must have fired at least once. Set to 0 to revert "
+                       "to v0.26 behavior. Set to 3+ for stricter mastery.",
+        "example": 1,
+        "since": "0.27.0",
     },
     "cooldown_prompts": {
         "category": "rule-activation",
@@ -3050,7 +3068,11 @@ def active_rules_split(cfg: dict, g: dict, l: dict) -> tuple[list[str], list[str
     """v0.9.0: split into (practicing, mastered). Practicing is capped at
     max_active_rules (the tier that drives daily coaching). Mastered is
     uncapped — they always evaluate, but emit rarely via a longer cooldown.
-    A cooldown of 0 disables mastered firing entirely."""
+    A cooldown of 0 disables mastered firing entirely.
+    v0.27.0: `inactive` status (rule graduated with fires_total == 0)
+    behaves like `mastered` for slot-freeing — the rule doesn't apply to
+    the user's patterns, so it shouldn't block newer rules from activating.
+    But it does NOT get refresher fires or count in mastery stats."""
     practicing: list[str] = []
     mastered: list[str] = []
     for rid in RULE_ORDER:
@@ -3059,6 +3081,9 @@ def active_rules_split(cfg: dict, g: dict, l: dict) -> tuple[list[str], list[str
         st = effective_status(rid, g, l)
         if st == "mastered":
             mastered.append(rid)
+        elif st == "inactive":
+            # Frees the slot but doesn't participate in mastered refreshers.
+            continue
         else:
             practicing.append(rid)
     max_active = int(cfg.get("max_active_rules", 5))
@@ -3461,6 +3486,58 @@ def _flag_previous_for_review(local_dir: Path, mark_prompt: str) -> None:
         f.write(json.dumps(entry) + "\n")
 
 
+def _append_graduation_event(local_dir: Path, rule_id: str, from_status: str,
+                              to_status: str, fires_total: int,
+                              clean_streak: int) -> None:
+    """v0.27.0 — append a graduation event line to log.md so users can grep
+    `event=graduation` and audit when each rule mastered (or went inactive)
+    and how much evidence it had at the time."""
+    log = local_dir / "log.md"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    date = _today()
+    body = log.read_text(encoding="utf-8") if log.exists() else ""
+    lines_out = []
+    if not log.exists():
+        lines_out.append("# prompt-coach log\n")
+    header = f"## {date}\n"
+    if header.strip() not in body:
+        lines_out.append(header)
+    lines_out.append(
+        f"- [{_now_iso()}] event=graduation rule={rule_id} "
+        f"from={from_status} to={to_status} "
+        f"fires_total={fires_total} clean_streak={clean_streak}"
+    )
+    with log.open("a", encoding="utf-8") as f:
+        f.write("\n".join(lines_out) + "\n")
+
+
+def _migrate_v27_inactive_status(g: dict, local_dir: Path) -> int:
+    """v0.27.0 — auto-migration. Rules that graduated pre-v0.27 with
+    fires_total == 0 were labeled `mastered` because the old logic
+    ignored evidence. Now they should be `inactive` — same "frees the
+    active slot" behavior, but doesn't claim mastery. Idempotent (only
+    migrates if a rule is currently `mastered` AND `fires_total == 0`).
+    Returns the number of rules migrated so the caller can log it."""
+    rules = g.get("rules", {})
+    if not isinstance(rules, dict):
+        return 0
+    migrated = 0
+    for rid, rs in rules.items():
+        if (rs.get("status") == "mastered"
+            and int(rs.get("fires_total", 0)) == 0):
+            rs["status"] = "inactive"
+            _append_graduation_event(
+                local_dir, rid, "mastered", "inactive",
+                int(rs.get("fires_total", 0)),
+                int(rs.get("clean_streak", 0)),
+            )
+            migrated += 1
+    if migrated > 0:
+        # Marker on global state so the migration only logs once per install
+        g["v27_migration_done"] = True
+    return migrated
+
+
 def append_log(local_dir: Path, entry: dict) -> None:
     log = local_dir / "log.md"
     log.parent.mkdir(parents=True, exist_ok=True)
@@ -3525,6 +3602,19 @@ def main() -> int:
 
     local_dir = cwd / ".claude" / "prompt-coach"
     l = load_json(local_dir / "state.json", blank_local_state())
+
+    # v0.27.0 — one-shot auto-migration for legacy "mastered with 0 fires"
+    # rules. Runs once per install (marker on global state); each migrated
+    # rule is logged as a graduation event so the audit trail is preserved.
+    # Safe: idempotent (only touches rules that meet the criteria) and
+    # non-destructive (fires_total, clean_streak stay put; only status
+    # changes from "mastered" to "inactive").
+    if not g.get("v27_migration_done"):
+        n_migrated = _migrate_v27_inactive_status(g, local_dir)
+        # Marker set inside the helper only if we actually migrated rules;
+        # for a fresh install with nothing to migrate, set the marker here
+        # so subsequent runs don't scan again.
+        g["v27_migration_done"] = True
 
     # Increment prompt counters.
     g["prompt_count"] = int(g.get("prompt_count", 0)) + 1
@@ -3645,15 +3735,49 @@ def main() -> int:
             gr["clean_streak"] = int(gr.get("clean_streak", 0)) + 1
             lr["clean_streak_here"] = int(lr.get("clean_streak_here", 0)) + 1
 
-        # Graduate if we cleared the bar and the rule wasn't just fired.
+        # v0.27.0 — evidence-based graduation.
+        # Three outcomes when clean_streak reaches graduation_threshold:
+        #   fires_total >= min_fires_for_mastery → "mastered" (real learning)
+        #   fires_total == 0                     → "inactive" (rule doesn't
+        #                                          apply to the user's
+        #                                          patterns; free the active
+        #                                          slot without claiming
+        #                                          mastery)
+        #   0 < fires_total < min_fires           → stay "practicing" (has
+        #                                          some evidence but not
+        #                                          enough for mastery; the
+        #                                          coach keeps checking)
+        # "mastered" and "inactive" both free the active-rules slot so
+        # higher-tier rules can activate; only "mastered" gets refresher
+        # fires or counts in stats.
+        min_fires = int(cfg.get("min_fires_for_mastery", 1))
         if (rid not in fired
             and gr["clean_streak"] >= threshold
-            and gr.get("status") != "mastered"):
-            gr["status"] = "mastered"
-            gr["graduated_at"] = _now_iso()
-            gr["post_mastery_fires"] = 0
-            gr["post_mastery_fire_prompts"] = []
-            mastery_events.append(rid)
+            and gr.get("status") not in ("mastered", "inactive")):
+            fires_total = int(gr.get("fires_total", 0))
+            new_status = None
+            if fires_total >= min_fires:
+                new_status = "mastered"
+                mastery_events.append(rid)
+            elif fires_total == 0:
+                new_status = "inactive"
+                # No mastery event; nothing to praise
+            # else: 0 < fires_total < min_fires — stay practicing, don't
+            # touch status. clean_streak keeps growing; when fires_total
+            # catches up (or clean_streak breaks and re-accumulates), the
+            # decision re-runs.
+            if new_status is not None:
+                prior_status = gr.get("status", "practicing")
+                gr["status"] = new_status
+                gr["graduated_at"] = _now_iso()
+                gr["post_mastery_fires"] = 0
+                gr["post_mastery_fire_prompts"] = []
+                # v0.27.0 — write a graduation event to the local log so
+                # the user can grep `event=graduation` and audit the
+                # mastery timeline. Format kept regex-friendly.
+                _append_graduation_event(local_dir, rid, prior_status,
+                                          new_status, fires_total,
+                                          gr["clean_streak"])
 
         # v0.9.0 — post-mastery fire tracking (for optional auto-demotion).
         # Even if demotion is off, we track the counter so /stats can surface
