@@ -16,7 +16,13 @@ Usage
 
 Reads every `<repo>/.claude/prompt-coach/log.md` under the search root
 plus the global mastery state at `~/.claude/prompt-coach/state.json`.
-Never writes anything; safe to invoke on a schedule.
+
+v0.22+: Default behavior maintains a watermark at
+`~/.claude/prompt-coach/daily-review/last-reviewed.json` so daily runs
+only see new activity since the last review. Explicit window flags (--since,
+--days, --yesterday) skip the watermark entirely so ad-hoc queries
+don't disturb the daily cadence. Escape hatches: --no-mark,
+--reset-mark, --show-mark.
 """
 
 from __future__ import annotations
@@ -127,6 +133,61 @@ def load_global_state() -> dict:
         return json.loads(p.read_text())
     except json.JSONDecodeError:
         return {}
+
+
+# ── Watermark (v0.22+) ─────────────────────────────────────────────────
+
+def _watermark_path() -> Path:
+    # v0.22+ — daily-review owns its own state subdirectory under
+    # ~/.claude/prompt-coach/ so the watermark file belongs to the
+    # daily-review skill, not the coach's top-level namespace.
+    return (Path.home() / ".claude" / "prompt-coach" / "daily-review"
+            / "last-reviewed.json")
+
+
+def load_watermark() -> datetime | None:
+    """Return the last-review timestamp as UTC, or None if unset."""
+    p = _watermark_path()
+    if not p.exists():
+        return None
+    try:
+        data = json.loads(p.read_text())
+        s = data.get("last_reviewed")
+        if not s:
+            return None
+        # Support both plain ISO and 'Z'-suffixed strings
+        if s.endswith("Z"):
+            return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=timezone.utc
+            )
+        return datetime.fromisoformat(s).astimezone(timezone.utc)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
+def save_watermark(ts: datetime) -> None:
+    """Write ts (UTC) as the new watermark. Preserves any other keys."""
+    p = _watermark_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    existing: dict = {}
+    if p.exists():
+        try:
+            existing = json.loads(p.read_text())
+        except json.JSONDecodeError:
+            existing = {}
+    existing["last_reviewed"] = ts.astimezone(timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+    p.write_text(json.dumps(existing, indent=2) + "\n")
+
+
+def reset_watermark() -> bool:
+    """Delete the watermark. Returns True if a file was removed."""
+    p = _watermark_path()
+    if p.exists():
+        p.unlink()
+        return True
+    return False
 
 
 def load_candidates(repo_root: Path) -> list[dict]:
@@ -385,9 +446,17 @@ def render_report(entries: list[dict], per_repo: dict[str, dict],
 
 # ── CLI ────────────────────────────────────────────────────────────────
 
-def _parse_since_until(args) -> tuple[datetime, datetime]:
-    """Resolve --since/--until/--days/--yesterday into a UTC (since, until) pair."""
+def _parse_since_until(args) -> tuple[datetime, datetime, bool]:
+    """Resolve --since/--until/--days/--yesterday into a UTC (since, until)
+    pair. Returns (since, until, uses_watermark). When no explicit window
+    flag is given (v0.22+), default to since=watermark (if present, else
+    today's local midnight) → until=now; the caller updates the watermark
+    to `until` after a successful render unless --no-mark is set."""
     now_local = datetime.now().astimezone()
+    now_utc = now_local.astimezone(timezone.utc)
+    explicit_flag = any([args.yesterday, args.days is not None,
+                          args.since, args.until])
+
     if args.yesterday:
         y = now_local.date() - timedelta(days=1)
         since = datetime(y.year, y.month, y.day, tzinfo=now_local.tzinfo)
@@ -395,21 +464,31 @@ def _parse_since_until(args) -> tuple[datetime, datetime]:
     elif args.days is not None:
         until = now_local
         since = until - timedelta(days=args.days)
-    else:
-        since_d = args.since
-        until_d = args.until
-        if since_d:
-            y, m, d = [int(x) for x in since_d.split("-")]
+    elif args.since or args.until:
+        if args.since:
+            y, m, d = [int(x) for x in args.since.split("-")]
             since = datetime(y, m, d, tzinfo=now_local.tzinfo)
         else:
             t = now_local.date()
             since = datetime(t.year, t.month, t.day, tzinfo=now_local.tzinfo)
-        if until_d:
-            y, m, d = [int(x) for x in until_d.split("-")]
+        if args.until:
+            y, m, d = [int(x) for x in args.until.split("-")]
             until = datetime(y, m, d, tzinfo=now_local.tzinfo) + timedelta(days=1)
         else:
             until = since + timedelta(days=1)
-    return since.astimezone(timezone.utc), until.astimezone(timezone.utc)
+    else:
+        # v0.22+ default: since = watermark (or today's midnight), until = now
+        watermark = load_watermark()
+        if watermark:
+            since = watermark
+        else:
+            t = now_local.date()
+            since = datetime(t.year, t.month, t.day, tzinfo=now_local.tzinfo)
+        until = now_local
+
+    return (since.astimezone(timezone.utc),
+            until.astimezone(timezone.utc),
+            not explicit_flag)
 
 
 def main(argv: list[str]) -> int:
@@ -424,9 +503,33 @@ def main(argv: list[str]) -> int:
     p.add_argument("--repos", help="comma-separated repo paths (overrides "
                     "--search-root)")
     p.add_argument("--json", action="store_true", dest="as_json")
+    # v0.22+ watermark flags
+    p.add_argument("--no-mark", action="store_true",
+                    help="don't update the last-reviewed watermark after "
+                         "this run (default: update on the auto-window)")
+    p.add_argument("--reset-mark", action="store_true",
+                    help="delete the watermark and exit")
+    p.add_argument("--show-mark", action="store_true",
+                    help="print the current watermark and exit")
     args = p.parse_args(argv)
 
-    since, until = _parse_since_until(args)
+    # Watermark management (v0.22+)
+    if args.reset_mark:
+        if reset_watermark():
+            print(f"watermark cleared: {_watermark_path()}")
+        else:
+            print(f"no watermark to clear ({_watermark_path()} did not exist)")
+        return 0
+    if args.show_mark:
+        wm = load_watermark()
+        if wm:
+            print(f"watermark: {wm.isoformat()}")
+            print(f"  file: {_watermark_path()}")
+        else:
+            print(f"watermark unset (no file at {_watermark_path()})")
+        return 0
+
+    since, until, uses_watermark = _parse_since_until(args)
 
     if args.repos:
         log_paths = []
@@ -465,9 +568,17 @@ def main(argv: list[str]) -> int:
             "global_prompt_count": global_state.get("prompt_count"),
         }
         print(json.dumps(out, indent=2, default=str))
+        if uses_watermark and not args.no_mark:
+            save_watermark(until)
         return 0
 
     print(render_report(entries, per_repo, since, until, global_state))
+    # v0.22+ — update watermark after successful render on the auto-window
+    if uses_watermark and not args.no_mark:
+        save_watermark(until)
+        print(f"  Watermark advanced to {until.isoformat(timespec='minutes')}.")
+        print(f"  Next default run will start from there. To skip this, "
+              f"use --no-mark; to redo, --reset-mark.")
     return 0
 
 

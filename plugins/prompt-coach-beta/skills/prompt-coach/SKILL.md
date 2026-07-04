@@ -252,6 +252,15 @@ Complementary to `+/prompt-coach-beta:stats+`: `stats` is a point-in-time
 dashboard reading global state; `daily-review` is temporal + cross-repo,
 reading per-repo log files with a date filter. Both are read-only.
 
+**Watermark (v0.22+).** Default runs with no window flag read a timestamp
+from `~/.claude/prompt-coach/daily-review/last-reviewed.json` and filter
+from there to now, then advance the timestamp after a successful render.
+So running `+/prompt-coach-beta:daily-review+` daily naturally shows only
+new activity since the last review, without renaming any log files. Any
+explicit window flag (`--since`, `--days`, `--yesterday`, etc.) skips the
+watermark entirely so ad-hoc queries don't disturb the daily cadence.
+Escape hatches: `--no-mark`, `--reset-mark`, `--show-mark`.
+
 ## Options + interactive flows + mastery (v0.19+)
 
 Three additions on top of v0.18's `:config`:

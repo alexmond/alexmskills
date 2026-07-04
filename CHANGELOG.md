@@ -7,6 +7,37 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 10)
+
+### Added
+- **prompt-coach-beta 0.22.0** — daily-review watermark. User asked
+  "after done should probably rename the logs so we do not reprocess
+  them again". Chose a watermark file instead of renaming, because
+  the coach's `UserPromptSubmit` hook writes to `log.md` continuously
+  and renaming during a session risks a race with the analyzer.
+  Watermark achieves the same semantic result — "only new stuff
+  since last review" — without touching any log files.
+  - **Watermark file** at
+    `~/.claude/prompt-coach/daily-review/last-reviewed.json` — owned
+    by the daily-review feature, not the coach's top-level namespace.
+  - **Default behavior change**: when no explicit window flag is
+    given, `since` = watermark (or today's local midnight if unset),
+    `until` = now. On successful render, the watermark advances to
+    `until`.
+  - **Explicit flags skip the watermark**: `--since`, `--until`,
+    `--days`, `--yesterday` are ad-hoc queries that don't disturb
+    the daily cadence.
+  - **Escape hatches**: `--no-mark` (don't advance this run),
+    `--reset-mark` (delete + exit), `--show-mark` (print + exit).
+  - **9 test categories verified**: unset watermark shows correct
+    message, default run advances, --show-mark reads back correctly,
+    watermark filters entries to since watermark, --no-mark preserves,
+    --since skips advance, --reset-mark clears, idempotent on second
+    reset, --json path also advances.
+  - Live-verified on the maintainer's real data: default run against
+    ~/IdeaProjects showed 105 prompts across 8 active repos, 21%
+    emit rate triggered the health warning, watermark advanced.
+
 ## 2026-07-03 (later 9)
 
 ### Added

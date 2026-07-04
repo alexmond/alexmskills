@@ -43,6 +43,20 @@ repos.
    - "under ~/code" / "search root ~/code" → `--search-root ~/code`
    - "as JSON" / "json format" → `--json`
 
+   Watermark control (v0.22+):
+
+   | User says | Run |
+   |---|---|
+   | *(no arg — default)* | since = watermark → now; watermark advances after render |
+   | *"since last review"* / *"what's new"* | same as default (explicit) |
+   | *"don't move the mark"* / *"peek only"* | any window + `--no-mark` |
+   | *"reset the watermark"* / *"start over"* | `--reset-mark` |
+   | *"where's the watermark"* / *"show mark"* | `--show-mark` |
+
+   When any explicit window flag is present (`--since`, `--until`, `--days`,
+   `--yesterday`), the watermark is **not** advanced — one-off queries don't
+   disturb the daily cadence.
+
 3. **Render the script's stdout verbatim.** It's already formatted for the
    terminal — box-drawing bars, section headers, aligned columns. Do not
    restyle. If the exit code is non-zero, surface the stderr.
