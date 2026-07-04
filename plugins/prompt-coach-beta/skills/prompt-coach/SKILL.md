@@ -214,6 +214,44 @@ The `outcome` log line now records preset + source per fire (e.g.
 `nudged:inline:full:v1:p=plain:src=static`) so `/prompt-coach-beta:stats` can
 mine which combination you actually converge on.
 
+## Cross-repo daily review (v0.21+)
+
+`+/prompt-coach-beta:daily-review+` aggregates every
+`.claude/prompt-coach/log.md` under a search root (default: `~/IdeaProjects`)
+and renders a scannable brief covering the day's — or an arbitrary window's —
+activity across the fleet.
+
+Sections in the brief:
+
+- **Volume** — prompts analyzed, nudges emitted (with emit rate),
+  praises, refreshers, skipped conversationals, silenced events
+- **Top-fired rules** — with each rule's current mastery status
+  (mastered vs streak N/15)
+- **Positive detections** — praise-eligible patterns the coach caught
+- **Top typo corrections** — dyslexic-friendly normalizations
+- **By repo** — per-repo prompt count + emit breakdown
+- **Flagged for review** — candidates queued in `candidates.jsonl`
+  ready for `/prompt-coach-beta:report-issue`
+- **Health signals** — emit-rate warnings, saturation events, rules
+  close to mastery
+
+Modes:
+
+[cols="1,2",options="header"]
+|===
+| Say | Runs
+| *"daily review"* (default) | Today (since local midnight)
+| *"yesterday"* | Yesterday only
+| *"last week"* / *"last 7 days"* | `--days 7`
+| *"since 2026-07-01"* | `--since 2026-07-01`
+| *"just for alexmskills"* | `--repos <path>`
+| *"as JSON"* | `--json` for scripting
+|===
+
+Complementary to `+/prompt-coach-beta:stats+`: `stats` is a point-in-time
+dashboard reading global state; `daily-review` is temporal + cross-repo,
+reading per-repo log files with a date filter. Both are read-only.
+
 ## Options + interactive flows + mastery (v0.19+)
 
 Three additions on top of v0.18's `:config`:

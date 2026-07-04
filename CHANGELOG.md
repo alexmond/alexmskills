@@ -7,6 +7,45 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-03 (later 9)
+
+### Added
+- **prompt-coach-beta 0.21.0** — `/prompt-coach-beta:daily-review`
+  cross-repo brief. User asked for a daily-runnable analytics
+  view over prompts across all repos, since the existing
+  `/prompt-coach-beta:stats` command is point-in-time from global
+  state.json and doesn't see the per-repo log.md files.
+  - **New script** `scripts/daily-review.py` — reads every
+    `.claude/prompt-coach/log.md` under a search root (default
+    `~/IdeaProjects`, depth 6), parses each entry (regex handles
+    the optional `corrected=[...]` field between positives and
+    praise), filters by a `[since, until)` window, aggregates,
+    and renders a categorized report.
+  - **Report sections**: Volume (prompts, nudges + emit rate,
+    praises, refreshers, skipped, silenced, no-emit); Top-fired
+    rules (with per-rule mastery status from global state);
+    Positive detections; Top typo corrections; By repo (share of
+    prompts + per-repo nudge/praise/refresh/silence breakdown);
+    Flagged for review (candidates.jsonl counts per repo); Health
+    signals (emit-rate warnings, saturation events, rules close to
+    mastery).
+  - **CLI modes**: `--days N`, `--yesterday`, `--since YYYY-MM-DD`,
+    `--until YYYY-MM-DD`, `--search-root <path>`, `--repos <p1,p2>`
+    (comma-separated), `--json`.
+  - **Verified end-to-end on the maintainer's real data**: 11
+    repos with coach logs, 209 prompts across 7 days, all sections
+    render correctly. Empty windows produce a "nothing recorded"
+    message with debug hints rather than an error.
+  - **New slash command** `commands/daily-review.md` — orchestration
+    for Claude with natural-language routing: "daily review",
+    "yesterday", "last week", "since YYYY-MM-DD", "just for
+    <repo>", "as json". Follow-up suggestions calibrated to the
+    report content (high emit rate → check `config mastery`;
+    candidates queued → run `report-issue`; close to mastery →
+    surface it).
+  - **Read-only across the fleet.** No writes to any repo, safe to
+    schedule.
+
 ## 2026-07-03 (later 8)
 
 ### Added
