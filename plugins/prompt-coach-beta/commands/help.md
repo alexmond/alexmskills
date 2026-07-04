@@ -38,6 +38,9 @@ COMMANDS
 
   /prompt-coach-beta:stats           Health dashboard — prompts analyzed, emit rate,
                                      top-fired rules, mastery, typo corrections, config
+  /prompt-coach-beta:mastery         Which rules mastered, which need reset — with
+                                     analysis (well-tested / barely-tested / untested);
+                                     surfaces close-to-mastery rules (v0.26+)
   /prompt-coach-beta:config          Structured config surface — show / get / describe /
                                      set / reset / diff / export / mastery / sources
                                      (v0.18+)

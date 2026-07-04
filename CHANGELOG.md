@@ -7,6 +7,47 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-04 (later 2)
+
+### Added
+- **prompt-coach-beta 0.26.0** — top-level `/prompt-coach-beta:mastery`
+  command + mastery evidence-quality analysis. User asked: "do not see
+  :mastery or is it a different name , should be an easy way to check
+  current mastery, analyze it and check if some of it needs reset."
+  - **New slash command** `commands/mastery.md` — direct top-level
+    access. `/prompt-coach-beta:mastery` runs the same code as
+    `/prompt-coach-beta:config mastery`; you don't have to type the
+    `config` prefix anymore.
+  - **Enhanced `cmd_mastery` output** — new ANALYSIS section at the
+    bottom that classifies mastered rules by evidence quality:
+    - **Well-tested** (`fires_total ≥ 3`) — solid mastery
+    - **Barely-tested** (`1 ≤ fires_total < 3`) — thin evidence but
+      plausible
+    - **Untested** (`fires_total == 0`) — rule graduated with
+      `clean_streak` alone; probably means the rule is irrelevant to
+      the user's patterns rather than truly mastered. Section lists
+      up to 12 untested rules with a reset suggestion.
+    - **Close to mastery** — in-progress rules with `clean_streak ≥ 12`
+      surfaced separately so you know what's about to graduate. A
+      couple more clean prompts and they lock in.
+  - **JSON output extended**: `--json mastery` now includes an
+    `analysis` key with four arrays (`well_tested`, `barely_tested`,
+    `untested`, `close_to_mastery`) each holding rule ids for
+    programmatic downstream use.
+  - **Verified on real state**: user has 29 mastered rules; analysis
+    correctly classifies 7 well-tested, 4 barely-tested, 18 untested
+    (many of the L3/L5 rules that never fired because they don't match
+    the user's prompting patterns). Two rules surfaced at streak
+    12/15.
+  - **Natural-language routing** in the new command: *"show mastery"*
+    / *"how am I doing"* / *"check my mastery"* / *"which rules
+    mastered"* / *"reset <rule-id>"* / *"analyze mastery"* all route
+    to the appropriate script call.
+  - **SKILL.md Quick Start** updated: 4 commands table → 5 commands
+    table, mastery added.
+  - **help.md COMMANDS block** updated to include
+    `/prompt-coach-beta:mastery`.
+
 ## 2026-07-04 (later)
 
 ### Added

@@ -34,11 +34,12 @@ Progress: 0/15 clean prompts → mastered
 
 The nudge is a suggestion, not a block — Claude answers your prompt normally after it. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a row (default 15), then the next dormant rule activates in its place.
 
-### The 4 slash commands
+### The 5 slash commands
 
 | Command | When to use |
 |---|---|
 | `/prompt-coach-beta:stats` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status. |
+| `/prompt-coach-beta:mastery` | *"Which rules mastered, which need reset?"* Per-rule breakdown + analysis (well-tested / barely-tested / untested masteries; close-to-mastery). |
 | `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `set`, `describe`, `options`, `mastery`, `sources`, `diff`, `export`, `reset`. |
 | `/prompt-coach-beta:help` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet. |
 | `/prompt-coach-beta:report-issue` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only). |

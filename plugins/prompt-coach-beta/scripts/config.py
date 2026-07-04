@@ -491,12 +491,52 @@ def _mastery_snapshot() -> dict:
     }
 
 
+def _mastery_analysis(snap: dict) -> dict:
+    """v0.26.0 — classify mastered rules by fires_total (evidence quality)
+    and surface in-progress rules close to graduating. Returns a dict with:
+      well_tested   : mastered rules with fires_total ≥ 3 (solid)
+      barely_tested : mastered rules with 1 ≤ fires_total < 3 (thin evidence)
+      untested      : mastered rules with fires_total == 0 (rule may just be
+                      irrelevant to the user's patterns, not truly mastered)
+      close_to_mastery : in-progress rules with clean_streak ≥ 12 (about to
+                         graduate; surfacing them helps users notice what's
+                         about to lock in).
+    """
+    well_tested = []
+    barely_tested = []
+    untested = []
+    for r in snap["mastered"]:
+        if r["fires_total"] >= 3:
+            well_tested.append(r)
+        elif r["fires_total"] >= 1:
+            barely_tested.append(r)
+        else:
+            untested.append(r)
+    close = [r for r in snap["in_progress"] if r["clean_streak"] >= 12]
+    return {
+        "well_tested": sorted(well_tested, key=lambda r: (r["tier"], r["id"])),
+        "barely_tested": sorted(barely_tested, key=lambda r: (r["tier"], r["id"])),
+        "untested": sorted(untested, key=lambda r: (r["tier"], r["id"])),
+        "close_to_mastery": sorted(close,
+                                    key=lambda r: (-r["clean_streak"],
+                                                    r["tier"], r["id"])),
+    }
+
+
 def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
     """v0.19.0 — mastery dashboard: mastered / in-progress / dormant counts,
-    with per-rule details for the first two groups."""
+    with per-rule details for the first two groups.
+    v0.26.0 — adds an ANALYSIS section that classifies mastered rules by
+    evidence quality (well-tested / barely-tested / untested) and surfaces
+    in-progress rules close to mastery, so users can spot rules worth
+    resetting (untested masteries usually mean the rule is irrelevant to
+    their patterns, not that they've internalized it)."""
     snap = _mastery_snapshot()
+    analysis = _mastery_analysis(snap)
     if as_json:
-        print(json.dumps(snap, indent=2))
+        out = dict(snap)
+        out["analysis"] = {k: [r["id"] for r in v] for k, v in analysis.items()}
+        print(json.dumps(out, indent=2))
         return 0
 
     t = snap["totals"]
@@ -535,6 +575,46 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
         for tier in sorted(by_tier):
             print(f"     L{tier}: {by_tier[tier]} rule(s)")
         print()
+
+    # ── v0.26.0 analysis + suggestions ──────────────────────────────
+    a = analysis
+    total_mastered = len(snap["mastered"])
+    if total_mastered > 0 or a["close_to_mastery"]:
+        print("── ANALYSIS ─────────────────────────────────────────────")
+        print(f"  Mastery evidence quality (of {total_mastered} mastered "
+              f"rules):")
+        print(f"    ✓ well-tested   : {len(a['well_tested']):<3d}  "
+              f"(fires_total ≥ 3 — solid mastery)")
+        print(f"    ~ barely-tested : {len(a['barely_tested']):<3d}  "
+              f"(1 ≤ fires_total < 3 — thin evidence)")
+        print(f"    ? untested      : {len(a['untested']):<3d}  "
+              f"(fires_total = 0 — rule may just be irrelevant to your "
+              f"patterns)")
+        print()
+
+        if a["untested"]:
+            print(f"  Untested mastered rules ({len(a['untested'])}):")
+            for r in a["untested"][:12]:
+                print(f"    ? L{r['tier']}  {r['id']}")
+            if len(a["untested"]) > 12:
+                print(f"    …+{len(a['untested']) - 12} more")
+            print()
+            print(f"  These graduated with clean_streak alone — they never "
+                  f"actually caught you.")
+            print(f"  If you want them to actively check you, reset one:")
+            print(f"    /prompt-coach-beta:config mastery-reset <rule-id>")
+            print(f"  Or leave them mastered — the coach won't nag on them.")
+            print()
+
+        if a["close_to_mastery"]:
+            print(f"  Close to mastery ({len(a['close_to_mastery'])} rule(s) "
+                  f"at streak 12-14/15):")
+            for r in a["close_to_mastery"]:
+                print(f"    → L{r['tier']}  {r['id']:32s}  "
+                      f"streak {r['clean_streak']}/15  "
+                      f"(fires_total {r['fires_total']})")
+            print(f"  A few more clean prompts and these graduate.")
+            print()
 
     print("Reset one rule:    /prompt-coach-beta:config mastery-reset <rule-id>")
     print("Reset everything:  /prompt-coach-beta:config mastery-reset-all")
