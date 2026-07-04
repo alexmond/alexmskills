@@ -100,6 +100,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-03 — **prompt-coach-anthropic-align** — 0.20.0: 6 new rules (xml-tags/classical-role/test-goalseeking/verify-claim/overthinking/edit-preference) + `anthropic_ref` field + `:config sources` verb. 25/34 rules linked. Why: audit-driven coverage.
 - 2026-07-03 — **prompt-coach-daily-review** — 0.21.0/0.22.0: `/prompt-coach-beta:daily-review` reads every repo's log.md + watermark for "since last review". Superseded by log-review skill (0.23.0). Why: cross-repo temporal analytics.
 - 2026-07-03 — **log-review-extract** — 0.23.0: daily-review moved to `~/.claude/skills/log-review/`. Redacted by default; watermark auto-migrates. Why: coach output shouldn't leak repo names to GitHub.
+- 2026-07-04 — **prompt-coach-picker-skip** — 0.24.0: reads session transcript, skips AskUserQuestion answers + `?`/`:`+list prefills. 17/17 real turns caught. Why: picker answers can't be rephrased to dodge a rule.
 
 ### Historic (older than 14 days · see git log for the build-up)
 
