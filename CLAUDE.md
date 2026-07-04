@@ -106,6 +106,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-04 — **prompt-coach-inactive** — 0.27.0: `min_fires_for_mastery` + new `inactive` status + graduation events in log + auto-migration. Legacy false-masteries move to `inactive`. Why: evidence-based mastery.
 - 2026-07-04 — **prompt-coach-tips** — 0.28.0: 6 proactive tips (💡) — Mode A (matching) + Mode B (graduation-unlock paired to L1 masteries). Rate-limited variable-ratio; enabled by default. Why: advanced-technique nudging.
 - 2026-07-04 — **prompt-coach-inline-only** — 0.29.0: `nudge_style` deleted, rendering always inline, new master `enabled: bool`. Legacy configs silently ignored. Why: 3 of 4 modes were dead surface.
+- 2026-07-04 — **prompt-coach-collaborator** — 0.34.0: coach_style=collaborator (C+D). Hook tells Claude via additionalContext to rewrite the user's prompt in-place; no external API. `nudge` legacy path preserved. Why: nagger → collaborator.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

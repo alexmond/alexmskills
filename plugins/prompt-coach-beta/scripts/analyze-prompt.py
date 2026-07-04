@@ -48,6 +48,17 @@ DEFAULT_CONFIG = {
     # the coach entirely for this scope; `pause_until_prompt` still
     # works for temporary silence.
     "enabled": True,
+    # v0.34.0 — coach_style: "collaborator" is the C+D default. Instead
+    # of a hand-written nudge, the hook tells Claude (via
+    # additionalContext) to analyze the user's prompt against the
+    # candidate rules with full session context and produce a
+    # rewrite of the user's prompt. Reply "yes"/"no"/"edit" as
+    # the accept/edit/reject signal on the next turn.
+    #
+    # "nudge" preserves the pre-v0.34 emit path (variant picker,
+    # voice presets, tips catalog, anti-habituation) for users who
+    # want the legacy behavior. Deprecated; will be removed post-v1.0.
+    "coach_style": "collaborator",
     "graduation_threshold": 15,   # clean prompts in a row → mastered
     # v0.27.0 — evidence requirement for mastery. A rule that hits
     # graduation_threshold with fires_total below this value transitions to
@@ -157,6 +168,23 @@ CONFIG_SCHEMA = {
                        "(both/silent/log-only) are silently ignored.",
         "example": True,
         "since": "0.29.0",
+    },
+    "coach_style": {
+        "category": "output",
+        "type": "str",
+        "choices": ["collaborator", "nudge"],
+        "choice_descriptions": {
+            "collaborator": "v0.34+ default. Claude reads the user's prompt in "
+                            "session context and produces a rewrite with the "
+                            "improvements baked in. No hand-written nudges.",
+            "nudge": "Legacy v0.16-v0.29 behavior: hand-written nudge text with "
+                     "variant pool, voice presets, anti-habituation, tips catalog. "
+                     "Deprecated; will be removed post-v1.0.",
+        },
+        "description": "Whether the coach nudges (writes a corrective note) or "
+                       "collaborates (rewrites the prompt for you).",
+        "example": "collaborator",
+        "since": "0.34.0",
     },
     "pause_until_prompt": {
         "category": "output",
@@ -3659,6 +3687,117 @@ def _context_for_claude(rule: Rule) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# v0.34.0 — collaborator mode (C+D architecture)
+# ---------------------------------------------------------------------------
+# Instead of emitting a hand-written nudge and hoping the user rewrites their
+# own prompt, we tell Claude — same turn, same response — to do the analysis
+# and produce an improved rewrite. Claude has full session context via the
+# transcript, so it can veto false positives (context resolves it) and
+# produce a situated improvement.
+#
+# No external API call. No latency. Uses the exact model the user is already
+# paying for on this turn. Data flow: the prompt already goes to Claude to be
+# answered; we just piggyback a "coach analysis" job onto the same response.
+
+_V34_INSTRUCTION_TEMPLATE = """[prompt-coach · v0.34 · collaborator mode]
+
+The user just submitted this prompt:
+«{prompt_text}»
+
+The coach's regex fast-filter identified these candidate rules that MIGHT
+apply to this prompt (rule id · one-line concept · Anthropic guide anchor):
+
+{candidate_rules_block}
+
+Read the last few turns of our conversation as context. Then, in this
+same response, do the following BEFORE addressing the user's actual
+question:
+
+1. Decide which candidate rules actually apply given full context. Rules
+   whose concern is resolved by prior context (e.g. "vague-reference"
+   for "it" when "it" was named two turns ago) go into `vetoed`.
+2. Write an improved version of the user's prompt that addresses the
+   confirmed rules. Don't add improvements NOT backed by a candidate
+   rule — this coach is opinionated, anchored to specific concepts.
+3. List 1-3 specific changes you made, one line each.
+4. Cite the Anthropic guide anchor for each change (see the anchors
+   above; use the exact strings).
+
+Render the coach block at the very start of your response, verbatim,
+following this format:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 prompt-coach — I read your prompt as:
+
+    "<your improved version of the user's prompt>"
+
+Changes:
+  [1] <one-line change with the rule concept in parens>
+  [2] <second change if any>
+  [3] <third change if any>
+
+Sources: <anthropic-guide-anchor-1>
+         <anthropic-guide-anchor-2>
+
+Reply "yes" to proceed with this rewrite, "no" for original, or
+"edit" to change something.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Then, below the block, address the user's actual question using
+your best judgment about which prompt to work from — default to the
+improved version unless the user's original had a specific
+constraint the rewrite loses.
+
+Guardrails:
+- If your confidence that any candidate rule actually applies is LOW
+  (context resolves everything), skip the coach block entirely and
+  just answer the question. Silence is better than a false-positive
+  rewrite.
+- Match the user's voice: brief if they're brief, expansive if they're
+  detailed. Don't preach.
+- The coach is opinionated — every change must trace to one of the
+  candidate rules above. No freewheeling improvements.
+- User's next turn is their signal:
+    "yes" / "y" / "ok"  → they accept your rewrite; you already
+                          proceeded correctly.
+    "no" / "n"          → they preferred the original; on your NEXT
+                          response, reset to the original and proceed.
+    "edit <thing>"      → adjust the rewrite as they specify.
+
+  You don't need to record this — the coach's next-turn analyzer will
+  read your rendered coach block from the transcript and infer the
+  signal.
+
+Your response starts NOW, with either the coach block or (if
+confidence too low) directly with the answer to the user's question."""
+
+
+def _v34_candidate_rules_block(rule_ids: list[str]) -> str:
+    """Render a compact one-rule-per-line block with concept + anthropic_ref.
+    Used inside the v0.34 additionalContext instruction so Claude has enough
+    to reason about which rules apply without needing to look up the full
+    catalog."""
+    lines = []
+    for rid in rule_ids:
+        r = RULES_BY_ID.get(rid)
+        if not r:
+            continue
+        ref = r.anthropic_ref or "(no upstream mapping)"
+        # Concept is derived from rule.name — short and human.
+        lines.append(f"  · {r.id:32s} — {r.name} · {ref}")
+    return "\n".join(lines) if lines else "  (none — this shouldn't happen)"
+
+
+def _v34_context_for_claude(prompt_text: str, rule_ids: list[str]) -> str:
+    """Build the v0.34 additionalContext instruction telling Claude to run
+    the coach analysis inline as part of its response."""
+    return _V34_INSTRUCTION_TEMPLATE.format(
+        prompt_text=prompt_text[:2000],
+        candidate_rules_block=_v34_candidate_rules_block(rule_ids),
+    )
+
+
 def _inline_context_for_claude(rule: Rule, streak: int, threshold: int) -> str:
     """v0.10.0 — `nudge_style: inline` variant. Instructs Claude to render
     the nudge as a visible block at the start of its response so the user
@@ -4152,6 +4291,58 @@ def main() -> int:
 
     outcome = "no-emit"
     context_line: str | None = None
+
+    # v0.34.0 — Collaborator mode intercept. Instead of the elaborate v0.16-
+    # v0.28 emit path (variant picking, disclosure levels, voice presets,
+    # LLM-compose, tips, anti-habituation), let Claude do the analysis + a
+    # rewrite of the user's prompt in the same response. Regex fast-filter
+    # provides candidate rule ids; Claude reads them + session context and
+    # decides. Legacy path stays available via `coach_style: nudge` for
+    # users who want the old behavior.
+    coach_style = cfg.get("coach_style", "collaborator")
+    if coach_style == "collaborator" and fired:
+        # Update fires_total / clean_streak on every practicing/active rule
+        # BEFORE emitting, so mastery ledger stays truthful. This mirrors
+        # what the elaborate path does; we just skip the emit ceremony.
+        current_prompt = g["prompt_count"]
+        min_fires_master = int(cfg.get("min_fires_for_mastery", 1))
+        threshold = int(cfg.get("graduation_threshold", 15))
+        for rid in active_practicing + active_mastered:
+            gr = g["rules"].setdefault(rid, {})
+            lr = l["rules"].setdefault(rid, {})
+            if rid in fired:
+                gr["fires_total"] = int(gr.get("fires_total", 0)) + 1
+                gr["clean_streak"] = 0
+                gr["last_fired_at"] = _now_iso()
+                lr["fires_here"] = int(lr.get("fires_here", 0)) + 1
+                lr["clean_streak_here"] = 0
+                lr["last_fired_at"] = _now_iso()
+            else:
+                gr["clean_streak"] = int(gr.get("clean_streak", 0)) + 1
+                lr["clean_streak_here"] = int(lr.get("clean_streak_here", 0)) + 1
+            # v0.27 evidence-based graduation
+            if (rid not in fired
+                and gr["clean_streak"] >= threshold
+                and gr.get("status") not in ("mastered", "inactive")):
+                fires_total = int(gr.get("fires_total", 0))
+                new_status = None
+                if fires_total >= min_fires_master:
+                    new_status = "mastered"
+                    mastery_events.append(rid)
+                elif fires_total == 0:
+                    new_status = "inactive"
+                if new_status is not None:
+                    prior_status = gr.get("status", "practicing")
+                    gr["status"] = new_status
+                    gr["graduated_at"] = _now_iso()
+                    _append_graduation_event(local_dir, rid, prior_status,
+                                              new_status, fires_total,
+                                              gr["clean_streak"])
+        context_line = _v34_context_for_claude(prompt_raw, list(fired))
+        outcome = f"collaborator:candidates={len(fired)}"
+        # Skip the entire legacy emit path — jump to persistence.
+        chosen = None
+        chosen_mastered = None
 
     if chosen is not None:
         rule = RULES_BY_ID[chosen]

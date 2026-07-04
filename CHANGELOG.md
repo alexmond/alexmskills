@@ -7,6 +7,54 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-04 (later 6)
+
+### Added
+- **prompt-coach-beta 0.34.0** — **collaborator mode** (C+D
+  architecture). User: "actually i like combination of c and d";
+  "no need for mode, always inline, none other work"; "2 is not
+  relevant we are analizing same promt user already sent to
+  antropic, lets go right to 34."
+  - **Insight**: since the user's prompt is already going to
+    Claude on this turn (Claude Code is the LLM), we don't need
+    a separate Anthropic API call. The hook adds a
+    `additionalContext` instruction telling Claude to run the
+    coach analysis + produce a rewrite as part of the same
+    response. Zero extra latency. Zero extra cost. Zero new
+    dependency.
+  - **New default**: `coach_style: "collaborator"`. When the
+    regex fast-filter identifies ≥1 candidate rule, the hook
+    emits a template instructing Claude to:
+    1. Decide which candidate rules actually apply (with full
+       session context — vetoes false positives that context
+       resolves)
+    2. Write an improved version of the user's prompt with the
+       changes baked in
+    3. Cite the Anthropic guide anchors (`anthropic_ref` field
+       from v0.20) for each change
+    4. Render as a coach block at the very start of the response
+    5. Then answer the user's actual question, using the
+       improved prompt unless the user rejects
+  - **Response signal via next turn**: user replies "yes" /
+    "no" / "edit" — this becomes their accept/edit/reject signal
+    for the next turn's analyzer to detect via the v0.24 picker-
+    answer transcript reader. (v0.35 will wire this loop; v0.34
+    just ships the coach block.)
+  - **Legacy path preserved**: set `coach_style: "nudge"` to
+    revert to the v0.16-v0.29 emit path (variant picker, voice
+    presets, tips catalog, anti-habituation). Deprecated; will
+    be removed post-v1.0.
+  - **State updates preserved**: fires_total, clean_streak, and
+    v0.27 evidence-based graduation all update in collaborator
+    mode. Mastery ledger stays truthful.
+  - **Version jump**: 0.29 → 0.34 per user instruction ("go
+    right to 34"). Intermediate v0.30-v0.33 releases from the
+    roadmap sketch are folded into this one.
+  - **Six tests pass**: collaborator context emits on regex-hit
+    prompt, log outcome=collaborator:candidates=N, coach_style=
+    nudge preserves legacy path, fires_total increments,
+    enabled=false silences everything, marketplace validates.
+
 ## 2026-07-04 (later 5)
 
 ### Changed
