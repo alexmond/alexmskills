@@ -1,7 +1,7 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump graduate install-help docs-build dev-link dev-unlink
+.PHONY: help validate list bump graduate install-help docs-build dev-link dev-unlink test-coach
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -9,6 +9,9 @@ help: ## Show this help
 
 validate: ## Validate the marketplace + all plugin manifests
 	@bash scripts/validate-marketplace.sh
+
+test-coach: ## Run the prompt-coach-beta release test harness (run after each release)
+	@python3 plugins/prompt-coach-beta/scripts/test-harness.py
 
 list: ## List catalog: name, version, description
 	@jq -r '.plugins[] | [.name, .version, .description] | @tsv' \

@@ -7,6 +7,50 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05 (later 5)
+
+### Changed / Removed
+- **prompt-coach-beta 0.38.0** — collaborator-only + big cleanup + a
+  release test harness. User: "also remove legacy mode, the mode
+  works very well and cleanup, confirm that everything still works,
+  we also need a test harness that can be done after each release."
+  - **Legacy `nudge` mode removed.** `coach_style` is gone; when a
+    rule fires, Claude always does the collaborator rewrite. The
+    entire hand-written v0.16-v0.28 emit path was deleted: the nudge
+    block, the refresher block, and **16 now-dead functions** (`_box`,
+    `_box_medium`, `_box_short`, `_refresher_box`, `_praise_box`,
+    `_context_for_claude`, `_praise_context`,
+    `_inline_context_for_claude`, `_inline_context_for_claude_refresher`,
+    `pick_nudge`, `_pick_variant`, `_disclosure_level`,
+    `_resolve_voice_source`, `_llm_compose_instruction`, `_is_silenced`,
+    `_fires_in_window`).
+  - **Dead config removed** (nothing read them anymore): `coach_style`,
+    `voice_preset`, `voice_source`, and the five anti-habituation keys
+    (`saturation_threshold`, `silence_window`, `silence_duration`,
+    `disclosure_medium_at`, `disclosure_short_at`). The `voice` and
+    `anti-habituation` config categories are gone. Rationale: under
+    collaborator mode Claude writes each rewrite fresh, so there's no
+    preset to pick and no repeated text to habituate to.
+  - **~570 net lines deleted** from the analyzer (633 removed / 64
+    added). Also fixed a long-standing `\s` SyntaxWarning (raw
+    docstring).
+  - **New release test harness** — `scripts/test-harness.py` +
+    `make test-coach`. 15 checks drive the real hook + config surface
+    in throwaway HOME/repo dirs: clean→ack, rule→collaborator block w/
+    URLs, `show_source_urls` toggle, `enabled=false` silence, no
+    fires_total double-count, mastery→🎓 congrats, conversational skip,
+    config get/set/describe, analyze single + history, sources/paths
+    `--open` (mocked browser), scripts parse, marketplace validates.
+    **Run after every release.** All 15 green on this release.
+  - **Docs de-staled**: SKILL.md (removed the nudge_style / voice /
+    anti-habituation sections + updated Quick Start to show the 💬
+    collaborator block, Configuration, verify-it's-on), help.md
+    (config reference + say-it phrases), Makefile (`test-coach`).
+  - Kept intact: collaborator, praise (inline), ack, tips, analyze,
+    sources/paths, mastery ledger, typo tolerance, the 34-rule
+    catalog. The Rule `variants` data remains (dead but harmless;
+    a deeper data-layer cleanup for later).
+
 ## 2026-07-05 (later 4)
 
 ### Added

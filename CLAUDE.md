@@ -110,6 +110,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-05 — **prompt-coach-liveness** — 0.35.0: praise had no inline branch (dead since v0.29); restored it + 🎓 mastery congrats + `ack_clean` clean-prompt heartbeat; fixed v0.34 fires_total double-count. Why: "too silent" was real.
 - 2026-07-05 — **prompt-coach-access** — 0.36.0: `show_source_urls` (clickable doc URLs in coach block, in quick-set) + `sources --open` browser + new `paths` verb (skill folders, state, runnable scripts). Why: access to docs + own files.
 - 2026-07-05 — **prompt-coach-analyze** — 0.37.0: on-demand `analyze "<text>"` / `--last N` + `/prompt-coach-beta:analyze` runs full 34-rule catalog on any prompt/history, coached. Why: knowledge on demand, not passive.
+- 2026-07-05 — **prompt-coach-collab-only** — 0.38.0: removed legacy `nudge` mode + `coach_style` + 16 dead fns + voice/anti-habituation cfg (~570 lines); added `make test-coach` (15-check harness). Why: collaborator won; need a gate.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

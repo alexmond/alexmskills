@@ -19,20 +19,27 @@ Restart the session so the `UserPromptSubmit` hook registers. Then just prompt C
 
 ### What you'll see when a rule fires
 
-A box appears above Claude's response with the rule id and a coaching hint:
+As of v0.34 the coach is a **collaborator** (not a nagger): when a rule fires, Claude reads your prompt in context and rewrites it with the fix baked in, at the top of its response:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 prompt-coach — vague-reference: Vague reference
+💬 prompt-coach — I read your prompt as:
 
-The 'it/this/that' is doing a lot of work in that sentence. Which
-file / PR / error are you pointing at?
+    "in src/auth/login.js, update handleLogin() to reject empty
+     password submissions with a 422 and a 'password required'
+     message. Keep the existing test suite green."
 
-Progress: 0/15 clean prompts → mastered
+Changes:
+  [1] Named the file + function (was: 'the login flow')
+  [2] Made the behavior explicit + added a guardrail
+
+Sources: https://…/be-clear-and-direct
+
+Reply "yes" to proceed, "no" for original, or "edit" to change something.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-The nudge is a suggestion, not a block — Claude answers your prompt normally after it. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a row (default 15), then the next dormant rule activates in its place.
+On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The coach is a suggestion, not a block — Claude answers your prompt normally. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a row (default 15, with an evidence gate), then the next dormant rule activates.
 
 ### The 5 slash commands
 
@@ -53,14 +60,14 @@ Claude edits your config file when you say any of these:
 - *"enable prompt-coach"* — turn it back on
 - *"coach pause 10"* — temporary silence for 10 prompts
 
-(Rendering is always inline as of v0.29 — the pre-v0.29 `nudge_style` options
-`both` / `silent` / `log-only` are silently ignored. Inline was the only mode
-that worked reliably in a Claude Code CLI environment; the rest were dead
-surface.)
+(Rendering is always inline. As of v0.38 the coach is collaborator-only — Claude
+rewrites your prompt fresh each time — so the pre-v0.38 `nudge_style`,
+`voice_preset`/`voice_source`, and anti-habituation options were all removed.)
 
-**Voice** — how nudges are phrased:
-- *"set prompt-coach voice to plain"* — simple English, short sentences, no idioms (non-native friendly)
-- *"set prompt-coach voice to colleague"* — default: direct, ends on a question
+**Analyze / docs / files** (v0.36+):
+- *"analyze this prompt: <text>"* / *"analyze my last 20 prompts"* — full-catalog coaching on demand
+- *"open the docs for <rule>"* — open the Anthropic guide section in a browser
+- *"show me the skill folders"* — list the plugin's folders, state files, runnable scripts
 
 **Pause / disable:**
 - *"coach pause 10"* — silence nudges for the next 10 prompts
@@ -72,16 +79,11 @@ surface.)
 
 ### First-day tweaks
 
-If English is a second language:
-```
-"set prompt-coach voice to plain"
-```
-
 To fully disable the coach in this repo/scope:
 ```
 "disable prompt-coach"
 ```
-(Coach is inline-only as of v0.29 — no need to pick a rendering mode.)
+(Coach is collaborator-only + inline as of v0.38 — no rendering mode or voice to pick.)
 
 If you're being nudged too often:
 ```
@@ -248,97 +250,30 @@ Set `typo_tolerance: 0` in config to disable the normalization pass entirely.
 
 ## Configuration
 
-Config resolves in order: repo local → user global → default. Keys:
+Config resolves in order: repo local → user global → default. Run
+`/prompt-coach-beta:config show` for the live, schema-backed list. Key knobs:
 
-- `nudge_style` — `"both"` (default) / `"silent"` / `"log-only"`. Applies to praise as well.
+- `enabled` — master switch; `false` = the hook returns immediately (default: true)
+- `ack_clean` / `ack_ratio` — the `✓` liveness heartbeat on clean prompts + its rate (default: true / 1)
+- `show_source_urls` — full clickable doc URLs in the coach block (default: true)
 - `graduation_threshold` — clean prompts in a row → mastered (default: 15)
-- `cooldown_prompts` — min prompts between same-rule nudges (default: 5)
-- `max_active_rules` — never nag on more than this many rules at once (default: 5)
-- `pause_until_prompt` — skip nudging until global `prompt_count` passes this
+- `min_fires_for_mastery` — evidence gate: a rule needs ≥ this many fires before it can master, else it retires *inactive* (default: 1)
+- `cooldown_prompts` — min prompts between same-rule fires (default: 5)
+- `mastered_cooldown_prompts` — cooldown between refresher fires on mastered rules (default: 50; `0` disables)
+- `max_active_rules` — cap on practicing rules active at once (default: 6)
+- `pause_until_prompt` — skip until global `prompt_count` passes this
 - `disabled_rules` — array of rule ids to permanently silence
-- `praise_ratio` — 1 praise per N clean prompts with a positive detection (default: 10, Kohn's don't-dilute threshold)
-- `praise_on_mastery` — celebrate when a rule graduates (default: true)
-- `praise_on_first_after_fire` — celebrate immediate corrections (default: true)
-- `disable_praise` — silence all encouragement but keep nudges (default: false)
-- `mastered_cooldown_prompts` — cooldown between refresher fires on mastered rules (default: 50; `0` disables refresher firing)
-- `demote_on_regression` — object `{enabled, threshold, window}`; off by default. When on, auto-demotes a mastered rule that fires threshold+ times within window prompts.
+- `praise_ratio` / `praise_on_mastery` / `praise_on_first_after_fire` / `disable_praise` — encouragement layer
+- `tips_enabled` — proactive advanced-technique tips (default: true)
 - `typo_tolerance` — Levenshtein edit distance for typo normalization (default: 2, `0` disables)
-- `llm_fallback.enabled` — stub for v0.6 opt-in LLM classification when regex misses (default: false)
+
+> **v0.38 removed** the legacy `nudge_style`, `voice_preset`/`voice_source`, and the
+> anti-habituation keys (`saturation_threshold`, `silence_window`, `silence_duration`,
+> `disclosure_medium_at`, `disclosure_short_at`) along with the hand-written nudge path.
+> The coach is **collaborator-only**: when a rule fires Claude rewrites your prompt fresh,
+> so there is no preset to pick and no repeated text to habituate to.
 
 Full source citations behind each rule: [`docs/sources.md`](../../docs/sources.md).
-
-## nudge_style — four options (v0.10+)
-
-| Style | User sees | Claude sees | When to use |
-|---|---|---|---|
-| `both` (default) | boxed nudge on **stderr** (dim area under prompt) | `additionalContext` with guidance | You want the nudge visible AND Claude to factor it in |
-| `silent` | nothing | `additionalContext` with guidance | You've internalized the rules; just want Claude to compensate |
-| `log-only` | nothing | nothing | Weekly review discipline — read `log.md`, no live nudges |
-| **`inline`** (v0.10+) | **the boxed nudge is rendered as the opening block of Claude's response** | render instruction + guidance | You want the nudge **inline in your transcript**. Best if your TUI doesn't render hook stderr. |
-
-### Switching modes
-
-Just say it and Claude will edit the right file:
-
-- *"Set prompt-coach to inline"* → writes `nudge_style: "inline"` to `~/.claude/prompt-coach/config.json`
-- *"Set prompt-coach to silent"*
-- *"Set prompt-coach to log-only for this repo"*
-- *"Reset prompt-coach mode"* → deletes the local override so the global default takes over
-- *"Disable praise"* → sets `disable_praise: true`
-- *"Praise every N prompts"* → sets `praise_ratio: N`
-
-### About inline mode
-
-The mechanism: the hook writes an instruction into `additionalContext` telling Claude to render the
-nudge box *verbatim* at the very start of its response, then continue with the actual task. Costs
-~50 extra output tokens per fire and adds the nudge as a persistent line in your transcript. If a
-nudge doesn't substantively apply because prior context resolves the ambiguity, Claude renders the
-block but adds a one-line "(context resolves the ambiguity, proceeding)" note.
-
-## Voice presets & sources (v0.17+)
-
-Two orthogonal config knobs shape *how* the coach talks to you.
-
-### `voice_preset` — personality
-
-Chooses which set of pre-written phrasings the coach draws from.
-
-- `colleague` (default) — friendly, direct, ends on a concrete question. Assumes fluent
-  colloquial English and light idiom. "You said 'fix it' — what's 'it'?"
-- `plain` — simple English, short sentences, no idioms, no jargon. Written for
-  non-native speakers or anyone who prefers explicit phrasing. "Please tell me what
-  'it' or 'this' is. For example: a file name, a PR number, or an error message."
-
-Coverage: L1 + L2 rules (10 rules) ship both presets with 3 variants each = 60
-phrasings. L3–L6 rules currently ship `colleague` only; if you pick `plain`, they
-fall back to `colleague` (no crash, no missing text). L3–L6 `plain` variants will be
-added as evidence surfaces which rules fire most.
-
-Switch it conversationally:
-
-- *"set prompt-coach voice to plain"*
-- *"set prompt-coach voice to colleague"*
-- *"reset prompt-coach voice"*
-
-### `voice_source` — who authors the sentence
-
-Independent of preset. Chooses whether the nudge text is drawn from the static
-catalog or composed fresh by Claude.
-
-| Source | How | Cost per fire | Determinism |
-|---|---|---|---|
-| `static` (default) | Pre-written variants from the catalog. Rotates + follows disclosure levels. | 0 tokens, ~0 ms | Deterministic — same rule, same context → same text (mod novelty rotation) |
-| `llm-compose` | Hook passes rule id + guidance + your prompt shape to Claude in `additionalContext`; Claude writes the nudge fresh, primed to reflect *this specific* prompt with 6 anti-disagreement guardrails. | +200–800 ms, ~150–400 output tokens per fire | Non-deterministic; may feel repetitive-in-a-different-way |
-| `hybrid` | First fire in the window = static preset (deterministic, teaching-focused). Medium/short refreshers = llm-compose (livelier when you've already learned the rule and want a light-touch reminder). | Costs both, sparingly | Mixed |
-
-Anti-disagreement guardrails baked into `llm-compose`: must open with the rule id
-header verbatim, must not override the rule even if context resolves the referent,
-must end on a concrete ask, word-count cap by disclosure level, must match the
-preset's voice.
-
-The `outcome` log line now records preset + source per fire (e.g.
-`nudged:inline:full:v1:p=plain:src=static`) so `/prompt-coach-beta:stats` can
-mine which combination you actually converge on.
 
 ## Cross-repo daily review — moved out (v0.23+)
 
@@ -359,13 +294,11 @@ picks up the skill from `~/.claude/skills/log-review/`. Redacted-by-default
 Three additions on top of v0.18's `:config`:
 
 - `+/prompt-coach-beta:config options <key>+` — enumerates legal values for a key
-  with per-choice explanations. For enums like `voice_source`, lists each choice
-  and what it does. For int/bool/list, shows current + default + example +
-  description. Answers *"what modes exist?"* without needing to already know.
+  with per-choice explanations. For int/bool/list, shows current + default +
+  example + description. Answers *"what modes exist?"* without needing to already know.
 - `+/prompt-coach-beta:config quick+` — interactive multi-choice picker for the
-  ~4 categorical settings (`voice_preset`, `voice_source`, `nudge_style`,
-  `praise_ratio`). Claude walks you through with AskUserQuestion; each answer
-  routes to `:config set`.
+  ~4 high-value settings (`ack_clean`, `show_source_urls`, `praise_ratio`, `tips_enabled`).
+  Claude walks you through with AskUserQuestion; each answer routes to `:config set`.
 - `+/prompt-coach-beta:config full+` — same pattern for every schema key. Enum
   keys → picker; numeric/bool → "keep current / type new value / reset to
   default". Longer flow; you can skip categories.
@@ -413,25 +346,6 @@ The command is the discoverable path when you don't know what the options are ca
 Writes are deep-merged into the target JSON — keys the schema doesn't know about
 (e.g. forward-compat entries from future versions) are preserved, not stripped.
 Invalid values (wrong type, not in `choices`) are rejected with a clear error.
-
-## Anti-habituation (v0.16+)
-
-Same message repeated wears out. The literature (Hattie & Timperley 2007 on feedback wear-out;
-Sasse & Rashid 2013 on alert fatigue; ad-tech creative-wearout research) converges on **variety
-+ frequency capping + escalation** as the combination that keeps coaching salient. The coach
-ships all four:
-
-- **Variant pool** — L1 rules have 3 phrasing variants each, hand-written in a "colleague giving
-  quick feedback" voice. Rotates on each fire.
-- **Novelty constraint** — never repeats a variant within the last 2 fires of the same rule.
-- **Progressive disclosure** — fires_in_window drives format: full box for the first fire,
-  medium box (no sources, no progress line) for the 2nd–3rd, one-liner for the 4th+.
-- **Silence after saturation** — 5 fires within 30 prompts triggers a 30-prompt silence on
-  that rule. Absence is a signal: coaching isn't landing, going quiet is more honest than
-  nagging.
-
-Config knobs: `saturation_threshold` (default 5), `silence_window` (30), `silence_duration`
-(30), `disclosure_medium_at` (2 fires in window), `disclosure_short_at` (4).
 
 ## Mastery ≠ silence (v0.9+)
 
@@ -530,20 +444,20 @@ Full prompts stay in `log.md` locally. You see the exact payload before it's pos
 
 ```
 ~/.claude/prompt-coach/
-├── config.json        # global config (nudge_style, thresholds, disabled_rules)
+├── config.json        # global config (enabled, thresholds, disabled_rules)
 └── state.json         # global mastery ledger: fires_total, clean_streak, status per rule
 
 <repo>/.claude/prompt-coach/
-├── config.json        # per-repo overrides (nudge_style, disabled_rules)
+├── config.json        # per-repo overrides (enabled, disabled_rules)
 ├── state.json         # per-repo fires_here, reactivations
 └── log.md             # rolling log of nudges + prompt previews
 ```
 
 ## Verify it's on
 
-- New prompt should either produce a boxed nudge on stderr (when `nudge_style: both` and a rule
-  fires), an inline block at the start of Claude's response (when `nudge_style: inline`), or
-  leave `.claude/prompt-coach/log.md` growing (all modes).
+- A rule-firing prompt should produce the inline `💬 prompt-coach` block at the start of
+  Claude's response; a clean prompt produces the one-line `✓` heartbeat. Either way
+  `.claude/prompt-coach/log.md` keeps growing.
 - Global counter: `jq '.prompt_count' ~/.claude/prompt-coach/state.json` should increment per
   prompt.
 - If neither happens, the hook may not be registered — check `enabledPlugins` in

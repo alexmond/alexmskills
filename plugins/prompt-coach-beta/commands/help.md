@@ -64,12 +64,11 @@ SAY-IT PHRASES (talk to Claude naturally; Claude edits the right file)
     "coach pause 10"                  temporary silence for N prompts
     "reset prompt-coach mode"         drop local override (legacy — no-op post-v0.29)
 
-  Voice (v0.17+):
-    "set prompt-coach voice to colleague"  default — direct, ends on a question
-    "set prompt-coach voice to plain"      simple English for non-native speakers
-    "set prompt-coach source to static"    default — pre-written variants
-    "set prompt-coach source to llm-compose" Claude writes a fresh, situated nudge each fire
-    "set prompt-coach source to hybrid"    static on full fires, llm-compose on refreshers
+  Analyze / sources / files (v0.36+):
+    "analyze this prompt: <text>"     full-catalog read + a coached rewrite
+    "analyze my last N prompts"       pattern report over recent history
+    "open the docs for <rule>"        open the Anthropic guide URL in a browser
+    "show me the skill folders"       list plugin folders, state, runnable scripts
 
   Pause / disable:
     "coach pause 10"                  silence for the next N prompts
@@ -88,29 +87,23 @@ SAY-IT PHRASES (talk to Claude naturally; Claude edits the right file)
 ────────────────────────────────────────────────────────────────────
 CURRENT CONFIG (resolved: default → global → this repo)
 
-  nudge_style:                <live value>
+  enabled:                    <live value>  (master switch; false = fully off)
+  ack_clean:                  <live value>  (✓ heartbeat on clean prompts)
+  ack_ratio:                  <live value>  (1 = every clean prompt)
+  show_source_urls:           <live value>  (clickable doc URLs in the coach block)
   graduation_threshold:       <live value>  (clean prompts in a row → mastered)
-  cooldown_prompts:           <live value>  (min between same-rule nudges)
+  min_fires_for_mastery:      <live value>  (evidence gate for mastery)
+  cooldown_prompts:           <live value>  (min between same-rule fires)
   mastered_cooldown_prompts:  <live value>  (min between refresher fires)
   max_active_rules:           <live value>  (default 6)
   praise_ratio:               <live value>  (1 praise per N clean prompts w/ positive)
   praise_on_mastery:          <live value>
   praise_on_first_after_fire: <live value>
   disable_praise:             <live value>
+  tips_enabled:               <live value>  (proactive advanced-technique tips)
   typo_tolerance:             <live value>  (0 disables normalization)
   disabled_rules:             <live value>
   demote_on_regression:       <live value>  (self-healing; off by default)
-
-  Anti-habituation (v0.16+):
-    saturation_threshold:     <live value>  (N fires in silence_window → silence)
-    silence_window:           <live value>  (sliding window in prompts)
-    silence_duration:         <live value>  (how long silence lasts)
-    disclosure_medium_at:     <live value>  (fire count → medium box)
-    disclosure_short_at:      <live value>  (fire count → one-liner)
-
-  Voice (v0.17+):
-    voice_preset:             <live value>  (colleague | plain)
-    voice_source:             <live value>  (static | llm-compose | hybrid)
 
   Global config file:   ~/.claude/prompt-coach/config.json
   Per-repo config file: .claude/prompt-coach/config.json (per repo)
@@ -118,13 +111,13 @@ CURRENT CONFIG (resolved: default → global → this repo)
 ────────────────────────────────────────────────────────────────────
 CONFIG OPTIONS REFERENCE
 
-  nudge_style        both | silent | log-only | inline
-                     both     — boxed nudge on stderr + Claude sees context
-                     silent   — Claude sees, user doesn't
-                     log-only — no external output; every fire logged
-                     inline   — nudge rendered as opening block of Claude's response
+  enabled                   Master switch. false = hook returns immediately (default: true)
+  ack_clean                 ✓ liveness heartbeat on clean prompts (default: true)
+  ack_ratio                 Emit the ack every Nth clean prompt (default: 1)
+  show_source_urls          Full clickable doc URLs in the coach block (default: true)
 
   graduation_threshold      N clean prompts → rule masters (default: 15)
+  min_fires_for_mastery     Evidence gate: min fires before a rule can master (default: 1)
   cooldown_prompts          Min prompts between same-rule nudges (default: 5)
   mastered_cooldown_prompts Refresher cooldown for mastered rules (default: 50; 0=off)
   max_active_rules          Cap on practicing rules active at once (default: 6)
@@ -141,26 +134,10 @@ CONFIG OPTIONS REFERENCE
                             rules that fire threshold+ times within window prompts.
                             Off by default.
 
-  Anti-habituation (v0.16+):
-  saturation_threshold      N fires in silence_window → silence rule (default: 5)
-  silence_window            Sliding window in prompts (default: 30)
-  silence_duration          How long silence lasts (default: 30 prompts)
-  disclosure_medium_at      Fire count in window → medium box (default: 2)
-  disclosure_short_at       Fire count in window → one-liner (default: 4)
-
-  Voice (v0.17+):
-  voice_preset              Which set of phrasings the coach draws from:
-                              colleague  — default, direct, ends on a question
-                              plain      — simple English for non-native speakers
-                            L1+L2 ship both presets with 3 variants each; L3-L6
-                            fall back to colleague when plain requested.
-  voice_source              Who authors the nudge text at fire time:
-                              static      — pre-written variants (default; 0 cost)
-                              llm-compose — Claude writes fresh, situated to your
-                                            prompt with 6 guardrails
-                                            (+200-800ms, ~150-400 tokens/fire)
-                              hybrid      — static on full fires, llm-compose on
-                                            medium/short refreshers
+  (v0.38 removed the legacy `nudge_style`, `voice_preset`/`voice_source`, and the
+   anti-habituation keys along with the hand-written nudge path. The coach is
+   collaborator-only: when a rule fires, Claude rewrites your prompt fresh, so
+   there's no preset to pick and no repeated text to habituate to.)
 
 ────────────────────────────────────────────────────────────────────
 STATE FILES

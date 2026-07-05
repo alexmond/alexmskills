@@ -48,17 +48,6 @@ DEFAULT_CONFIG = {
     # the coach entirely for this scope; `pause_until_prompt` still
     # works for temporary silence.
     "enabled": True,
-    # v0.34.0 — coach_style: "collaborator" is the C+D default. Instead
-    # of a hand-written nudge, the hook tells Claude (via
-    # additionalContext) to analyze the user's prompt against the
-    # candidate rules with full session context and produce a
-    # rewrite of the user's prompt. Reply "yes"/"no"/"edit" as
-    # the accept/edit/reject signal on the next turn.
-    #
-    # "nudge" preserves the pre-v0.34 emit path (variant picker,
-    # voice presets, tips catalog, anti-habituation) for users who
-    # want the legacy behavior. Deprecated; will be removed post-v1.0.
-    "coach_style": "collaborator",
     # v0.35.0 — liveness. On a clean prompt (nothing else fired), emit a
     # compact ambient one-liner confirming the coach ran + showing mastery
     # progress. Informational, not praise; distinct ✓ glyph. `ack_ratio`
@@ -94,23 +83,12 @@ DEFAULT_CONFIG = {
                                   # with no-answer-shape included)
     "pause_until_prompt": 0,      # user-set: skip nudging until global_prompt_count > this
     "disabled_rules": [],         # user can permanently silence a rule id
-    # v0.16.0 — anti-habituation (variant pool + progressive disclosure +
-    # novelty constraint + silence-after-saturation). Evidence: Hattie &
-    # Timperley 2007 on feedback wear-out; Sasse & Rashid 2013 on alert
-    # fatigue; ad-tech creative-wearout literature. Same message repeated
-    # loses ~40-60% impact after 3-4 exposures.
-    "saturation_threshold": 5,        # 5+ fires in silence_window → silence
-    "silence_window": 30,             # prompts — sliding window for saturation
-    "silence_duration": 30,           # prompts — how long to stay silent
-    "disclosure_medium_at": 2,        # 2nd fire in window → medium box
-    "disclosure_short_at": 4,         # 4th+ fire in window → one-liner
-    # v0.17.0 — voice_preset chooses the coach's personality (which set of
-    # phrasings to draw from). voice_source chooses WHO authors the sentence
-    # at fire time: preset text ("static"), Claude composing fresh
-    # ("llm-compose"), or a mix ("hybrid": static on full, llm-compose on
-    # medium/short so refreshers feel situated).
-    "voice_preset": "colleague",      # "colleague" | "plain"
-    "voice_source": "static",         # "static" | "llm-compose" | "hybrid"
+    # v0.38.0 — the v0.16 anti-habituation config (saturation_threshold,
+    # silence_window, silence_duration, disclosure_medium_at,
+    # disclosure_short_at) and v0.17 voice config (voice_preset,
+    # voice_source) were removed with the legacy nudge emit path. Under
+    # collaborator mode Claude writes each rewrite fresh, so there's no
+    # repeated-text to habituate to and no preset to pick.
     # Encouragement layer (v0.3+). Sparing praise for the specific positive
     # behaviors mirroring the negative rules — evidence-based defaults tuned
     # for variable-ratio reinforcement without diluting nudges.
@@ -181,23 +159,6 @@ CONFIG_SCHEMA = {
         "example": True,
         "since": "0.29.0",
     },
-    "coach_style": {
-        "category": "output",
-        "type": "str",
-        "choices": ["collaborator", "nudge"],
-        "choice_descriptions": {
-            "collaborator": "v0.34+ default. Claude reads the user's prompt in "
-                            "session context and produces a rewrite with the "
-                            "improvements baked in. No hand-written nudges.",
-            "nudge": "Legacy v0.16-v0.29 behavior: hand-written nudge text with "
-                     "variant pool, voice presets, anti-habituation, tips catalog. "
-                     "Deprecated; will be removed post-v1.0.",
-        },
-        "description": "Whether the coach nudges (writes a corrective note) or "
-                       "collaborates (rewrites the prompt for you).",
-        "example": "collaborator",
-        "since": "0.34.0",
-    },
     "ack_clean": {
         "category": "output",
         "type": "bool",
@@ -237,32 +198,6 @@ CONFIG_SCHEMA = {
                        "Use to silence the coach for N prompts (say 'coach pause N').",
         "example": None,
         "since": "0.5.0",
-    },
-    # ── voice ──
-    "voice_preset": {
-        "category": "voice",
-        "type": "str",
-        "choices": ["colleague", "plain"],
-        "choice_descriptions": {
-            "colleague": "Direct, colloquial, ends on a concrete question. 'You said fix it — what is it?' Assumes fluent English + light idiom.",
-            "plain": "Simple English, short sentences, no idioms, no jargon. For non-native speakers or anyone who prefers explicit. L1+L2 rules covered; L3-L6 fall back to colleague.",
-        },
-        "description": "Which phrasing personality the coach uses.",
-        "example": "plain",
-        "since": "0.17.0",
-    },
-    "voice_source": {
-        "category": "voice",
-        "type": "str",
-        "choices": ["static", "llm-compose", "hybrid"],
-        "choice_descriptions": {
-            "static": "Pre-written variants from the catalog. 0 cost, deterministic (same rule + context → same text, mod novelty rotation).",
-            "llm-compose": "Claude writes the nudge fresh, situated to YOUR prompt, with 6 anti-disagreement guardrails. +200-800ms, ~150-400 output tokens per fire.",
-            "hybrid": "Static on full fires (deterministic teaching moment). Llm-compose on medium/short refreshers (livelier when repeating).",
-        },
-        "description": "Who authors the nudge sentence at fire time.",
-        "example": "llm-compose",
-        "since": "0.17.0",
     },
     # ── rule-activation ──
     "max_active_rules": {
@@ -403,44 +338,6 @@ CONFIG_SCHEMA = {
                        "for longer.",
         "example": 2,
         "since": "0.5.0",
-    },
-    # ── anti-habituation ──
-    "saturation_threshold": {
-        "category": "anti-habituation",
-        "type": "int",
-        "description": "N fires of the same rule within silence_window prompts triggers "
-                       "silence.",
-        "example": 5,
-        "since": "0.16.0",
-    },
-    "silence_window": {
-        "category": "anti-habituation",
-        "type": "int",
-        "description": "Sliding window in prompts for saturation detection.",
-        "example": 30,
-        "since": "0.16.0",
-    },
-    "silence_duration": {
-        "category": "anti-habituation",
-        "type": "int",
-        "description": "How many prompts a silenced rule stays silent.",
-        "example": 30,
-        "since": "0.16.0",
-    },
-    "disclosure_medium_at": {
-        "category": "anti-habituation",
-        "type": "int",
-        "description": "Fire count in window at which the nudge shrinks to a medium box "
-                       "(no sources, no progress bar).",
-        "example": 2,
-        "since": "0.16.0",
-    },
-    "disclosure_short_at": {
-        "category": "anti-habituation",
-        "type": "int",
-        "description": "Fire count in window at which the nudge shrinks to a one-liner.",
-        "example": 4,
-        "since": "0.16.0",
     },
     # ── llm-fallback (stub) ──
     "llm_fallback": {
@@ -1174,7 +1071,7 @@ def rule_missing_context_fetch(prompt: str) -> bool:
 
 
 def rule_no_answer_shape(prompt: str) -> bool:
-    """Information-seeking question with no format spec — evidence: real
+    r"""Information-seeking question with no format spec — evidence: real
     prompts like 'what are lsp servers', 'how much of github app support
     do we have?', 'Do we have enough for release?', and 'Are there java
     libs...' were firing nothing at all.
@@ -3555,200 +3452,9 @@ def within_cooldown(rid: str, l: dict, cfg: dict, mastered: bool = False) -> boo
     return (l.get("prompt_count", 0) - last) < int(cfg.get(key, default))
 
 
-def pick_nudge(fired: list[str], l: dict, cfg: dict, mastered: bool = False) -> str | None:
-    """Pick the highest-priority firing rule that isn't in cooldown.
-    mastered=True uses the longer mastered_cooldown_prompts window."""
-    eligible = [r for r in fired if not within_cooldown(r, l, cfg, mastered=mastered)]
-    if not eligible:
-        return None
-    def rank(rid: str) -> tuple:
-        r = RULES_BY_ID[rid]
-        return (r.tier, RULE_ORDER.index(rid))
-    eligible.sort(key=rank)
-    return eligible[0]
-
-
 # ---------------------------------------------------------------------------
 # Emission
 # ---------------------------------------------------------------------------
-
-
-def _refresher_box(rule: Rule, days_since_mastery: int | None, mode: str) -> str:
-    """v0.9.0 — softer box for a mastered rule that fired. No sources,
-    no progress bar; a one-line refresher plus the context that this rule
-    is mastered."""
-    mastery_line = (f"mastered {days_since_mastery}d ago"
-                    if days_since_mastery is not None else "mastered")
-    return (
-        f"🔄 prompt-coach [{mode} · refresher] — {rule.id} ({mastery_line})\n"
-        f"   {rule.primary_nudge}"
-    )
-
-
-def _fires_in_window(gr: dict, current_prompt: int, window: int) -> int:
-    """v0.16.0 — count recent fires within a sliding window of prompts."""
-    return sum(1 for p in gr.get("recent_fire_prompts", [])
-               if current_prompt - p <= window)
-
-
-def _pick_variant(rule: Rule, gr: dict, cfg: dict | None = None) -> tuple[int, str]:
-    """v0.16.0 — anti-habituation variant picker with novelty constraint.
-    v0.17.0 — takes cfg to know which voice preset's variants to draw from.
-    Avoids the last 2 variants used. Returns (index, text)."""
-    preset = (cfg or {}).get("voice_preset", DEFAULT_VOICE_PRESET)
-    variants = rule.variants_for(preset)
-    if not variants:
-        return 0, ""
-    if len(variants) == 1:
-        return 0, variants[0]
-    recent = list(gr.get("recent_variants", []))
-    candidates = [i for i in range(len(variants)) if i not in recent]
-    if not candidates:
-        candidates = list(range(len(variants)))
-    idx = candidates[int(gr.get("fires_total", 0)) % len(candidates)]
-    return idx, variants[idx]
-
-
-def _resolve_voice_source(cfg: dict, level: str) -> str:
-    """v0.17.0 — resolve which source of text to use (static | llm-compose)
-    given the config'd voice_source and the current disclosure level.
-
-    - static     → always static preset text
-    - llm-compose → always Claude composes
-    - hybrid     → static on 'full', llm-compose on 'medium'/'short'
-    """
-    vs = cfg.get("voice_source", "static")
-    if vs not in ("static", "llm-compose", "hybrid"):
-        vs = "static"
-    if vs == "hybrid":
-        return "static" if level == "full" else "llm-compose"
-    return vs
-
-
-def _llm_compose_instruction(rule: Rule, level: str, preset: str,
-                             days_since_mastery: int | None,
-                             prompt_preview: str,
-                             is_refresher: bool = False) -> str:
-    """v0.17.0 — build an additionalContext instruction that lets Claude
-    write the nudge text fresh, situated to the user's actual prompt.
-
-    Guardrails baked in to prevent the "disagreement" failure mode:
-      - opens with the rule id header
-      - never overrides the rule's judgment (deliver the coaching even if
-        prior context resolves the specific referent)
-      - ends on a concrete ask when guidance implies one
-      - word-count ceiling per disclosure level
-    """
-    length_cap = {"full": 45, "medium": 25, "short": 15}[level]
-    header = (
-        f"🔄 prompt-coach — refresher on {rule.id} (mastered "
-        f"{days_since_mastery if days_since_mastery is not None else 0}d ago)"
-        if is_refresher else
-        f"🎯 prompt-coach [{'inline' if level == 'full' else 'inline · ' + level}] — {rule.id}"
-    )
-    example_variants = rule.variants_for(preset)[:2]
-    examples_block = ""
-    if example_variants:
-        examples_block = (
-            "  For reference, the preset's static phrasings for this rule "
-            f"(voice: {preset}) are:\n"
-            + "\n".join(f"    - {v!r}" for v in example_variants) + "\n"
-        )
-
-    return (
-        f"[prompt-coach · inline · {level}"
-        f"{' · refresher' if is_refresher else ''} · llm-compose] "
-        f"Rule '{rule.id}' ({rule.name}) matched. Write a **situated** "
-        f"nudge — tailored to the user's actual prompt — and render it "
-        f"as the opening block of your response BEFORE addressing the "
-        f"task.\n\n"
-        f"HARD RULES for the nudge you write:\n"
-        f"  1. Start with EXACTLY this header line as-is: `{header}`\n"
-        f"  2. Follow with ONE blockquote line of coaching. Cap: "
-        f"{length_cap} words.\n"
-        f"  3. DO NOT override the rule. Even if the referent is clear "
-        f"from prior context, still deliver the coaching (add a brief "
-        f"parenthetical 'context resolves this one' if you want, but "
-        f"never skip the coaching itself). The rule fired for a "
-        f"reason.\n"
-        f"  4. Match the voice preset `{preset}`: "
-        f"{'friendly, direct, ends on a concrete question' if preset == 'colleague' else 'simple English, short sentences, no idioms, no jargon'}.\n"
-        f"  5. End on a concrete ask when the guidance implies one "
-        f"(e.g. 'what file?', 'what's off-limits?', 'what does done look "
-        f"like?').\n"
-        f"  6. Prompt shape you're coaching on (first 60 chars): "
-        f"«{prompt_preview[:60]}»\n\n"
-        f"{examples_block}"
-        f"Then answer the user's actual task, normally.\n\n"
-        f"Guidance for shaping the response after the nudge: {rule.guidance}"
-    )
-
-
-def _disclosure_level(gr: dict, current_prompt: int, cfg: dict) -> str:
-    """v0.16.0 — progressive disclosure. Fires in the recent window govern
-    whether to show the full box (teaching), a shorter reminder, or a
-    one-liner. Reflects 'you've seen this; quick reminder'."""
-    fires = _fires_in_window(gr, current_prompt, int(cfg.get("silence_window", 30)))
-    if fires >= int(cfg.get("disclosure_short_at", 4)):
-        return "short"
-    if fires >= int(cfg.get("disclosure_medium_at", 2)):
-        return "medium"
-    return "full"
-
-
-def _is_silenced(gr: dict, current_prompt: int) -> bool:
-    """v0.16.0 — is this rule inside its silence-after-saturation window?"""
-    return current_prompt < int(gr.get("silence_until_prompt", 0))
-
-
-def _box(rule: Rule, variant_text: str, streak: int, threshold: int, mode: str) -> str:
-    """Full box — first fire in a window, or post-silence return.
-    v0.16.0: takes a variant_text explicitly instead of reading rule.nudge."""
-    bar = "━" * 70
-    lines = [
-        bar,
-        f"🎯 prompt-coach [{mode}] — {rule.id}: {rule.name}",
-        "",
-        variant_text,
-        "",
-        "Sources:",
-    ]
-    for title, url in rule.sources:
-        lines.append(f"  • {title}  <{url}>")
-    lines.append("")
-    lines.append(
-        f"Progress: {streak}/{threshold} clean prompts → mastered · "
-        f"say 'coach pause 10' to silence · 'coach off {rule.id}' to disable."
-    )
-    lines.append(bar)
-    return "\n".join(lines)
-
-
-def _box_medium(rule: Rule, variant_text: str, mode: str) -> str:
-    """v0.16.0 — reminder-scale box. No sources, no progress line.
-    Fires 2nd-3rd time in the window."""
-    bar = "━" * 60
-    return (
-        f"{bar}\n"
-        f"🎯 prompt-coach [{mode}] — {rule.id}\n\n"
-        f"{variant_text}\n"
-        f"{bar}"
-    )
-
-
-def _box_short(rule: Rule, variant_text: str, mode: str) -> str:
-    """v0.16.0 — one-line callout. Fires 4th+ time in the window.
-    You've heard this multiple times; brief poke only."""
-    return f"🎯 {rule.id} · {variant_text}"
-
-
-def _context_for_claude(rule: Rule) -> str:
-    return (
-        f"[prompt-coach] The user's prompt matched the coaching rule "
-        f"'{rule.id}' ({rule.name}). Guidance for how to respond well: "
-        f"{rule.guidance} This is advisory, not a directive — proceed with "
-        f"the user's actual task."
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -3924,72 +3630,6 @@ def _ack_line(g: dict, active_practicing: list[str], threshold: int,
         return (f"✓ prompt-coach · clean prompt · watching {practicing_n} "
                 f"rule{'s' if practicing_n != 1 else ''}")
     return "✓ prompt-coach · clean prompt · all active rules mastered 🎓"
-
-
-def _inline_context_for_claude(rule: Rule, streak: int, threshold: int) -> str:
-    """v0.10.0 — `nudge_style: inline` variant. Instructs Claude to render
-    the nudge as a visible block at the start of its response so the user
-    sees the coaching inline. More visible than stderr; costs ~50 output
-    tokens per fire."""
-    bar = "━" * 60
-    box = (
-        f"{bar}\n"
-        f"🎯 prompt-coach — {rule.id}: {rule.name}\n\n"
-        f"{rule.primary_nudge}\n\n"
-        f"Progress: {streak}/{threshold} clean prompts → mastered\n"
-        f"{bar}"
-    )
-    return (
-        f"[prompt-coach · inline mode] The user's prompt matched the "
-        f"coaching rule '{rule.id}' ({rule.name}). Because the user has "
-        f"opted into `nudge_style: inline`, render the following block "
-        f"AT THE VERY START of your response, VERBATIM, before addressing "
-        f"the user's task:\n\n"
-        f"{box}\n\n"
-        f"Then answer the user's actual question. If the nudge doesn't "
-        f"substantively apply because prior context makes the referent "
-        f"clear, still render the block but add a one-line note like "
-        f"'(context resolves the ambiguity, proceeding)' after it. "
-        f"Guidance for shaping the response: {rule.guidance}"
-    )
-
-
-def _inline_context_for_claude_refresher(rule: Rule, days_since: int | None) -> str:
-    """v0.10.0 — inline variant for a refresher (mastered rule that fired).
-    Softer instruction — one-line block, not the full-width box."""
-    mastery_line = (f"mastered {days_since}d ago"
-                    if days_since is not None else "mastered")
-    line = f"🔄 prompt-coach — refresher on {rule.id} ({mastery_line}) — {rule.primary_nudge}"
-    return (
-        f"[prompt-coach · inline refresher] Mastered rule '{rule.id}' matched. "
-        f"Render this ONE line at the start of your response before addressing "
-        f"the task: `{line}`. Keep it as a single blockquote or callout line. "
-        f"Guidance: {rule.guidance} Don't belabor it — this is a light "
-        f"re-fire, not a full nudge."
-    )
-
-
-def _praise_box(kind: str, header: str, text: str,
-                sources: list[tuple[str, str]], mode: str) -> str:
-    """Praise line — deliberately shorter/gentler than the nudge box."""
-    icon = {"mastery": "🎓", "first-after-fire": "✨",
-            "variable-ratio": "✅"}.get(kind, "✅")
-    lines = [
-        f"{icon} prompt-coach [{mode} · {kind}] — {header}",
-        f"   {text}",
-    ]
-    if sources:
-        titles = ", ".join(t for t, _ in sources[:2])
-        lines.append(f"   (Encouragement grounded in: {titles})")
-    return "\n".join(lines)
-
-
-def _praise_context(kind: str, id_: str, text: str) -> str:
-    return (
-        f"[prompt-coach · {kind}] The user's prompt did the specific positive "
-        f"thing tracked by '{id_}'. Text shown to the user: {text} "
-        f"Advisory context; keep the response focused on their actual task."
-    )
 
 
 def pick_praise(positive_fires: list[str], mastery_events: list[str],
@@ -4314,10 +3954,6 @@ def main() -> int:
     fired_practicing = [rid for rid in active_practicing if fires(prompt, rid)]
     fired_mastered = [rid for rid in active_mastered if fires(prompt, rid)]
     fired = fired_practicing + fired_mastered  # for logging + bookkeeping
-    chosen = pick_nudge(fired_practicing, l, cfg, mastered=False)
-    chosen_mastered: str | None = None
-    if chosen is None and fired_mastered:
-        chosen_mastered = pick_nudge(fired_mastered, l, cfg, mastered=True)
 
     threshold = int(cfg.get("graduation_threshold", 15))
     mastery_events: list[str] = []  # rule ids that graduated this prompt
@@ -4420,195 +4056,23 @@ def main() -> int:
     outcome = "no-emit"
     context_line: str | None = None
 
-    # v0.34.0 — Collaborator mode intercept. Instead of the elaborate v0.16-
-    # v0.28 emit path (variant picking, disclosure levels, voice presets,
-    # LLM-compose, tips, anti-habituation), let Claude do the analysis + a
-    # rewrite of the user's prompt in the same response. Regex fast-filter
-    # provides candidate rule ids; Claude reads them + session context and
-    # decides. Legacy path stays available via `coach_style: nudge` for
-    # users who want the old behavior.
-    coach_style = cfg.get("coach_style", "collaborator")
-    if coach_style == "collaborator" and fired:
-        # v0.35.0 — the canonical bookkeeping loop above (over `active`) has
-        # ALREADY updated fires_total / clean_streak / graduation /
-        # mastery_events for every active rule this prompt. The collaborator
-        # intercept only builds the additionalContext instruction telling
-        # Claude to rewrite the prompt; it must NOT re-touch state, or every
-        # fired rule gets +2 fires_total and every clean rule +2 streak
-        # (the v0.34 double-count bug — a single prompt showed fires_total=2).
+    # v0.38.0 — Collaborator is the ONLY mode. When any rule fires, Claude
+    # does the analysis + rewrite in the same response (the C+D
+    # architecture). The legacy v0.16-v0.28 hand-written emit path (variant
+    # picking, disclosure levels, voice presets, LLM-compose, refresher
+    # boxes) was removed — the `coach_style: nudge` option is gone.
+    #
+    # The canonical bookkeeping loop above (over `active`) has ALREADY
+    # updated fires_total / clean_streak / graduation / mastery_events for
+    # every active rule this prompt. The intercept only builds the
+    # additionalContext instruction; it must NOT re-touch state (that was
+    # the v0.34 double-count bug). Mastery events still flow to the praise
+    # layer below, so the congrats renders here too.
+    if fired:
         context_line = _v34_context_for_claude(
             prompt_raw, list(fired),
             show_urls=bool(cfg.get("show_source_urls", True)))
         outcome = f"collaborator:candidates={len(fired)}"
-        # Skip the entire legacy emit path — jump to persistence. Mastery
-        # events (if a rule graduated this prompt) still flow to the praise
-        # layer below, so the congrats renders even in collaborator mode.
-        chosen = None
-        chosen_mastered = None
-
-    if chosen is not None:
-        rule = RULES_BY_ID[chosen]
-        gr = g["rules"][chosen]
-        lr = l["rules"][chosen]
-        current_prompt = g["prompt_count"]
-
-        # v0.16.0 — silence-after-saturation check. If this rule has fired
-        # too many times recently and we entered a silence window, skip
-        # emission but still record the fire so state stays honest.
-        if _is_silenced(gr, current_prompt):
-            outcome = "silenced:saturation"
-        else:
-            gr["last_nudged_at"] = _now_iso()
-            lr["last_nudged_at"] = _now_iso()
-            lr["last_nudged_prompt"] = l["prompt_count"]
-            l["last_nudge_prompt"] = l["prompt_count"]
-
-            mode = cfg["nudge_style"]
-            paused_until = int(cfg.get("pause_until_prompt", 0))
-            if g["prompt_count"] <= paused_until:
-                outcome = "paused"
-            else:
-                # v0.16.0 — pick variant (novelty-aware) and disclosure level.
-                # v0.17.0 — pass cfg so preset selection works.
-                variant_idx, variant_text = _pick_variant(rule, gr, cfg)
-                level = _disclosure_level(gr, current_prompt, cfg)
-                preset = cfg.get("voice_preset", DEFAULT_VOICE_PRESET)
-                source = _resolve_voice_source(cfg, level)
-                outcome = (
-                    f"nudged:{cfg['nudge_style']}:{level}:v{variant_idx}"
-                    f":p={preset}:src={source}"
-                )
-
-                streak = int(g["rules"][chosen].get("clean_streak", 0))
-                if mode == "both":
-                    if level == "full":
-                        box = _box(rule, variant_text, streak, threshold, mode)
-                    elif level == "medium":
-                        box = _box_medium(rule, variant_text, mode)
-                    else:  # short
-                        box = _box_short(rule, variant_text, mode)
-                    print(box, file=sys.stderr, flush=True)
-                if mode == "inline":
-                    if source == "llm-compose":
-                        # v0.17.0 — Claude composes situated text with guardrails.
-                        context_line = _llm_compose_instruction(
-                            rule, level, preset, None, prompt_raw,
-                            is_refresher=False,
-                        )
-                    else:
-                        # v0.17.0 — static: build the inline instruction from the
-                        # picked variant text, embedding it verbatim so Claude
-                        # renders exactly what the preset says (fixes v0.16 bug
-                        # where medium/short paths left the variant to Claude).
-                        if level == "full":
-                            context_line = _inline_context_for_claude(
-                                rule, streak, threshold)
-                            context_line = context_line.replace(
-                                rule.primary_nudge, variant_text)
-                        elif level == "medium":
-                            context_line = (
-                                f"[prompt-coach · inline · medium] Rule '{rule.id}' "
-                                f"matched. Render EXACTLY this at the start of your "
-                                f"response, before addressing the task, verbatim as "
-                                f"a header line followed by a single blockquote:\n\n"
-                                f"🎯 prompt-coach [inline] — {rule.id}\n\n"
-                                f"> {variant_text}\n\n"
-                                f"Then answer the user's actual question. Do not "
-                                f"substitute or rephrase — copy the blockquote text "
-                                f"verbatim. Guidance for shaping the response: "
-                                f"{rule.guidance}"
-                            )
-                        else:  # short
-                            context_line = (
-                                f"[prompt-coach · inline · short] Rule '{rule.id}' "
-                                f"matched — you've seen this multiple times recently. "
-                                f"Render EXACTLY this ONE compact line at the start "
-                                f"of your response, verbatim:\n\n"
-                                f"🎯 {rule.id} · {variant_text}\n\n"
-                                f"Then answer the user's actual question. Do not "
-                                f"substitute or rephrase — copy the line verbatim. "
-                                f"Brief poke only; skip detailed guidance."
-                            )
-                elif mode in ("both", "silent"):
-                    context_line = _context_for_claude(rule)
-
-                # v0.16.0 — update variant history + fire prompts for next time.
-                recent_variants = list(gr.get("recent_variants", []))
-                recent_variants.append(variant_idx)
-                gr["recent_variants"] = recent_variants[-2:]  # cap at 2
-                recent_fires = list(gr.get("recent_fire_prompts", []))
-                recent_fires.append(current_prompt)
-                gr["recent_fire_prompts"] = recent_fires[-10:]  # cap at 10
-
-                # v0.16.0 — after emit, check if we've hit saturation.
-                # If so, enter silence for silence_duration prompts.
-                fires_in_window = _fires_in_window(
-                    gr, current_prompt, int(cfg.get("silence_window", 30)))
-                if fires_in_window >= int(cfg.get("saturation_threshold", 5)):
-                    gr["silence_until_prompt"] = (
-                        current_prompt + int(cfg.get("silence_duration", 30))
-                    )
-    elif chosen_mastered is not None:
-        # v0.9.0 — mastered rule fires: soft refresher, longer cooldown.
-        rule = RULES_BY_ID[chosen_mastered]
-        gr = g["rules"][chosen_mastered]
-        lr = l["rules"][chosen_mastered]
-        gr["last_nudged_at"] = _now_iso()
-        lr["last_nudged_at"] = _now_iso()
-        lr["last_nudged_prompt"] = l["prompt_count"]
-        l["last_nudge_prompt"] = l["prompt_count"]
-        outcome = f"refresher:{cfg['nudge_style']}"
-
-        mode = cfg["nudge_style"]
-        paused_until = int(cfg.get("pause_until_prompt", 0))
-        if g["prompt_count"] <= paused_until:
-            outcome = "paused"
-        else:
-            # Days since graduation, if available.
-            grad = gr.get("graduated_at")
-            days_since = None
-            if grad:
-                try:
-                    grad_dt = datetime.strptime(grad, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-                    now_dt = datetime.now(timezone.utc)
-                    days_since = max(0, (now_dt - grad_dt).days)
-                except (ValueError, TypeError):
-                    pass
-            # v0.17.0 — resolve voice source for the refresher too.
-            # Refreshers count as "short" for source resolution.
-            preset = cfg.get("voice_preset", DEFAULT_VOICE_PRESET)
-            source = _resolve_voice_source(cfg, "short")
-            if mode == "both":
-                print(_refresher_box(rule, days_since, mode),
-                      file=sys.stderr, flush=True)
-            if mode == "inline":
-                if source == "llm-compose":
-                    context_line = _llm_compose_instruction(
-                        rule, "short", preset, days_since, prompt_raw,
-                        is_refresher=True,
-                    )
-                else:
-                    # v0.17.0 — static refresher: embed the picked variant text
-                    # verbatim so it renders reliably.
-                    picked = rule.primary_nudge_for(preset)
-                    mastery_line = (f"mastered {days_since}d ago"
-                                    if days_since is not None else "mastered")
-                    context_line = (
-                        f"[prompt-coach · inline · refresher] Mastered rule "
-                        f"'{rule.id}' matched. Render EXACTLY this ONE line at "
-                        f"the start of your response, verbatim:\n\n"
-                        f"🔄 prompt-coach — refresher on {rule.id} "
-                        f"({mastery_line}) — {picked}\n\n"
-                        f"Then answer the user's actual task. Do not rephrase — "
-                        f"copy verbatim. Light re-fire; don't belabor it."
-                    )
-            elif mode in ("both", "silent"):
-                context_line = (
-                    f"[prompt-coach · refresher] Mastered rule '{rule.id}' "
-                    f"({rule.name}) matched this prompt — light re-fire. "
-                    f"Guidance: {rule.guidance} Continue with the task; no need "
-                    f"to belabor the point unless the pattern keeps repeating."
-                )
 
     # ---------------- Encouragement layer ---------------- #
     # Only consider praise on prompts that did NOT emit a nudge (Kohn 1993:
@@ -4616,11 +4080,10 @@ def main() -> int:
     # entirely if paused.
     positive_fires: list[str] = []
     praise_choice = None
-    # v0.9.0 — refreshers count as "spoke this prompt" for Kohn's
-    # don't-dilute-praise principle. If we said anything (nudge OR
-    # refresher), no praise on the same prompt.
-    nudged_this_prompt = ((chosen is not None or chosen_mastered is not None)
-                          and outcome != "paused")
+    # v0.38.0 — if the collaborator block fired (any rule matched), that
+    # counts as "spoke this prompt" for Kohn's don't-dilute-praise
+    # principle: no praise on the same prompt.
+    nudged_this_prompt = bool(fired) and outcome != "paused"
     paused_until = int(cfg.get("pause_until_prompt", 0))
     is_paused = g["prompt_count"] <= paused_until
 
@@ -4643,62 +4106,45 @@ def main() -> int:
 
     if praise_choice is not None:
         kind, pid_or_rid, praise_text, sources = praise_choice
-        mode = cfg["nudge_style"]
-
+        outcome = f"praised:{kind}:{cfg['nudge_style']}"
+        # v0.35.0 — praise had NO inline branch before then, so from v0.29
+        # (when rendering was hardcoded to inline) through v0.34 the entire
+        # encouragement layer — positive detectors, first-after-fire, AND
+        # mastery congrats — was computed then silently dropped. This
+        # restores it. Mastery gets a distinct celebratory line; ordinary
+        # praise a quieter one. (v0.37.1 — dead both/silent branch + the
+        # _praise_box stderr helper removed; rendering is always inline.)
         if kind == "mastery":
-            header = f"Rule mastered: {RULES_BY_ID[pid_or_rid].name}"
+            # praise_text already carries the celebration ("🎉 Rule
+            # mastered: **X**. That's N clean prompts…"). Prefix the
+            # coach glyph, strip a leading 🎉 to avoid a double emoji.
+            body = praise_text.lstrip()
+            if body.startswith("🎉"):
+                body = body[1:].lstrip()
+            ack = f"🎓 prompt-coach — {body}"
+            context_line = (
+                f"[prompt-coach · inline · mastery] The user just graduated "
+                f"a rule to mastered — a real milestone. Render EXACTLY this "
+                f"ONE line at the very START of your response, verbatim, "
+                f"then address their task:\n\n{ack}\n\n"
+                f"It's a genuine congratulation; render it warmly but don't "
+                f"expand on it or make the user respond to it.")
         elif kind == "first-after-fire":
             p = POSITIVES_BY_ID[pid_or_rid]
-            header = f"First-after-fire: {p.id} → mirror {p.mirrors}"
+            ack = (f"✨ prompt-coach — nice, you applied "
+                   f"{p.mirrors} right after the nudge. {praise_text}")
+            context_line = (
+                f"[prompt-coach · inline · praise] Render EXACTLY this ONE "
+                f"line at the very START of your response, verbatim, then "
+                f"address the task:\n\n{ack}\n\n"
+                f"Keep it to that line; it's light encouragement, not a topic.")
         else:
-            p = POSITIVES_BY_ID[pid_or_rid]
-            header = f"{p.id}"
-
-        outcome = f"praised:{kind}:{cfg['nudge_style']}"
-        if mode == "both":
-            print(_praise_box(kind, header, praise_text, sources, mode),
-                  file=sys.stderr, flush=True)
-        if mode == "inline":
-            # v0.35.0 — praise had NO inline branch before now, so from v0.29
-            # (when rendering was hardcoded to inline) through v0.34 the
-            # entire encouragement layer — positive detectors, first-after-
-            # fire, AND mastery congrats — was computed then silently
-            # dropped. This restores it. Mastery gets a distinct celebratory
-            # line; ordinary praise a quieter one.
-            if kind == "mastery":
-                # praise_text already carries the celebration ("🎉 Rule
-                # mastered: **X**. That's N clean prompts…"). Prefix the
-                # coach glyph, strip a leading 🎉 to avoid a double emoji.
-                body = praise_text.lstrip()
-                if body.startswith("🎉"):
-                    body = body[1:].lstrip()
-                ack = f"🎓 prompt-coach — {body}"
-                instr = (
-                    f"[prompt-coach · inline · mastery] The user just graduated "
-                    f"a rule to mastered — a real milestone. Render EXACTLY this "
-                    f"ONE line at the very START of your response, verbatim, "
-                    f"then address their task:\n\n{ack}\n\n"
-                    f"It's a genuine congratulation; render it warmly but don't "
-                    f"expand on it or make the user respond to it.")
-            elif kind == "first-after-fire":
-                p = POSITIVES_BY_ID[pid_or_rid]
-                ack = (f"✨ prompt-coach — nice, you applied "
-                       f"{p.mirrors} right after the nudge. {praise_text}")
-                instr = (
-                    f"[prompt-coach · inline · praise] Render EXACTLY this ONE "
-                    f"line at the very START of your response, verbatim, then "
-                    f"address the task:\n\n{ack}\n\n"
-                    f"Keep it to that line; it's light encouragement, not a topic.")
-            else:
-                ack = f"✨ prompt-coach — {praise_text}"
-                instr = (
-                    f"[prompt-coach · inline · praise] Render EXACTLY this ONE "
-                    f"line at the very START of your response, verbatim, then "
-                    f"address the task:\n\n{ack}\n\n"
-                    f"Keep it to that line; it's light encouragement, not a topic.")
-            context_line = instr
-        elif mode in ("both", "silent"):
-            context_line = _praise_context(kind, pid_or_rid, praise_text)
+            ack = f"✨ prompt-coach — {praise_text}"
+            context_line = (
+                f"[prompt-coach · inline · praise] Render EXACTLY this ONE "
+                f"line at the very START of your response, verbatim, then "
+                f"address the task:\n\n{ack}\n\n"
+                f"Keep it to that line; it's light encouragement, not a topic.")
 
         # State updates for praise
         g["praise_count"] = int(g.get("praise_count", 0)) + 1
@@ -4741,13 +4187,12 @@ def main() -> int:
     if fired_tip_id:
         tip = TIPS_BY_ID[fired_tip_id]
         _record_tip_fire(g, fired_tip_id)
-        mode = cfg["nudge_style"]
         # If a rule already emitted (nudge / praise), don't overwrite the
         # outcome — record the tip as an additional log field. But if
-        # outcome is "no-emit", promote to tipped:<mode>:<tip-id>.
+        # outcome is "no-emit", promote to tipped:inline:<tip-id>.
         if outcome == "no-emit":
-            outcome = f"tipped:{mode}:{fired_tip_id}:{fired_tip_mode}"
-        # Render tip
+            outcome = f"tipped:inline:{fired_tip_id}:{fired_tip_mode}"
+        # Render tip inline (v0.37.1 — dead both/silent branches removed).
         bar = "━" * 60
         tip_box = (
             f"{bar}\n"
@@ -4755,28 +4200,14 @@ def main() -> int:
             f"{tip.body}\n"
             f"{bar}"
         )
-        if mode == "both":
-            print(tip_box, file=sys.stderr, flush=True)
-        if mode in ("both", "silent"):
-            # Only overwrite context_line if nothing else set it
-            if context_line is None:
-                context_line = (
-                    f"[prompt-coach · tip] Rule '{fired_tip_id}' "
-                    f"({tip.technique}) suggests: {tip.body}\n\n"
-                    f"Guidance: {tip.guidance}"
-                )
-        elif mode == "inline":
-            # Inline: render tip box as opening block
-            tip_inline = (
+        if context_line is None:
+            context_line = (
                 f"[prompt-coach · inline · tip] Render the following block "
                 f"AT THE VERY START of your response, VERBATIM, before "
                 f"addressing the user's task:\n\n{tip_box}\n\n"
                 f"Then answer the user's actual question. Guidance for the "
                 f"response: {tip.guidance}"
             )
-            if context_line is None:
-                context_line = tip_inline
-        # `log-only` and everything else: just log the fire, no user output
 
     # ---------------- Liveness acknowledgment (v0.35.0) ---------------- #
     # The coach was "too silent": since v0.29 it only spoke on rule hits, so
@@ -4834,7 +4265,7 @@ def main() -> int:
         "positive_fires": positive_fires,
         "mastery_events": mastery_events,
         "demoted_events": demoted_events,
-        "chosen": chosen or chosen_mastered,
+        "chosen": (fired[0] if fired else None),
         "praise": praise_choice[0] + ":" + praise_choice[1] if praise_choice else None,
         "outcome": outcome,
         "prompt": prompt_raw[:400],
