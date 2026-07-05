@@ -640,14 +640,30 @@ _CLAUDE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
 # is always in the very recent tail, and transcripts can be 15+ MB.
 _TRANSCRIPT_TAIL_LINES = 80
 
-# Heuristic marker for a prefilled option-list continuation: a `?` or `:`
-# followed by a run of bulleted or numbered lines. Requires ≥2 options; a
-# single `- foo` after a `?` is too permissive. The `:` alternative catches
-# imperative prefills like "Pick one:", "Choose one:", "Options:" — which
-# is how the model often prefixes a pre-drafted picker.
+# v0.34.1 — Heuristic marker for a prefilled option-list continuation.
+# History: v0.24 accepted `[?:]` + <=2000 chars + >=2 list items *anywhere*
+# in the assistant text. In practice this over-fired catastrophically —
+# any structured prose with a `:` intro + bulleted items looked like a
+# picker, so users' real prompts got skipped as "picker answers" for
+# hours on end (Alex reported "no nudges since last release" 2026-07-05).
+# Tightened three ways:
+#   1. Require `?` (not `:`) — a question mark actually signals a
+#      picker; colons appear in "Changes:", "Sections:", "Details:" prose
+#      that is NOT a picker.
+#   2. Tighter distance: `?` must be within 600 chars of the list start,
+#      not 2000. Real pickers have the question close to the options.
+#   3. Applied to the TAIL of the assistant text only (last 1500 chars).
+#      A picker in the middle of a long response followed by unrelated
+#      prose is not a picker interaction with the user's next prompt.
 _OPTION_LIST_RE = re.compile(
-    r"[?:][\s\S]{0,2000}?"
-    r"(?:^\s*(?:[-*•]|\d+\.|\(?[a-eA-E]\))\s+.+\n){2,}",
+    r"(?:"
+    # Form A: "Which? A/B/C" — question then list
+    r"\?[^?]{0,600}?"
+    r"(?:^\s*(?:[-*•]|\d+\.|\(?[a-eA-E][.\)])\s+.+(?:\n|$)){2,}"
+    r"|"
+    # Form B: "A/B/C. Which?" — list then question within 600 chars
+    r"(?:^\s*(?:[-*•]|\d+\.|\(?[a-eA-E][.\)])\s+.+\n){2,}[^?]{0,600}?\?"
+    r")",
     re.MULTILINE,
 )
 
@@ -735,7 +751,11 @@ def _picker_reason(entry: dict) -> str | None:
             if isinstance(t, str):
                 text_chunks.append(t)
     text = "\n".join(text_chunks)
-    if text and _OPTION_LIST_RE.search(text):
+    # v0.34.1 — check only the tail of the assistant text. A picker in the
+    # middle of a long response followed by hundreds of chars of unrelated
+    # prose isn't a picker interaction; the user's next prompt is a fresh
+    # ask, not a picker answer.
+    if text and _OPTION_LIST_RE.search(text[-1500:]):
         return "option-list-answer"
     return None
 

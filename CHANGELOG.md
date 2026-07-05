@@ -7,6 +7,47 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05
+
+### Fixed
+- **prompt-coach-beta 0.34.1** — picker-answer heuristic
+  false-positive flood. User: "since last release i did not see a
+  single nudge, is there a problem?" Diagnosed: 10 of the last 13
+  log entries in the maintainer's alexmskills repo were
+  `outcome=skipped:option-list-answer`. The v0.24 heuristic was
+  matching virtually every one of my assistant responses because
+  they used the "colon + bulleted list" pattern of structured
+  prose (Changes: [1] [2]; Cost model: bullets; Multiple issues:
+  numbered list).
+  - **Tightened three ways**:
+    1. Require `?` (question mark) instead of `[?:]` (question OR
+       colon). Colons appear in "Changes:", "Cost model:",
+       "Sections:" prose that is NOT a picker.
+    2. Reduced max distance between `?` and list from 2000 chars
+       to 600 chars. Real pickers have the question close to the
+       options.
+    3. Support both orderings: "Which? A/B/C" (form A: question
+       first) and "A/B/C. Which?" (form B: list first). The old
+       regex only matched form A.
+    4. Applied to the TAIL of the assistant text (last 1500 chars)
+       only. A picker in the middle of a long response followed
+       by unrelated prose is not a picker interaction with the
+       user's next prompt.
+  - **Impact measured on the maintainer's real session
+    transcript** (511 assistant turns): pre-hotfix regex fired
+    132 times (25% false-positive rate — catastrophic); post-
+    hotfix regex fires 45 times, and of those, most are
+    yes/no-continuation turns that `is_conversational` catches
+    anyway when the user replies. Estimated 87 additional false
+    positives eliminated.
+  - **9 test cases verified**: 3 real picker patterns (question
+    first + bullets, list first + question, question mid + `(a)
+    (b)`) fire; 6 structured-prose patterns (colon + bullets, no
+    question mark) don't fire.
+  - Regression protection: also fixed the trailing-newline
+    requirement so pickers ending without a final `\n` after the
+    last option are still caught.
+
 ## 2026-07-04 (later 6)
 
 ### Added
