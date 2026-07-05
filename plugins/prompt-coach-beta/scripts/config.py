@@ -704,14 +704,116 @@ _ANTHROPIC_BASE_URL = ("https://platform.claude.com/docs/en/build-with-claude/"
                        "prompt-engineering/claude-prompting-best-practices")
 
 
+def _open_urls(urls: list[str]) -> int:
+    """v0.36.0 — open one or more doc URLs in the user's default browser.
+    Uses the stdlib `webbrowser` module (cross-platform: xdg-open on Linux,
+    `open` on macOS, ShellExecute on Windows). Returns count opened."""
+    import webbrowser
+    opened = 0
+    for u in urls:
+        if not u:
+            continue
+        try:
+            if webbrowser.open(u):
+                opened += 1
+                print(f"  ↗ opened {u}")
+            else:
+                print(f"  (could not open a browser for {u})", file=sys.stderr)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  (browser open failed for {u}: {exc})", file=sys.stderr)
+    return opened
+
+
+def cmd_paths(cwd: Path, as_json: bool = False,
+              open_browser: bool = False) -> int:
+    """v0.36.0 — expose the coach's own skill folders + state files as
+    openable local paths. Complements `sources` (external doc URLs): this
+    gives access to the LOCAL docs/config the skill ships and writes —
+    SKILL.md, docs/sources.md, the plugin root, and the resolved
+    config/state/log files. `--open` launches the plugin folder (and
+    SKILL.md) in the OS file browser via file:// URLs."""
+    plugin_root = Path(__file__).resolve().parent.parent
+    scripts_dir = plugin_root / "scripts"
+    analyzer = scripts_dir / "analyze-prompt.py"
+    config_script = scripts_dir / "config.py"
+    skill_md = plugin_root / "skills" / "prompt-coach" / "SKILL.md"
+    sources_md = plugin_root / "docs" / "sources.md"
+    home_pc = Path.home() / ".claude" / "prompt-coach"
+    repo_pc = cwd / ".claude" / "prompt-coach"
+
+    entries = [
+        ("plugin root",   plugin_root,               True),
+        ("scripts/",      scripts_dir,               True),
+        ("SKILL.md",      skill_md,                  True),
+        ("sources.md",    sources_md,                True),
+        ("commands/",     plugin_root / "commands",  True),
+        ("global config", home_pc / "config.json",   False),
+        ("global state",  home_pc / "state.json",    False),
+        ("repo config",   repo_pc / "config.json",   False),
+        ("repo state",    repo_pc / "state.json",    False),
+        ("repo log",      repo_pc / "log.md",        False),
+    ]
+    # v0.36.0 — runnable scripts + their exact invocations so the user (or
+    # Claude) can access AND run the coach's own scripts, not just read them.
+    runnable = [
+        ("config surface", config_script,
+         f"python3 {config_script} <verb> [args]"),
+        ("prompt analyzer", analyzer,
+         f'echo \'{{"prompt":"...","cwd":"{cwd}"}}\' | python3 {analyzer}'),
+    ]
+
+    if as_json:
+        out = {
+            "paths": {label: {"path": str(p), "url": p.as_uri() if p.exists() else None,
+                              "exists": p.exists()}
+                      for label, p, _ in entries},
+            "runnable": {label: {"path": str(p), "run": cmd, "exists": p.exists()}
+                         for label, p, cmd in runnable},
+        }
+        print(json.dumps(out, indent=2))
+        return 0
+
+    if open_browser:
+        # Open the shipped docs the user is most likely to want to read.
+        print("Opening the skill's folder + docs…")
+        urls = [p.as_uri() for _, p, ship in entries
+                if ship and p.exists()][:3]  # plugin root, scripts/, SKILL.md
+        return 0 if _open_urls(urls) else 1
+
+    print("prompt-coach-beta — skill folders & state files")
+    print("  (paths are clickable in most terminals; `--open` launches them)")
+    print()
+    for label, p, _ in entries:
+        mark = "" if p.exists() else "  (not created yet)"
+        print(f"  {label:14s} {p}{mark}")
+    print()
+    print("  Runnable scripts:")
+    for label, p, cmd in runnable:
+        mark = "" if p.exists() else "  (missing!)"
+        print(f"    · {label}{mark}")
+        print(f"        {cmd}")
+    print()
+    print("Open in browser/file-manager: "
+          "/prompt-coach-beta:config paths --open")
+    return 0
+
+
 def cmd_sources(cwd: Path, rule_id: str | None = None,
-                as_json: bool = False) -> int:
+                as_json: bool = False, open_browser: bool = False) -> int:
     """v0.20.0 — surface the citation trail for a rule (or the full mapping).
     Shows every source cited by the rule + the canonical Anthropic-guide
     section slug (if any) with its URL — enables 'why does this rule exist?'
-    trace back to authoritative material."""
+    trace back to authoritative material.
+
+    v0.36.0 — `open_browser` (`--open`) launches the rule's doc URL(s) in the
+    default browser so the user can review the docs without copy-pasting."""
     # No arg: summary — list every rule with its anthropic_ref
     if rule_id is None:
+        if open_browser:
+            # No specific rule → open the guide's top-level best-practices page.
+            print(f"Opening the Anthropic prompting guide…")
+            _open_urls([_ANTHROPIC_BASE_URL])
+            return 0
         rules_by_ref: dict[str | None, list[str]] = {}
         for rule in RULES:
             rules_by_ref.setdefault(rule.anthropic_ref, []).append(rule.id)
@@ -783,6 +885,17 @@ def cmd_sources(cwd: Path, rule_id: str | None = None,
     for title, url in rule.sources:
         print(f"    · {title}")
         print(f"      {url}")
+
+    if open_browser:
+        # Collect the Anthropic-guide URL + every cited source URL and open
+        # them all in the browser so the user can review the docs.
+        urls = []
+        if rule.anthropic_ref:
+            urls.append(f"{_ANTHROPIC_BASE_URL}#{rule.anthropic_ref}")
+        urls.extend(u for _, u in rule.sources if u)
+        print()
+        print(f"  Opening {len(urls)} doc URL(s) in your browser…")
+        _open_urls(urls)
     return 0
 
 
@@ -847,6 +960,11 @@ def _main(argv: list[str]) -> int:
     sub.add_parser("mastery-reset-all")
     s_sources = sub.add_parser("sources")
     s_sources.add_argument("rule_id", nargs="?", default=None)
+    s_sources.add_argument("--open", dest="open_browser", action="store_true",
+                           help="open the rule's doc URL(s) in a browser")
+    s_paths = sub.add_parser("paths")
+    s_paths.add_argument("--open", dest="open_browser", action="store_true",
+                         help="open the skill folder + docs in a file browser")
 
     args = p.parse_args(argv)
     cwd = Path(args.cwd) if args.cwd else Path.cwd()
@@ -877,7 +995,11 @@ def _main(argv: list[str]) -> int:
     if verb == "mastery-reset-all":
         return cmd_mastery_reset_all(cwd, args.dry_run)
     if verb == "sources":
-        return cmd_sources(cwd, args.rule_id, args.as_json)
+        return cmd_sources(cwd, args.rule_id, args.as_json,
+                           getattr(args, "open_browser", False))
+    if verb == "paths":
+        return cmd_paths(cwd, args.as_json,
+                         getattr(args, "open_browser", False))
     print(f"unknown verb: {verb}", file=sys.stderr)
     return 2
 

@@ -37,10 +37,12 @@ since-version) so new options are picked up automatically when they're added.
    - `mastery` → `python3 <path> mastery` (dashboard of mastered / in-progress / dormant rules)
    - `mastery-reset <rule-id>` → `python3 <path> mastery-reset <rule-id>` (dry-run once first)
    - `mastery-reset-all` → `python3 <path> mastery-reset-all` (dry-run once first, require explicit confirmation)
+   - `sources [<rule-id>]` → `python3 <path> sources [<rule-id>]` (citation trail + doc URLs; add `--open` to open the URL(s) in a browser)
+   - `paths` → `python3 <path> paths` (the skill's own folders, state files, and runnable scripts; add `--open` to open the folder + docs in a file browser)
 
    **Interactive flows (Claude-orchestrated via AskUserQuestion):**
 
-   - `quick` → walk the user through the ~4 categorical settings (`voice_preset`, `voice_source`, `nudge_style`, `praise_ratio`) with multiple-choice pickers. For each key:
+   - `quick` → walk the user through the ~4 high-value categorical settings (`coach_style`, `ack_clean`, `show_source_urls`, `praise_ratio`) with multiple-choice pickers. (The old voice/nudge_style keys are deprecated as of v0.34/v0.29 — don't offer them.) For each key:
      1. Run `python3 <path> options <key> --json` to get the current value + choices + descriptions
      2. Present via AskUserQuestion, header ≤12 chars (e.g. "Voice"), each option's label = the value, description = the first ~60 chars of the choice_description
      3. If the user picks a value different from current, run `python3 <path> set <key> <picked> --scope global`
@@ -80,6 +82,11 @@ to the appropriate command:
 | "start over" / "reset everything" | `reset-all` (require confirmation!) |
 | "walk me through settings" / "help me pick" / "quick setup" | `quick` (interactive) |
 | "walk me through everything" / "configure everything" | `full` (interactive, longer) |
+| "show me the sources" / "where does this rule come from" / "cite <rule>" | `sources [<rule>]` |
+| "open the docs" / "open the sources" / "review the guide for <rule>" | `sources [<rule>] --open` |
+| "where are the skill files" / "show me the skill folders" / "where's the config/log" | `paths` |
+| "open the skill folder" / "open SKILL.md" / "let me see the scripts" | `paths --open` |
+| "show me clickable urls" / "turn on source links" | `set show_source_urls true` |
 | "show me my mastery" / "what have I mastered" / "how am I doing" | `mastery` |
 | "reset my mastery on <rule>" / "reset <rule> mastery" | `mastery-reset <rule>` |
 | "reset all my mastery" / "start mastery over" | `mastery-reset-all` (require confirmation!) |

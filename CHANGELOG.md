@@ -7,6 +7,48 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05 (later 3)
+
+### Added
+- **prompt-coach-beta 0.36.0** — source URLs, skill-folder access,
+  runnable scripts. User: "bring back sources url to sources display,
+  but make it configurable and included in quick set … urls should be
+  clickable and open a browser window"; "skill also should allow
+  access to its skill folders"; "and allow running its scripts."
+  - **Clickable source URLs in the coach block** (`show_source_urls`,
+    default **on**). The v0.34 collaborator block's `Sources:` line
+    rendered bare anchor slugs (`be-clear-and-direct`); it now renders
+    the full doc URL so the terminal linkifies it and the user can
+    Cmd/Ctrl-click to open the Anthropic guide. Set false for just the
+    slug. Added to the `quick` interactive config flow.
+  - **`config sources … --open`** — opens the rule's Anthropic-guide
+    URL + every cited source URL in the default browser (stdlib
+    `webbrowser`, cross-platform). No rule → opens the guide's top
+    page.
+  - **New `config paths` verb** — exposes the skill's OWN folders and
+    files as openable local paths: plugin root, scripts/, SKILL.md,
+    docs/sources.md, commands/, plus the resolved global/repo
+    config/state/log. `--open` launches the folder + docs in the OS
+    file browser via `file://` URLs.
+  - **Runnable scripts surfaced** — `paths` lists the analyzer and
+    config scripts with their exact invocation commands, so the user
+    (or Claude) can access AND run the coach's scripts directly, not
+    just read them.
+  - **Quick-set flow de-staled** — it still offered `voice_preset` /
+    `voice_source` / `nudge_style` (deprecated in v0.34 / deleted in
+    v0.29). Now walks the current high-value keys: `coach_style`,
+    `ack_clean`, `show_source_urls`, `praise_ratio`.
+  - **Config**: `show_source_urls` (bool, default true) in
+    CONFIG_SCHEMA under `output`.
+  - **Natural-language routing** added for sources/paths/open in
+    config.md.
+  - **Tests pass**: URLs present in collaborator block by default;
+    `show_source_urls=false` → slug only; get/set/describe roundtrip;
+    `sources <rule> --open` opens 3 doc URLs; `sources --open` opens
+    base guide; `paths` lists folders + runnable scripts; `paths
+    --open` opens plugin folder + SKILL.md; `paths --json` carries
+    runnable commands; marketplace validates.
+
 ## 2026-07-05 (later 2)
 
 ### Fixed

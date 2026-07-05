@@ -66,6 +66,11 @@ DEFAULT_CONFIG = {
     # Nth. Set ack_clean=false to go back to silent-on-clean.
     "ack_clean": True,
     "ack_ratio": 1,
+    # v0.36.0 — show full clickable doc URLs in the coach's Sources line
+    # (collaborator block). On by default; terminals auto-linkify a bare
+    # https URL so the user can Cmd/Ctrl-click to open the doc. Set false
+    # for just the short anchor slug (e.g. "be-clear-and-direct").
+    "show_source_urls": True,
     "graduation_threshold": 15,   # clean prompts in a row → mastered
     # v0.27.0 — evidence requirement for mastery. A rule that hits
     # graduation_threshold with fires_total below this value transitions to
@@ -213,6 +218,17 @@ CONFIG_SCHEMA = {
                        "steady heartbeat). Raise to 5/10 for a quieter pulse.",
         "example": 1,
         "since": "0.35.0",
+    },
+    "show_source_urls": {
+        "category": "output",
+        "type": "bool",
+        "description": "Show full clickable doc URLs in the coach's Sources "
+                       "line (the collaborator block), so you can Cmd/Ctrl-click "
+                       "to open the Anthropic guide section. On by default. Set "
+                       "false to show just the short anchor slug (e.g. "
+                       "'be-clear-and-direct') and keep the block compact.",
+        "example": True,
+        "since": "0.36.0",
     },
     "pause_until_prompt": {
         "category": "output",
@@ -3769,8 +3785,7 @@ question:
    confirmed rules. Don't add improvements NOT backed by a candidate
    rule — this coach is opinionated, anchored to specific concepts.
 3. List 1-3 specific changes you made, one line each.
-4. Cite the Anthropic guide anchor for each change (see the anchors
-   above; use the exact strings).
+4. In the Sources line, cite {sources_instruction}.
 
 Render the coach block at the very start of your response, verbatim,
 following this format:
@@ -3785,8 +3800,7 @@ Changes:
   [2] <second change if any>
   [3] <third change if any>
 
-Sources: <anthropic-guide-anchor-1>
-         <anthropic-guide-anchor-2>
+Sources: <one per confirmed rule, per the Sources instruction above>
 
 Reply "yes" to proceed with this rewrite, "no" for original, or
 "edit" to change something.
@@ -3821,28 +3835,54 @@ Your response starts NOW, with either the coach block or (if
 confidence too low) directly with the answer to the user's question."""
 
 
-def _v34_candidate_rules_block(rule_ids: list[str]) -> str:
+def _anthropic_url(ref: str | None) -> str | None:
+    """v0.36.0 — resolve an anthropic_ref anchor slug to a full doc URL.
+    Returns None when the rule has no upstream mapping."""
+    if not ref:
+        return None
+    return f"{_ANTHROPIC_BEST}#{ref}"
+
+
+def _v34_candidate_rules_block(rule_ids: list[str],
+                               show_urls: bool = True) -> str:
     """Render a compact one-rule-per-line block with concept + anthropic_ref.
     Used inside the v0.34 additionalContext instruction so Claude has enough
     to reason about which rules apply without needing to look up the full
-    catalog."""
+    catalog.
+
+    v0.36.0 — when show_urls is on, append the full doc URL for each rule so
+    Claude can render a clickable Sources line (terminals auto-linkify a bare
+    https URL; the user Cmd/Ctrl-clicks to open the docs)."""
     lines = []
     for rid in rule_ids:
         r = RULES_BY_ID.get(rid)
         if not r:
             continue
         ref = r.anthropic_ref or "(no upstream mapping)"
-        # Concept is derived from rule.name — short and human.
-        lines.append(f"  · {r.id:32s} — {r.name} · {ref}")
+        url = _anthropic_url(r.anthropic_ref)
+        if show_urls and url:
+            lines.append(f"  · {r.id:32s} — {r.name} · {ref} · {url}")
+        else:
+            lines.append(f"  · {r.id:32s} — {r.name} · {ref}")
     return "\n".join(lines) if lines else "  (none — this shouldn't happen)"
 
 
-def _v34_context_for_claude(prompt_text: str, rule_ids: list[str]) -> str:
+def _v34_context_for_claude(prompt_text: str, rule_ids: list[str],
+                            show_urls: bool = True) -> str:
     """Build the v0.34 additionalContext instruction telling Claude to run
     the coach analysis inline as part of its response."""
+    sources_instruction = (
+        "the FULL clickable doc URL shown for each confirmed rule in the "
+        "candidate list above (render the bare https URL so the terminal "
+        "linkifies it)"
+        if show_urls else
+        "the Anthropic guide anchor slug for each confirmed rule (see the "
+        "anchors above; use the exact strings)"
+    )
     return _V34_INSTRUCTION_TEMPLATE.format(
         prompt_text=prompt_text[:2000],
-        candidate_rules_block=_v34_candidate_rules_block(rule_ids),
+        candidate_rules_block=_v34_candidate_rules_block(rule_ids, show_urls),
+        sources_instruction=sources_instruction,
     )
 
 
@@ -4396,7 +4436,9 @@ def main() -> int:
         # Claude to rewrite the prompt; it must NOT re-touch state, or every
         # fired rule gets +2 fires_total and every clean rule +2 streak
         # (the v0.34 double-count bug — a single prompt showed fires_total=2).
-        context_line = _v34_context_for_claude(prompt_raw, list(fired))
+        context_line = _v34_context_for_claude(
+            prompt_raw, list(fired),
+            show_urls=bool(cfg.get("show_source_urls", True)))
         outcome = f"collaborator:candidates={len(fired)}"
         # Skip the entire legacy emit path — jump to persistence. Mastery
         # events (if a rule graduated this prompt) still flow to the praise
