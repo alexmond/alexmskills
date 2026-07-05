@@ -1,7 +1,7 @@
 = Prompt Coach (beta)
 :navtitle: prompt-coach-beta
 
-A `UserPromptSubmit` hook that watches every prompt sent to Claude Code and nudges toward better prompting habits — definition-of-done, scoped references, guardrails, verification, and more. Rules quietly graduate once you consistently apply them, so the coach fades as your prompts improve.
+A `UserPromptSubmit` hook that watches every prompt you send Claude Code and coaches you toward better prompting habits — definition-of-done, scoped references, guardrails, verification, and more. As of v0.34 the coach is a *collaborator*: when a rule fires, Claude reads your prompt in context and rewrites it with the fix baked in, at the top of its response. Rules quietly graduate once you consistently apply them, so the coach fades as your prompts improve.
 
 The `-beta` suffix is intentional: the plugin ships from the same marketplace as the stable plugins but is signposted as in-progress. It graduates to `prompt-coach` when it earns its stable slot.
 
@@ -14,60 +14,78 @@ The `-beta` suffix is intentional: the plugin ships from the same marketplace as
 /reload-plugins
 ----
 
-That's it. No separate channel, no extra configuration. Restart the session so the `UserPromptSubmit` hook registers. Then just prompt Claude normally — the coach analyzes every prompt in the background and nudges when a rule matches.
+That's it. No separate channel, no extra configuration. Restart the session so the `UserPromptSubmit` hook registers. Then just prompt Claude normally — the coach analyzes every prompt in the background and steps in when a rule matches.
 
 == Quick start
 
 === What you'll see when a rule fires
 
-A box appears above Claude's response with the rule id and a coaching hint:
+The coach is a *collaborator*, not a nagger. When a rule fires, Claude rewrites your prompt with the improvement baked in — rendered as a block at the very top of its response:
 
 [source,text]
 ----
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 prompt-coach — vague-reference: Vague reference
+💬 prompt-coach — I read your prompt as:
 
-The 'it/this/that' is doing a lot of work in that sentence. Which
-file / PR / error are you pointing at?
+    "in src/auth/login.js, update handleLogin() to reject empty
+     password submissions with a 422 and a 'password required'
+     message. Keep the existing test suite green."
 
-Progress: 0/15 clean prompts → mastered
+Changes:
+  [1] Named the file + function (was: 'the login flow')
+  [2] Made the behavior explicit + added a guardrail
+
+Sources: https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct
+
+Reply "yes" to proceed, "no" for original, or "edit" to change something.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ----
 
-The nudge is a suggestion, not a block — Claude answers your prompt normally after it. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a row (default 15), then the next dormant rule activates in its place.
+Your reply on the next turn — `yes` / `no` / `edit` — is the accept/reject signal; Claude answers your prompt normally either way. The `Sources` line carries the full clickable doc URL so you can jump to the Anthropic guide section behind the rule (toggle with `show_source_urls`).
 
-=== The four slash commands
+On a *clean* prompt you instead get a compact one-line liveness heartbeat:
+
+[source,text]
+----
+✓ prompt-coach · clean prompt · closest to mastery: no-verify-loop 12/15
+----
+
+This is informational, not praise — a heartbeat that also shows your progress toward the next mastery. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a row (default 15) *and* an evidence gate (`min_fires_for_mastery`), then the next dormant rule activates. When a rule masters you get a `🎓` congratulation.
+
+=== The slash commands
 
 [cols="1,3",options="header"]
 |===
 | Command | When to use
+| `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 34-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
 | `+/prompt-coach-beta:stats+` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status.
-| `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `diff` / `export` / `reset`.
+| `+/prompt-coach-beta:mastery+` | *"Which rules mastered, which need reset?"* Per-rule breakdown with well-tested / barely-tested / untested analysis + close-to-mastery.
+| `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `paths` / `analyze` / `diff` / `export` / `reset`.
 | `+/prompt-coach-beta:help+` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet.
 | `+/prompt-coach-beta:report-issue+` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only).
 |===
 
 === Say-it phrases (natural language)
 
-Claude edits your config file when you say any of these:
+Claude edits your config file — or runs the right command — when you say any of these:
 
-*Modes* — where the nudge appears:
+*On / off:*
 
-* *"set prompt-coach to inline"* — nudge is rendered as the opening block of Claude's response (best for TUIs that don't show stderr)
-* *"set prompt-coach to silent"* — Claude sees the nudge context, you don't
-* *"set prompt-coach to log-only"* — every fire logged, nothing shown
-* *"set prompt-coach to both"* — default: stderr box + Claude sees it
+* *"disable prompt-coach"* — full silence in this scope (`enabled: false`)
+* *"enable prompt-coach"* — turn it back on
+* *"coach pause 10"* — temporary silence for the next 10 prompts
 
-*Voice* — how nudges are phrased:
+*Analyze / docs / files:*
 
-* *"set prompt-coach voice to plain"* — simple English, short sentences, no idioms (non-native friendly)
-* *"set prompt-coach voice to colleague"* — default: direct, ends on a question
+* *"analyze this prompt: <text>"* / *"analyze my last 20 prompts"* — full-catalog coaching on demand
+* *"open the docs for <rule>"* — open the Anthropic guide section in a browser
+* *"show me the skill folders"* — list the plugin's folders, state files, and runnable scripts
 
-*Pause / disable:*
+*Per-rule + praise:*
 
-* *"coach pause 10"* — silence nudges for the next 10 prompts
 * *"coach off <rule-id>"* — permanently disable one rule
 * *"coach on <rule-id>"* — re-enable it
+* *"disable praise"* — silence encouragement, keep coaching
 
 *Bug reporting:*
 
@@ -75,21 +93,14 @@ Claude edits your config file when you say any of these:
 
 === First-day tweaks
 
-If English is a second language:
+To fully disable the coach in this repo or globally:
 
 [source,text]
 ----
-"set prompt-coach voice to plain"
+"disable prompt-coach"
 ----
 
-If you want nudges rendered inline in Claude's response (not stderr box):
-
-[source,text]
-----
-"set prompt-coach to inline"
-----
-
-If you're being nudged too often:
+If you're being coached too often:
 
 [source,text]
 ----
@@ -101,6 +112,28 @@ If you're being nudged too often:
 === Companion skill: log-review
 
 For cross-repo analytics of coach activity, say *"log review"* or *"daily review"*. That invokes the standalone `log-review` skill at `~/.claude/skills/log-review/` (redacted-by-default output, safe to paste anywhere).
+
+== On-demand analysis
+
+The passive hook is quiet by design — it only checks the handful of *active* rules. But the skill carries the whole prompting-knowledge catalog, so you can point it at a prompt on demand for a *complete* read via `+/prompt-coach-beta:analyze+`:
+
+* *A specific prompt* — every rule that fires (with tier, the fix, and a clickable doc URL) plus a rewritten prompt.
+* *Your recent history* — reads this repo's coach log, runs the full catalog on the last N prompts, and reports your clean rate, the top recurring rules, and one habit to focus on next.
+
+[source,text]
+----
+$ …/config.py analyze "fix it and make it better and faster"
+── prompt analysis ─────────────────────────────────────
+  7 rule(s) fired (full catalog):
+    · L1 vague-reference — Vague reference
+    · L1 no-definition-of-done — No definition of done
+    · L1 improve-without-metric — Improve without a metric
+    · L2 no-verify-loop — No verify loop
+    · L4 implicit-goal — Action without goal
+    …
+----
+
+Read-only — it never touches mastery, config, or state.
 
 == What it watches for
 
@@ -182,135 +215,59 @@ Six tiers of rules, roughly five each. Only six rules are active at a time (`max
 | no-edit-preference *(v0.20+)* | "Create a new file/script/helper" without an edit-existing preference
 |===
 
-== Nudge modes
+== How it renders (v0.38: collaborator-only)
 
-Four modes control where the nudge appears. Config resolves in order: repo local → user global → default.
+Rendering is always *inline* — the coach block is the opening of Claude's response. There is a single master switch and a small set of behavioural knobs; there is no "mode" or "voice" to pick.
 
-[cols="1,2,2",options="header"]
+[cols="1,3",options="header"]
 |===
-| Mode | User sees | Claude sees
-
-| `both` (default) | Boxed nudge on stderr (dim area under prompt) | `additionalContext` with guidance
-| `silent` | Nothing | `additionalContext` with guidance
-| `log-only` | Nothing | Nothing (every fire still logged)
-| `inline` | The boxed nudge is rendered as the opening block of Claude's response | Render instruction + guidance
-|===
-
-Switch modes conversationally — Claude edits the config file:
-
-[source,text]
-----
-"set prompt-coach to inline"
-"set prompt-coach to silent"
-"reset prompt-coach mode"
-----
-
-== Voice presets and sources (v0.17+)
-
-Two orthogonal knobs shape *how* the coach talks to you.
-
-`voice_preset` chooses the *personality* — which set of pre-written phrasings the coach draws from:
-
-* `colleague` (default) — friendly, direct, ends on a concrete question. Assumes fluent colloquial English and light idiom. `+"You said 'fix it' — what's 'it'?"+`
-* `plain` — simple English, short sentences, no idioms, no jargon. Written for non-native speakers or anyone who prefers explicit phrasing. `+"Please tell me what 'it' or 'this' is. For example: a file name, a PR number, or an error message."+`
-
-Coverage: L1 + L2 rules (10 rules) ship both presets with 3 variants each. L3–L6 rules currently ship `colleague` only; if you pick `plain`, they fall back to `colleague` (no crash, no missing text).
-
-`voice_source` chooses *who authors the sentence at fire time*, independent of preset:
-
-[cols="1,3,2,2",options="header"]
-|===
-| Source | How | Cost per fire | Determinism
-
-| `static` (default) | Pre-written variants from the catalog. Rotates + follows disclosure levels. | 0 tokens, ~0 ms | Deterministic — same rule, same context → same text (modulo novelty rotation)
-| `llm-compose` | Hook passes rule id + guidance + your prompt shape to Claude in `additionalContext`; Claude writes the nudge fresh, primed to reflect *this specific* prompt with six anti-disagreement guardrails. | +200–800 ms, ~150–400 output tokens | Non-deterministic; may feel repetitive-in-a-different-way
-| `hybrid` | First fire in the window = static preset (deterministic, teaching-focused). Medium/short refreshers = `llm-compose` (livelier when repeating). | Costs both, sparingly | Mixed
+| Key | What it does
+| `enabled` | Master switch. `false` = the hook returns immediately, fully silent (default: true)
+| `ack_clean` / `ack_ratio` | The `✓` liveness heartbeat on clean prompts, and its rate (`1` = every clean prompt)
+| `show_source_urls` | Full clickable doc URLs in the coach block's `Sources` line (default: true)
+| `pause_until_prompt` | Skip until the global prompt counter passes this
+| `disabled_rules` | Array of rule ids to permanently silence
 |===
 
-The six anti-disagreement guardrails baked into `llm-compose`: header line verbatim, word-count cap per disclosure level, must not override the rule even if context resolves the referent, must match the preset's voice, must end on a concrete ask when guidance implies one, and prompt shape (first 60 chars) provided so Claude can situate the response.
+[NOTE]
+====
+v0.38 removed the earlier `nudge_style` modes (`both` / `silent` / `log-only`), the `voice_preset` / `voice_source` knobs, and the anti-habituation config, along with the entire hand-written nudge path. Under collaborator mode Claude writes each rewrite fresh, so there is no preset to pick and no repeated text to habituate to.
+====
 
-Switch conversationally:
+== Config surface
 
-[source,text]
-----
-"set prompt-coach voice to plain"
-"set prompt-coach source to llm-compose"
-"set prompt-coach source to hybrid"
-----
-
-The `outcome` log line records the combination per fire (e.g. `nudged:inline:full:v1:p=plain:src=static`) so `/prompt-coach-beta:stats` can mine which combination you converge on.
-
-== Config surface (v0.18+)
-
-By v0.18 the coach's config had grown to 22 keys across 8 categories. `+/prompt-coach-beta:config+` is the structured surface — it reads a `CONFIG_SCHEMA` metadata dict alongside `DEFAULT_CONFIG`, so future options are picked up automatically once they land in the schema. The dashboard, describer, and validator never drift.
-
-Nine verbs:
+`+/prompt-coach-beta:config+` is the structured surface over the coach's config. It reads a `CONFIG_SCHEMA` metadata dict alongside `DEFAULT_CONFIG`, so new options are picked up automatically once they land in the schema — the dashboard, describer, and validator never drift.
 
 [cols="2,4",options="header"]
 |===
 | Verb | What it does
-| `show` | Categorized dashboard with resolved value + source (default/global/repo) per key
-| `show <category>` | One category only (e.g. `show voice`)
+| `show` / `show <category>` | Categorized dashboard with resolved value + source (default/global/repo) per key
 | `get <key>` | Resolved value only
 | `describe <key>` | Full metadata: type, default, current, choices, example, since-version, description
+| `options <key>` | Enumerates legal values with per-choice explanations
 | `set <key> <value>` | Validate against schema → deep-merge write to scoped config
-| `reset <key>` | Remove your override, revert to previous layer
-| `reset-all` | Wipe the scoped config file (requires confirmation)
-| `diff` | Show only keys where the resolved value differs from the default
-| `export` | Print the resolved config as JSON (for backup)
+| `reset <key>` / `reset-all` | Remove an override / wipe the scoped config file (confirmation required)
+| `diff` / `export` | Show changed-from-default keys / print resolved config as JSON
+| `mastery` / `mastery-reset <rule>` / `mastery-reset-all` | Mastery dashboard + resets (dry-run first)
+| `sources [<rule>]` | Citation trail + doc URLs; add `--open` to open them in a browser
+| `paths` | The skill's own folders, state files, and runnable scripts; add `--open` to open them
+| `analyze "<text>"` / `analyze --last N` | Full-catalog analysis of a prompt or recent history
+| `quick` / `full` | Interactive multi-choice config walk-throughs (via `AskUserQuestion`)
 |===
 
-Flags: `--scope global` (default) or `--scope repo` chooses which config file writes go to. `--dry-run` on `set`/`reset`/`reset-all` previews without touching disk. `--json` on `show`/`get`/`describe`/`diff` produces machine-readable output.
+Flags: `--scope global` (default) or `--scope repo` chooses which config file writes go to. `--dry-run` on `set`/`reset` previews without touching disk. `--json` produces machine-readable output. Writes are deep-merged so forward-compat keys the schema doesn't yet know about are preserved, not stripped.
 
-Categories: `output`, `voice`, `rule-activation`, `mastery`, `praise`, `typo-tolerance`, `anti-habituation`, `llm-fallback`.
+The `quick` flow walks you through the high-value categorical settings (`ack_clean`, `show_source_urls`, `praise_ratio`, `tips_enabled`) with multiple-choice pickers.
 
-**Say-it phrases still work** — natural language like `+"set prompt-coach to inline"+` or `+"coach off no-few-shot"+` routes to `:config set` under the hood. The command is the discoverable path when you don't know what the options are called; natural language is the fast path when you do.
+== Source URLs and skill access (v0.36+)
 
-Writes are deep-merged into the target JSON so keys the schema doesn't know about (forward-compat entries from future versions) are preserved, not stripped. Invalid values are rejected with a clear error message.
-
-=== Options, interactive flows, and mastery (v0.19+)
-
-Four more verbs joined `:config` in v0.19:
-
-[cols="2,4",options="header"]
-|===
-| Verb | What it does
-| `options <key>` | Enumerates legal values for a key with per-choice explanations. For enums (`nudge_style`, `voice_preset`, `voice_source`), lists each choice + what it does. For int/bool/list keys, shows type + current + default + example + description.
-| `quick` | Interactive multi-choice picker for the ~4 categorical settings (`voice_preset`, `voice_source`, `nudge_style`, `praise_ratio`). Claude walks you through with `AskUserQuestion`; each answer routes to `:config set`.
-| `full` | Same interactive pattern for every schema key. Enums → picker; numeric/bool → keep-current / type-new / reset-to-default. Longer flow; you can skip categories.
-| `mastery` | Dashboard: mastered rules (with mastery date), in-progress rules (fires_total > 0, sorted by streak descending so closest-to-mastery shows first), dormant count by tier.
-| `mastery-reset <rule-id>` | Zeros fires_total, clean_streak, status, mastered_at for one rule. Preserves `prompt_count` + other rules + non-schema keys. Dry-run preview first.
-| `mastery-reset-all` | Same across every rule with accumulated state. Preserves `prompt_count`. Dry-run preview first.
-|===
-
-Under the hood, enum keys in `CONFIG_SCHEMA` now carry an optional `choice_descriptions` dict — same forward-compat pattern as v0.18. Adding a new enum config means adding a `choice_descriptions` dict; `options` and `quick` pick it up automatically.
+* *Clickable sources* — the coach block's `Sources` line renders the full Anthropic-guide URL so your terminal linkifies it (Cmd/Ctrl-click to open). Toggle with `show_source_urls`.
+* *`config sources <rule> --open`* — opens the rule's guide URL + every cited source in your default browser.
+* *`config paths`* — exposes the skill's own local files (plugin root, `SKILL.md`, `docs/sources.md`, resolved config/state/log) as openable paths, plus the analyzer and config scripts with their exact run commands. `--open` launches the folder + docs.
 
 == Anthropic guide alignment (v0.20+)
 
-v0.20 aligns the coach with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Two-part change:
-
-**Six new rules** closing high-value gaps in the coach's coverage:
-
-* `no-xml-structure` (L3) — flags ≥7-line pastes without `<code>` / `<data>` / `<logs>` delimiters. Anthropic: `structure-prompts-with-xml-tags`.
-* `no-classical-role` (L3) — flags critique/review/audit asks (>15 words) that don't invoke a role via "you are a X". Distinct from `no-role-for-critique` which flags the Claude Code `/roles:as` variant. Anthropic: `give-claude-a-role`.
-* `test-goalseeking` (L3) — flags "make tests pass" / "get CI green" / "fix broken tests" without stated correctness intent. Anthropic explicitly calls this out as a gaming/hallucination vector. `avoid-focusing-on-passing-tests-and-hard-coding`.
-* `no-verify-before-claim` (L3) — flags assertion-shaped questions ("does X exist", "which files use Y") that don't demand receipts (file:line, quoted code). Distinct from `no-uncertainty-budget`, which is about admitting uncertainty; this is about demanding evidence. `minimizing-hallucinations-in-agentic-coding`.
-* `overthinking-warning` (L4) — the inverse of the coach's usual push-toward-more-structure direction. Fires on ≥60-word prompts with 3+ elaboration markers ("make sure to", "be very careful", "please also", "furthermore", etc.). `overthinking-and-excessive-thoroughness`.
-* `no-edit-preference` (L6) — flags "create/write/make new script/helper/file" without an edit-existing preference. `reduce-file-creation-in-agentic-coding`.
-
-**`Rule.anthropic_ref` field.** Every rule now optionally carries a section slug from Anthropic's page. 25 of the 34 shipped rules link to a canonical section; 9 are Claude-Code-specific or novel coach concepts with no direct upstream mapping.
-
-**`/prompt-coach-beta:config sources`** — new verb that surfaces the citation trail:
-
-[cols="2,4",options="header"]
-|===
-| Form | What it shows
-| `sources` (no arg) | Overview: base URL + every rule grouped by its `anthropic_ref`, plus a separate section for unlinked rules. Header notes coverage (e.g. "25/34 rules link to an Anthropic-guide section").
-| `sources <rule-id>` | Per-rule detail: tier, name, `anthropic_ref` slug + full URL to the exact section anchor, and the full list of cited sources (titles + URLs).
-| `--json sources` / `--json sources <rule-id>` | Machine-readable equivalents for scripting.
-|===
-
-Enables tracing *"why does this rule exist?"* back to Anthropic's authoritative material in one command.
+The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 25 of the 34 shipped rules link to a canonical section, and 9 are Claude-Code-specific or novel coach concepts with no direct upstream mapping. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
 
 == Encouragement layer
 
@@ -318,20 +275,13 @@ The coach also praises the *specific positive behaviors* that mirror the negativ
 
 Design constraints:
 
-* *Never on a nudged prompt.* Praise + correction on the same prompt dilutes both.
+* *Never on a coached prompt.* Praise + correction on the same prompt dilutes both.
 * *Specific, not generic.* Describes what you did, not who you are.
 * *Process, not trait.* Praises the technique.
 * *Variable-ratio.* Intermittent praise stays potent.
-* *Milestone events.* Rule graduating to mastered + first-after-fire always recognized.
+* *Milestone events.* Rule graduating to mastered (`🎓`) + first-after-fire always recognized.
 
-== Anti-habituation
-
-Same message repeated wears out. The literature (Hattie & Timperley 2007 on feedback wear-out; Sasse & Rashid 2013 on alert fatigue) converges on *variety + frequency capping + escalation* as the combination that keeps coaching salient. The coach ships all four:
-
-* *Variant pool* — L1 rules have 3 phrasing variants each. Rotates on each fire.
-* *Novelty constraint* — never repeats a variant within the last 2 fires of the same rule.
-* *Progressive disclosure* — first fire in the window shows the full box; 2nd–3rd is a medium reminder; 4th+ is a one-liner.
-* *Silence after saturation* — 5 fires within 30 prompts triggers a 30-prompt silence on that rule. Absence signals that coaching isn't landing.
+Distinct from praise, the `✓` clean-prompt *acknowledgment* (v0.35) is a frequent, informational liveness heartbeat — a green-dot signal that the coach ran, plus your progress toward the next mastery. Grounded in the informational-vs-controlling-feedback distinction (Deci & Ryan 2000) and the endowed-progress effect (Nunes & Drèze 2006).
 
 == Typo tolerance
 
@@ -343,25 +293,13 @@ Set `typo_tolerance: 0` to disable.
 
 == Conversational short-circuit
 
-Many prompts in an ongoing conversation aren't full asks — they're approvals (`sure`, `publish`, `go`), multi-choice picks (`1 and 2`, `option a`), or continuations (`continue`, `thanks`). The coach detects these and skips analysis entirely — no rule matching, no praise, no streak updates. Task-notification and system-reminder messages are also short-circuited.
+Many prompts in an ongoing conversation aren't full asks — they're approvals (`sure`, `publish`, `go`), multi-choice picks (`1 and 2`, `option a`), or continuations (`continue`, `thanks`). The coach detects these and skips analysis entirely — no rule matching, no praise, no streak updates. It also reads the session transcript to skip *picker answers* (replies to an `AskUserQuestion` menu) so a multiple-choice pick never triggers a false coaching pass.
 
 == Mastery ≠ silence
 
-Mastered rules aren't permanently dormant. They still evaluate every prompt, and when only a mastered rule matches, a *refresher* fires: a one-line softer box (`🔄 prompt-coach — refresher on <rule>`) rather than the full nudge. The cooldown for mastered rules is much longer (50 prompts vs 5 for practicing rules). If a mastered rule keeps matching, that's the highest-signal event in the system — evidence that a habit is regressing.
+Mastered rules aren't permanently dormant. They still evaluate every prompt, and when only a mastered rule matches, a *refresher* fires — a lighter re-fire rather than the full coaching block. The cooldown for mastered rules is much longer (50 prompts vs 5 for practicing rules). Mastery is evidence-based: a rule only masters if it has actually fired at least `min_fires_for_mastery` times; a rule that reaches the clean-streak threshold with zero fires retires as *inactive* (it never applied to how you prompt) rather than claiming a mastery you never earned.
 
 Optional self-healing: `demote_on_regression` auto-demotes a mastered rule that fires threshold+ times within a rolling window. Off by default.
-
-== Slash commands
-
-[cols="1,3",options="header"]
-|===
-| Command | What it does
-| `/prompt-coach-beta:stats` | Health dashboard — prompts analyzed, emit rate, top-fired rules, mastery, typo corrections, current config
-| `/prompt-coach-beta:config` | Structured config surface — show / describe / options / set / reset / diff / export / mastery / mastery-reset / mastery-reset-all / sources (v0.18–v0.20)
-| `/prompt-coach-beta:help` | Compact help card with commands, say-it phrases, and full config reference
-| `/prompt-coach-beta:report-issue` | File a privacy-safe bug report about a prompt the coach mistreated
-| `/prompt-coach-beta:prompt-coach` | Print the full SKILL.md
-|===
 
 == Reporting bad calls
 
@@ -381,15 +319,19 @@ The analyzer flags the *prior* substantive prompt's analysis (not the current co
 [source,text]
 ----
 ~/.claude/prompt-coach/
-├── config.json        # global config
+├── config.json        # global config (enabled, thresholds, disabled_rules)
 └── state.json         # global mastery ledger
 
 <repo>/.claude/prompt-coach/
 ├── config.json        # per-repo overrides
-├── state.json         # per-repo fires, reactivations, anti-habituation state
-├── log.md             # rolling log of nudges + prompt previews
+├── state.json         # per-repo fires, reactivations
+├── log.md             # rolling log of coaching + prompt previews
 └── candidates.jsonl   # flagged bad-call candidates
 ----
+
+== Quality gate
+
+The plugin ships a release test harness — `make test-coach` (or `python3 plugins/prompt-coach-beta/scripts/test-harness.py`). Fifteen checks drive the real hook and config surface in throwaway directories: clean→ack, rule→collaborator block with clickable URLs, `show_source_urls` toggle, `enabled=false` silence, mastery→`🎓` congrats, the analyze command (single + history), `sources`/`paths --open`, and a marketplace-validity check. Run it after every change.
 
 == Future — Java MCP server
 
@@ -399,7 +341,7 @@ The living design spec lives in the repo at `plugins/prompt-coach-beta/docs/java
 
 == Design notes
 
-* *Pure heuristics.* Rules are regex + short-window checks. No LLM call per prompt. Cheap, deterministic, ~10 ms.
-* *False positives are OK.* Cooldowns prevent pestering; graduation rewards consistent clean prompts even in the face of an over-eager rule.
+* *Fast filter, then Claude.* Rules are regex + short-window checks — cheap, deterministic, ~10 ms — and identify candidate rules. When one fires, Claude does the situated rewrite in the same response it was already going to send, so there's no extra API call or latency.
+* *False positives are cheap.* Cooldowns prevent pestering; graduation rewards consistent clean prompts even in the face of an over-eager rule; and Claude can veto a candidate rule when context resolves it.
 * *Sources are diverse.* Each rule cites 2+ sources drawn from Anthropic prompt-engineering docs, Claude Code best practices, OpenAI's prompt guide, Simon Willison's notes, and academic work (Wei et al. 2022 on CoT, Brown et al. 2020 on few-shot, Schulhoff et al. 2024 on prompt patterns).
 * *Beta.* Graduates to `prompt-coach` (drops the suffix, cuts a `1.0.0` release) once it earns its stable slot.
