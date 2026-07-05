@@ -7,6 +7,34 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05 (later 2)
+
+### Fixed
+- **prompt-coach-beta 0.35.1** — honest ack carrot. The v0.35.0 ack
+  advertised the highest-streak practicing rule as "closest to
+  mastery" regardless of `fires_total`. But under the v0.27 evidence
+  gate, a rule that reaches the streak threshold with fires_total <
+  min_fires graduates to *inactive* (silently retired — it never
+  applied to the user's prompts), NOT *mastered* (congrats). So the
+  ack dangled a milestone that would never fire: the maintainer's
+  live state showed `closest to mastery: no-chain-of-thought 14/15`
+  for a rule with **0 fires** that was one clean prompt from going
+  silently inactive.
+  - `_ack_line` now only considers rules with `fires_total >=
+    min_fires_for_mastery` (the ones that can actually master) for
+    the "closest to mastery" line.
+  - If active rules exist but none is masterable yet, shows a neutral
+    `watching N rules` instead of a false promise.
+  - Diagnosis surfaced from the log: praise fired 21× historically
+    (`praise_count: 21`) but was never once visible — in `both` mode
+    it went to stderr (TUI doesn't render it), and in `inline` mode
+    the praise path had no inline branch (never did — the nudge path
+    got inline in v0.10, praise never followed). v0.35.0 was the
+    first version where praise could render at all.
+  - 4 tests pass: picks masterable rule over the 0-fire carrot;
+    neutral "watching N" when nothing masterable; milestone line when
+    all retired; single masterable rule.
+
 ## 2026-07-05 (later)
 
 ### Added / Fixed

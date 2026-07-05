@@ -3846,25 +3846,44 @@ def _v34_context_for_claude(prompt_text: str, rule_ids: list[str]) -> str:
     )
 
 
-def _ack_line(g: dict, active_practicing: list[str], threshold: int) -> str:
-    """v0.35.0 — build the compact clean-prompt acknowledgment line.
+def _ack_line(g: dict, active_practicing: list[str], threshold: int,
+              min_fires: int = 1) -> str:
+    """v0.35.1 — build the compact clean-prompt acknowledgment line.
 
-    Shows (a) that the prompt was clean and (b) mastery progress: the active
-    practicing rule closest to graduating, with its streak / threshold. Falls
-    back to a milestone note when no practicing rule remains active (all
-    active rules already mastered/inactive)."""
-    progressing = []
+    Shows (a) the prompt was clean and (b) HONEST mastery progress.
+
+    v0.35.0 bug: this advertised the highest-streak practicing rule as
+    "closest to mastery" regardless of its fires_total. But under the v0.27
+    evidence gate, a rule that reaches the streak threshold with
+    fires_total < min_fires graduates to *inactive* (silently retired — it
+    never actually applied to the user's prompts), NOT to *mastered* (no
+    congrats). So the ack dangled a milestone that would never fire — e.g.
+    "closest to mastery: no-chain-of-thought 14/15" for a rule with 0
+    fires that was about to go inactive.
+
+    Fix: only rules with fires_total >= min_fires can actually master, so
+    only those are eligible for the "closest to mastery" carrot. If none
+    qualify, show a neutral liveness line (no false promise)."""
+    masterable = []   # (rid, streak) — has the evidence to actually master
+    practicing_n = 0
     for rid in active_practicing:
         rs = g.get("rules", {}).get(rid, {})
-        if rs.get("status", "practicing") == "practicing":
-            progressing.append((rid, int(rs.get("clean_streak", 0))))
-    if not progressing:
-        return "✓ prompt-coach · clean prompt · all active rules mastered 🎓"
-    # Closest to mastery = highest current clean_streak.
-    rid, streak = max(progressing, key=lambda t: t[1])
-    streak = min(streak, threshold)
-    return (f"✓ prompt-coach · clean prompt · closest to mastery: "
-            f"{rid} {streak}/{threshold}")
+        if rs.get("status", "practicing") != "practicing":
+            continue
+        practicing_n += 1
+        if int(rs.get("fires_total", 0)) >= min_fires:
+            masterable.append((rid, int(rs.get("clean_streak", 0))))
+    if masterable:
+        rid, streak = max(masterable, key=lambda t: t[1])
+        streak = min(streak, threshold)
+        return (f"✓ prompt-coach · clean prompt · closest to mastery: "
+                f"{rid} {streak}/{threshold}")
+    if practicing_n:
+        # Rules are active but none has fired yet, so none can master until
+        # it does. Don't promise mastery; just confirm the coach is watching.
+        return (f"✓ prompt-coach · clean prompt · watching {practicing_n} "
+                f"rule{'s' if practicing_n != 1 else ''}")
+    return "✓ prompt-coach · clean prompt · all active rules mastered 🎓"
 
 
 def _inline_context_for_claude(rule: Rule, streak: int, threshold: int) -> str:
@@ -4747,7 +4766,8 @@ def main() -> int:
         since = int(g.get("acks_since", 0)) + 1
         if since >= ack_ratio:
             g["acks_since"] = 0
-            ack_line = _ack_line(g, active_practicing, threshold)
+            ack_line = _ack_line(g, active_practicing, threshold,
+                                 int(cfg.get("min_fires_for_mastery", 1)))
             outcome = "ack:clean"
             context_line = (
                 f"[prompt-coach · inline · ack] The user's prompt was clean — "
