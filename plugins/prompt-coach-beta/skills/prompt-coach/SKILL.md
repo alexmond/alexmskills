@@ -177,6 +177,39 @@ grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fo
 - **Milestone events** — a rule graduating to *mastered* and a "first-after-fire" (you did the
   thing you were nudged on last prompt) are always recognized regardless of ratio.
 
+> **v0.35 fix:** the praise layer had no inline-render branch, so from v0.29 (when rendering
+> became inline-only) through v0.34 all of the above — including the mastery congrats — was
+> computed then silently dropped. v0.35 restores it: mastery renders `🎓 prompt-coach — you
+> mastered …`, first-after-fire and positives render `✨ prompt-coach — …`.
+
+## Liveness acknowledgment (v0.35+)
+
+The coach used to speak *only* on a rule hit, so a clean prompt produced silence and you
+couldn't tell it was alive. `ack_clean` (default **on**) fixes that: on a clean prompt where
+nothing else fired, it emits one compact ambient line —
+
+```
+✓ prompt-coach · clean prompt · closest to mastery: no-verify-loop 12/15
+```
+
+**This is not praise — it's a heartbeat.** The distinction is deliberate and grounded:
+
+- **Informational, not evaluative.** Praise conveys a judgment ("good job") and must stay
+  sparing or it wears out (Kohn 1993; Deci & Ryan 2000 on controlling vs *informational*
+  feedback). A progress counter conveys competence *information* — like a test runner's green
+  dot or a shell's git-branch segment — so it can be frequent without the wear-out.
+- **Endowed-progress effect** (Nunes & Drèze 2006) — surfacing "N/threshold to mastery" makes
+  the goal feel closer and pulls you toward it.
+- **Status channel, not alert channel** (Sasse & Rashid 2013 on alert fatigue) — a distinct
+  `✓` glyph (vs 🎯 nudge / 🔄 refresher / 💡 tip / ✨🎓 praise) reads as ambient status, not a
+  demand for action.
+
+**Priority ladder:** nudge/collaborator › refresher › praise › tip › ack. The ack fires only
+when nothing else spoke, so the coach never stacks two messages on one prompt.
+
+**Config:** `ack_clean` (bool, default true) · `ack_ratio` (int, default 1 = every clean prompt;
+raise to 5/10 for a quieter pulse). Say *"turn off prompt-coach acks"* or *"coach ack every 10"*.
+
 ## Conversational short-circuit (v0.6+)
 
 Many prompts in an ongoing conversation aren't full asks — they're **approvals**

@@ -59,6 +59,13 @@ DEFAULT_CONFIG = {
     # voice presets, tips catalog, anti-habituation) for users who
     # want the legacy behavior. Deprecated; will be removed post-v1.0.
     "coach_style": "collaborator",
+    # v0.35.0 — liveness. On a clean prompt (nothing else fired), emit a
+    # compact ambient one-liner confirming the coach ran + showing mastery
+    # progress. Informational, not praise; distinct ✓ glyph. `ack_ratio`
+    # rate-limits it: 1 = every clean prompt (heartbeat), higher = every
+    # Nth. Set ack_clean=false to go back to silent-on-clean.
+    "ack_clean": True,
+    "ack_ratio": 1,
     "graduation_threshold": 15,   # clean prompts in a row → mastered
     # v0.27.0 — evidence requirement for mastery. A rule that hits
     # graduation_threshold with fires_total below this value transitions to
@@ -185,6 +192,27 @@ CONFIG_SCHEMA = {
                        "collaborates (rewrites the prompt for you).",
         "example": "collaborator",
         "since": "0.34.0",
+    },
+    "ack_clean": {
+        "category": "output",
+        "type": "bool",
+        "description": "Emit a compact ambient one-liner on a clean prompt "
+                       "(nothing else fired) confirming the coach ran + showing "
+                       "the active rule closest to mastery. A liveness heartbeat, "
+                       "not praise — distinct ✓ glyph, informational not "
+                       "evaluative. On by default; set false to go silent on "
+                       "clean prompts.",
+        "example": True,
+        "since": "0.35.0",
+    },
+    "ack_ratio": {
+        "category": "output",
+        "type": "int",
+        "description": "Rate-limit for ack_clean: emit the liveness line every "
+                       "Nth clean prompt. 1 = every clean prompt (default; a "
+                       "steady heartbeat). Raise to 5/10 for a quieter pulse.",
+        "example": 1,
+        "since": "0.35.0",
     },
     "pause_until_prompt": {
         "category": "output",
@@ -3818,6 +3846,27 @@ def _v34_context_for_claude(prompt_text: str, rule_ids: list[str]) -> str:
     )
 
 
+def _ack_line(g: dict, active_practicing: list[str], threshold: int) -> str:
+    """v0.35.0 — build the compact clean-prompt acknowledgment line.
+
+    Shows (a) that the prompt was clean and (b) mastery progress: the active
+    practicing rule closest to graduating, with its streak / threshold. Falls
+    back to a milestone note when no practicing rule remains active (all
+    active rules already mastered/inactive)."""
+    progressing = []
+    for rid in active_practicing:
+        rs = g.get("rules", {}).get(rid, {})
+        if rs.get("status", "practicing") == "practicing":
+            progressing.append((rid, int(rs.get("clean_streak", 0))))
+    if not progressing:
+        return "✓ prompt-coach · clean prompt · all active rules mastered 🎓"
+    # Closest to mastery = highest current clean_streak.
+    rid, streak = max(progressing, key=lambda t: t[1])
+    streak = min(streak, threshold)
+    return (f"✓ prompt-coach · clean prompt · closest to mastery: "
+            f"{rid} {streak}/{threshold}")
+
+
 def _inline_context_for_claude(rule: Rule, streak: int, threshold: int) -> str:
     """v0.10.0 — `nudge_style: inline` variant. Instructs Claude to render
     the nudge as a visible block at the start of its response so the user
@@ -4321,46 +4370,18 @@ def main() -> int:
     # users who want the old behavior.
     coach_style = cfg.get("coach_style", "collaborator")
     if coach_style == "collaborator" and fired:
-        # Update fires_total / clean_streak on every practicing/active rule
-        # BEFORE emitting, so mastery ledger stays truthful. This mirrors
-        # what the elaborate path does; we just skip the emit ceremony.
-        current_prompt = g["prompt_count"]
-        min_fires_master = int(cfg.get("min_fires_for_mastery", 1))
-        threshold = int(cfg.get("graduation_threshold", 15))
-        for rid in active_practicing + active_mastered:
-            gr = g["rules"].setdefault(rid, {})
-            lr = l["rules"].setdefault(rid, {})
-            if rid in fired:
-                gr["fires_total"] = int(gr.get("fires_total", 0)) + 1
-                gr["clean_streak"] = 0
-                gr["last_fired_at"] = _now_iso()
-                lr["fires_here"] = int(lr.get("fires_here", 0)) + 1
-                lr["clean_streak_here"] = 0
-                lr["last_fired_at"] = _now_iso()
-            else:
-                gr["clean_streak"] = int(gr.get("clean_streak", 0)) + 1
-                lr["clean_streak_here"] = int(lr.get("clean_streak_here", 0)) + 1
-            # v0.27 evidence-based graduation
-            if (rid not in fired
-                and gr["clean_streak"] >= threshold
-                and gr.get("status") not in ("mastered", "inactive")):
-                fires_total = int(gr.get("fires_total", 0))
-                new_status = None
-                if fires_total >= min_fires_master:
-                    new_status = "mastered"
-                    mastery_events.append(rid)
-                elif fires_total == 0:
-                    new_status = "inactive"
-                if new_status is not None:
-                    prior_status = gr.get("status", "practicing")
-                    gr["status"] = new_status
-                    gr["graduated_at"] = _now_iso()
-                    _append_graduation_event(local_dir, rid, prior_status,
-                                              new_status, fires_total,
-                                              gr["clean_streak"])
+        # v0.35.0 — the canonical bookkeeping loop above (over `active`) has
+        # ALREADY updated fires_total / clean_streak / graduation /
+        # mastery_events for every active rule this prompt. The collaborator
+        # intercept only builds the additionalContext instruction telling
+        # Claude to rewrite the prompt; it must NOT re-touch state, or every
+        # fired rule gets +2 fires_total and every clean rule +2 streak
+        # (the v0.34 double-count bug — a single prompt showed fires_total=2).
         context_line = _v34_context_for_claude(prompt_raw, list(fired))
         outcome = f"collaborator:candidates={len(fired)}"
-        # Skip the entire legacy emit path — jump to persistence.
+        # Skip the entire legacy emit path — jump to persistence. Mastery
+        # events (if a rule graduated this prompt) still flow to the praise
+        # layer below, so the congrats renders even in collaborator mode.
         chosen = None
         chosen_mastered = None
 
@@ -4576,7 +4597,46 @@ def main() -> int:
         if mode == "both":
             print(_praise_box(kind, header, praise_text, sources, mode),
                   file=sys.stderr, flush=True)
-        if mode in ("both", "silent"):
+        if mode == "inline":
+            # v0.35.0 — praise had NO inline branch before now, so from v0.29
+            # (when rendering was hardcoded to inline) through v0.34 the
+            # entire encouragement layer — positive detectors, first-after-
+            # fire, AND mastery congrats — was computed then silently
+            # dropped. This restores it. Mastery gets a distinct celebratory
+            # line; ordinary praise a quieter one.
+            if kind == "mastery":
+                # praise_text already carries the celebration ("🎉 Rule
+                # mastered: **X**. That's N clean prompts…"). Prefix the
+                # coach glyph, strip a leading 🎉 to avoid a double emoji.
+                body = praise_text.lstrip()
+                if body.startswith("🎉"):
+                    body = body[1:].lstrip()
+                ack = f"🎓 prompt-coach — {body}"
+                instr = (
+                    f"[prompt-coach · inline · mastery] The user just graduated "
+                    f"a rule to mastered — a real milestone. Render EXACTLY this "
+                    f"ONE line at the very START of your response, verbatim, "
+                    f"then address their task:\n\n{ack}\n\n"
+                    f"It's a genuine congratulation; render it warmly but don't "
+                    f"expand on it or make the user respond to it.")
+            elif kind == "first-after-fire":
+                p = POSITIVES_BY_ID[pid_or_rid]
+                ack = (f"✨ prompt-coach — nice, you applied "
+                       f"{p.mirrors} right after the nudge. {praise_text}")
+                instr = (
+                    f"[prompt-coach · inline · praise] Render EXACTLY this ONE "
+                    f"line at the very START of your response, verbatim, then "
+                    f"address the task:\n\n{ack}\n\n"
+                    f"Keep it to that line; it's light encouragement, not a topic.")
+            else:
+                ack = f"✨ prompt-coach — {praise_text}"
+                instr = (
+                    f"[prompt-coach · inline · praise] Render EXACTLY this ONE "
+                    f"line at the very START of your response, verbatim, then "
+                    f"address the task:\n\n{ack}\n\n"
+                    f"Keep it to that line; it's light encouragement, not a topic.")
+            context_line = instr
+        elif mode in ("both", "silent"):
             context_line = _praise_context(kind, pid_or_rid, praise_text)
 
         # State updates for praise
@@ -4656,6 +4716,48 @@ def main() -> int:
             if context_line is None:
                 context_line = tip_inline
         # `log-only` and everything else: just log the fire, no user output
+
+    # ---------------- Liveness acknowledgment (v0.35.0) ---------------- #
+    # The coach was "too silent": since v0.29 it only spoke on rule hits, so
+    # a clean prompt got nothing and the user couldn't tell it was alive.
+    # `ack_clean` (default on) emits a compact, ambient one-liner on a clean
+    # prompt confirming the coach ran + showing mastery progress.
+    #
+    # This is deliberately NOT praise. Praise is evaluative and must stay
+    # sparing (Kohn 1993; Deci & Ryan 2000 on controlling vs informational
+    # feedback). The ack is *informational* — a heartbeat, like a test
+    # runner's green dot or a shell's git-branch segment. Informational
+    # progress feedback supports competence without the wear-out that
+    # repeated praise causes, and surfacing "N/threshold to mastery"
+    # leverages the endowed-progress effect (Nunes & Drèze 2006). It uses a
+    # distinct glyph (✓) from nudge (🎯) / refresher (🔄) / tip (💡) /
+    # praise (✨🎓) so it reads as status, not an alert (Sasse & Rashid 2013
+    # on keeping informational status off the alert channel).
+    #
+    # Priority: it fires ONLY when nothing else spoke this prompt
+    # (outcome == "no-emit", context_line is None) and no rule fired. So
+    # nudge > refresher > praise > tip > ack. Rate-controlled by `ack_ratio`
+    # (default 1 = every clean prompt; raise to dial the heartbeat down).
+    if (cfg.get("ack_clean", True)
+            and context_line is None
+            and outcome == "no-emit"
+            and not fired
+            and not is_paused):
+        ack_ratio = max(1, int(cfg.get("ack_ratio", 1)))
+        since = int(g.get("acks_since", 0)) + 1
+        if since >= ack_ratio:
+            g["acks_since"] = 0
+            ack_line = _ack_line(g, active_practicing, threshold)
+            outcome = "ack:clean"
+            context_line = (
+                f"[prompt-coach · inline · ack] The user's prompt was clean — "
+                f"no rules fired. Render EXACTLY this ONE line at the very "
+                f"start of your response, verbatim, then answer normally:\n\n"
+                f"{ack_line}\n\n"
+                f"Keep it to that single line — it's an ambient liveness "
+                f"signal, not a topic. Don't comment on it or invite a reply.")
+        else:
+            g["acks_since"] = since
 
     # Persist state.
     g["updated_at"] = _now_iso()

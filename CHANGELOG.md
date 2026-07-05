@@ -7,6 +7,57 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05 (later)
+
+### Added / Fixed
+- **prompt-coach-beta 0.35.0** — liveness + restored positive layer.
+  User: "the current skill is too silent… I would like some
+  indication that it is working, for example when prompt is correct
+  post a short message about a prompt and mastery increase, research
+  proper messaging, make it configurable but on for default"; and
+  "also when mastery achieved, post an appropriate congrats message."
+  - **Root cause found**: when v0.29 deleted `nudge_style` and
+    hardcoded rendering to inline, the **praise path never got an
+    `inline` branch** (it only handled `both` / `silent`). So from
+    v0.29 through v0.34, the ENTIRE encouragement layer — positive
+    detectors, first-after-fire, AND the mastery-congrats — was
+    computed then silently dropped. The "too silent" complaint was a
+    real regression. Fixed: praise now renders inline, with a distinct
+    celebratory line for mastery (🎓), first-after-fire (✨), and
+    ordinary positives (✨).
+  - **New: clean-prompt acknowledgment** (`ack_clean`, default
+    **on**). On a clean prompt where nothing else fired, the coach
+    emits one compact ambient line:
+    `✓ prompt-coach · clean prompt · closest to mastery: <rule> N/15`.
+    Rate-limited by `ack_ratio` (default 1 = every clean prompt; raise
+    for a quieter pulse).
+  - **Messaging research** (grounds the design; cited in SKILL.md):
+    the ack is deliberately *informational, not praise*. Praise is
+    evaluative and must stay sparing (Kohn 1993; Deci & Ryan 2000 on
+    controlling vs informational feedback). The ack is a heartbeat —
+    like a test runner's green dot — so it can be frequent without
+    the wear-out repeated praise causes. Showing "N/threshold to
+    mastery" leverages the endowed-progress effect (Nunes & Drèze
+    2006). Distinct ✓ glyph keeps it on the status channel, not the
+    alert channel (Sasse & Rashid 2013 on alert fatigue).
+  - **Priority ladder**: nudge/collaborator > refresher > praise >
+    tip > ack. The ack only speaks when nothing else did, so the
+    coach never stacks two messages on one prompt.
+  - **Bug fixed (found while reading)**: the v0.34 collaborator
+    intercept re-ran the state-update loop that the canonical
+    bookkeeping loop already runs, double-counting `fires_total` and
+    `clean_streak` (a single prompt showed fires_total=2). The
+    intercept now only builds the rewrite instruction; state is
+    owned solely by the canonical loop. Mastery events still flow to
+    the praise layer, so the congrats fires in collaborator mode too.
+  - **Config**: `ack_clean` (bool, default true) + `ack_ratio` (int,
+    default 1), both in CONFIG_SCHEMA under the `output` category.
+  - **Six tests pass**: clean prompt → ✓ ack with progress; fired
+    rule increments fires_total by exactly 1 (double-count gone);
+    mastery event → 🎓 congrats renders inline; ack_clean=false
+    silences clean prompts; ack_ratio=3 → 2 acks over 6 clean
+    prompts; marketplace validates.
+
 ## 2026-07-05
 
 ### Fixed
