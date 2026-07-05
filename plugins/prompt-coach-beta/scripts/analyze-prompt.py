@@ -804,23 +804,12 @@ def normalize_prompt(prompt: str, tolerance: int
 # Rule catalog
 # ---------------------------------------------------------------------------
 
-DEFAULT_VOICE_PRESET = "colleague"
-
 
 @dataclass
 class Rule:
     id: str
     tier: int                     # 1 = fundamentals, 2 = intermediate, 3 = advanced
     name: str
-    # v0.16.0 — nudges is a *list* of phrasing variants for anti-habituation.
-    # v0.17.0 — nudges can now be a dict keyed by voice preset name, so the
-    # same rule can carry parallel phrasings for different voices
-    # ("colleague" / "plain" / future presets). Accepted shapes:
-    #   str                     — single variant, treated as `colleague`
-    #   list[str]               — multiple variants, treated as `colleague`
-    #   dict[preset, list[str]] — full preset-keyed catalog
-    # Preset resolution falls back: requested preset → colleague → primary.
-    nudge: str | list[str] | dict[str, list[str]]
     guidance: str                 # short hint for Claude's additionalContext
     sources: list[tuple[str, str]]  # (title, url)
     check: Callable[[str], bool]
@@ -831,44 +820,6 @@ class Rule:
     # claude-prompting-best-practices — used by /prompt-coach-beta:config
     # sources <rule-id> to surface a traceable citation.
     anthropic_ref: str | None = None
-
-    def variants_for(self, preset: str = DEFAULT_VOICE_PRESET) -> list[str]:
-        """Return variant list for the requested preset, with fallback."""
-        n = self.nudge
-        if isinstance(n, str):
-            return [n]
-        if isinstance(n, list):
-            return list(n)
-        if isinstance(n, dict):
-            if preset in n:
-                return list(n[preset])
-            if DEFAULT_VOICE_PRESET in n:
-                return list(n[DEFAULT_VOICE_PRESET])
-            # Last resort: any preset's variants
-            for v in n.values():
-                if v:
-                    return list(v)
-            return []
-        return []
-
-    def primary_nudge_for(self, preset: str = DEFAULT_VOICE_PRESET) -> str:
-        vs = self.variants_for(preset)
-        return vs[0] if vs else ""
-
-    @property
-    def nudges(self) -> list[str]:
-        """Backward-compat: default preset (colleague)."""
-        return self.variants_for(DEFAULT_VOICE_PRESET)
-
-    @property
-    def primary_nudge(self) -> str:
-        return self.primary_nudge_for(DEFAULT_VOICE_PRESET)
-
-    def has_preset(self, preset: str) -> bool:
-        """True if the rule ships variants specifically for this preset."""
-        if isinstance(self.nudge, dict):
-            return preset in self.nudge
-        return preset == DEFAULT_VOICE_PRESET
 
 
 # ---- L1 fundamentals -------------------------------------------------------
@@ -1679,22 +1630,6 @@ RULES: list[Rule] = [
         id="vague-reference",
         tier=1,
         name="Vague reference",
-        nudge={
-            "colleague": [
-                "You said 'fix it' — what's 'it'? A file, a PR, an error message? "
-                "Point me at the specific thing and I'll go faster.",
-                "The 'it/this/that' is doing a lot of work in that sentence. Which "
-                "file / PR / error are you pointing at?",
-                "One quick thing: what specifically are we working on?",
-            ],
-            "plain": [
-                "Please tell me what 'it' or 'this' is. For example: a file name, "
-                "a PR number, or an error message.",
-                "The words 'it' and 'this' can mean many things. Which file or "
-                "which error do you mean?",
-                "What is the exact file or error? A name or a number helps me.",
-            ],
-        },
         guidance=(
             "User's prompt starts with an unresolved pronoun. If context makes the "
             "referent unambiguous, proceed; otherwise ask ONE short clarifying "
@@ -1708,23 +1643,6 @@ RULES: list[Rule] = [
         id="no-definition-of-done",
         tier=1,
         name="No definition of done",
-        nudge={
-            "colleague": [
-                "How will we know when this is done? A passing test, a specific "
-                "output, a green build?",
-                "Give me a way to check success — 'until pytest passes' or 'when "
-                "the CI is green' or 'the output matches X'.",
-                "Quick: what does 'done' look like here?",
-            ],
-            "plain": [
-                "How can we check the work is finished? For example: a test "
-                "passes, or the build is green.",
-                "Please tell me one way to check the result is correct. "
-                "A test, a value, or a status is fine.",
-                "What tells you the change is finished? Please say one clear "
-                "sign.",
-            ],
-        },
         guidance=(
             "User's prompt is an action verb with no acceptance criteria. Before "
             "acting, restate your interpretation of 'done' in one sentence, and "
@@ -1738,24 +1656,6 @@ RULES: list[Rule] = [
         id="unbounded-scope",
         tier=1,
         name="Unbounded scope",
-        nudge={
-            "colleague": [
-                "'All' / 'every' / 'the whole thing' is a lot. Which files or "
-                "module specifically? Or should this be audit-only, no changes?",
-                "That's a big scope. Can we narrow it down — a path, a pattern, a "
-                "specific module?",
-                "Do you want me to actually change everything, or scope this to "
-                "something smaller first?",
-            ],
-            "plain": [
-                "Words like 'all' or 'every' cover many files. Which files or "
-                "which module should I change?",
-                "Should I really change everything? Or should I only look "
-                "and not change anything?",
-                "Please name one folder, one file type, or one pattern to work "
-                "on. That way I do not change too much.",
-            ],
-        },
         guidance=(
             "User's prompt has an unbounded scope word attached to a mutating "
             "verb. Ask them to constrain (path glob, module, or read-only) BEFORE "
@@ -1769,24 +1669,6 @@ RULES: list[Rule] = [
         id="improve-without-metric",
         tier=1,
         name="Improve without a metric",
-        nudge={
-            "colleague": [
-                "'Better' / 'faster' / 'cleaner' means different things to "
-                "different people. What are you actually optimizing for — speed "
-                "(ms), size (lines), correctness (tests)?",
-                "How will we measure 'better'? A latency target, a specific test "
-                "passing, a byte count?",
-                "Quick — what's the target? A number or a spec I can aim at?",
-            ],
-            "plain": [
-                "'Better' can mean many things. Please pick one: faster, "
-                "smaller, more correct, or easier to read.",
-                "How do we measure success? A number is best. For example: "
-                "'under 200 ms' or 'test X passes'.",
-                "What is your target? Please give a number or a rule I can "
-                "aim for.",
-            ],
-        },
         guidance=(
             "User asked for improvement without a measurable target. Either infer "
             "the most likely target from context and STATE it before acting, or "
@@ -1800,27 +1682,6 @@ RULES: list[Rule] = [
         id="missing-guardrails",
         tier=1,
         name="Missing guardrails",
-        nudge={
-            "colleague": [
-                "You're asking for a big change — refactor / rewrite / migrate — "
-                "but didn't say what to leave alone. What must NOT change? Name "
-                "one thing: the public API, the tests, the file layout.",
-                "Before I touch anything: what's off-limits? Say something like "
-                "'don't break the public API' or 'existing tests must still pass' "
-                "and I'll respect that.",
-                "Quick one before I dig in: anything I should specifically not "
-                "touch?",
-            ],
-            "plain": [
-                "You want a big change. Please tell me one thing I must not "
-                "change. For example: the public API, or the tests, or the "
-                "file names.",
-                "What must stay the same? Please name one thing. I will keep "
-                "it safe.",
-                "Before I start: is there anything I must not change or "
-                "delete?",
-            ],
-        },
         guidance=(
             "User's prompt has a broad mutating verb and no invariant. State the "
             "invariants you'll preserve (public API, existing tests, file "
@@ -1834,24 +1695,6 @@ RULES: list[Rule] = [
         id="compound-tasks",
         tier=2,
         name="Compound tasks",
-        nudge={
-            "colleague": [
-                "Three-plus verbs in one prompt often mean I'll get halfway through "
-                "and stop. Can we split it? Which is the P0 and which can wait?",
-                "Lot going on in one ask — I'll do better if we order it: first X, "
-                "then Y, then Z. Which should I do first?",
-                "Want me to make a task list first and check with you before "
-                "starting? Multi-step stuff is easier that way.",
-            ],
-            "plain": [
-                "You asked me to do many things. I may do only part of it. "
-                "Please tell me the order, or which one is most important.",
-                "There are many steps in this ask. Should I make a list first, "
-                "so we do not miss any step?",
-                "Please tell me: which step should I do first? I will do them "
-                "one by one.",
-            ],
-        },
         guidance=(
             "User's prompt bundles multiple mutations. Propose an ordered plan "
             "with the smallest independently-verifiable slice first; ask which "
@@ -1865,24 +1708,6 @@ RULES: list[Rule] = [
         id="no-verify-loop",
         tier=2,
         name="No verify loop",
-        nudge={
-            "colleague": [
-                "How do we know the change worked? Add 'and run the tests' or "
-                "'and confirm the build stays green' so we close the loop.",
-                "Implementation without verification is faith-based. Say what "
-                "should be true after — a test passing, a build succeeding, "
-                "an output matching.",
-                "Quick: after I make the change, what should you see to know "
-                "it landed?",
-            ],
-            "plain": [
-                "Please also tell me how to check my work. For example: 'and "
-                "run the tests' or 'and check the build is green'.",
-                "How do I know my change worked? Please say one clear check.",
-                "After I finish, what should you see? A test result, or a "
-                "log line, or a screen output?",
-            ],
-        },
         guidance=(
             "User's prompt implements without verifying. Run the relevant tests / "
             "type-check / build after your change, and report the result even if "
@@ -1895,25 +1720,6 @@ RULES: list[Rule] = [
         id="missing-context-fetch",
         tier=2,
         name="Missing context reference",
-        nudge={
-            "colleague": [
-                "You mentioned 'the failing test' / 'the issue' / 'that error' "
-                "without naming it. Paste the ID, test name, or error text — "
-                "then I don't have to guess.",
-                "Which failing test / which issue / which error? A name, a "
-                "number, or the error text saves us a round trip.",
-                "Quick — can you paste the identifier or the error text? "
-                "Faster than me guessing which one you mean.",
-            ],
-            "plain": [
-                "Please tell me the exact test name, or the ticket number, or "
-                "the error text. Then I can find it.",
-                "Which test failed? Which ticket? Please give the name or "
-                "the number.",
-                "Please copy the error message or the ticket ID here. This "
-                "way I know what you mean.",
-            ],
-        },
         guidance=(
             "User referenced an external artifact by role but not by ID. Ask "
             "for the identifier (issue #, test name, error string) before "
@@ -1927,24 +1733,6 @@ RULES: list[Rule] = [
         id="no-answer-shape",
         tier=1,
         name="Information ask without a shape",
-        nudge={
-            "colleague": [
-                "How do you want the answer shaped? A few bullets, one paragraph, "
-                "yes/no + one line, a table?",
-                "Give me a shape and I'll fit the answer to it — '3 bullets each', "
-                "'under 100 words', 'table with X and Y columns'.",
-                "Quick shape? One-liner, table, bullets — anything works, just save "
-                "me from a wall of text.",
-            ],
-            "plain": [
-                "What shape do you want for the answer? For example: 3 bullets, "
-                "one short paragraph, or a table.",
-                "Please pick a format: bullets, table, one line, or yes/no. "
-                "I will match it.",
-                "Please tell me: how long, and what shape? A number of bullets "
-                "or a max word count is fine.",
-            ],
-        },
         guidance=(
             "User asked an information-seeking question without specifying "
             "shape. Pick a compact default upfront (e.g. 'I'll give you 3 "
@@ -1959,25 +1747,6 @@ RULES: list[Rule] = [
         id="no-format-spec",
         tier=2,
         name="No output shape",
-        nudge={
-            "colleague": [
-                "You asked for a summary / list / report but didn't say how "
-                "shaped. Give me one: '5 bullets', 'table with columns X/Y/Z', "
-                "'under 200 words'.",
-                "What shape should the output take? A short bulleted list, a "
-                "table, a paragraph? Different asks want different shapes.",
-                "Quick — how do you want it? Bullets, table, paragraph, "
-                "one-liner?",
-            ],
-            "plain": [
-                "You want a summary or list. Please say how: 5 bullets, or "
-                "a table with columns, or under 200 words.",
-                "What shape should the answer be? For example: a list, a "
-                "table, or a short paragraph.",
-                "Please tell me one format: bullets, table, or short text. "
-                "I will match it.",
-            ],
-        },
         guidance=(
             "User asked for structured output without specifying structure. Pick "
             "a compact default (bullets ≤ 7, or a small table) and STATE it "
@@ -1992,11 +1761,6 @@ RULES: list[Rule] = [
         id="no-adversarial-check",
         tier=3,
         name="No adversarial check",
-        nudge=(
-            "High-stakes area (security / migration / prod / deletes). Ask "
-            "for an adversarial pass: 'what would a skeptic attack here?', "
-            "'list 3 ways this breaks under concurrency'."
-        ),
         guidance=(
             "User's prompt is high-stakes. Before acting, list 2–3 concrete "
             "failure modes and either address or explicitly accept each. Offer "
@@ -2010,10 +1774,6 @@ RULES: list[Rule] = [
         id="retry-without-diagnosis",
         tier=3,
         name="Retry without diagnosis",
-        nudge=(
-            "'Try again' with no new info tends to loop. Add: what failed, "
-            "what the error said, what you tried, what you expected."
-        ),
         guidance=(
             "User is retrying without new context. BEFORE re-attempting, restate "
             "what you understood failed last round; if unclear, ask for the error "
@@ -2026,11 +1786,6 @@ RULES: list[Rule] = [
         id="no-few-shot",
         tier=3,
         name="Pattern ask without example",
-        nudge=(
-            "You asked for something 'like X' or 'in the same style' but didn't "
-            "show one. Paste a 2–3 line example — few-shot demonstrations beat "
-            "descriptions almost every time."
-        ),
         guidance=(
             "User asked for pattern-matched output without providing an exemplar. "
             "Ask for one small example, or pick a plausible one from context and "
@@ -2044,11 +1799,6 @@ RULES: list[Rule] = [
         id="no-chain-of-thought",
         tier=3,
         name="Hard reasoning without 'think first'",
-        nudge=(
-            "You asked a why/debug/trace/root-cause question. Add 'think through "
-            "this first' or 'reason step by step before answering' — CoT is a "
-            "well-known accuracy lift on reasoning tasks."
-        ),
         guidance=(
             "User asked a reasoning question. Think through the problem "
             "explicitly in your response (not silently) before stating the "
@@ -2062,11 +1812,6 @@ RULES: list[Rule] = [
         id="no-rubric",
         tier=3,
         name="Judgment without rubric",
-        nudge=(
-            "'Is this good?' means nothing without a rubric. Add the axes you "
-            "care about: correctness, performance, readability, size — or point "
-            "to the spec it's judged against."
-        ),
         guidance=(
             "User asked for a judgment without criteria. Propose a rubric (3–5 "
             "axes with a scale) BEFORE evaluating; invite the user to correct "
@@ -2079,11 +1824,6 @@ RULES: list[Rule] = [
         id="no-uncertainty-budget",
         tier=3,
         name="Investigative ask without uncertainty budget",
-        nudge=(
-            "'Find whether X' or 'does Y exist' without an 'if unsure, say so' "
-            "clause tempts a confident guess. Add: 'if you can't verify, tell me "
-            "what you'd need to.'"
-        ),
         guidance=(
             "User asked an investigative question. When answering, distinguish "
             "verified findings from inference; if you can't confirm from the "
@@ -2099,11 +1839,6 @@ RULES: list[Rule] = [
         id="implicit-goal",
         tier=4,
         name="Action without goal",
-        nudge=(
-            "You said WHAT to do but not WHY. State the goal in one clause "
-            "('so that …', 'in order to …', 'because …') — it lets Claude "
-            "propose a cheaper means when there is one."
-        ),
         guidance=(
             "User's prompt has an action but no stated goal. State your best "
             "guess at the goal in one sentence and check it BEFORE acting; ask "
@@ -2118,11 +1853,6 @@ RULES: list[Rule] = [
         id="unbounded-iteration",
         tier=4,
         name="Loop without stopping condition",
-        nudge=(
-            "'Keep improving' or 'refine more' without a stopping condition "
-            "burns rounds. Add 'until … passes / matches / is under N lines' "
-            "or a max number of iterations."
-        ),
         guidance=(
             "User asked for iterative refinement without a stopping condition. "
             "Propose an explicit exit criterion (test passes, rubric hit, N "
@@ -2137,11 +1867,6 @@ RULES: list[Rule] = [
         id="no-rubric-for-refine",
         tier=4,
         name="Refinement without rubric",
-        nudge=(
-            "'Refine this' / 'make it better' without a rubric drifts. Name the "
-            "1–3 axes the next pass should improve (clarity, correctness, "
-            "brevity) so 'better' isn't a moving target."
-        ),
         guidance=(
             "User asked for refinement without saying which axis to improve. "
             "Propose 1–3 named axes; state which axis this pass targets and "
@@ -2155,11 +1880,6 @@ RULES: list[Rule] = [
         id="no-plan-mode-for-risky",
         tier=5,
         name="Risky change without a plan first",
-        nudge=(
-            "Migration / delete / rewrite / prod-touching changes usually earn "
-            "a plan pass first. Try: 'propose a plan first (don't touch code)' "
-            "or invoke plan mode."
-        ),
         guidance=(
             "User asked for a risky change without asking for a plan. Before "
             "editing, propose an ordered plan (what changes, what stays, what "
@@ -2174,11 +1894,6 @@ RULES: list[Rule] = [
         id="no-task-list-for-multi-step",
         tier=5,
         name="Multi-step ask without a task list",
-        nudge=(
-            "Three or more action verbs in one prompt drift into partial work. "
-            "Ask for a TaskCreate / checklist first so nothing is silently "
-            "dropped."
-        ),
         guidance=(
             "User's prompt contains 3+ discrete actions. Use TaskCreate to "
             "materialize the steps up front, mark each in_progress as you "
@@ -2193,11 +1908,6 @@ RULES: list[Rule] = [
         id="no-agents-for-parallel-lookup",
         tier=5,
         name="Multiple lookups without parallel agents",
-        nudge=(
-            "Independent 'find X and also find Y' asks are cheaper as parallel "
-            "Agent/Explore calls than sequential greps. Say 'run these in "
-            "parallel'."
-        ),
         guidance=(
             "User implied multiple independent lookups. Fan them out with "
             "parallel Agent (Explore) calls in a single message rather than "
@@ -2211,11 +1921,6 @@ RULES: list[Rule] = [
         id="no-role-for-critique",
         tier=5,
         name="Review ask without a role",
-        nudge=(
-            "'Review my X' is stronger when you invoke a role: /roles:as "
-            "reviewer, or ask for a skeptic pass, security review, adversarial "
-            "check. The persona shapes what gets caught."
-        ),
         guidance=(
             "User asked for a review without specifying a persona. Ask which "
             "lens (correctness / security / API / readability / performance) — "
@@ -2230,11 +1935,6 @@ RULES: list[Rule] = [
         id="no-panel-for-contested-design",
         tier=5,
         name="Contested design without a panel",
-        nudge=(
-            "Signals of a genuine design fork ('which is better', 'torn "
-            "between', 'tradeoff'). Consider /brainstorm-panel with 3–4 "
-            "perspectives — one Claude reasoning solo tends to anchor."
-        ),
         guidance=(
             "User signaled a contested design choice. Before answering, name "
             "2–3 lenses that could disagree (skeptic / architect / user); if "
@@ -2248,11 +1948,6 @@ RULES: list[Rule] = [
         id="no-workflow-for-fanout",
         tier=5,
         name="Fan-out ask without Workflow",
-        nudge=(
-            "'For each of these 20+ things …' as one prompt is a serial slog. "
-            "Consider Workflow or parallel agents so the fan-out actually "
-            "fans out."
-        ),
         guidance=(
             "User implied fan-out over many items. Propose parallel agent "
             "fan-out or Workflow orchestration BEFORE starting; a serial for-"
@@ -2267,11 +1962,6 @@ RULES: list[Rule] = [
         id="no-skill-lookup",
         tier=6,
         name='"How do I …" without checking existing skills',
-        nudge=(
-            "That reads like a pattern that might already have a skill. "
-            "Before rolling your own: ask 'is there a skill for this?' — "
-            "or list the catalog with /help. Discoverability > memorability."
-        ),
         guidance=(
             "User asked 'how do I X' / 'what's the standard way' without "
             "checking whether an existing skill covers it. Before answering, "
@@ -2287,11 +1977,6 @@ RULES: list[Rule] = [
         id="pattern-worth-abstracting",
         tier=6,
         name="Repetition without abstraction",
-        nudge=(
-            "You said 'again' / 'same as before'. Rule of three: on the "
-            "third occurrence a pattern earns a skill. Worth naming, "
-            "extracting, or asking for a skill scaffold now?"
-        ),
         guidance=(
             "User signaled repetition ('again', 'yet another', 'same as "
             "last time'). Note the repetition and — if we're at N≥3 — ask "
@@ -2305,11 +1990,6 @@ RULES: list[Rule] = [
         id="no-skill-composition",
         tier=6,
         name="Repeatable ceremony not named as a skill",
-        nudge=(
-            "You described a multi-step process meant to be repeated. That's "
-            "the shape of a skill — name → steps → done → sources. Worth "
-            "codifying so you don't re-derive the sequence?"
-        ),
         guidance=(
             "User described a repeatable multi-step workflow ('first X, then "
             "Y, then Z', 'every time we do this…'). Offer to draft a skill "
@@ -2324,29 +2004,6 @@ RULES: list[Rule] = [
         id="no-xml-structure",
         tier=3,
         name="Pasted content without XML tags",
-        nudge={
-            "colleague": [
-                "That's a big chunk of code/data in the prompt. Wrap it in "
-                "`<code>…</code>` or `<data>…</data>` (or similar) so I don't "
-                "have to guess where content ends and instructions begin.",
-                "For pastes this size, XML tags help: `<logs>…</logs>`, "
-                "`<code>…</code>`, `<constraints>…</constraints>`. Try one and "
-                "the ambiguity between reference material and the actual ask "
-                "goes away.",
-                "Long paste + inline instructions is where Claude misparses. "
-                "Fence with `<tag>…</tag>` and it stays clean.",
-            ],
-            "plain": [
-                "You pasted a lot of code or data. Please put it inside XML "
-                "tags. For example: `<code>…</code>` or `<logs>…</logs>`. This "
-                "helps me tell content and instructions apart.",
-                "Big paste needs a tag around it. Try `<code>` before and "
-                "`</code>` after, or `<data>` and `</data>`. Then I can find "
-                "the ask more easily.",
-                "Please add a simple XML tag around the pasted part. Like "
-                "`<code>` at the start and `</code>` at the end.",
-            ],
-        },
         guidance=(
             "User pasted substantial content (≥8 lines of code fence or "
             "indented block) without XML tags. Suggest wrapping it — Anthropic "
@@ -2361,27 +2018,6 @@ RULES: list[Rule] = [
         id="no-classical-role",
         tier=3,
         name="Critique/review ask without a role",
-        nudge={
-            "colleague": [
-                "Review / audit / critique asks land harder when you name the "
-                "reviewer. Try 'You are a senior security engineer…' at the "
-                "top — the persona shapes what gets flagged.",
-                "Who's reviewing? 'You are a staff engineer skeptical of X' "
-                "shifts what Claude looks for. Different role, different "
-                "findings.",
-                "Quick — what role should Claude take here? Skeptic, security, "
-                "performance? Naming it lifts the review quality noticeably.",
-            ],
-            "plain": [
-                "You asked for a review or audit. Please tell me what kind of "
-                "reviewer to be. For example: 'You are a security engineer' "
-                "or 'You are a senior architect'. This changes what I look for.",
-                "Which role should I take for this review? Security? "
-                "Performance? Please add one line at the start: 'You are a …'.",
-                "Please give me a role. For example: 'Act as a senior "
-                "reviewer' or 'You are a skeptic'. Then I know how to check.",
-            ],
-        },
         guidance=(
             "User asked for review / audit / critique in a medium-long prompt "
             "with no 'you are a X' role framing. Suggest a role that fits the "
@@ -2397,31 +2033,6 @@ RULES: list[Rule] = [
         id="test-goalseeking",
         tier=3,
         name="Test-passing without correctness",
-        nudge={
-            "colleague": [
-                "'Make the tests pass' with no mention of the actual bug is "
-                "an invitation to game the tests. Say what SHOULD be true "
-                "(correctness / behavior / invariant) — the passing tests "
-                "become a check, not the goal.",
-                "Careful — 'get CI green' + no root-cause language often "
-                "produces test-mocking, `pytest.skip`, or hard-coded returns "
-                "that pass without fixing anything. Add 'and actually fix "
-                "the underlying bug'.",
-                "One quick add: what's the ACTUAL correctness bar? 'Tests "
-                "pass' is a side effect; 'X handles Y correctly' is the goal.",
-            ],
-            "plain": [
-                "You asked me to make tests pass. Please also tell me what "
-                "the real fix is. For example: 'fix the bug where X returns "
-                "the wrong value'. Passing tests alone can hide real bugs.",
-                "'Make tests green' is not the same as fixing the code. "
-                "Please tell me what should really work. What is the correct "
-                "behavior?",
-                "Please add the real goal. For example: 'the function should "
-                "return X for input Y'. Then passing tests actually mean the "
-                "code is right.",
-            ],
-        },
         guidance=(
             "User asked to 'make tests pass' / 'fix broken tests' / 'get CI "
             "green' without stating the correctness intent. Anthropic's guide "
@@ -2437,28 +2048,6 @@ RULES: list[Rule] = [
         id="no-verify-before-claim",
         tier=3,
         name="Assertion ask without evidence demand",
-        nudge={
-            "colleague": [
-                "'Does X exist / is Y used / which files reference Z' answers "
-                "well when you demand the receipt. Add 'with file:line' or "
-                "'quote the code' — kills the confident-hallucination class.",
-                "For 'is this really used?' questions, ask for the citation "
-                "up front: 'show me the file and line' or 'paste the exact "
-                "call site'. Otherwise Claude may confidently guess.",
-                "Small add that changes the answer quality: 'with references' "
-                "or 'point me at the specific line'. Assertions without "
-                "receipts are where hallucinations hide.",
-            ],
-            "plain": [
-                "You asked a question about the code. Please also ask for "
-                "proof. For example: 'show me the file and line number' or "
-                "'quote the code'. This helps me not make things up.",
-                "Ask me to prove it. For example: 'with file:line' or 'paste "
-                "the code that shows this'. Then you can check my answer.",
-                "Please add 'show me the file and line' to your question. "
-                "This way I give you a real answer, not a guess.",
-            ],
-        },
         guidance=(
             "User asked an assertion-shaped question about the workspace "
             "('does X exist', 'is Y used', 'which files reference Z') without "
@@ -2475,29 +2064,6 @@ RULES: list[Rule] = [
         id="overthinking-warning",
         tier=4,
         name="Over-elaborated ask",
-        nudge={
-            "colleague": [
-                "Lots of 'make sure to / be very careful / please also' — "
-                "that stack usually pushes Claude into slow, over-scoped "
-                "work. Anthropic's guide flags this. Consider trimming to "
-                "the ONE thing that actually matters.",
-                "You've layered a lot of caveats. Each one costs breadth and "
-                "adds surface for over-elaboration. Which two constraints "
-                "are load-bearing? Drop the rest.",
-                "Long, careful prompt with lots of hedges — Claude will match "
-                "the energy and over-scope. Trim to the minimum spec that "
-                "still gets you the outcome you want.",
-            ],
-            "plain": [
-                "Your prompt has many careful words like 'please also' and "
-                "'make sure'. This can make me do too much or worry too much. "
-                "Please pick the most important 1-2 things.",
-                "You added many 'must do' items. Some are not needed. Please "
-                "keep only the ones that really matter. I will do them well.",
-                "Too many careful notes can slow me down. Please tell me "
-                "just the 1 or 2 things that matter most. I will focus there.",
-            ],
-        },
         guidance=(
             "User's prompt has 3+ overthinking/thoroughness markers ('make "
             "sure to', 'be very careful', 'please also', 'every single', "
@@ -2513,29 +2079,6 @@ RULES: list[Rule] = [
         id="no-edit-preference",
         tier=6,
         name="Create-new without edit-existing preference",
-        nudge={
-            "colleague": [
-                "'Create a script/helper/file' without 'unless one exists' "
-                "usually spawns a fresh file when an existing one could be "
-                "extended. Add: 'prefer editing existing files; create new "
-                "only if none fits'.",
-                "For agentic coding, Anthropic recommends flagging edit-vs-"
-                "create explicitly. Say 'prefer to reuse or extend' and the "
-                "surface area of the change goes down.",
-                "Small add that shrinks the diff: 'edit existing files if "
-                "possible, only create new if nothing fits'. Otherwise "
-                "expect a new file.",
-            ],
-            "plain": [
-                "You asked me to make a new file or helper. Please also say: "
-                "'only make new files if none of the current ones fit'. "
-                "Then I will try to edit an existing file first.",
-                "Please add: 'prefer editing existing files'. This helps me "
-                "not make too many new files.",
-                "Small note: please say if I can edit an existing file "
-                "instead of making a new one. I usually prefer editing.",
-            ],
-        },
         guidance=(
             "User asked to create a new file/script/helper without stating an "
             "edit-existing preference. Anthropic's 'Reduce file creation' "

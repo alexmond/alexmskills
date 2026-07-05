@@ -7,6 +7,25 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05 (later 6)
+
+### Removed
+- **prompt-coach-beta 0.38.1** — the `variants` data-layer cleanup
+  deferred from 0.38.0. Removed the ~200 hand-written nudge strings
+  the coach no longer uses (collaborator mode writes each rewrite
+  fresh).
+  - Deleted the `nudge={...}` preset dicts from **all 34 Rule
+    constructors** (AST-span removal so every other field, comment,
+    and bit of formatting stayed put), the `nudge` field from the
+    `Rule` dataclass, its 5 accessor methods (`variants_for`,
+    `primary_nudge_for`, `nudges`, `primary_nudge`, `has_preset`),
+    and the `DEFAULT_VOICE_PRESET` constant.
+  - analyzer: **4292 → 3835 lines** (−457 this release; ~865 lines
+    below the pre-v0.38 size). All 34 rules still construct + fire;
+    they now carry only `id/tier/name/guidance/sources/check/
+    anthropic_ref` — the data collaborator mode actually reads.
+  - `make test-coach` → 15/15 green; `make validate` → valid.
+
 ## 2026-07-05 (later 5)
 
 ### Changed / Removed
