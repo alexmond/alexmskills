@@ -7,6 +7,37 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05 (later 4)
+
+### Added
+- **prompt-coach-beta 0.37.0** — on-demand prompt analysis. User: "the
+  skill now contains a lot of information about prompting so it can be
+  asked to analyze a specific prompt or prompt history for the last N
+  requests … review skill for that purpose, extend if needed, and add
+  to examples."
+  - **New `config analyze` verb + `/prompt-coach-beta:analyze`
+    command.** The passive hook only checks the few *active* rules;
+    this runs the **full 34-rule catalog + positive detectors** on
+    demand.
+    - `analyze "<text>"` → every rule that fires against one prompt,
+      with tier, the fix (guidance), and a clickable doc URL; `--json`
+      for Claude to build a rewrite.
+    - `analyze --last N` → reads this repo's coach log, runs the full
+      catalog on the last N prompts, reports clean rate + a
+      most-fired-rules frequency chart + per-prompt breakdown.
+  - **The slash command wraps it with a coached narrative**: single
+    prompt → per-rule "why + fix" + a rewritten prompt; history →
+    pattern report + one habit to focus on next + a worked example.
+  - Read-only — never touches mastery, config, or state.
+  - Helpers: `_analyze_one(text)` (full-catalog fire check, ignores
+    active-caps/mastery/cooldown) and `_read_last_prompts(cwd, n)`
+    (parses `prompt=«…»` from log.md, skips graduation-event lines).
+  - Examples added to SKILL.md (new "On-demand analysis" section),
+    help.md (command list), config.md (verb + NL routing), and the
+    new commands/analyze.md.
+  - Verified on the maintainer's real log: "analyze --last 8" →
+    "clean: 4/8, vague-reference fired 3×" — genuine coaching signal.
+
 ## 2026-07-05 (later 3)
 
 ### Added

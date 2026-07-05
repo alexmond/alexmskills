@@ -46,6 +46,8 @@ _spec.loader.exec_module(_analyzer)
 CONFIG_SCHEMA = _analyzer.CONFIG_SCHEMA
 DEFAULT_CONFIG = _analyzer.DEFAULT_CONFIG
 RULES = _analyzer.RULES
+POSITIVES = getattr(_analyzer, "POSITIVES", [])
+_anthropic_url = getattr(_analyzer, "_anthropic_url", lambda ref: None)
 config_key_source = _analyzer.config_key_source
 config_categories = _analyzer.config_categories
 config_keys_in_category = _analyzer.config_keys_in_category
@@ -724,6 +726,149 @@ def _open_urls(urls: list[str]) -> int:
     return opened
 
 
+def _analyze_one(text: str) -> tuple[list, list]:
+    """Run the FULL rule catalog + positive detectors against one prompt.
+    Unlike the passive hook, this ignores active-rule caps, mastery, and
+    cooldowns — it's a complete read of every rule, for on-demand analysis."""
+    fired = []
+    for r in RULES:
+        try:
+            if r.check(text):
+                fired.append(r)
+        except Exception:  # noqa: BLE001 — a bad regex never breaks analysis
+            pass
+    positives = []
+    for p in POSITIVES:
+        try:
+            if p.check(text):
+                positives.append(p)
+        except Exception:  # noqa: BLE001
+            pass
+    return fired, positives
+
+
+def _read_last_prompts(cwd: Path, n: int) -> list[dict]:
+    """Pull the last N substantive prompts from this repo's coach log.
+    Returns [{prompt, outcome}] oldest→newest. Skips graduation-event lines
+    (no prompt=) and empty/placeholder prompts."""
+    import re
+    log = cwd / ".claude" / "prompt-coach" / "log.md"
+    if not log.exists():
+        return []
+    rows = []
+    for line in log.read_text(errors="replace").splitlines():
+        pm = re.search(r"prompt=«([^»]*)»", line)
+        if not pm:
+            continue
+        prompt = pm.group(1).strip()
+        if not prompt or prompt == "—":
+            continue
+        om = re.search(r"outcome=(\S+)", line)
+        rows.append({"prompt": prompt, "outcome": om.group(1) if om else "?"})
+    return rows[-n:]
+
+
+def cmd_analyze(cwd: Path, text: str | None = None, last_n: int | None = None,
+                as_json: bool = False) -> int:
+    """v0.37.0 — on-demand prompt analysis. Runs the full rule catalog (all
+    34 rules across 6 tiers + positive detectors) against either a specific
+    prompt (`text`) or the last N logged prompts (`last_n`), and reports
+    which rules fire so the user can improve. The passive hook only checks
+    the handful of *active* rules; this checks everything.
+
+    Emits JSON (for Claude to build rewrites / narrative) or a human
+    table."""
+    def rule_dict(r):
+        return {
+            "id": r.id, "tier": r.tier, "name": r.name,
+            "guidance": getattr(r, "guidance", ""),
+            "anthropic_ref": getattr(r, "anthropic_ref", None),
+            "url": _anthropic_url(getattr(r, "anthropic_ref", None)),
+        }
+
+    # ---- Single prompt ----
+    if text is not None:
+        fired, positives = _analyze_one(text)
+        if as_json:
+            print(json.dumps({
+                "mode": "single",
+                "prompt": text,
+                "fired": [rule_dict(r) for r in fired],
+                "positives": [{"id": p.id, "mirrors": getattr(p, "mirrors", None)}
+                              for p in positives],
+                "clean": not fired,
+            }, indent=2))
+            return 0
+        print(f"── prompt analysis " + "─" * 48)
+        print(f"  «{text[:120]}{'…' if len(text) > 120 else ''}»")
+        print()
+        if not fired:
+            print("  ✓ clean — no rules fired against the full catalog.")
+        else:
+            print(f"  {len(fired)} rule(s) fired (full catalog):")
+            for r in sorted(fired, key=lambda r: r.tier):
+                print(f"    · L{r.tier} {r.id} — {r.name}")
+                if getattr(r, "guidance", ""):
+                    print(f"        {r.guidance}")
+                url = _anthropic_url(getattr(r, "anthropic_ref", None))
+                if url:
+                    print(f"        {url}")
+        if positives:
+            print()
+            print(f"  Positive habits detected: "
+                  + ", ".join(p.id for p in positives))
+        return 0
+
+    # ---- Last N prompts ----
+    n = last_n or 10
+    rows = _read_last_prompts(cwd, n)
+    if not rows:
+        print(f"No logged prompts found in {cwd}/.claude/prompt-coach/log.md",
+              file=sys.stderr)
+        return 1
+    analyzed = []
+    rule_counts: dict[str, int] = {}
+    for row in rows:
+        fired, positives = _analyze_one(row["prompt"])
+        for r in fired:
+            rule_counts[r.id] = rule_counts.get(r.id, 0) + 1
+        analyzed.append({
+            "prompt": row["prompt"], "outcome": row["outcome"],
+            "fired": [r.id for r in fired],
+            "positives": [p.id for p in positives],
+        })
+    top = sorted(rule_counts.items(), key=lambda kv: -kv[1])
+
+    if as_json:
+        print(json.dumps({
+            "mode": "history", "n": len(rows),
+            "prompts": analyzed,
+            "rule_frequency": dict(top),
+            "rule_detail": {rid: rule_dict(next(r for r in RULES if r.id == rid))
+                            for rid, _ in top},
+        }, indent=2))
+        return 0
+
+    print(f"── analysis of last {len(rows)} prompts " + "─" * 30)
+    clean = sum(1 for a in analyzed if not a["fired"])
+    print(f"  clean: {clean}/{len(rows)}   "
+          f"({100*clean//max(1,len(rows))}% fired no rule)")
+    print()
+    if top:
+        print("  Most-fired rules across these prompts:")
+        for rid, cnt in top[:6]:
+            r = next(r for r in RULES if r.id == rid)
+            bar = "▮" * cnt
+            print(f"    {cnt:2d} {bar} L{r.tier} {rid} — {r.name}")
+    print()
+    print("  Per-prompt:")
+    for a in analyzed:
+        tag = "✓ clean" if not a["fired"] else ", ".join(a["fired"])
+        print(f"    · «{a['prompt'][:60]}{'…' if len(a['prompt'])>60 else ''}»")
+        print(f"        {tag}")
+    return 0
+
+
 def cmd_paths(cwd: Path, as_json: bool = False,
               open_browser: bool = False) -> int:
     """v0.36.0 — expose the coach's own skill folders + state files as
@@ -965,6 +1110,11 @@ def _main(argv: list[str]) -> int:
     s_paths = sub.add_parser("paths")
     s_paths.add_argument("--open", dest="open_browser", action="store_true",
                          help="open the skill folder + docs in a file browser")
+    s_analyze = sub.add_parser("analyze")
+    s_analyze.add_argument("text", nargs="?", default=None,
+                           help="a prompt to analyze against the full catalog")
+    s_analyze.add_argument("--last", dest="last_n", type=int, default=None,
+                           help="instead analyze the last N logged prompts")
 
     args = p.parse_args(argv)
     cwd = Path(args.cwd) if args.cwd else Path.cwd()
@@ -1000,6 +1150,9 @@ def _main(argv: list[str]) -> int:
     if verb == "paths":
         return cmd_paths(cwd, args.as_json,
                          getattr(args, "open_browser", False))
+    if verb == "analyze":
+        return cmd_analyze(cwd, args.text, getattr(args, "last_n", None),
+                           args.as_json)
     print(f"unknown verb: {verb}", file=sys.stderr)
     return 2
 

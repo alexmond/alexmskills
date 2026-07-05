@@ -109,6 +109,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-04 — **prompt-coach-collaborator** — 0.34.0: coach_style=collaborator (C+D). Hook tells Claude via additionalContext to rewrite the user's prompt in-place; no external API. `nudge` legacy path preserved. Why: nagger → collaborator.
 - 2026-07-05 — **prompt-coach-liveness** — 0.35.0: praise had no inline branch (dead since v0.29); restored it + 🎓 mastery congrats + `ack_clean` clean-prompt heartbeat; fixed v0.34 fires_total double-count. Why: "too silent" was real.
 - 2026-07-05 — **prompt-coach-access** — 0.36.0: `show_source_urls` (clickable doc URLs in coach block, in quick-set) + `sources --open` browser + new `paths` verb (skill folders, state, runnable scripts). Why: access to docs + own files.
+- 2026-07-05 — **prompt-coach-analyze** — 0.37.0: on-demand `analyze "<text>"` / `--last N` + `/prompt-coach-beta:analyze` runs full 34-rule catalog on any prompt/history, coached. Why: knowledge on demand, not passive.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

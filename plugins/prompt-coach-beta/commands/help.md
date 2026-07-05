@@ -41,6 +41,9 @@ COMMANDS
   /prompt-coach-beta:mastery         Which rules mastered, which need reset — with
                                      analysis (well-tested / barely-tested / untested);
                                      surfaces close-to-mastery rules (v0.26+)
+  /prompt-coach-beta:analyze         On-demand analysis (v0.37+): run the FULL 34-rule
+                                     catalog against a pasted prompt or your last N
+                                     logged prompts, with a coached rewrite / pattern report
   /prompt-coach-beta:config          Structured config surface — show / get / describe /
                                      set / reset / diff / export / mastery / sources
                                      (v0.18+)

@@ -451,6 +451,37 @@ if a mastered rule fires 3+ times within 30 prompts, demote it back to practicin
 default — being surprised by a graduated rule reactivating is unpleasant. Users who want strict
 self-healing turn this on.
 
+## On-demand analysis — `/prompt-coach-beta:analyze` (v0.37+)
+
+The passive hook is quiet by design — it only checks the few *active* rules. But the skill
+carries the whole prompting-knowledge catalog, so you can point it at a prompt on demand and
+get a **full-catalog read** (all 34 rules × 6 tiers + positive detectors), not just the active
+subset.
+
+Two modes:
+
+- **A specific prompt** — *"analyze this prompt: refactor the whole auth module to be cleaner"*.
+  You get every rule that fires (with its tier, the fix, and a clickable doc URL) plus a
+  rewritten prompt that resolves the top issues.
+- **Your recent history** — *"analyze my last 20 prompts"* / *"how have I been prompting?"*.
+  Reads this repo's coach log, runs the full catalog on each, and reports your clean rate, the
+  top recurring rules, and one habit to focus on next.
+
+Backed by `config.py analyze "<text>"` / `analyze --last N` (add `--json` for raw data). The
+slash command wraps it with a coached narrative. Read-only — never touches mastery or config.
+
+```
+$ …/config.py analyze "fix it and make it better and faster"
+── prompt analysis ─────────────────────────────────────
+  7 rule(s) fired (full catalog):
+    · L1 vague-reference — Vague reference
+    · L1 no-definition-of-done — No definition of done
+    · L1 improve-without-metric — Improve without a metric
+    · L2 no-verify-loop — No verify loop
+    · L4 implicit-goal — Action without goal
+    …
+```
+
 ## Introspection — `/prompt-coach-beta:stats`
 
 Type `/prompt-coach-beta:stats` (v0.8+) to see a compact dashboard: total prompts analyzed,
