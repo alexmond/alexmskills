@@ -288,6 +288,72 @@ def t_incremental_routing_rule():
           f"registered={registered} fires={bool(fires)} quiet={bool(quiet)}")
 
 
+def t_acceptance_loop():
+    """v0.41 P1 — a yes/no/edit reply to a rewrite is recorded per rule."""
+    h, c = _fresh()
+    sp = h / ".claude/prompt-coach/state.json"
+    _hook(c, h, "fix it fast")   # fires → last_prompt_fired_rules set
+    _hook(c, h, "yes")           # accepted reply
+    g = json.loads(sp.read_text())
+    tally = g.get("acceptance", {})
+    vr = g.get("rules", {}).get("vague-reference", {}).get("outcomes", {})
+    check("P1 acceptance loop: 'yes' → accepted recorded per-rule + globally",
+          tally.get("accepted", 0) >= 1 and vr.get("accepted", 0) >= 1,
+          f"tally={tally} vague-ref={vr}")
+
+
+def t_fatigue_cap():
+    """v0.41 P2 — visible rewrites are capped within a rolling window."""
+    h, c = _fresh()
+    for i in range(9):
+        _hook(c, h, f"fix it fast item {i}")
+    log = (c / ".claude/prompt-coach/log.md").read_text()
+    check("P2 fatigue cap silences rewrites past max_nudges_per_window",
+          "outcome=capped" in log and log.count("outcome=collaborator") <= 6,
+          f"capped={log.count('outcome=capped')} collab={log.count('outcome=collaborator')}")
+
+
+def t_precision_gate():
+    """v0.41 P2 — a low-acceptance rule is demoted dormant; explore re-admits."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_an2", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_an2"] = m
+    spec.loader.exec_module(m)
+    cfg = dict(m.DEFAULT_CONFIG)
+    g = {"prompt_count": 3, "rules": {"vague-reference": {
+        "status": "practicing",
+        "outcomes": {"accepted": 0, "edited": 0, "rejected": 6}}}}
+    l = {"rules": {}}
+    gated = "vague-reference" not in m.active_rules_split(cfg, g, l)[0]
+    g["prompt_count"] = 10  # explore tick
+    explored = "vague-reference" in m.active_rules_split(cfg, g, l)[0]
+    check("P2 precision gate demotes rejected rule + explore slot re-admits",
+          gated and explored, f"gated={gated} explored={explored}")
+
+
+def t_decaying_mastery():
+    """v0.41 P3 — an overdue mastery decays to `watch`, then re-graduates on a
+    fresh demonstration (with the review interval expanded)."""
+    h, c = _fresh()
+    sp = h / ".claude/prompt-coach/state.json"
+    _hook(c, h, "hello there friend")
+    st = json.loads(sp.read_text())
+    st.setdefault("rules", {})["vague-reference"] = {
+        "status": "mastered", "fires_total": 2, "clean_streak": 9,
+        "demonstrations": 3, "mastery_basis": "demonstrated",
+        "review_stage": 0, "review_due_at": "2020-01-01T00:00:00Z"}
+    sp.write_text(json.dumps(st))
+    _hook(c, h, "hello there friend")   # decay pass
+    watched = json.loads(sp.read_text())["rules"]["vague-reference"]["status"] == "watch"
+    _hook(c, h, "In src/x.py, add a null check; leave other files untouched.")
+    r = json.loads(sp.read_text())["rules"]["vague-reference"]
+    regraduated = r["status"] == "mastered" and int(r.get("review_stage", 0)) >= 1
+    check("P3 decaying mastery: mastered→watch(overdue)→mastered(fresh demo)",
+          watched and regraduated,
+          f"watched={watched} status={r.get('status')} stage={r.get('review_stage')}")
+
+
 def t_grandfather_migration():
     """v0.40 — existing masteries are grandfathered, not wiped: a pre-v0.40
     mastered rule (no demonstrations, no mastery_basis) stays mastered, gets
@@ -332,6 +398,10 @@ CHECKS = [
     t_paths,
     t_incremental_routing_rule,
     t_earned_mastery_demonstration_driven,
+    t_acceptance_loop,
+    t_fatigue_cap,
+    t_precision_gate,
+    t_decaying_mastery,
     t_grandfather_migration,
     t_marketplace_valid,
 ]

@@ -115,6 +115,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-05 — **prompt-coach-incremental-routing** — 0.39.0: L5 rule (35 total) — terse per-step routing ("one after another") → batch into TaskCreate/Workflow. Research-backed; harness 16/16. Why: user routes a lot; fell between conversational-skip and verbose L5 regexes.
 - 2026-07-05 — **prompt-coach-earned-mastery** — 0.40.0: mastery driven by *demonstrations* (positive-detector fires = you USED the technique), not clean-streak absence. +13 positives (35/35), grandfather migration, harness 18/18. Why: rules mastered unexercised.
 - 2026-07-06 — **prompt-coach-reset-fix** — 0.40.1: mastery-reset now zeros `demonstrations` + drops `mastery_basis` (was preserving them → reset rule instantly re-mastered). Harness 19/19. Why: v0.40 made demonstrations the driver; reset helper predated it.
+- 2026-07-06 — **prompt-coach-adaptive** — 0.41.0: 3 research-backed features on a shared ledger — P1 acceptance loop (accept/edit/reject), P2 precision-gated activation + fatigue cap, P3 decaying mastery (watch tier, expanding review). Harness 23/23. Why: telemetry showed 0 acceptance tracked, mastery starving.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

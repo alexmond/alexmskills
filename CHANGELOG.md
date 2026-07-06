@@ -7,6 +7,41 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-06 (later)
+
+### Added
+- **prompt-coach-beta 0.41.0** — **adaptive coaching**: three research-backed
+  improvements on a shared per-rule ledger (fires · accept/edit/reject ·
+  last-natural-use). Motivated by the coach's own telemetry (506 prompts):
+  46 rewrites produced with 0 acceptance recorded, only 2/35 rules ever
+  demonstrated, 60% of the catalog dead weight.
+  - **P1 — acceptance loop.** The turn after a rewrite, the reply is recorded
+    per rule: `yes`→accepted, `edit …`→edited (a *positive* signal, distinct
+    from rejected), `no`→rejected; a fresh prompt records nothing (no guessing
+    at implicit rejections). Yields per-rule acceptance rate. Recorded before
+    the conversational short-circuit so "yes"/"no" aren't swallowed. Grounded
+    in Copilot's acceptance-rate metric + CodeCompose (segment by type) +
+    the blind-reject / three-outcome distinctions (arXiv 2601.21379).
+  - **P2 — precision-gated activation.** A rule below `precision_floor` (0.15)
+    over `min_outcomes_for_gating` (4) outcomes is demoted `dormant` and stops
+    firing; a deterministic explore slot re-admits one dormant rule every
+    `explore_period` (10) prompts; a rolling-window fatigue cap
+    (`max_nudges_per_window` 6 / `nudge_window` 20) silences excess rewrites
+    (still logged + bookkept). Generalizes `inactive` to *dismissed* rules —
+    the path static-analysis research endorses over hard-disabling; explore/
+    exploit + fatigue cap from contextual-bandit work.
+  - **P3 — decaying mastery.** Mastery is no longer terminal. A mastered rule
+    carries a review clock on an expanding schedule (`review_intervals_days`
+    = 30/90/180 days of non-use); each natural use resets + advances it. If it
+    lapses, the rule decays to a `watch` tier and must be freshly
+    re-demonstrated to re-graduate (retrieval practice); tripping it in
+    `watch` drops it to `practicing`. Grounded in skill-decay meta-analyses +
+    the spacing effect. Grandfathered masteries lazily arm a clock.
+  - 7 new config keys (with CONFIG_SCHEMA); harness **19 → 23** (P1 accept
+    ledger, P2 gate + fatigue cap, P3 decay→watch→re-graduate). Docs: new
+    "Adaptive coaching" + "Decaying mastery" sections in the Antora page +
+    SKILL.md, help-card config reference.
+
 ## 2026-07-06
 
 ### Fixed

@@ -296,6 +296,33 @@ Set `typo_tolerance: 0` to disable.
 
 Many prompts in an ongoing conversation aren't full asks — they're approvals (`sure`, `publish`, `go`), multi-choice picks (`1 and 2`, `option a`), or continuations (`continue`, `thanks`). The coach detects these and skips analysis entirely — no rule matching, no praise, no streak updates. It also reads the session transcript to skip *picker answers* (replies to an `AskUserQuestion` menu) so a multiple-choice pick never triggers a false coaching pass.
 
+== Adaptive coaching (v0.41+)
+
+The coach learns which rules are worth firing *for you* by closing the loop on every rewrite.
+
+=== Acceptance loop
+
+The collaborator rewrite is only as good as whether you *take* it — acceptance rate is the north-star metric for inline AI suggestions (it's GitHub Copilot's core adoption metric). On the turn after a rewrite, the coach reads your reply and records a per-rule outcome:
+
+[cols="1,3",options="header"]
+|===
+| Reply | Recorded as
+| `yes` / `ok` / `proceed` … | `accepted`
+| `edit <thing>` | `edited` — *a positive signal* (the coaching landed, the specifics didn't), distinct from a rejection
+| `no` / `original` … | `rejected`
+| a fresh, unrelated prompt | nothing (we don't guess at implicit rejections — the ledger stays high-precision)
+|===
+
+From these it computes a **per-rule acceptance rate** = `(accepted + edited) / outcomes`.
+
+=== Precision-gated activation + fatigue cap
+
+That acceptance rate then decides which rules fire:
+
+* **Precision gate** — a rule whose acceptance rate falls below `precision_floor` (default 0.15) over at least `min_outcomes_for_gating` outcomes is demoted to `dormant` and stops firing. This generalizes the mastery `inactive` status to *dismissed* rules — the path static-analysis research endorses over hard-disabling (which drives the alert-fatigue that makes developers ignore *all* warnings).
+* **Explore slot** — every `explore_period` prompts (default 10) one dormant rule is re-admitted to refresh its estimate, so a rule that was noisy in only one context isn't buried forever (a deterministic exploit/explore split).
+* **Fatigue cap** — at most `max_nudges_per_window` visible rewrites per rolling window of `nudge_window` prompts (default 6 per 20); over the cap, fires are still logged and bookkept but the rewrite isn't rendered. Firing too often makes the signal non-stationary — you tune it out.
+
 [#earned-mastery]
 == Earned mastery (v0.40+)
 
@@ -320,6 +347,10 @@ Config knobs (`rule-activation` category): `min_demonstrations`, `regression_gua
 Mastered rules aren't permanently dormant. They still evaluate every prompt, and when only a mastered rule matches, a *refresher* fires — a lighter re-fire rather than the full coaching block. The cooldown for mastered rules is much longer (50 prompts vs 5 for practicing rules).
 
 Optional self-healing: `demote_on_regression` auto-demotes a mastered rule that fires threshold+ times within a rolling window. Off by default.
+
+=== Decaying mastery (v0.41+)
+
+Prompting is an accuracy-based cognitive skill, and those decay with non-use (Arthur et al. 1998; _Psychological Bulletin_ 2024 finds ~half of an accuracy skill lost by ~6.5 months of non-use). So mastery is **not terminal**. A mastered rule carries a **review clock on an expanding schedule** (`review_intervals_days`, default `[30, 90, 180]` days). Every time you *naturally use* the technique, that demonstration is spaced retrieval — it resets and advances the clock. If the clock lapses with no natural use, the rule **decays to a `watch` tier** and re-enters active coaching; it must be **freshly re-demonstrated** to re-graduate (a retrieval-practice loop). Tripping the rule while in `watch` is a genuine regression and drops it back to `practicing` to re-earn from scratch. Grounded in the spacing effect + expanding intervals (_Nature Reviews Psychology_ 2022).
 
 == Reporting bad calls
 

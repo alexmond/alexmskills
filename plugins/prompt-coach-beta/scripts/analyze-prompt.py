@@ -26,7 +26,7 @@ import re
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -80,6 +80,22 @@ DEFAULT_CONFIG = {
     "min_demonstrations": 3,
     "regression_guard": 3,
     "inactive_after": 15,
+    # v0.41.0 (Proposal 2) — precision-gated adaptive activation. A rule the
+    # user consistently rejects (low acceptance) is demoted to `dormant` and
+    # stops firing; a small deterministic explore slot re-surfaces one dormant
+    # rule every `explore_period` prompts to refresh its estimate. Plus a
+    # rolling-window fatigue cap on total visible rewrites.
+    "precision_gating": True,
+    "precision_floor": 0.15,          # demote below this acceptance rate
+    "min_outcomes_for_gating": 4,     # need this many outcomes before gating
+    "explore_period": 10,             # re-admit a dormant rule every N prompts
+    "nudge_window": 20,               # rolling window (prompts) for the cap
+    "max_nudges_per_window": 6,       # max visible rewrites per window (0=off)
+    # v0.41.0 (Proposal 3) — decaying mastery. A mastered rule carries a
+    # review clock on an expanding schedule (days of NON-USE); each natural
+    # use resets+expands it. If it lapses, the rule decays to `watch` and must
+    # be freshly re-demonstrated to re-graduate (spaced retrieval practice).
+    "review_intervals_days": [30, 90, 180],
     # v0.28.0 — proactive tips (advanced-technique suggestions). Distinct
     # from rules (which fire on problems in the prompt). Tips fire on-topic
     # for a technique the user could try. Two firing modes:
@@ -275,6 +291,69 @@ CONFIG_SCHEMA = {
                        "graduation_threshold.",
         "example": 15,
         "since": "0.40.0",
+    },
+    "precision_gating": {
+        "category": "rule-activation",
+        "type": "bool",
+        "description": "ADAPTIVE ACTIVATION (v0.41+). When on, a rule whose "
+                       "acceptance rate (accepted+edited)/outcomes falls below "
+                       "precision_floor is demoted to `dormant` and stops firing; "
+                       "an explore slot periodically re-surfaces it.",
+        "example": True,
+        "since": "0.41.0",
+    },
+    "precision_floor": {
+        "category": "rule-activation",
+        "type": "float",
+        "description": "Acceptance-rate floor (v0.41+): a rule below this over "
+                       "min_outcomes_for_gating recorded outcomes is demoted "
+                       "dormant. Default 0.15 (only rules rejected ~85%+ of the "
+                       "time).",
+        "example": 0.15,
+        "since": "0.41.0",
+    },
+    "min_outcomes_for_gating": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "How many recorded accept/edit/reject outcomes a rule needs "
+                       "before the precision gate applies to it (v0.41+).",
+        "example": 4,
+        "since": "0.41.0",
+    },
+    "explore_period": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "Explore/exploit (v0.41+): re-admit one dormant rule every N "
+                       "prompts to refresh its acceptance estimate so a rule noisy "
+                       "in only one context isn't buried forever. 0 disables.",
+        "example": 10,
+        "since": "0.41.0",
+    },
+    "nudge_window": {
+        "category": "output",
+        "type": "int",
+        "description": "Rolling window (in prompts) for the fatigue cap (v0.41+).",
+        "example": 20,
+        "since": "0.41.0",
+    },
+    "max_nudges_per_window": {
+        "category": "output",
+        "type": "int",
+        "description": "FATIGUE CAP (v0.41+): max visible rewrites within "
+                       "nudge_window prompts; over the cap, fires are still logged "
+                       "and bookkept but the rewrite isn't rendered. 0 disables.",
+        "example": 6,
+        "since": "0.41.0",
+    },
+    "review_intervals_days": {
+        "category": "rule-activation",
+        "type": "list",
+        "description": "DECAYING MASTERY (v0.41+): expanding review schedule in days "
+                       "of NON-USE. A mastered rule unused past the current interval "
+                       "decays to `watch` and must be re-demonstrated; each natural "
+                       "use resets + advances to the next interval.",
+        "example": [30, 90, 180],
+        "since": "0.41.0",
     },
     "tips_enabled": {
         "category": "output",
@@ -3240,23 +3319,52 @@ def active_rules_split(cfg: dict, g: dict, l: dict) -> tuple[list[str], list[str
     But it does NOT get refresher fires or count in mastery stats."""
     practicing: list[str] = []
     mastered: list[str] = []
+    # v0.41.0 (Proposal 2) — precision-gated activation. A rule the user
+    # consistently rejects is demoted to `dormant` (suppressed from firing),
+    # generalizing the mastery `inactive` status to *dismissed* rules — the
+    # path static-analysis research endorses over hard-disabling. A small
+    # deterministic explore slot periodically re-surfaces one dormant rule so
+    # a rule that was noisy in only one context isn't buried forever
+    # (exploit/explore, ~1-in-explore_period).
+    min_outcomes = int(cfg.get("min_outcomes_for_gating", 4))
+    floor = float(cfg.get("precision_floor", 0.15))
+    gate_on = bool(cfg.get("precision_gating", True))
+    dormant: list[str] = []
     for rid in RULE_ORDER:
         if rid in cfg.get("disabled_rules", []):
             continue
         st = effective_status(rid, g, l)
         if st == "mastered":
             mastered.append(rid)
-        elif st == "inactive":
+            continue
+        if st == "inactive":
             # Frees the slot but doesn't participate in mastered refreshers.
             continue
-        else:
-            practicing.append(rid)
+        # Practicing candidate — apply the precision gate.
+        if gate_on:
+            prec = _rule_precision(g.get("rules", {}).get(rid, {}), min_outcomes)
+            if prec is not None and prec < floor:
+                dormant.append(rid)
+                continue
+        practicing.append(rid)
+    # Explore slot: periodically re-admit one dormant rule to refresh its
+    # precision estimate. Deterministic (keyed off prompt_count) so it's
+    # testable and resume-safe.
+    explore_period = int(cfg.get("explore_period", 10))
+    pc = int(g.get("prompt_count", 0))
+    if dormant and explore_period > 0 and pc % explore_period == 0:
+        practicing.append(dormant[(pc // explore_period) % len(dormant)])
     max_active = int(cfg.get("max_active_rules", 5))
     if len(practicing) > max_active:
         def rank(rid: str) -> tuple:
             r = RULES_BY_ID[rid]
-            fires = g.get("rules", {}).get(rid, {}).get("fires_total", 0)
-            return (r.tier, -fires, RULE_ORDER.index(rid))
+            rs = g.get("rules", {}).get(rid, {})
+            fires = rs.get("fires_total", 0)
+            # Prefer higher precision (unknown precision sorts neutral at 1.0
+            # so unproven rules still get their fair chance to accrue data).
+            prec = _rule_precision(rs, min_outcomes)
+            prec = 1.0 if prec is None else prec
+            return (r.tier, -round(prec, 3), -fires, RULE_ORDER.index(rid))
         practicing.sort(key=rank)
         practicing = practicing[:max_active]
     # If mastered firing is disabled, return no mastered candidates.
@@ -3641,6 +3749,113 @@ def _migrate_v40_demonstrations(g: dict) -> int:
     return tagged
 
 
+# ── v0.41.0 — acceptance loop (Proposal 1) ─────────────────────────────────
+# The collaborator rewrite is only as good as whether the user TAKES it.
+# Copilot's north-star metric is acceptance rate; segmented by suggestion type
+# it tells you which rules produce rewrites that land. We record the user's
+# next-turn reply (yes/no/edit) per rule. `edited` is a POSITIVE signal (the
+# coaching landed, the specifics didn't) — distinct from `rejected`.
+
+_REPLY_ACCEPT = re.compile(
+    r"^(y|yes|yep|yeah|ok|okay|sure|proceed|go|go ahead|do it|sounds good|"
+    r"lgtm|ship it|please do|yes please)$")
+_REPLY_REJECT = re.compile(
+    r"^(n|no|nope|nah|original|keep original|as is|leave it|use original)$")
+
+
+def _classify_reply(prompt: str) -> str | None:
+    """Classify a reply to a prior collaborator rewrite. Returns
+    'accepted' / 'edited' / 'rejected', or None if it isn't a clear reply
+    (a fresh substantive prompt is None — we don't guess at implicit
+    rejections, keeping the ledger high-precision)."""
+    p = re.sub(r"[.!,\s]+$", "", prompt.strip().lower())
+    if _REPLY_ACCEPT.fullmatch(p):
+        return "accepted"
+    if _REPLY_REJECT.fullmatch(p):
+        return "rejected"
+    if re.match(r"^edit\b", p):
+        return "edited"
+    return None
+
+
+def _record_acceptance(g: dict, l: dict, prompt_raw: str) -> str | None:
+    """If a collaborator rewrite was offered last prompt and THIS prompt is a
+    clear yes/no/edit reply, record the outcome per rule (and globally).
+    Returns the verdict, or None. Idempotent per reply — clears
+    last_prompt_fired_rules once recorded so a reply isn't double-counted."""
+    offered = list(l.get("last_prompt_fired_rules", []) or [])
+    if not offered:
+        return None
+    verdict = _classify_reply(prompt_raw)
+    if verdict is None:
+        return None
+    for rid in offered:
+        rs = g.setdefault("rules", {}).setdefault(rid, {})
+        oc = rs.setdefault("outcomes", {"accepted": 0, "edited": 0, "rejected": 0})
+        oc[verdict] = int(oc.get(verdict, 0)) + 1
+        rs["last_outcome_at"] = _now_iso()
+    tally = g.setdefault("acceptance", {"accepted": 0, "edited": 0, "rejected": 0})
+    tally[verdict] = int(tally.get(verdict, 0)) + 1
+    l["last_prompt_fired_rules"] = []  # consumed
+    return verdict
+
+
+def _rule_precision(rs: dict, min_outcomes: int = 4) -> float | None:
+    """Per-rule precision = (accepted + edited) / all recorded outcomes.
+    `edited` counts as a hit (the coaching landed). Returns None until at
+    least `min_outcomes` outcomes are recorded (too little signal to gate)."""
+    oc = rs.get("outcomes") or {}
+    a = int(oc.get("accepted", 0)); e = int(oc.get("edited", 0))
+    r = int(oc.get("rejected", 0))
+    total = a + e + r
+    if total < max(1, min_outcomes):
+        return None
+    return (a + e) / total
+
+
+# ── v0.41.0 — decaying mastery (Proposal 3) ────────────────────────────────
+# Prompting is an accuracy-based cognitive skill, exactly the kind that decays
+# with non-use (Arthur 1998; Psych Bulletin 2024 — ~half lost by ~6.5 months).
+# So mastery is NOT terminal: a mastered rule carries a review-due timestamp on
+# an EXPANDING schedule (spacing effect; Nature Rev Psych 2022). Each natural
+# use (a demonstration) is spaced retrieval that resets/extends the clock. If
+# the clock lapses with no natural use, the rule decays to a `watch` tier and
+# must be freshly re-demonstrated to re-graduate (retrieval-practice loop).
+
+def _parse_iso(s: str):
+    try:
+        return datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+
+
+def _days_since(iso: str | None) -> float | None:
+    """Days elapsed since an ISO timestamp (>0 = in the past). None if unset."""
+    dt = _parse_iso(iso) if iso else None
+    if dt is None:
+        return None
+    return (datetime.now(timezone.utc) - dt).total_seconds() / 86400.0
+
+
+def _review_intervals(cfg: dict) -> list[int]:
+    v = cfg.get("review_intervals_days") or [30, 90, 180]
+    try:
+        out = [int(x) for x in v if int(x) > 0]
+    except (TypeError, ValueError):
+        out = []
+    return out or [30, 90, 180]
+
+
+def _set_review_due(gr: dict, cfg: dict, stage: int) -> None:
+    """Arm (or re-arm) a mastered rule's review clock at the given expanding
+    stage, keyed off wall-clock non-use."""
+    intervals = _review_intervals(cfg)
+    stage = max(0, min(stage, len(intervals) - 1))
+    gr["review_stage"] = stage
+    due = datetime.now(timezone.utc) + timedelta(days=intervals[stage])
+    gr["review_due_at"] = due.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def append_log(local_dir: Path, entry: dict) -> None:
     log = local_dir / "log.md"
     log.parent.mkdir(parents=True, exist_ok=True)
@@ -3738,6 +3953,12 @@ def main() -> int:
     # (which is the analysis being complained about) to candidates.jsonl.
     if is_bug_report_phrase(prompt_raw):
         _flag_previous_for_review(local_dir, prompt_raw)
+
+    # v0.41.0 — acceptance loop (Proposal 1). If a collaborator rewrite was
+    # offered last prompt and THIS prompt is a clear yes/no/edit reply,
+    # record the per-rule outcome BEFORE the conversational short-circuit
+    # (which would otherwise swallow "yes"/"no" and lose the signal).
+    _acceptance_verdict = _record_acceptance(g, l, prompt_raw)
 
     # Conversational short-circuit — "sure", "publish", "1 and 2", "go for
     # it" etc. are fragments answering an implicit question, not full
@@ -3850,6 +4071,21 @@ def main() -> int:
             "last_nudged_prompt": None,
         })
         gr["status"] = gr.get("status") or "practicing"
+
+        # v0.41.0 (P3) — decay a mastered rule whose review window has lapsed
+        # with no natural use down to `watch`. It re-enters active coaching
+        # and must be freshly re-demonstrated to re-graduate (retrieval).
+        if gr.get("status") == "mastered":
+            if not gr.get("review_due_at"):
+                # Lazily arm the clock for pre-P3 (grandfathered) masteries so
+                # they participate in decay instead of being immortal.
+                _set_review_due(gr, cfg, int(gr.get("review_stage", 0)))
+            overdue = _days_since(gr.get("review_due_at"))
+            if overdue is not None and overdue > 0:
+                gr["status"] = "watch"
+                gr["watch_base_demos"] = int(gr.get("demonstrations", 0))
+                gr["watch_since"] = _now_iso()
+
         if rid in fired:
             gr["fires_total"] = int(gr.get("fires_total", 0)) + 1
             gr["clean_streak"] = 0
@@ -3857,6 +4093,11 @@ def main() -> int:
             lr["fires_here"] = int(lr.get("fires_here", 0)) + 1
             lr["clean_streak_here"] = 0
             lr["last_fired_at"] = _now_iso()
+            # v0.41.0 (P3) — a rule tripped while in `watch` is a real
+            # regression: demote to practicing so it must re-earn mastery.
+            if gr.get("status") == "watch":
+                gr["status"] = "practicing"
+                gr.pop("watch_base_demos", None)
         else:
             gr["clean_streak"] = int(gr.get("clean_streak", 0)) + 1
             lr["clean_streak_here"] = int(lr.get("clean_streak_here", 0)) + 1
@@ -3866,6 +4107,10 @@ def main() -> int:
             if rid in demonstrated_rules:
                 gr["demonstrations"] = int(gr.get("demonstrations", 0)) + 1
                 gr["last_demo_at"] = _now_iso()
+                # v0.41.0 (P3) — natural use of a MASTERED rule is spaced
+                # retrieval: reset + expand its review clock (skill refreshed).
+                if gr.get("status") == "mastered":
+                    _set_review_due(gr, cfg, int(gr.get("review_stage", 0)) + 1)
 
         # v0.40.0 — EARNED (demonstration-driven) graduation. Mastery is
         # evidence of the *good technique*, not the absence of the mistake:
@@ -3884,11 +4129,18 @@ def main() -> int:
         min_demos = int(cfg.get("min_demonstrations", 3))
         regression_guard = int(cfg.get("regression_guard", 3))
         inactive_after = int(cfg.get("inactive_after", threshold))
-        if (rid not in fired
-            and gr.get("status") not in ("mastered", "inactive")):
+        status_now = gr.get("status")
+        if rid not in fired and status_now not in ("mastered", "inactive"):
             demos = int(gr.get("demonstrations", 0))
             new_status = None
-            if demos >= min_demos and gr["clean_streak"] >= regression_guard:
+            if status_now == "watch":
+                # v0.41.0 (P3) — re-graduate only on a FRESH demonstration
+                # since decay (retrieval practice), not a stale demo count.
+                if (demos > int(gr.get("watch_base_demos", 0))
+                        and gr["clean_streak"] >= regression_guard):
+                    new_status = "mastered"
+                    mastery_events.append(rid)
+            elif demos >= min_demos and gr["clean_streak"] >= regression_guard:
                 new_status = "mastered"
                 mastery_events.append(rid)
             elif demos == 0 and gr["clean_streak"] >= inactive_after:
@@ -3902,6 +4154,16 @@ def main() -> int:
                     "demonstrated" if new_status == "mastered" else "unexercised")
                 gr["post_mastery_fires"] = 0
                 gr["post_mastery_fire_prompts"] = []
+                if new_status == "mastered":
+                    # v0.41.0 (P3) — arm the review clock. Fresh mastery
+                    # starts at stage 0; a re-graduation from watch expands
+                    # (the next non-use window is longer).
+                    _set_review_due(
+                        gr, cfg,
+                        (int(gr.get("review_stage", 0)) + 1)
+                        if prior_status == "watch" else 0)
+                    gr.pop("watch_base_demos", None)
+                    gr.pop("watch_since", None)
                 # Write a graduation event to the local log so the user can
                 # grep `event=graduation` and audit the mastery timeline.
                 _append_graduation_event(local_dir, rid, prior_status,
@@ -3946,10 +4208,24 @@ def main() -> int:
     # the v0.34 double-count bug). Mastery events still flow to the praise
     # layer below, so the congrats renders here too.
     if fired:
-        context_line = _v34_context_for_claude(
-            prompt_raw, list(fired),
-            show_urls=bool(cfg.get("show_source_urls", True)))
-        outcome = f"collaborator:candidates={len(fired)}"
+        # v0.41.0 (Proposal 2) — session fatigue cap. The marketing-fatigue
+        # bandit result: firing too often makes the signal non-stationary
+        # (the user tunes it out). Cap visible rewrites within a rolling
+        # window; over the cap we still do all bookkeeping + log the fire,
+        # we just don't render the block (silence beats nagging).
+        window = int(cfg.get("nudge_window", 20))
+        cap = int(cfg.get("max_nudges_per_window", 6))
+        recent = [p for p in (g.get("recent_nudge_prompts") or [])
+                  if int(g.get("prompt_count", 0)) - int(p) < window]
+        if cap > 0 and len(recent) >= cap:
+            outcome = f"capped:candidates={len(fired)}"  # silenced by fatigue cap
+        else:
+            context_line = _v34_context_for_claude(
+                prompt_raw, list(fired),
+                show_urls=bool(cfg.get("show_source_urls", True)))
+            outcome = f"collaborator:candidates={len(fired)}"
+            recent.append(int(g.get("prompt_count", 0)))
+        g["recent_nudge_prompts"] = recent
 
     # ---------------- Encouragement layer ---------------- #
     # Only consider praise on prompts that did NOT emit a nudge (Kohn 1993:

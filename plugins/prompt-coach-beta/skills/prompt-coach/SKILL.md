@@ -365,6 +365,23 @@ and it hasn't relapsed in the last `regression_guard` prompts. A rule neither de
 tripped over a long window retires *inactive*. Existing masteries are **grandfathered** (tagged
 `mastery_basis: legacy`); `mastery-reset <rule>` makes one re-earn it honestly.
 
+## Adaptive coaching (v0.41+)
+
+The coach learns which rules are worth firing *for you* by closing the loop on every rewrite.
+
+- **Acceptance loop (P1)** — the turn after a rewrite, your reply is recorded per rule:
+  `yes`→`accepted`, `edit …`→`edited` (a *positive* signal — coaching landed), `no`→`rejected`.
+  A fresh unrelated prompt records nothing (no guessing at implicit rejections). Yields a
+  per-rule **acceptance rate** = `(accepted + edited) / outcomes`.
+- **Precision-gated activation (P2)** — a rule below `precision_floor` (0.15) over
+  `min_outcomes_for_gating` (4) outcomes is demoted `dormant` and stops firing; an **explore
+  slot** re-admits one dormant rule every `explore_period` (10) prompts. A **fatigue cap**
+  (`max_nudges_per_window`, default 6 per 20) silences excess rewrites (still logged).
+- **Decaying mastery (P3)** — mastery isn't terminal. A mastered rule carries a review clock on
+  an expanding schedule (`review_intervals_days` = `[30, 90, 180]` days of non-use); each natural
+  use resets + advances it. If it lapses, the rule decays to a `watch` tier and must be freshly
+  re-demonstrated to re-graduate. Grounded in skill-decay + spacing-effect research.
+
 ## Mastery ≠ silence (v0.9+)
 
 Mastered rules aren't permanently dormant — they still evaluate every prompt, just emit rarely.

@@ -124,6 +124,15 @@ CONFIG OPTIONS REFERENCE
   inactive_after            clean_streak with 0 demonstrations → rule retires inactive (default: 15)
   graduation_threshold      Clean-streak recency/decay signal; no longer drives mastery (default: 15)
   min_fires_for_mastery     Legacy v0.27 gate, superseded by min_demonstrations; ignored
+
+  ADAPTIVE COACHING (v0.41)
+  precision_gating          Demote rules you consistently reject to dormant (default: true)
+  precision_floor           Acceptance-rate floor below which a rule is demoted (default: 0.15)
+  min_outcomes_for_gating   Recorded accept/edit/reject outcomes needed before gating (default: 4)
+  explore_period            Re-admit one dormant rule every N prompts (default: 10; 0=off)
+  max_nudges_per_window     Max visible rewrites per nudge_window prompts (default: 6; 0=off)
+  nudge_window              Rolling window (prompts) for the fatigue cap (default: 20)
+  review_intervals_days     Decaying-mastery review schedule, days of non-use (default: 30/90/180)
   cooldown_prompts          Min prompts between same-rule nudges (default: 5)
   mastered_cooldown_prompts Refresher cooldown for mastered rules (default: 50; 0=off)
   max_active_rules          Cap on practicing rules active at once (default: 6)
