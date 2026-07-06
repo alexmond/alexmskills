@@ -650,20 +650,34 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
 
 
 def _reset_rule_state(state: dict, rule_id: str) -> dict:
-    """Zero fires_total, clean_streak, status, mastered_at for one rule."""
+    """Zero a rule's accumulated mastery state so it re-earns from scratch.
+
+    v0.40.0 — under earned mastery, `demonstrations` is the mastery driver,
+    so a reset MUST zero it (and drop the `mastery_basis` tag); otherwise a
+    demonstration-earned rule would instantly re-master on the next clean
+    prompt. Also clears graduated_at / last_demo_at / post-mastery counters.
+    """
     rules = state.setdefault("rules", {})
     prev = rules.get(rule_id, {}).copy()
-    rules[rule_id] = {
+    _reset_fields = {
         "fires_total": 0,
         "clean_streak": 0,
+        "demonstrations": 0,
         "status": "practicing",
         "mastered_at": None,
+        "graduated_at": None,
+        "last_demo_at": None,
+    }
+    # Fields to drop entirely (not carried forward) on reset.
+    _drop = {"mastery_basis", "recent_variants", "recent_fire_prompts",
+             "silence_until_prompt", "post_mastery_fires",
+             "post_mastery_fire_prompts", "demoted_at"}
+    rules[rule_id] = {
+        **_reset_fields,
         # Preserve any coach-internal fields the schema doesn't know about,
-        # except the ones we explicitly reset.
+        # except the ones we explicitly reset or drop.
         **{k: v for k, v in rules.get(rule_id, {}).items()
-           if k not in ("fires_total", "clean_streak", "status",
-                        "mastered_at", "recent_variants",
-                        "recent_fire_prompts", "silence_until_prompt")},
+           if k not in _reset_fields and k not in _drop},
     }
     return prev
 
@@ -685,20 +699,26 @@ def cmd_mastery_reset(cwd: Path, rule_id: str, dry_run: bool = False) -> int:
     current = rules.get(rule_id, {})
     if not current or (current.get("fires_total", 0) == 0
                        and current.get("clean_streak", 0) == 0
-                       and current.get("status", "practicing") == "practicing"):
+                       and current.get("demonstrations", 0) == 0
+                       and current.get("status", "practicing") == "practicing"
+                       and "mastery_basis" not in current):
         print(f"nothing to reset — {rule_id} has no accumulated state")
         return 0
     if dry_run:
         print(f"[dry-run] would reset {rule_id}:")
         print(f"  fires_total: {current.get('fires_total', 0)} → 0")
         print(f"  clean_streak: {current.get('clean_streak', 0)} → 0")
+        print(f"  demonstrations: {current.get('demonstrations', 0)} → 0")
         print(f"  status: {current.get('status', 'practicing')} → practicing")
+        if current.get("mastery_basis"):
+            print(f"  mastery_basis: {current.get('mastery_basis')} → (cleared)")
         if current.get("mastered_at"):
             print(f"  mastered_at: {current.get('mastered_at')} → null")
         return 0
     _reset_rule_state(state, rule_id)
     _save_json(state_path, state)
-    print(f"reset {rule_id} — fires_total=0, clean_streak=0, status=practicing")
+    print(f"reset {rule_id} — fires_total=0, clean_streak=0, "
+          "demonstrations=0, status=practicing")
     return 0
 
 

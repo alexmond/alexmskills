@@ -114,6 +114,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-05 — **prompt-coach-variants-gone** — 0.38.1: stripped ~200 dead nudge strings — `nudge={}` from all 34 rules + field + 5 accessors (AST-span). analyzer 4292→3835 lines; harness 15/15. Why: collaborator writes fresh.
 - 2026-07-05 — **prompt-coach-incremental-routing** — 0.39.0: L5 rule (35 total) — terse per-step routing ("one after another") → batch into TaskCreate/Workflow. Research-backed; harness 16/16. Why: user routes a lot; fell between conversational-skip and verbose L5 regexes.
 - 2026-07-05 — **prompt-coach-earned-mastery** — 0.40.0: mastery driven by *demonstrations* (positive-detector fires = you USED the technique), not clean-streak absence. +13 positives (35/35), grandfather migration, harness 18/18. Why: rules mastered unexercised.
+- 2026-07-06 — **prompt-coach-reset-fix** — 0.40.1: mastery-reset now zeros `demonstrations` + drops `mastery_basis` (was preserving them → reset rule instantly re-mastered). Harness 19/19. Why: v0.40 made demonstrations the driver; reset helper predated it.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

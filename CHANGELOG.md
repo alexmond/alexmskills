@@ -7,6 +7,23 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-06
+
+### Fixed
+- **prompt-coach-beta 0.40.1** — `mastery-reset` / `mastery-reset-all` now
+  zero the `demonstrations` counter and drop the `mastery_basis` tag.
+  - **Why:** v0.40 made `demonstrations` the mastery driver, but the reset
+    helper (`_reset_rule_state`) only zeroed `fires_total` / `clean_streak`
+    / `status` and *preserved* everything else — so a demonstration-earned
+    rule reset to `practicing` kept its demonstrations and would instantly
+    re-master on the next clean prompt, defeating the reset. Found while
+    running `mastery-reset unbounded-scope` (harmless there — demos were 0 —
+    but broken for any earned mastery).
+  - Reset now clears `demonstrations`, `graduated_at`, `last_demo_at`, and
+    drops `mastery_basis` / post-mastery counters; the dry-run preview and
+    "nothing to reset" guard account for demonstrations + mastery_basis.
+    Harness → **19 checks** (reset zeroes demonstrations + drops basis).
+
 ## 2026-07-05 (later 8)
 
 ### Changed

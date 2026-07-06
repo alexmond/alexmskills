@@ -189,6 +189,24 @@ def t_config_roundtrip():
           f"get={ok_get} set={ok_set} desc={ok_desc}")
 
 
+def t_mastery_reset_zeros_demonstrations():
+    """v0.40.1 — mastery-reset must zero `demonstrations` (the mastery
+    driver) and drop the `mastery_basis` tag; otherwise a
+    demonstration-earned rule would instantly re-master after a reset."""
+    h, c = _fresh()
+    sp = h / ".claude/prompt-coach/state.json"
+    sp.write_text(json.dumps({"rules": {"no-verify-loop": {
+        "status": "mastered", "fires_total": 2, "clean_streak": 9,
+        "demonstrations": 5, "mastery_basis": "demonstrated"}}}))
+    _cfg(c, h, "mastery-reset", "no-verify-loop")
+    rs = json.loads(sp.read_text()).get("rules", {}).get("no-verify-loop", {})
+    check("mastery-reset zeros demonstrations + drops mastery_basis",
+          rs.get("demonstrations") == 0 and rs.get("status") == "practicing"
+          and "mastery_basis" not in rs,
+          f"demos={rs.get('demonstrations')} status={rs.get('status')} "
+          f"basis_present={'mastery_basis' in rs}")
+
+
 def t_analyze_single():
     h, c = _fresh()
     r = _cfg(c, h, "--json", "analyze", "fix it and make it better and faster")
@@ -307,6 +325,7 @@ CHECKS = [
     t_mastery_congrats,
     t_picker_skip,
     t_config_roundtrip,
+    t_mastery_reset_zeros_demonstrations,
     t_analyze_single,
     t_analyze_history,
     t_sources_open,
