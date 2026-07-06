@@ -24,7 +24,7 @@ Render as a fenced block so it presents like a dashboard, under 60 lines.
 prompt-coach-beta v<VERSION>
 
 A UserPromptSubmit hook that watches every prompt you send Claude Code and nudges
-you toward better prompting habits. 35 rules across 6 tiers, 22 positive detectors,
+you toward better prompting habits. 35 rules across 6 tiers, 35 positive detectors,
 typo tolerance, conversational + picker-answer short-circuit. Rules quietly
 graduate as you master them and fade to occasional refreshers.
 
@@ -91,8 +91,10 @@ CURRENT CONFIG (resolved: default → global → this repo)
   ack_clean:                  <live value>  (✓ heartbeat on clean prompts)
   ack_ratio:                  <live value>  (1 = every clean prompt)
   show_source_urls:           <live value>  (clickable doc URLs in the coach block)
-  graduation_threshold:       <live value>  (clean prompts in a row → mastered)
-  min_fires_for_mastery:      <live value>  (evidence gate for mastery)
+  min_demonstrations:         <live value>  (times you USED the technique → mastered, v0.40)
+  regression_guard:           <live value>  (clean prompts since last fire, needed w/ demos)
+  inactive_after:             <live value>  (clean_streak w/ 0 demos → inactive)
+  graduation_threshold:       <live value>  (clean-streak recency signal; not the mastery driver)
   cooldown_prompts:           <live value>  (min between same-rule fires)
   mastered_cooldown_prompts:  <live value>  (min between refresher fires)
   max_active_rules:           <live value>  (default 6)
@@ -116,8 +118,12 @@ CONFIG OPTIONS REFERENCE
   ack_ratio                 Emit the ack every Nth clean prompt (default: 1)
   show_source_urls          Full clickable doc URLs in the coach block (default: true)
 
-  graduation_threshold      N clean prompts → rule masters (default: 15)
-  min_fires_for_mastery     Evidence gate: min fires before a rule can master (default: 1)
+  min_demonstrations        EARNED MASTERY (v0.40): times the mirroring positive must fire
+                            — i.e. times you USED the technique — before a rule masters (default: 3)
+  regression_guard          Clean prompts since last fire required alongside demos (default: 3)
+  inactive_after            clean_streak with 0 demonstrations → rule retires inactive (default: 15)
+  graduation_threshold      Clean-streak recency/decay signal; no longer drives mastery (default: 15)
+  min_fires_for_mastery     Legacy v0.27 gate, superseded by min_demonstrations; ignored
   cooldown_prompts          Min prompts between same-rule nudges (default: 5)
   mastered_cooldown_prompts Refresher cooldown for mastered rules (default: 50; 0=off)
   max_active_rules          Cap on practicing rules active at once (default: 6)

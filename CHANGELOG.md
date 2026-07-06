@@ -7,6 +7,41 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05 (later 8)
+
+### Changed
+- **prompt-coach-beta 0.40.0** — **earned mastery**. Mastery is now driven
+  by *demonstrations* — the number of times a rule's mirroring positive
+  detector fired (i.e. the user actively USED the good technique) — instead
+  of by a clean streak (mere absence of the mistake).
+  - **Why:** the old model graduated rules that were never exercised. Every
+    clean prompt advanced every practicing rule's streak, so a rule mastered
+    on prompts that had nothing to do with it; the only "evidence"
+    (`fires_total`) counted times the user got it *wrong*. Reported by the
+    user watching unrelated rules march toward mastery.
+  - New signals + config (`rule-activation`): `min_demonstrations` (default
+    3), `regression_guard` (default 3), `inactive_after` (default 15). A
+    rule masters when `demonstrations ≥ min_demonstrations` AND it hasn't
+    relapsed in the last `regression_guard` prompts. `clean_streak` is
+    demoted to a recency guard; a rule neither demonstrated nor tripped over
+    `inactive_after` clean prompts retires `inactive`. The legacy
+    `min_fires_for_mastery` gate is retained but ignored.
+  - **35 positive detectors — one per rule.** Authored the 13 missing
+    mirrors (`batched-routing`, `structured-tasks`, `asked-adversarial`,
+    `assigned-role`, `preferred-edit`, `refine-with-axis`,
+    `named-skill-candidate`, `demanded-receipts`, `used-xml-tags`,
+    `asked-concise`, `diagnosed-retry`, `stated-correctness-intent`,
+    `stated-answer-shape`) so every rule can earn mastery. Positives now do
+    double duty: praise + demonstration evidence.
+  - **Migration:** existing masteries are grandfathered (kept, tagged
+    `mastery_basis: legacy`; newly-earned ones are `demonstrated`).
+    `mastery-reset <rule>` makes a rule re-earn mastery honestly. Idempotent
+    (`v40_migration_done`). The `✓` ack now ranks "closest to mastery" by
+    demonstrations (`2/3 demonstrated`), not clean streak.
+  - Harness → **18 checks** (earned-mastery mechanic + grandfather
+    migration). Docs (SKILL.md, Antora page, help card) updated: new
+    `[#earned-mastery]` section, positive count 22 → 35, config reference.
+
 ## 2026-07-05 (later 7)
 
 ### Added

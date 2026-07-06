@@ -60,14 +60,26 @@ DEFAULT_CONFIG = {
     # https URL so the user can Cmd/Ctrl-click to open the doc. Set false
     # for just the short anchor slug (e.g. "be-clear-and-direct").
     "show_source_urls": True,
-    "graduation_threshold": 15,   # clean prompts in a row → mastered
-    # v0.27.0 — evidence requirement for mastery. A rule that hits
-    # graduation_threshold with fires_total below this value transitions to
-    # `inactive` (rule doesn't apply to the user's patterns) instead of
-    # `mastered`. Default 1 = "must have fired at least once". Set to 0 to
-    # revert to v0.26 behavior (mastery on clean_streak alone). Set higher
-    # (e.g. 3) for stricter mastery — only rules with real evidence graduate.
+    "graduation_threshold": 15,   # clean prompts in a row (recency/decay)
+    # v0.27.0 — LEGACY evidence gate. Superseded by demonstration-driven
+    # mastery in v0.40.0 (see `min_demonstrations`); retained for
+    # forward-compat and ignored by the new graduation path.
     "min_fires_for_mastery": 1,
+    # v0.40.0 — EARNED MASTERY. Mastery is driven by *demonstrations* — the
+    # number of times a rule's mirroring positive detector fired (i.e. the
+    # user actively USED the good technique), not by the mere absence of the
+    # mistake. This fixes the flaw where rules graduated on clean prompts
+    # that never exercised them.
+    #   min_demonstrations — positive demonstrations required to master
+    #   regression_guard   — clean prompts since the last fire required
+    #                        alongside the demonstrations (no active relapse)
+    #   inactive_after     — clean_streak with ZERO demonstrations after which
+    #                        a rule retires `inactive` ("N/A to how you work")
+    #                        instead of lingering; defaults to
+    #                        graduation_threshold.
+    "min_demonstrations": 3,
+    "regression_guard": 3,
+    "inactive_after": 15,
     # v0.28.0 — proactive tips (advanced-technique suggestions). Distinct
     # from rules (which fire on problems in the prompt). Tips fire on-topic
     # for a technique the user could try. Two firing modes:
@@ -219,21 +231,50 @@ CONFIG_SCHEMA = {
     "graduation_threshold": {
         "category": "rule-activation",
         "type": "int",
-        "description": "Number of clean prompts in a row before a rule graduates to "
-                       "mastered.",
+        "description": "Clean prompts in a row a rule tracks as a recency/decay "
+                       "signal. Since v0.40 this no longer drives mastery (see "
+                       "min_demonstrations); it feeds the regression guard and the "
+                       "inactive-after default.",
         "example": 15,
         "since": "0.5.0",
     },
     "min_fires_for_mastery": {
         "category": "rule-activation",
         "type": "int",
-        "description": "Evidence requirement for mastery (v0.27+). A rule that hits "
-                       "graduation_threshold with fires_total below this transitions "
-                       "to `inactive` (rule doesn't apply) instead of `mastered`. "
-                       "Default 1: must have fired at least once. Set to 0 to revert "
-                       "to v0.26 behavior. Set to 3+ for stricter mastery.",
+        "description": "LEGACY (v0.27) evidence gate, superseded by "
+                       "min_demonstrations in v0.40. Retained for forward-compat; "
+                       "ignored by the demonstration-driven graduation path.",
         "example": 1,
         "since": "0.27.0",
+    },
+    "min_demonstrations": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "EARNED MASTERY (v0.40+). Number of times a rule's mirroring "
+                       "positive detector must fire — i.e. times you actively USED the "
+                       "good technique — before the rule can master. Absence of the "
+                       "mistake no longer counts; demonstration does.",
+        "example": 3,
+        "since": "0.40.0",
+    },
+    "regression_guard": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "Clean prompts since the last fire required alongside the "
+                       "demonstrations for mastery (v0.40+) — proves no active relapse "
+                       "at the moment of graduation.",
+        "example": 3,
+        "since": "0.40.0",
+    },
+    "inactive_after": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "Clean_streak with ZERO demonstrations after which a rule "
+                       "retires `inactive` ('N/A to how you work') instead of "
+                       "lingering as practicing (v0.40+). Defaults to "
+                       "graduation_threshold.",
+        "example": 15,
+        "since": "0.40.0",
     },
     "tips_enabled": {
         "category": "output",
@@ -2763,6 +2804,140 @@ def pos_asked_workflow(prompt: str) -> bool:
     return bool(fanout and counted and tool)
 
 
+# ---- v0.40.0 — positive detectors for the 13 rules that previously had no
+# mirror. Every rule now has one so mastery can be *earned* by demonstrating
+# the good technique, not merely by not tripping the rule. ------------------
+
+def pos_batched_routing(prompt: str) -> bool:
+    """Mirrors incremental-routing: user batched the steps up front (task
+    list / numbered plan / workflow) instead of routing one at a time."""
+    pl = prompt.lower()
+    worded = re.search(
+        r"\b(task ?list|checklist|as a workflow|use taskcreate|taskcreate|"
+        r"do all of (?:these|the following|them)|here'?s the plan|"
+        r"batch (?:these|them)|all at once|in parallel)\b", pl)
+    numbered = len(re.findall(r"(?m)^\s*\d+[.)]\s+\S", prompt)) >= 2
+    return bool(worded or numbered)
+
+
+def pos_structured_tasks(prompt: str) -> bool:
+    """Mirrors compound-tasks: 3+ actions, but laid out as a list / task
+    list / first-then sequence instead of an 'and'-chain."""
+    n = len(re.findall(rf"\b(?:{'|'.join(ACTION_VERBS)})\b", prompt.lower()))
+    if n < 3:
+        return False
+    return bool(len(re.findall(r"(?m)^\s*(?:\d+[.)]|[-*])\s+\S", prompt)) >= 2
+                or re.search(r"\b(task ?list|checklist|step 1|use taskcreate)\b"
+                             r"|first\b.*\bthen\b", prompt.lower()))
+
+
+def pos_asked_adversarial(prompt: str) -> bool:
+    """Mirrors no-adversarial-check: user invited a skeptical / red-team pass."""
+    return bool(re.search(
+        r"\b(adversarial|red[- ]team|devil'?s advocate|skeptic|poke holes|"
+        r"what could go wrong|try to break (?:this|it)|attack this|"
+        r"steelman|challenge (?:this|it|the))\b", prompt.lower()))
+
+
+def pos_assigned_role(prompt: str) -> bool:
+    """Mirrors no-classical-role: user gave Claude a role/persona."""
+    return bool(re.search(
+        r"\b(you are an? |act as an? |as an? expert |play the role of|"
+        r"imagine you are|assume the role|in the role of)\b", prompt.lower()))
+
+
+def pos_preferred_edit(prompt: str) -> bool:
+    """Mirrors no-edit-preference: user preferred editing existing code over
+    creating new files."""
+    return bool(re.search(
+        r"\b(edit (?:the )?existing|modify (?:the )?existing|"
+        r"update (?:the )?existing|extend (?:the )?existing|in[- ]?place|"
+        r"don'?t create (?:a )?new|reuse (?:the )?existing|"
+        r"add (?:it )?to (?:the )?existing)\b", prompt.lower()))
+
+
+def pos_refine_with_axis(prompt: str) -> bool:
+    """Mirrors no-rubric-for-refine: refine ask that names the axis."""
+    pl = prompt.lower()
+    refine = re.search(r"\b(refine|improve|polish|tighten|revise|rework)\b", pl)
+    axis = re.search(
+        r"\b(for readability|for clarity|for performance|for correctness|"
+        r"for maintainability|specifically the|the error handling|the naming|"
+        r"the structure|on the .{0,20} (?:axis|dimension)|in terms of)\b", pl)
+    return bool(refine and axis)
+
+
+def pos_named_skill_candidate(prompt: str) -> bool:
+    """Mirrors no-skill-composition: user named a repeatable ceremony as a
+    skill candidate."""
+    return bool(re.search(
+        r"\b(make (?:this|it) a skill|turn (?:this|it) into a skill|"
+        r"add a skill for|as a reusable skill|create a skill|"
+        r"skill candidate|worth a skill|should be a skill)\b", prompt.lower()))
+
+
+def pos_demanded_receipts(prompt: str) -> bool:
+    """Mirrors no-verify-before-claim: user demanded evidence, not assertion."""
+    return bool(re.search(
+        r"\b(cite (?:the )?file|file:line|with (?:the )?line numbers?|"
+        r"quote the (?:code|line)|show me where|point to the (?:exact )?\w+|"
+        r"with evidence|don'?t guess|verify before|receipts?\b)\b",
+        prompt.lower()))
+
+
+def pos_used_xml_tags(prompt: str) -> bool:
+    """Mirrors no-xml-structure: user delimited pasted content with tags."""
+    return bool(re.search(
+        r"<(code|data|logs?|context|document|example|input|file|error|"
+        r"output|instructions?)>", prompt, re.I))
+
+
+def pos_asked_concise(prompt: str) -> bool:
+    """Mirrors overthinking-warning: user explicitly asked to keep it simple."""
+    return bool(re.search(
+        r"\b(keep it (?:simple|brief|short)|don'?t overthink|be concise|"
+        r"briefly|one[- ]liner|minimal (?:change|diff)|smallest change|"
+        r"just the\b)\b", prompt.lower()))
+
+
+def pos_diagnosed_retry(prompt: str) -> bool:
+    """Mirrors retry-without-diagnosis: a retry carrying new information."""
+    pl = prompt.lower()
+    retry = re.search(
+        r"\b(try again|retry|still (?:failing|broken|not)|"
+        r"another (?:attempt|approach))\b", pl)
+    diagnosis = re.search(
+        r"\b(because|the error (?:was|is)|it failed (?:on|because|with)|"
+        r"the issue (?:was|is)|root cause|this time|the reason|turns out|"
+        r"i think it'?s)\b", pl)
+    return bool(retry and diagnosis)
+
+
+def pos_stated_correctness_intent(prompt: str) -> bool:
+    """Mirrors test-goalseeking: 'make tests pass' plus a correctness intent
+    that forecloses hard-coding / gaming."""
+    pl = prompt.lower()
+    tests = re.search(
+        r"\b(tests? pass|ci green|fix (?:the )?(?:broken )?tests?|make .{0,20}pass)\b", pl)
+    intent = re.search(
+        r"\b(without (?:changing|breaking) behavior|hard[- ]?cod(?:e|ing)|"
+        r"fix the (?:actual|real|root) (?:bug|cause|issue)|"
+        r"without cheating|keep the behavior|real fix|properly)\b", pl)
+    return bool(tests and intent)
+
+
+def pos_stated_answer_shape(prompt: str) -> bool:
+    """Mirrors no-answer-shape: a question that specifies the answer format."""
+    pl = prompt.lower()
+    question = "?" in prompt or re.search(
+        r"\b(what|which|how many|how much|list|name)\b", pl)
+    shape = re.search(
+        r"\b(as a (?:table|list|bullet)|in json|one[- ]word|in a table|"
+        r"a single (?:number|word|sentence)|yes or no|comma[- ]separated|"
+        r"top \d+|ranked)\b", pl)
+    return bool(question and shape)
+
+
 # Praise phrasings: one specific/process-focused + one warm/humorous per positive.
 # Rotated to prevent habituation.
 POSITIVES: list[Positive] = [
@@ -2881,6 +3056,72 @@ POSITIVES: list[Positive] = [
                  "You noticed a repeatable pattern and moved to abstract it. That's the rule-of-three payoff.",
                  "Pattern → skill on the same day you noticed it. Future-you owes present-you a beer.",
              ], [SRC_FOWLER_REFACTOR, SRC_KENT_BECK_YAGNI, SRC_ANTHROPIC_SKILLS]),
+    # ---- v0.40.0 — mirrors for the 13 previously-unmirrored rules ----
+    Positive("batched-routing", "incremental-routing", 5,
+             pos_batched_routing, [
+                 "You batched the steps up front instead of routing one at a time. That's one plan, not ten round-trips.",
+                 "A task list / plan instead of 'continue'×10. The agent runs the whole thing while you get coffee.",
+             ], [SRC_BROPHY_PRAISE, SRC_FOGG_TINY]),
+    Positive("structured-tasks", "compound-tasks", 2,
+             pos_structured_tasks, [
+                 "You laid the multi-part ask out as a list, not an 'and'-chain. Nothing gets dropped now.",
+                 "Structured the steps instead of run-on-sentencing them. Each one has a home.",
+             ], [SRC_BROPHY_PRAISE, SRC_MUELLER_DWECK]),
+    Positive("asked-adversarial", "no-adversarial-check", 3,
+             pos_asked_adversarial, [
+                 "You invited a skeptical pass on a high-stakes ask. Red-teaming your own plan is a senior move.",
+                 "You asked Claude to poke holes. Better it finds them than prod does.",
+             ], [SRC_BROPHY_PRAISE, SRC_DECI_RYAN]),
+    Positive("assigned-role", "no-classical-role", 3,
+             pos_assigned_role, [
+                 "You gave Claude a role — the answer will speak from that expertise instead of hedging generically.",
+                 "'You are a X' framing. Sharper lens, sharper answer.",
+             ], [SRC_BROPHY_PRAISE, SRC_FOGG_TINY]),
+    Positive("preferred-edit", "no-edit-preference", 6,
+             pos_preferred_edit, [
+                 "You asked to edit existing code rather than spawn a new file. Fewer orphans, less sprawl.",
+                 "Edit-in-place over new-file. The repo stays a repo, not a landfill.",
+             ], [SRC_FOWLER_REFACTOR, SRC_BROPHY_PRAISE]),
+    Positive("refine-with-axis", "no-rubric-for-refine", 4,
+             pos_refine_with_axis, [
+                 "You named the axis to refine on. 'Better' is now a direction, not a vibe.",
+                 "Refine + a specific dimension. Claude knows which way is up.",
+             ], [SRC_BROPHY_PRAISE, SRC_DECI_RYAN]),
+    Positive("named-skill-candidate", "no-skill-composition", 6,
+             pos_named_skill_candidate, [
+                 "You named a repeatable ceremony as a skill candidate. That's the composition instinct paying off.",
+                 "Spotted a skill hiding in a routine. Future-you will invoke it in one line.",
+             ], [SRC_FOWLER_REFACTOR, SRC_ANTHROPIC_SKILLS]),
+    Positive("demanded-receipts", "no-verify-before-claim", 3,
+             pos_demanded_receipts, [
+                 "You demanded receipts — file:line, quoted code — instead of taking an assertion on faith.",
+                 "'Show me where' beats 'does X exist?'. Hallucinations don't survive evidence.",
+             ], [SRC_BROPHY_PRAISE, SRC_DECI_RYAN]),
+    Positive("used-xml-tags", "no-xml-structure", 3,
+             pos_used_xml_tags, [
+                 "You delimited the pasted content with tags. Claude can tell your data from your instructions now.",
+                 "Tagged the payload. No more 'wait, was that line part of the code or the ask?'.",
+             ], [SRC_BROPHY_PRAISE, SRC_MUELLER_DWECK]),
+    Positive("asked-concise", "overthinking-warning", 4,
+             pos_asked_concise, [
+                 "You asked to keep it simple. Sometimes the best prompt engineering is a shorter prompt.",
+                 "'Don't overthink it.' The rare nudge toward less structure — and the right one here.",
+             ], [SRC_FOGG_TINY, SRC_BROPHY_PRAISE]),
+    Positive("diagnosed-retry", "retry-without-diagnosis", 3,
+             pos_diagnosed_retry, [
+                 "Your retry carried new information — the error, the cause, the change. That's a retry that can actually converge.",
+                 "You didn't just say 'try again', you said why. The loop has a chance now.",
+             ], [SRC_BROPHY_PRAISE, SRC_DECI_RYAN]),
+    Positive("stated-correctness-intent", "test-goalseeking", 3,
+             pos_stated_correctness_intent, [
+                 "You paired 'make it pass' with a correctness intent. No hard-coding the green checkmark.",
+                 "You foreclosed the cheat — real fix, not a mocked one. The tests still mean something.",
+             ], [SRC_BROPHY_PRAISE, SRC_DECI_RYAN]),
+    Positive("stated-answer-shape", "no-answer-shape", 1,
+             pos_stated_answer_shape, [
+                 "You specified the answer shape — table, JSON, one word. You'll get what you can use, first try.",
+                 "You told Claude the format up front. No reformatting round-trip.",
+             ], [SRC_BROPHY_PRAISE, SRC_FOGG_TINY]),
 ]
 
 POSITIVES_BY_ID = {p.id: p for p in POSITIVES}
@@ -3184,40 +3425,37 @@ def _v34_context_for_claude(prompt_text: str, rule_ids: list[str],
 
 
 def _ack_line(g: dict, active_practicing: list[str], threshold: int,
-              min_fires: int = 1) -> str:
-    """v0.35.1 — build the compact clean-prompt acknowledgment line.
+              min_demonstrations: int = 3) -> str:
+    """v0.40.0 — build the compact clean-prompt acknowledgment line.
 
-    Shows (a) the prompt was clean and (b) HONEST mastery progress.
+    Shows (a) the prompt was clean and (b) HONEST mastery progress toward
+    EARNED mastery. Under the v0.40 model a rule masters on *demonstrations*
+    (times the user used the good technique), so the "closest to mastery"
+    carrot ranks by demonstrations toward min_demonstrations — not by a
+    clean streak of unrelated prompts, which never proved anything.
 
-    v0.35.0 bug: this advertised the highest-streak practicing rule as
-    "closest to mastery" regardless of its fires_total. But under the v0.27
-    evidence gate, a rule that reaches the streak threshold with
-    fires_total < min_fires graduates to *inactive* (silently retired — it
-    never actually applied to the user's prompts), NOT to *mastered* (no
-    congrats). So the ack dangled a milestone that would never fire — e.g.
-    "closest to mastery: no-chain-of-thought 14/15" for a rule with 0
-    fires that was about to go inactive.
-
-    Fix: only rules with fires_total >= min_fires can actually master, so
-    only those are eligible for the "closest to mastery" carrot. If none
-    qualify, show a neutral liveness line (no false promise)."""
-    masterable = []   # (rid, streak) — has the evidence to actually master
+    Only rules with at least one demonstration are on a real path to
+    mastery, so only those are eligible for the carrot. If none qualify,
+    show a neutral liveness line (no false promise)."""
+    masterable = []   # (rid, demonstrations) — actually on the mastery path
     practicing_n = 0
     for rid in active_practicing:
         rs = g.get("rules", {}).get(rid, {})
         if rs.get("status", "practicing") != "practicing":
             continue
         practicing_n += 1
-        if int(rs.get("fires_total", 0)) >= min_fires:
-            masterable.append((rid, int(rs.get("clean_streak", 0))))
+        demos = int(rs.get("demonstrations", 0))
+        if demos > 0:
+            masterable.append((rid, demos))
     if masterable:
-        rid, streak = max(masterable, key=lambda t: t[1])
-        streak = min(streak, threshold)
+        rid, demos = max(masterable, key=lambda t: t[1])
+        demos = min(demos, min_demonstrations)
         return (f"✓ prompt-coach · clean prompt · closest to mastery: "
-                f"{rid} {streak}/{threshold}")
+                f"{rid} {demos}/{min_demonstrations} demonstrated")
     if practicing_n:
-        # Rules are active but none has fired yet, so none can master until
-        # it does. Don't promise mastery; just confirm the coach is watching.
+        # Rules are active but none has been demonstrated yet, so none can
+        # master until you use the technique. Don't promise mastery; just
+        # confirm the coach is watching.
         return (f"✓ prompt-coach · clean prompt · watching {practicing_n} "
                 f"rule{'s' if practicing_n != 1 else ''}")
     return "✓ prompt-coach · clean prompt · all active rules mastered 🎓"
@@ -3330,10 +3568,11 @@ def _flag_previous_for_review(local_dir: Path, mark_prompt: str) -> None:
 
 def _append_graduation_event(local_dir: Path, rule_id: str, from_status: str,
                               to_status: str, fires_total: int,
-                              clean_streak: int) -> None:
+                              clean_streak: int, demonstrations: int = 0) -> None:
     """v0.27.0 — append a graduation event line to log.md so users can grep
     `event=graduation` and audit when each rule mastered (or went inactive)
-    and how much evidence it had at the time."""
+    and how much evidence it had at the time. v0.40.0 adds demonstrations
+    (the mastery driver)."""
     log = local_dir / "log.md"
     log.parent.mkdir(parents=True, exist_ok=True)
     date = _today()
@@ -3347,6 +3586,7 @@ def _append_graduation_event(local_dir: Path, rule_id: str, from_status: str,
     lines_out.append(
         f"- [{_now_iso()}] event=graduation rule={rule_id} "
         f"from={from_status} to={to_status} "
+        f"demonstrations={demonstrations} "
         f"fires_total={fires_total} clean_streak={clean_streak}"
     )
     with log.open("a", encoding="utf-8") as f:
@@ -3378,6 +3618,27 @@ def _migrate_v27_inactive_status(g: dict, local_dir: Path) -> int:
         # Marker on global state so the migration only logs once per install
         g["v27_migration_done"] = True
     return migrated
+
+
+def _migrate_v40_demonstrations(g: dict) -> int:
+    """v0.40.0 — grandfather migration for demonstration-driven mastery. The
+    `demonstrations` counter is new, so pre-v0.40 rules have no history to
+    recover. Rather than wipe existing masteries, GRANDFATHER them: backfill
+    demonstrations=0 and tag mastered rules `mastery_basis: "legacy"` so the
+    mastery dashboard can distinguish earned (demonstration-backed) from
+    legacy masteries. Non-destructive + idempotent. Users who want a rule to
+    re-earn mastery honestly can `mastery-reset <rule>`."""
+    rules = g.get("rules", {})
+    if not isinstance(rules, dict) or g.get("v40_migration_done"):
+        return 0
+    tagged = 0
+    for rs in rules.values():
+        rs.setdefault("demonstrations", 0)
+        if rs.get("status") == "mastered" and "mastery_basis" not in rs:
+            rs["mastery_basis"] = "legacy"
+            tagged += 1
+    g["v40_migration_done"] = True
+    return tagged
 
 
 def append_log(local_dir: Path, entry: dict) -> None:
@@ -3463,6 +3724,10 @@ def main() -> int:
         # for a fresh install with nothing to migrate, set the marker here
         # so subsequent runs don't scan again.
         g["v27_migration_done"] = True
+
+    # v0.40.0 — grandfather existing masteries into the demonstration model
+    # (backfill demonstrations=0, tag mastered rules as legacy). Idempotent.
+    _migrate_v40_demonstrations(g)
 
     # Increment prompt counters.
     g["prompt_count"] = int(g.get("prompt_count", 0)) + 1
@@ -3550,16 +3815,33 @@ def main() -> int:
     mastery_events: list[str] = []  # rule ids that graduated this prompt
     demoted_events: list[str] = []  # rule ids that lost mastery this prompt
 
+    # v0.40.0 — EARNED MASTERY. Compute which active rules the user actively
+    # DEMONSTRATED this prompt: their mirroring positive detector fired. This
+    # is the mastery signal (presence of the good technique), independent of
+    # whether a nudge also fired on some other rule. Praise is still
+    # suppressed on nudged prompts (below); demonstration-counting is not.
+    demonstrated_rules: set[str] = set()
+    for _pid, _p in POSITIVES_BY_ID.items():
+        if _p.mirrors in active:
+            try:
+                if _p.check(prompt):
+                    demonstrated_rules.add(_p.mirrors)
+            except Exception:
+                pass  # never let a bad regex break the hook
+
     # Bookkeeping: update every active rule's streak.
     for rid in active:
         gr = g["rules"].setdefault(rid, {
             "status": "practicing",
             "fires_total": 0,
             "clean_streak": 0,
+            "demonstrations": 0,
             "last_fired_at": None,
             "last_nudged_at": None,
+            "last_demo_at": None,
             "graduated_at": None,
         })
+        gr.setdefault("demonstrations", 0)  # v0.40 — backfill on old state
         lr = l["rules"].setdefault(rid, {
             "fires_here": 0,
             "clean_streak_here": 0,
@@ -3578,50 +3860,54 @@ def main() -> int:
         else:
             gr["clean_streak"] = int(gr.get("clean_streak", 0)) + 1
             lr["clean_streak_here"] = int(lr.get("clean_streak_here", 0)) + 1
+            # v0.40.0 — count a demonstration when the user actively used the
+            # good technique (mirroring positive fired) on a prompt that did
+            # NOT trip this rule. This is the evidence mastery is built on.
+            if rid in demonstrated_rules:
+                gr["demonstrations"] = int(gr.get("demonstrations", 0)) + 1
+                gr["last_demo_at"] = _now_iso()
 
-        # v0.27.0 — evidence-based graduation.
-        # Three outcomes when clean_streak reaches graduation_threshold:
-        #   fires_total >= min_fires_for_mastery → "mastered" (real learning)
-        #   fires_total == 0                     → "inactive" (rule doesn't
-        #                                          apply to the user's
-        #                                          patterns; free the active
-        #                                          slot without claiming
-        #                                          mastery)
-        #   0 < fires_total < min_fires           → stay "practicing" (has
-        #                                          some evidence but not
-        #                                          enough for mastery; the
-        #                                          coach keeps checking)
+        # v0.40.0 — EARNED (demonstration-driven) graduation. Mastery is
+        # evidence of the *good technique*, not the absence of the mistake:
+        #   demonstrations >= min_demonstrations
+        #     AND clean_streak >= regression_guard  → "mastered"
+        #       (you used the technique enough times AND aren't currently
+        #        relapsing)
+        #   demonstrations == 0 AND clean_streak >= inactive_after → "inactive"
+        #       (the rule never applied to how you prompt — free the active
+        #        slot without claiming a mastery you never earned; this also
+        #        subsumes the old fires==0 retirement)
+        #   else → stay "practicing" (keep watching + counting demos)
         # "mastered" and "inactive" both free the active-rules slot so
         # higher-tier rules can activate; only "mastered" gets refresher
         # fires or counts in stats.
-        min_fires = int(cfg.get("min_fires_for_mastery", 1))
+        min_demos = int(cfg.get("min_demonstrations", 3))
+        regression_guard = int(cfg.get("regression_guard", 3))
+        inactive_after = int(cfg.get("inactive_after", threshold))
         if (rid not in fired
-            and gr["clean_streak"] >= threshold
             and gr.get("status") not in ("mastered", "inactive")):
-            fires_total = int(gr.get("fires_total", 0))
+            demos = int(gr.get("demonstrations", 0))
             new_status = None
-            if fires_total >= min_fires:
+            if demos >= min_demos and gr["clean_streak"] >= regression_guard:
                 new_status = "mastered"
                 mastery_events.append(rid)
-            elif fires_total == 0:
+            elif demos == 0 and gr["clean_streak"] >= inactive_after:
                 new_status = "inactive"
                 # No mastery event; nothing to praise
-            # else: 0 < fires_total < min_fires — stay practicing, don't
-            # touch status. clean_streak keeps growing; when fires_total
-            # catches up (or clean_streak breaks and re-accumulates), the
-            # decision re-runs.
             if new_status is not None:
                 prior_status = gr.get("status", "practicing")
                 gr["status"] = new_status
                 gr["graduated_at"] = _now_iso()
+                gr["mastery_basis"] = (
+                    "demonstrated" if new_status == "mastered" else "unexercised")
                 gr["post_mastery_fires"] = 0
                 gr["post_mastery_fire_prompts"] = []
-                # v0.27.0 — write a graduation event to the local log so
-                # the user can grep `event=graduation` and audit the
-                # mastery timeline. Format kept regex-friendly.
+                # Write a graduation event to the local log so the user can
+                # grep `event=graduation` and audit the mastery timeline.
                 _append_graduation_event(local_dir, rid, prior_status,
-                                          new_status, fires_total,
-                                          gr["clean_streak"])
+                                          new_status, int(gr.get("fires_total", 0)),
+                                          gr["clean_streak"],
+                                          demonstrations=demos)
 
         # v0.9.0 — post-mastery fire tracking (for optional auto-demotion).
         # Even if demotion is off, we track the counter so /stats can surface
@@ -3831,7 +4117,7 @@ def main() -> int:
         if since >= ack_ratio:
             g["acks_since"] = 0
             ack_line = _ack_line(g, active_practicing, threshold,
-                                 int(cfg.get("min_fires_for_mastery", 1)))
+                                 int(cfg.get("min_demonstrations", 3)))
             outcome = "ack:clean"
             context_line = (
                 f"[prompt-coach · inline · ack] The user's prompt was clean — "

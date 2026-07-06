@@ -39,7 +39,7 @@ Reply "yes" to proceed, "no" for original, or "edit" to change something.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The coach is a suggestion, not a block — Claude answers your prompt normally. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a row (default 15, with an evidence gate), then the next dormant rule activates.
+On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The coach is a suggestion, not a block — Claude answers your prompt normally. Rules graduate to "mastered" once you've **demonstrated** the good technique `min_demonstrations` times (default 3, v0.40 earned-mastery model), then the next dormant rule activates.
 
 ### The 5 slash commands
 
@@ -166,7 +166,7 @@ activates in its place, and so on.
 
 ## Encouragement layer (v0.3+)
 
-The coach also *praises the specific positive behaviors* mirroring the negative rules — 21 detectors,
+The coach also *praises the specific positive behaviors* mirroring the negative rules — 35 detectors (one per rule),
 sparing (default 1-in-10 clean prompts + always on mastery + always on first-after-fire), and
 grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan
 2000, Kohn 1993). Design choices:
@@ -192,7 +192,7 @@ couldn't tell it was alive. `ack_clean` (default **on**) fixes that: on a clean 
 nothing else fired, it emits one compact ambient line —
 
 ```
-✓ prompt-coach · clean prompt · closest to mastery: no-verify-loop 12/15
+✓ prompt-coach · clean prompt · closest to mastery: no-verify-loop 2/3 demonstrated
 ```
 
 **This is not praise — it's a heartbeat.** The distinction is deliberate and grounded:
@@ -257,8 +257,11 @@ Config resolves in order: repo local → user global → default. Run
 - `enabled` — master switch; `false` = the hook returns immediately (default: true)
 - `ack_clean` / `ack_ratio` — the `✓` liveness heartbeat on clean prompts + its rate (default: true / 1)
 - `show_source_urls` — full clickable doc URLs in the coach block (default: true)
-- `graduation_threshold` — clean prompts in a row → mastered (default: 15)
-- `min_fires_for_mastery` — evidence gate: a rule needs ≥ this many fires before it can master, else it retires *inactive* (default: 1)
+- `min_demonstrations` — **earned mastery (v0.40)**: times the mirroring positive must fire (you *used* the technique) before a rule can master (default: 3)
+- `regression_guard` — clean prompts since the last fire required alongside the demonstrations (default: 3)
+- `inactive_after` — clean_streak with zero demonstrations after which a rule retires *inactive* (default: 15)
+- `graduation_threshold` — clean-streak recency/decay signal; no longer drives mastery since v0.40 (default: 15)
+- `min_fires_for_mastery` — legacy v0.27 gate, superseded by `min_demonstrations`; retained but ignored
 - `cooldown_prompts` — min prompts between same-rule fires (default: 5)
 - `mastered_cooldown_prompts` — cooldown between refresher fires on mastered rules (default: 50; `0` disables)
 - `max_active_rules` — cap on practicing rules active at once (default: 6)
@@ -347,6 +350,20 @@ The command is the discoverable path when you don't know what the options are ca
 Writes are deep-merged into the target JSON — keys the schema doesn't know about
 (e.g. forward-compat entries from future versions) are preserved, not stripped.
 Invalid values (wrong type, not in `choices`) are rejected with a clear error.
+
+## Earned mastery (v0.40+)
+
+Mastery is driven by **demonstrations — times you actively *used* the good technique** (the
+mirroring positive detector fired), not by the absence of the mistake. Before v0.40 a rule
+graduated after a clean streak, but "clean" just meant the anti-pattern was absent — and since
+most prompts don't exercise most rules, a rule could master on prompts unrelated to it.
+
+Every rule now has a positive mirror (35/35). When a positive fires it's a demonstration:
+`demonstrations` **drives mastery**, `clean_streak` is demoted to a recency guard, `fires_total`
+is a regression signal. A rule masters when `demonstrations ≥ min_demonstrations` (default 3)
+and it hasn't relapsed in the last `regression_guard` prompts. A rule neither demonstrated nor
+tripped over a long window retires *inactive*. Existing masteries are **grandfathered** (tagged
+`mastery_basis: legacy`); `mastery-reset <rule>` makes one re-earn it honestly.
 
 ## Mastery ≠ silence (v0.9+)
 

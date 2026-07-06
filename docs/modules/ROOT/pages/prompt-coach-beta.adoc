@@ -47,10 +47,10 @@ On a *clean* prompt you instead get a compact one-line liveness heartbeat:
 
 [source,text]
 ----
-✓ prompt-coach · clean prompt · closest to mastery: no-verify-loop 12/15
+✓ prompt-coach · clean prompt · closest to mastery: no-verify-loop 2/3 demonstrated
 ----
 
-This is informational, not praise — a heartbeat that also shows your progress toward the next mastery. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a row (default 15) *and* an evidence gate (`min_fires_for_mastery`), then the next dormant rule activates. When a rule masters you get a `🎓` congratulation.
+This is informational, not praise — a heartbeat that also shows your progress toward the next mastery. Rules graduate to "mastered" once you've *demonstrated* the good technique `min_demonstrations` times (default 3) with no recent relapse — see <<earned-mastery>> — then the next dormant rule activates. When a rule masters you get a `🎓` congratulation.
 
 === The slash commands
 
@@ -272,7 +272,7 @@ The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/b
 
 == Encouragement layer
 
-The coach also praises the *specific positive behaviors* that mirror the negative rules — 22 positive detectors. Praise is deliberately sparing (default 1 per 10 clean prompts with a positive, plus milestone events on rule mastery and first-after-fire), grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan 2000, Kohn 1993).
+The coach also praises the *specific positive behaviors* that mirror the negative rules — **35 positive detectors, one per rule** (v0.40 filled the last 13 gaps). Praise is deliberately sparing (default 1 per 10 clean prompts with a positive, plus milestone events on rule mastery and first-after-fire), grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan 2000, Kohn 1993). Beyond praise, these detectors now do double duty: each positive fire is the **demonstration** that drives earned mastery (see <<earned-mastery>>).
 
 Design constraints:
 
@@ -296,9 +296,28 @@ Set `typo_tolerance: 0` to disable.
 
 Many prompts in an ongoing conversation aren't full asks — they're approvals (`sure`, `publish`, `go`), multi-choice picks (`1 and 2`, `option a`), or continuations (`continue`, `thanks`). The coach detects these and skips analysis entirely — no rule matching, no praise, no streak updates. It also reads the session transcript to skip *picker answers* (replies to an `AskUserQuestion` menu) so a multiple-choice pick never triggers a false coaching pass.
 
-== Mastery ≠ silence
+[#earned-mastery]
+== Earned mastery (v0.40+)
 
-Mastered rules aren't permanently dormant. They still evaluate every prompt, and when only a mastered rule matches, a *refresher* fires — a lighter re-fire rather than the full coaching block. The cooldown for mastered rules is much longer (50 prompts vs 5 for practicing rules). Mastery is evidence-based: a rule only masters if it has actually fired at least `min_fires_for_mastery` times; a rule that reaches the clean-streak threshold with zero fires retires as *inactive* (it never applied to how you prompt) rather than claiming a mastery you never earned.
+Mastery is driven by **demonstrations — the times you actively *used* the good technique**, not by the mere absence of the mistake. This fixed a real flaw: before v0.40 a rule graduated after a run of clean prompts, but "clean" only meant the anti-pattern was absent — and most prompts don't exercise most rules, so a rule could master on prompts that never had anything to do with it.
+
+Each of the 35 rules now has a **mirroring positive detector** (e.g. `improve-without-metric` ↔ `stated-metric`, `incremental-routing` ↔ `batched-routing`). When a positive fires, that's a demonstration:
+
+[cols="1,3",options="header"]
+|===
+| Signal | Role in mastery
+| `demonstrations` | **Drives mastery** — increments each time the mirroring positive fires (you used the technique)
+| `clean_streak` | Demoted to a recency/no-regression guard, no longer the mastery driver
+| `fires_total` | Times you tripped the rule (a regression signal, not evidence of skill)
+|===
+
+A rule graduates to **mastered** once `demonstrations ≥ min_demonstrations` (default 3) **and** it hasn't relapsed in the last `regression_guard` prompts (default 3). A rule you neither demonstrate nor trip over a long window retires **inactive** ("N/A to how you work") instead of claiming a mastery you never earned.
+
+Config knobs (`rule-activation` category): `min_demonstrations`, `regression_guard`, `inactive_after`. The legacy `min_fires_for_mastery` gate is retained for forward-compat but ignored.
+
+*Migration:* existing masteries are **grandfathered** — kept as-is and tagged `mastery_basis: legacy` (vs `demonstrated` for newly-earned ones), so nothing is wiped. To make a rule re-earn mastery honestly under the new model, run `mastery-reset <rule>`.
+
+Mastered rules aren't permanently dormant. They still evaluate every prompt, and when only a mastered rule matches, a *refresher* fires — a lighter re-fire rather than the full coaching block. The cooldown for mastered rules is much longer (50 prompts vs 5 for practicing rules).
 
 Optional self-healing: `demote_on_regression` auto-demotes a mastered rule that fires threshold+ times within a rolling window. Off by default.
 

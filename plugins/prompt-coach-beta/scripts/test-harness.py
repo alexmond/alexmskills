@@ -124,14 +124,43 @@ def t_mastery_congrats():
     sp = h / ".claude/prompt-coach/state.json"
     _hook(c, h, "hello there friend")
     st = json.loads(sp.read_text())
+    # v0.40 — mastery is demonstration-driven: seed 2 demonstrations + a
+    # clean streak past the regression guard, then send a prompt that
+    # DEMONSTRATES scoped reference (names a file/function) so the mirroring
+    # positive fires → demonstrations hits 3 → vague-reference masters.
     st.setdefault("rules", {})["vague-reference"] = {
-        "status": "practicing", "fires_total": 1, "clean_streak": 14,
-        "last_fired_at": None, "last_nudged_at": None, "graduated_at": None}
+        "status": "practicing", "fires_total": 1, "clean_streak": 5,
+        "demonstrations": 2, "last_fired_at": None, "last_nudged_at": None,
+        "graduated_at": None}
     sp.write_text(json.dumps(st))
     _, ctx = _hook(c, h, "In src/db/pool.py, cap the connection pool at 20; "
                          "keep the existing retry logic untouched.")
     check("mastery event → 🎓 congrats renders inline",
           "🎓 prompt-coach — " in ctx and "mastered" in ctx.lower(), ctx[:120])
+
+
+def t_earned_mastery_demonstration_driven():
+    """v0.40 — the core fix: mastery comes from DEMONSTRATIONS (using the
+    technique), not from clean prompts that never exercise the rule.
+    (a) A demonstrating clean prompt increments `demonstrations`.
+    (b) Clean-but-non-demonstrating prompts do NOT march a rule to mastery —
+        the old absence-driven bug."""
+    h, c = _fresh()
+    sp = h / ".claude/prompt-coach/state.json"
+    _hook(c, h, "hello there friend")
+    # (a) a prompt that names a file demonstrates scoped reference
+    _hook(c, h, "In src/api/routes.py, add a health check endpoint returning 200; "
+                "leave the existing routes untouched.")
+    st = json.loads(sp.read_text())
+    demos = int(st.get("rules", {}).get("vague-reference", {}).get("demonstrations", 0))
+    # (b) many clean-but-empty prompts must NOT master vague-reference
+    for _ in range(20):
+        _hook(c, h, "hello there friend")
+    st2 = json.loads(sp.read_text())
+    status = st2.get("rules", {}).get("vague-reference", {}).get("status", "practicing")
+    check("earned mastery: demonstrations count + no mastery-by-absence",
+          demos >= 1 and status != "mastered",
+          f"demos_after_demo={demos} status_after_20_empty={status}")
 
 
 def t_picker_skip():
@@ -241,6 +270,26 @@ def t_incremental_routing_rule():
           f"registered={registered} fires={bool(fires)} quiet={bool(quiet)}")
 
 
+def t_grandfather_migration():
+    """v0.40 — existing masteries are grandfathered, not wiped: a pre-v0.40
+    mastered rule (no demonstrations, no mastery_basis) stays mastered, gets
+    demonstrations backfilled to 0 and tagged mastery_basis=legacy."""
+    h, c = _fresh()
+    sp = h / ".claude/prompt-coach/state.json"
+    _hook(c, h, "hello there friend")
+    st = json.loads(sp.read_text())
+    st.setdefault("rules", {})["unbounded-scope"] = {
+        "status": "mastered", "fires_total": 0, "clean_streak": 56}
+    st.pop("v40_migration_done", None)
+    sp.write_text(json.dumps(st))
+    _hook(c, h, "hello there friend")
+    rs = json.loads(sp.read_text()).get("rules", {}).get("unbounded-scope", {})
+    check("v40 grandfather: legacy mastery kept + tagged, not wiped",
+          rs.get("status") == "mastered" and rs.get("mastery_basis") == "legacy"
+          and "demonstrations" in rs,
+          f"status={rs.get('status')} basis={rs.get('mastery_basis')}")
+
+
 def t_marketplace_valid():
     r = subprocess.run(["make", "-C", str(REPO_ROOT), "validate"],
                        capture_output=True, text=True)
@@ -263,6 +312,8 @@ CHECKS = [
     t_sources_open,
     t_paths,
     t_incremental_routing_rule,
+    t_earned_mastery_demonstration_driven,
+    t_grandfather_migration,
     t_marketplace_valid,
 ]
 
