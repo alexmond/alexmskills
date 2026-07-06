@@ -7,6 +7,31 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-05 (later 7)
+
+### Added
+- **prompt-coach-beta 0.39.0** — new L5 rule **`incremental-routing`**
+  (35 rules total). Fires when a multi-step task is routed one terse
+  step at a time ("continue one after another", "do the next one",
+  "keep going through them") instead of batched into a `TaskCreate`
+  checklist or a `Workflow`. Each such step costs a human round-trip and
+  re-establishes context; the nudge offers to decompose the sequence
+  once and run it autonomously with a verification gate.
+  - Bare `continue` / `next` are still caught by the conversational
+    short-circuit (unchanged); the rule fires only on phrasings that
+    carry an explicit "do these sequentially" intent while routing per
+    step. Vetoed when the user already names a batching mechanism (task
+    list / plan / workflow / in parallel).
+  - `anthropic_ref="chain-complex-prompts"`; sources: Anthropic
+    best-practices (*Chain complex prompts* — "Claude handles most
+    multi-step reasoning internally"), Claude Code best practices
+    (*Explore → plan → code*), and LangChain's plan-and-execute writeup
+    (the per-step round-trip cost argument). Research-backed.
+  - Harness grows to **16 checks** (`make test-coach`) with a unit-level
+    check that the rule fires on per-step routing and stays quiet when
+    batched. Count references (`34 → 35`) updated across SKILL.md, the
+    Antora page, `config.py`, and the command cards.
+
 ## 2026-07-05 (later 6)
 
 ### Removed

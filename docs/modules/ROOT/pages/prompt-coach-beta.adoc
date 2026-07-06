@@ -57,7 +57,7 @@ This is informational, not praise — a heartbeat that also shows your progress 
 [cols="1,3",options="header"]
 |===
 | Command | When to use
-| `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 34-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
+| `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 35-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
 | `+/prompt-coach-beta:stats+` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status.
 | `+/prompt-coach-beta:mastery+` | *"Which rules mastered, which need reset?"* Per-rule breakdown with well-tested / barely-tested / untested analysis + close-to-mastery.
 | `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `paths` / `analyze` / `diff` / `export` / `reset`.
@@ -202,6 +202,7 @@ Six tiers of rules, roughly five each. Only six rules are active at a time (`max
 | no-role-for-critique | "Review my X" without invoking a role (skeptic / security / reviewer)
 | no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel
 | no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents
+| incremental-routing *(v0.39+)* | A multi-step task routed one terse step at a time ("continue", "one after another", "do the next one") instead of batched into a task list / Workflow
 |===
 
 === L6 — skill-awareness
@@ -267,7 +268,7 @@ The `quick` flow walks you through the high-value categorical settings (`ack_cle
 
 == Anthropic guide alignment (v0.20+)
 
-The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 25 of the 34 shipped rules link to a canonical section, and 9 are Claude-Code-specific or novel coach concepts with no direct upstream mapping. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
+The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 26 of the 35 shipped rules link to a canonical section, and 9 are Claude-Code-specific or novel coach concepts with no direct upstream mapping. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
 
 == Encouragement layer
 

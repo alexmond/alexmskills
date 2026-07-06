@@ -155,6 +155,7 @@ activates in its place, and so on.
 | no-role-for-critique | "Review my X" without invoking a role (skeptic / security / reviewer) |
 | no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel |
 | no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents |
+| incremental-routing | Multi-step task routed one terse step at a time ("continue" / "one after another" / "do the next one") instead of a batched task list / Workflow |
 
 **L6 — skill-awareness**
 | Rule | Catches |
@@ -369,7 +370,7 @@ self-healing turn this on.
 
 The passive hook is quiet by design — it only checks the few *active* rules. But the skill
 carries the whole prompting-knowledge catalog, so you can point it at a prompt on demand and
-get a **full-catalog read** (all 34 rules × 6 tiers + positive detectors), not just the active
+get a **full-catalog read** (all 35 rules × 6 tiers + positive detectors), not just the active
 subset.
 
 Two modes:

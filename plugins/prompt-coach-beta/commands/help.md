@@ -24,7 +24,7 @@ Render as a fenced block so it presents like a dashboard, under 60 lines.
 prompt-coach-beta v<VERSION>
 
 A UserPromptSubmit hook that watches every prompt you send Claude Code and nudges
-you toward better prompting habits. 34 rules across 6 tiers, 22 positive detectors,
+you toward better prompting habits. 35 rules across 6 tiers, 22 positive detectors,
 typo tolerance, conversational + picker-answer short-circuit. Rules quietly
 graduate as you master them and fade to occasional refreshers.
 
@@ -41,7 +41,7 @@ COMMANDS
   /prompt-coach-beta:mastery         Which rules mastered, which need reset — with
                                      analysis (well-tested / barely-tested / untested);
                                      surfaces close-to-mastery rules (v0.26+)
-  /prompt-coach-beta:analyze         On-demand analysis (v0.37+): run the FULL 34-rule
+  /prompt-coach-beta:analyze         On-demand analysis (v0.37+): run the FULL 35-rule
                                      catalog against a pasted prompt or your last N
                                      logged prompts, with a coached rewrite / pattern report
   /prompt-coach-beta:config          Structured config surface — show / get / describe /

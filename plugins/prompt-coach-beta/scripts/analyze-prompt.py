@@ -1371,6 +1371,33 @@ def rule_no_workflow_for_fanout(prompt: str) -> bool:
     return not bool(workflow)
 
 
+def rule_incremental_routing(prompt: str) -> bool:
+    """v0.39.0 — flag a multi-step task being routed one terse step at a time
+    ('continue one after another', 'do the next one', 'keep going through
+    them'). Each such step costs a human round-trip and re-establishes
+    context; the remedy is to batch the sequence into a TaskCreate checklist
+    (or a Workflow for a big fan-out) and let it run autonomously.
+
+    Bare 'continue' / 'next' are caught by is_conversational() upstream and
+    never reach here — this fires on the phrasings that carry an explicit
+    'do these sequentially' intent while still routing per step. Vetoed when
+    the user already names a batching mechanism (task list / plan / workflow /
+    in parallel)."""
+    pl = prompt.lower()
+    seq = re.search(
+        r"\b(one after another|one after the other|one at a time|"
+        r"one by one|do the next one|the next one|do the rest|"
+        r"keep going|go through (?:them|the list|these|all)|"
+        r"continue through|through them all|do them (?:in )?sequen|"
+        r"in sequence|sequentially|next task)\b", pl)
+    if not seq:
+        return False
+    batched = re.search(
+        r"\b(task ?list|to-?dos?|checklist|\bplan\b|workflow|taskcreate|"
+        r"all at once|in parallel|at the same time|batch|numbered list)\b", pl)
+    return not bool(batched)
+
+
 # ---- v0.20.0 — new rules covering Anthropic-guide gaps ---------------------
 
 def rule_no_xml_structure(prompt: str) -> bool:
@@ -1597,6 +1624,10 @@ SRC_ANTHROPIC_SUBAGENT = ("Anthropic — Subagent orchestration",
                           f"{_ANTHROPIC_BEST}#subagent-orchestration")
 SRC_ANTHROPIC_AUTONOMY = ("Anthropic — Balancing autonomy and safety",
                           f"{_ANTHROPIC_BEST}#balancing-autonomy-and-safety")
+SRC_ANTHROPIC_CHAINCOMPLEX = ("Anthropic — Chain complex prompts",
+                              f"{_ANTHROPIC_BEST}#chain-complex-prompts")
+SRC_LANGCHAIN_PLANEXEC = ("LangChain — Plan-and-execute agents",
+                          "https://www.langchain.com/blog/planning-agents")
 
 # Encouragement layer sources (v0.3+)
 SRC_MUELLER_DWECK = ("Mueller & Dweck — Praise for intelligence can undermine motivation (1998)",
@@ -1956,6 +1987,23 @@ RULES: list[Rule] = [
         sources=[SRC_CC_BESTPRACTICE, SRC_CC_HOOKS],
         check=rule_no_workflow_for_fanout,
         anthropic_ref="subagent-orchestration",
+    ),
+    Rule(
+        id="incremental-routing",
+        tier=5,
+        name="Routing a multi-step task one step at a time",
+        guidance=(
+            "User is driving a multi-step task one terse step at a time "
+            "('continue', 'one after another', 'do the next one'). Every step "
+            "costs a human round-trip and re-establishes context. Offer to "
+            "decompose the remaining work once into a TaskCreate checklist (or "
+            "a Workflow for a big fan-out), then run the sequence autonomously "
+            "with a verification gate — don't route per step."
+        ),
+        sources=[SRC_ANTHROPIC_CHAINCOMPLEX, SRC_CC_BESTPRACTICE,
+                 SRC_LANGCHAIN_PLANEXEC],
+        check=rule_incremental_routing,
+        anthropic_ref="chain-complex-prompts",
     ),
     # ---- L6 skill-awareness ----
     Rule(

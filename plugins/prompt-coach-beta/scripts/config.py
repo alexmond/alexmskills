@@ -771,7 +771,7 @@ def _read_last_prompts(cwd: Path, n: int) -> list[dict]:
 def cmd_analyze(cwd: Path, text: str | None = None, last_n: int | None = None,
                 as_json: bool = False) -> int:
     """v0.37.0 — on-demand prompt analysis. Runs the full rule catalog (all
-    34 rules across 6 tiers + positive detectors) against either a specific
+    35 rules across 6 tiers + positive detectors) against either a specific
     prompt (`text`) or the last N logged prompts (`last_n`), and reports
     which rules fire so the user can improve. The passive hook only checks
     the handful of *active* rules; this checks everything.

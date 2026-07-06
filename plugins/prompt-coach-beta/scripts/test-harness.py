@@ -219,6 +219,28 @@ def t_scripts_parse():
     check("both scripts parse", ok, detail)
 
 
+def t_incremental_routing_rule():
+    """incremental-routing (L5, v0.39) — fires on terse per-step routing,
+    stays quiet when a batching mechanism is named or the prompt is a bare
+    conversational continuation. L5 isn't active in a fresh hook run, so this
+    is a unit-level check against the analyzer module directly."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_an", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_an"] = m
+    spec.loader.exec_module(m)
+    registered = any(r.id == "incremental-routing" for r in m.RULES)
+    fn = getattr(m, "rule_incremental_routing", None)
+    fires = fn and fn("continue one after another") and \
+        not m.is_conversational("continue one after another")
+    quiet = fn and not fn("do these as a task list") and \
+        not fn("run all of them in parallel")
+    conv_skip = m.is_conversational("continue")  # bare continue short-circuits
+    check("incremental-routing rule fires on per-step routing, quiet when batched",
+          bool(registered and fires and quiet and conv_skip),
+          f"registered={registered} fires={bool(fires)} quiet={bool(quiet)}")
+
+
 def t_marketplace_valid():
     r = subprocess.run(["make", "-C", str(REPO_ROOT), "validate"],
                        capture_output=True, text=True)
@@ -240,6 +262,7 @@ CHECKS = [
     t_analyze_history,
     t_sources_open,
     t_paths,
+    t_incremental_routing_rule,
     t_marketplace_valid,
 ]
 

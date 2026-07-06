@@ -43,6 +43,10 @@ least two, it isn't ready to ship.
 - **Brown et al. — Language models are few-shot learners (2020).** The GPT-3 paper that made
   few-shot in-context learning a first-class technique. Cited by no-few-shot.
   <https://arxiv.org/abs/2005.14165>
+- **LangChain — Plan-and-execute agents.** Argues for generating a complete plan up front and
+  executing steps without consulting the agent after each action — fewer LLM calls, lower cost
+  than step-at-a-time ReAct. Cited by incremental-routing.
+  <https://www.langchain.com/blog/planning-agents>
 
 ## Encouragement layer (praise design)
 
