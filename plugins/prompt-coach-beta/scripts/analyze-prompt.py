@@ -3533,39 +3533,53 @@ def _v34_context_for_claude(prompt_text: str, rule_ids: list[str],
 
 
 def _ack_line(g: dict, active_practicing: list[str], threshold: int,
-              min_demonstrations: int = 3) -> str:
-    """v0.40.0 — build the compact clean-prompt acknowledgment line.
+              min_demonstrations: int = 3,
+              demonstrated: list[str] | None = None) -> str:
+    """v0.41.1 — build the compact clean-prompt acknowledgment line, made
+    *specific*: it names the rule involved rather than emitting a bare count
+    ("watching 1 rule" told you nothing). Priority of what to surface:
 
-    Shows (a) the prompt was clean and (b) HONEST mastery progress toward
-    EARNED mastery. Under the v0.40 model a rule masters on *demonstrations*
-    (times the user used the good technique), so the "closest to mastery"
-    carrot ranks by demonstrations toward min_demonstrations — not by a
-    clean streak of unrelated prompts, which never proved anything.
+    1. If THIS prompt demonstrated a good technique (a positive fired), say
+       which rule it satisfied + progress toward mastery — the most
+       informative signal ("what did I just do right?").
+    2. Else, the practicing rule closest to mastery (has ≥1 demonstration).
+    3. Else, NAME the rules being watched (not a count) so it's actionable.
+    4. Else, all active rules mastered.
+    """
+    rules = g.get("rules", {})
+    demonstrated = [r for r in (demonstrated or []) if r in rules or r]
 
-    Only rules with at least one demonstration are on a real path to
-    mastery, so only those are eligible for the carrot. If none qualify,
-    show a neutral liveness line (no false promise)."""
-    masterable = []   # (rid, demonstrations) — actually on the mastery path
-    practicing_n = 0
+    # 1) Most informative: the prompt actively USED a good technique.
+    if demonstrated:
+        best = max(demonstrated,
+                   key=lambda rid: int(rules.get(rid, {}).get("demonstrations", 0)))
+        d = int(rules.get(best, {}).get("demonstrations", 0))
+        if rules.get(best, {}).get("status") == "mastered":
+            return f"✓ prompt-coach · clean prompt · you used {best} (mastered 🎓)"
+        return (f"✓ prompt-coach · clean prompt · you used {best} "
+                f"({min(d, min_demonstrations)}/{min_demonstrations} toward mastery)")
+
+    # 2)/3) rank the active practicing rules.
+    masterable = []          # (rid, demonstrations) — on the mastery path
+    watching: list[str] = []
     for rid in active_practicing:
-        rs = g.get("rules", {}).get(rid, {})
+        rs = rules.get(rid, {})
         if rs.get("status", "practicing") != "practicing":
             continue
-        practicing_n += 1
+        watching.append(rid)
         demos = int(rs.get("demonstrations", 0))
         if demos > 0:
             masterable.append((rid, demos))
     if masterable:
         rid, demos = max(masterable, key=lambda t: t[1])
-        demos = min(demos, min_demonstrations)
         return (f"✓ prompt-coach · clean prompt · closest to mastery: "
-                f"{rid} {demos}/{min_demonstrations} demonstrated")
-    if practicing_n:
-        # Rules are active but none has been demonstrated yet, so none can
-        # master until you use the technique. Don't promise mastery; just
-        # confirm the coach is watching.
-        return (f"✓ prompt-coach · clean prompt · watching {practicing_n} "
-                f"rule{'s' if practicing_n != 1 else ''}")
+                f"{rid} {min(demos, min_demonstrations)}/{min_demonstrations} demonstrated")
+    if watching:
+        # Name the rules being watched (up to 2) so the signal is actionable
+        # — "watching for: no-verify-loop" beats "watching 1 rule".
+        shown = ", ".join(watching[:2])
+        extra = f" +{len(watching) - 2}" if len(watching) > 2 else ""
+        return f"✓ prompt-coach · clean prompt · watching for: {shown}{extra}"
     return "✓ prompt-coach · clean prompt · all active rules mastered 🎓"
 
 
@@ -4393,7 +4407,8 @@ def main() -> int:
         if since >= ack_ratio:
             g["acks_since"] = 0
             ack_line = _ack_line(g, active_practicing, threshold,
-                                 int(cfg.get("min_demonstrations", 3)))
+                                 int(cfg.get("min_demonstrations", 3)),
+                                 demonstrated=sorted(demonstrated_rules))
             outcome = "ack:clean"
             context_line = (
                 f"[prompt-coach · inline · ack] The user's prompt was clean — "

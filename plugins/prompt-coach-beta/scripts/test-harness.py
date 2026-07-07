@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -85,6 +86,19 @@ def t_hook_clean_ack():
                           "passwords with a 422; keep tests green.")
     check("clean prompt → ✓ ack",
           "✓ prompt-coach · clean prompt" in ctx, ctx[:120])
+
+
+def t_ack_is_informative():
+    """v0.41.1 — the ack NAMES the rule (what you satisfied / what's watched)
+    instead of a bare count like 'watching 1 rule'."""
+    h, c = _fresh()
+    # A clean, non-demonstrating prompt → 'watching for: <rule>' (named).
+    _, ctx = _hook(c, h, "what can we do based on the sources")
+    informative = ("watching for:" in ctx or "you used " in ctx
+                   or "closest to mastery:" in ctx)
+    bare_count = bool(re.search(r"watching \d+ rule", ctx))
+    check("ack names the rule (no bare 'watching N rules')",
+          informative and not bare_count, ctx.split("clean prompt")[-1][:80])
 
 
 def t_hook_collaborator_block_with_urls():
@@ -384,6 +398,7 @@ def t_marketplace_valid():
 CHECKS = [
     t_scripts_parse,
     t_hook_clean_ack,
+    t_ack_is_informative,
     t_hook_collaborator_block_with_urls,
     t_show_source_urls_off,
     t_enabled_false_silent,

@@ -50,7 +50,7 @@ On a *clean* prompt you instead get a compact one-line liveness heartbeat:
 ✓ prompt-coach · clean prompt · closest to mastery: no-verify-loop 2/3 demonstrated
 ----
 
-This is informational, not praise — a heartbeat that also shows your progress toward the next mastery. Rules graduate to "mastered" once you've *demonstrated* the good technique `min_demonstrations` times (default 3) with no recent relapse — see <<earned-mastery>> — then the next dormant rule activates. When a rule masters you get a `🎓` congratulation.
+This is informational, not praise — a heartbeat that also shows your progress toward the next mastery. It's **specific** (v0.41.1): it names the rule involved rather than a bare count — `you used <rule> (2/3 toward mastery)` when the clean prompt *demonstrated* a technique, `closest to mastery: <rule> …` for the practicing rule nearest graduation, or `watching for: <rule>` otherwise. Rules graduate to "mastered" once you've *demonstrated* the good technique `min_demonstrations` times (default 3) with no recent relapse — see <<earned-mastery>> — then the next dormant rule activates. When a rule masters you get a `🎓` congratulation.
 
 === The slash commands
 

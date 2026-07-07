@@ -7,6 +7,17 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-07
+
+### Changed
+- **prompt-coach-beta 0.41.1** — the clean-prompt `✓` ack is now **specific**:
+  it names the rule involved instead of a bare count. User feedback: "watching
+  1 rule" told them nothing. Priority: `you used <rule> (2/3 toward mastery)`
+  when the clean prompt demonstrated a technique → `closest to mastery:
+  <rule> …` → `watching for: <rule1>, <rule2> +N`. `_ack_line` takes the
+  prompt's demonstrated rules; harness → **24** (asserts no bare
+  "watching N rules"). Docs updated.
+
 ## 2026-07-06 (later)
 
 ### Added
