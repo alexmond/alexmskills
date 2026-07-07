@@ -45,7 +45,7 @@ COMMANDS
                                      catalog against a pasted prompt or your last N
                                      logged prompts, with a coached rewrite / pattern report
   /prompt-coach-beta:config          Structured config surface — show / get / describe /
-                                     set / reset / diff / export / mastery / sources
+                                     set / reset / diff / export / mastery / acceptance / sources
                                      (v0.18+)
 
   (Cross-repo daily review moved out in v0.23. Say "log review" or

@@ -16,10 +16,18 @@ Read the coach's state files and log to produce a compact health dashboard.
    - `prompt_count` (this repo)
    - `reactivated` (per-repo rule reactivations)
 3. Read the current repo's log at `.claude/prompt-coach/log.md` (if present):
-   - Count `outcome=nudged:*` (nudge events)
+   - Count `outcome=nudged:*` / `outcome=collaborator:*` (rewrite events)
+   - Count `outcome=capped:*` (rewrites silenced by the fatigue cap, v0.41+)
    - Count `outcome=praised:*` (praise events, broken out by kind: `mastery`, `first-after-fire`, `variable-ratio`)
    - Count `outcome=skipped:conversational` (short-circuited)
-   - Count `outcome=no-emit` (analyzed but nothing fired)
+   - Count `outcome=no-emit` / `outcome=ack:*` (analyzed but nothing fired)
+4. **Acceptance ledger (v0.42+)** — run
+   `python3 <plugin>/scripts/config.py acceptance` (or `--json acceptance`) for
+   the acceptance rate: how often rewrites are taken (accepted + edited) vs
+   rejected, globally and per rule. `edited` counts as a hit; `blind` rejects
+   (too fast to have read) are excluded from the rate. Surface the overall
+   rate + any rule flagged `⚠ dormant-risk` (low acceptance → will be
+   precision-gated out of firing).
 
 ## Present as
 
@@ -38,6 +46,10 @@ Rules:
   mastered (dormant):    <list rule ids graduated>
   active (up to 5):      <list rule ids currently practicing>
   most-fired top 5:      <rule: N fires>
+
+Acceptance (v0.42+):
+  accepted A · edited E · rejected R · blind B  →  rate P%
+  dormant-risk: <rules with low acceptance, if any>
 
 Typo normalization (global):
   <prompts_with_corrections> prompts had corrections (<tokens_corrected_total> tokens)

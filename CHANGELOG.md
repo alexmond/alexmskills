@@ -7,6 +7,34 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-07 (later)
+
+### Added
+- **prompt-coach-beta 0.42.0** — trustworthy acceptance signal (three
+  source-backed refinements to the v0.41 acceptance loop) + it's now visible.
+  - **#0 Attribution.** When several rules fire on one prompt, the yes/no/edit
+    reply now credits only the **primary** (highest-priority) fired rule, not
+    all of them — a single `no` no longer wrongly penalizes every candidate,
+    so precision-gating (P2) reacts to the rule that actually earned the
+    reject.
+  - **#1 Blind-reject.** A rejection arriving too fast to have read the block
+    (estimated from the rendered length via the transcript's ms timestamps vs
+    the reply timing, ~250 wpm, floored at 1.5 s) is bucketed `blind_reject`
+    and **excluded** from the acceptance rate — a reflex, not a considered
+    rejection (arXiv 2601.21379). Conservative: any missing/unparseable
+    timing → not flagged.
+  - **#2 Acceptance in stats.** New `+/prompt-coach-beta:config acceptance+`
+    verb (+ `--json`) renders the ledger: overall accept/edit/reject rate +
+    a per-rule table, low-acceptance rules flagged `⚠ dormant-risk`. Wired
+    into the `/stats` card. `edited` counts as a hit; blind rejects shown
+    separately.
+  - Also: the `✓` ack's last branch, "all active rules mastered 🎓" (a
+    dead-end like the earlier "watching 1 rule"), now reports real progress —
+    `coaching quiet — N/35 rules mastered 🎓`.
+  - Harness **24 → 27** (attribution, blind-reject unit+integration,
+    acceptance verb). Downstream-quality (acceptance ≠ quality) is tracked
+    separately as a GitHub issue.
+
 ## 2026-07-07
 
 ### Changed

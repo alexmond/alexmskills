@@ -117,6 +117,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-06 — **prompt-coach-reset-fix** — 0.40.1: mastery-reset now zeros `demonstrations` + drops `mastery_basis` (was preserving them → reset rule instantly re-mastered). Harness 19/19. Why: v0.40 made demonstrations the driver; reset helper predated it.
 - 2026-07-06 — **prompt-coach-adaptive** — 0.41.0: 3 research-backed features on a shared ledger — P1 acceptance loop (accept/edit/reject), P2 precision-gated activation + fatigue cap, P3 decaying mastery (watch tier, expanding review). Harness 23/23. Why: telemetry showed 0 acceptance tracked, mastery starving.
 - 2026-07-07 — **prompt-coach-ack-specific** — 0.41.1: clean-prompt ack names the rule (`you used <rule>` / `watching for: <rule>`) instead of "watching N rules". Harness 24/24. Why: user feedback — bare count told them nothing.
+- 2026-07-07 — **prompt-coach-acceptance-quality** — 0.42.0: acceptance signal made trustworthy + visible — #0 attribution (credit primary rule only), #1 blind-reject filter, #2 `config acceptance` verb. Ack "all mastered" → "coaching quiet — N/35 mastered". Harness 27/27. #3 downstream-quality → GitHub issue.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

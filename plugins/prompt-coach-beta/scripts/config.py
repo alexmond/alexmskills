@@ -649,6 +649,69 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
     return 0
 
 
+def cmd_acceptance(cwd: Path, as_json: bool = False) -> int:
+    """v0.42.0 — acceptance ledger: how often collaborator rewrites are taken
+    (accepted / edited) vs rejected, globally and PER RULE (segmented, per
+    CodeCompose — aggregate rate hides which rules carry vs drag). `edited`
+    counts as a hit (the coaching landed, the specifics didn't); `blind`
+    rejects (too fast to have read the block) are shown separately and
+    excluded from the rate."""
+    sp = _global_state_path()
+    state = _load_json(sp) if sp.exists() else {}
+    rules = state.get("rules", {}) if isinstance(state, dict) else {}
+    tally = state.get("acceptance", {}) if isinstance(state, dict) else {}
+
+    def _rate(a, e, r):
+        d = a + e + r
+        return (a + e) / d if d else None
+
+    rows = []
+    for rid, rs in rules.items():
+        oc = rs.get("outcomes") or {}
+        a, e = int(oc.get("accepted", 0)), int(oc.get("edited", 0))
+        r, b = int(oc.get("rejected", 0)), int(oc.get("blind_reject", 0))
+        if a + e + r + b == 0:
+            continue
+        rows.append({"id": rid, "accepted": a, "edited": e, "rejected": r,
+                     "blind_reject": b, "rate": _rate(a, e, r)})
+    rows.sort(key=lambda x: -(x["accepted"] + x["edited"]
+                              + x["rejected"] + x["blind_reject"]))
+
+    ga, ge = int(tally.get("accepted", 0)), int(tally.get("edited", 0))
+    gr, gb = int(tally.get("rejected", 0)), int(tally.get("blind_reject", 0))
+    overall = _rate(ga, ge, gr)
+
+    if as_json:
+        print(json.dumps({"global": {"accepted": ga, "edited": ge,
+              "rejected": gr, "blind_reject": gb, "rate": overall},
+              "rules": rows}, indent=2))
+        return 0
+
+    print("prompt-coach-beta — acceptance ledger")
+    print(f"  Global state: {sp} {'(present)' if sp.exists() else '(none)'}")
+    if ga + ge + gr + gb == 0:
+        print("  No rewrite replies recorded yet — reply yes/no/edit to a "
+              "coach block and it accrues here.")
+        return 0
+    rate_str = f"{overall * 100:.0f}%" if overall is not None else "—"
+    print(f"  Overall: {ga} accepted · {ge} edited · {gr} rejected"
+          f"{f' · {gb} blind' if gb else ''}  →  acceptance rate {rate_str}")
+    print("  (rate = (accepted+edited)/(accepted+edited+rejected); "
+          "blind rejects excluded)")
+    print()
+    if rows:
+        print("── per rule (by volume) ──────────────────────────────────")
+        print(f"  {'rule':32s} {'✓':>3} {'✎':>3} {'✗':>3} {'blind':>5}  rate")
+        for row in rows:
+            rstr = f"{row['rate'] * 100:.0f}%" if row["rate"] is not None else "—"
+            sample = row["accepted"] + row["edited"] + row["rejected"]
+            flag = ("  ⚠ dormant-risk" if row["rate"] is not None
+                    and row["rate"] < 0.15 and sample >= 4 else "")
+            print(f"  {row['id']:32s} {row['accepted']:>3} {row['edited']:>3} "
+                  f"{row['rejected']:>3} {row['blind_reject']:>5}  {rstr}{flag}")
+    return 0
+
+
 def _reset_rule_state(state: dict, rule_id: str) -> dict:
     """Zero a rule's accumulated mastery state so it re-earns from scratch.
 
@@ -1123,6 +1186,7 @@ def _main(argv: list[str]) -> int:
     sub.add_parser("mastery")
     sub.add_parser("mastery-reset").add_argument("rule_id")
     sub.add_parser("mastery-reset-all")
+    sub.add_parser("acceptance")
     s_sources = sub.add_parser("sources")
     s_sources.add_argument("rule_id", nargs="?", default=None)
     s_sources.add_argument("--open", dest="open_browser", action="store_true",
@@ -1164,6 +1228,8 @@ def _main(argv: list[str]) -> int:
         return cmd_mastery_reset(cwd, args.rule_id, args.dry_run)
     if verb == "mastery-reset-all":
         return cmd_mastery_reset_all(cwd, args.dry_run)
+    if verb == "acceptance":
+        return cmd_acceptance(cwd, args.as_json)
     if verb == "sources":
         return cmd_sources(cwd, args.rule_id, args.as_json,
                            getattr(args, "open_browser", False))

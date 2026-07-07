@@ -21,6 +21,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -368,6 +369,61 @@ def t_decaying_mastery():
           f"watched={watched} status={r.get('status')} stage={r.get('review_stage')}")
 
 
+def t_attribution_primary_only():
+    """v0.42 #0 — a yes/no/edit reply credits only the PRIMARY fired rule,
+    not every rule that fired (so precision isn't diluted)."""
+    h, c = _fresh()
+    sp = h / ".claude/prompt-coach/state.json"
+    _hook(c, h, "fix it fast")   # fires several rules
+    _hook(c, h, "yes")
+    g = json.loads(sp.read_text())
+    credited = [rid for rid, rs in g.get("rules", {}).items() if rs.get("outcomes")]
+    check("#0 attribution: reply credits exactly one (primary) rule",
+          len(credited) == 1, f"credited={credited}")
+
+
+def t_blind_reject():
+    """v0.42 #1 — a rejection too fast to have read the block is bucketed
+    `blind_reject`, not `rejected`. Pure logic + a crafted-transcript run."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_an3", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_an3"] = m
+    spec.loader.exec_module(m)
+    unit = (m._is_blind_reject(0.5, 200) and not m._is_blind_reject(60, 200)
+            and not m._is_blind_reject(None, 200))
+    # integration: craft a transcript with an assistant turn NOW + long text
+    h, c = _fresh()
+    sp = h / ".claude/prompt-coach/state.json"
+    _hook(c, h, "fix it fast")   # fires → offered set
+    slug = str(c.resolve()).replace("/", "-")
+    td = h / ".claude/projects" / slug
+    td.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    (td / "t.jsonl").write_text(json.dumps({
+        "type": "assistant", "timestamp": now,
+        "message": {"content": [{"type": "text", "text": "word " * 200}]}}) + "\n")
+    _hook(c, h, "no")   # instant reject after a long block → blind
+    tally = json.loads(sp.read_text()).get("acceptance", {})
+    check("#1 blind-reject: fast 'no' → blind_reject bucket (not rejected)",
+          unit and tally.get("blind_reject", 0) >= 1 and tally.get("rejected", 0) == 0,
+          f"unit={unit} tally={tally}")
+
+
+def t_acceptance_verb():
+    """v0.42 #2 — `config acceptance` renders the ledger + rate + dormant flag."""
+    h, c = _fresh()
+    (h / ".claude/prompt-coach/state.json").write_text(json.dumps({
+        "acceptance": {"accepted": 5, "edited": 2, "rejected": 1, "blind_reject": 1},
+        "rules": {"no-few-shot": {"outcomes": {"accepted": 0, "edited": 0, "rejected": 6}}}}))
+    r = _cfg(c, h, "acceptance")
+    j = _cfg(c, h, "--json", "acceptance")
+    ok_text = "acceptance rate" in r.stdout and "dormant-risk" in r.stdout
+    ok_json = '"rate"' in j.stdout
+    check("#2 acceptance verb renders rate + per-rule + dormant flag",
+          ok_text and ok_json, r.stdout[-120:])
+
+
 def t_grandfather_migration():
     """v0.40 — existing masteries are grandfathered, not wiped: a pre-v0.40
     mastered rule (no demonstrations, no mastery_basis) stays mastered, gets
@@ -414,6 +470,9 @@ CHECKS = [
     t_incremental_routing_rule,
     t_earned_mastery_demonstration_driven,
     t_acceptance_loop,
+    t_attribution_primary_only,
+    t_blind_reject,
+    t_acceptance_verb,
     t_fatigue_cap,
     t_precision_gate,
     t_decaying_mastery,

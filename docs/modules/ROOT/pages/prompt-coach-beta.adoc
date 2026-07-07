@@ -250,6 +250,7 @@ v0.38 removed the earlier `nudge_style` modes (`both` / `silent` / `log-only`), 
 | `reset <key>` / `reset-all` | Remove an override / wipe the scoped config file (confirmation required)
 | `diff` / `export` | Show changed-from-default keys / print resolved config as JSON
 | `mastery` / `mastery-reset <rule>` / `mastery-reset-all` | Mastery dashboard + resets (dry-run first)
+| `acceptance` | Acceptance ledger (v0.42) — rewrite accept/edit/reject rate, global + per rule
 | `sources [<rule>]` | Citation trail + doc URLs; add `--open` to open them in a browser
 | `paths` | The skill's own folders, state files, and runnable scripts; add `--open` to open them
 | `analyze "<text>"` / `analyze --last N` | Full-catalog analysis of a prompt or recent history
@@ -314,6 +315,13 @@ The collaborator rewrite is only as good as whether you *take* it — acceptance
 |===
 
 From these it computes a **per-rule acceptance rate** = `(accepted + edited) / outcomes`.
+
+Two refinements make that rate trustworthy (v0.42):
+
+* **Attribution** — when several rules fire on one prompt, the reply credits only the **primary** (highest-priority) rule, not all of them, so a single `no` doesn't wrongly penalize every candidate.
+* **Blind-reject filter** — a rejection that arrives *too fast to have read the rewrite* (estimated from the block's length vs the reply's timing) is bucketed as `blind_reject` and **excluded** from the rate — it's a reflex, not a considered rejection (arXiv 2601.21379).
+
+See the ledger any time with `+/prompt-coach-beta:stats+` or `+/prompt-coach-beta:config acceptance+` (`--json` for machine-readable): overall rate + a per-rule table, with low-acceptance rules flagged `⚠ dormant-risk`.
 
 === Precision-gated activation + fatigue cap
 

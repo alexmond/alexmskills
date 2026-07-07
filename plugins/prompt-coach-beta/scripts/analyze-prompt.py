@@ -3580,7 +3580,12 @@ def _ack_line(g: dict, active_practicing: list[str], threshold: int,
         shown = ", ".join(watching[:2])
         extra = f" +{len(watching) - 2}" if len(watching) > 2 else ""
         return f"✓ prompt-coach · clean prompt · watching for: {shown}{extra}"
-    return "✓ prompt-coach · clean prompt · all active rules mastered 🎓"
+    # No practicing rule is active — coaching is quiet. Say WHY, with real
+    # progress, instead of the old dead-end "all active rules mastered 🎓".
+    mastered_n = sum(1 for rs in rules.values() if rs.get("status") == "mastered")
+    total = len(RULES)
+    return (f"✓ prompt-coach · clean prompt · coaching quiet — "
+            f"{mastered_n}/{total} rules mastered 🎓")
 
 
 def pick_praise(positive_fires: list[str], mastery_events: list[str],
@@ -3792,26 +3797,96 @@ def _classify_reply(prompt: str) -> str | None:
     return None
 
 
-def _record_acceptance(g: dict, l: dict, prompt_raw: str) -> str | None:
+def _parse_ts(s: str | None):
+    """Tolerant ISO parser for transcript timestamps (which carry ms + Z)."""
+    if not s:
+        return None
+    s = s.strip()
+    for fmt in ("%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"):
+        try:
+            return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _assistant_text(entry: dict) -> str:
+    """Concatenate the text blocks of an assistant transcript entry."""
+    content = entry.get("message", {}).get("content", [])
+    if isinstance(content, str):
+        return content
+    out = []
+    for b in content or []:
+        if isinstance(b, dict) and b.get("type") == "text":
+            t = b.get("text", "")
+            if isinstance(t, str):
+                out.append(t)
+    return " ".join(out)
+
+
+def _is_blind_reject(gap_s: float | None, words: int) -> bool:
+    """Pure decision: was a rejection too fast to have READ the rewrite?
+    Reading model ~250 wpm; a reject inside 35% of the estimated read time
+    (floored at 1.5s) couldn't have been considered (arXiv 2601.21379)."""
+    if gap_s is None:
+        return False
+    read_s = max(1, words) / (250 / 60.0)
+    return gap_s < max(1.5, 0.35 * read_s)
+
+
+def _blind_reject_gap(cwd) -> bool:
+    """v0.42.0 (#1) — True if the current rejection arrived too fast to have
+    read the prior assistant turn (which carried the rewrite). Uses transcript
+    timestamps + rendered length. Conservative: any missing/unparseable data
+    → False (never over-flag)."""
+    try:
+        entry = _last_assistant_turn(cwd)
+        if not entry:
+            return False
+        ts = _parse_ts(entry.get("timestamp"))
+        if ts is None:
+            return False
+        gap = (datetime.now(timezone.utc) - ts).total_seconds()
+        words = len(_assistant_text(entry).split())
+        return _is_blind_reject(gap, words)
+    except Exception:
+        return False
+
+
+def _record_acceptance(g: dict, l: dict, prompt_raw: str, cwd=None) -> str | None:
     """If a collaborator rewrite was offered last prompt and THIS prompt is a
-    clear yes/no/edit reply, record the outcome per rule (and globally).
-    Returns the verdict, or None. Idempotent per reply — clears
-    last_prompt_fired_rules once recorded so a reply isn't double-counted."""
+    clear yes/no/edit reply, record the outcome. Returns the recorded bucket
+    or None. Idempotent per reply — clears last_prompt_fired_rules.
+
+    v0.42.0:
+      #0 ATTRIBUTION — credit only the PRIMARY (highest-priority) fired rule,
+         not every rule that fired, so precision isn't diluted / mis-penalized
+         when several rules fire together. `offered` is already priority-
+         sorted (practicing-by-rank then mastered), so offered[0] is primary.
+      #1 BLIND-REJECT — a rejection too fast to have read the rewrite is a
+         distinct signal (not a considered rejection): bucket it as
+         `blind_reject`, which is excluded from the precision denominator."""
     offered = list(l.get("last_prompt_fired_rules", []) or [])
     if not offered:
         return None
     verdict = _classify_reply(prompt_raw)
     if verdict is None:
         return None
-    for rid in offered:
-        rs = g.setdefault("rules", {}).setdefault(rid, {})
-        oc = rs.setdefault("outcomes", {"accepted": 0, "edited": 0, "rejected": 0})
-        oc[verdict] = int(oc.get(verdict, 0)) + 1
-        rs["last_outcome_at"] = _now_iso()
+    bucket = verdict
+    if verdict == "rejected" and cwd is not None and _blind_reject_gap(cwd):
+        bucket = "blind_reject"
+    primary = offered[0]                     # #0 attribution
+    rs = g.setdefault("rules", {}).setdefault(primary, {})
+    oc = rs.setdefault("outcomes", {"accepted": 0, "edited": 0, "rejected": 0})
+    oc[bucket] = int(oc.get(bucket, 0)) + 1
+    rs["last_outcome_at"] = _now_iso()
     tally = g.setdefault("acceptance", {"accepted": 0, "edited": 0, "rejected": 0})
-    tally[verdict] = int(tally.get(verdict, 0)) + 1
-    l["last_prompt_fired_rules"] = []  # consumed
-    return verdict
+    tally[bucket] = int(tally.get(bucket, 0)) + 1
+    l["last_prompt_fired_rules"] = []        # consumed
+    return bucket
 
 
 def _rule_precision(rs: dict, min_outcomes: int = 4) -> float | None:
@@ -3972,7 +4047,7 @@ def main() -> int:
     # offered last prompt and THIS prompt is a clear yes/no/edit reply,
     # record the per-rule outcome BEFORE the conversational short-circuit
     # (which would otherwise swallow "yes"/"no" and lose the signal).
-    _acceptance_verdict = _record_acceptance(g, l, prompt_raw)
+    _acceptance_verdict = _record_acceptance(g, l, prompt_raw, cwd)
 
     # Conversational short-circuit — "sure", "publish", "1 and 2", "go for
     # it" etc. are fragments answering an implicit question, not full
