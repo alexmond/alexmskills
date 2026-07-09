@@ -46,7 +46,7 @@ The three orchestrators **chain** — research *discovers* the facts, the panel 
 crew *delivers* it — and they **share roles** (one `skeptic` is a panel seat, a crew adversarial check,
 and a research verifier). Each is fully usable on its own; co-installed, they share one evolving talent
 pool. Full model: the
-**[Role System architecture](https://www.alexmond.org/alexmskills/role-system.html)**.
+**[Role System architecture](https://www.alexmond.org/alexmskills/role-system/)**.
 
 ## Install
 
