@@ -3,7 +3,8 @@
 
 The *discover* orchestrator: hand it an information space — a codebase, a corpus, a dataset — and it composes a task-fit team of *coverage roles*, fans them out in parallel under one identical output contract, merges their results straight from the agent transcripts via `jq` (without dumping the JSONL back into context), dedups, and adversarially verifies the synthesis into a cited result. Built for coverage that is *exhaustive, not representative* — and for doing it without burning output tokens re-writing every agent's result. It is the counterpart to xref:dev-crew.adoc[dev-crew] (deliver) and xref:brainstorm-panel.adoc[brainstorm-panel] (decide).
 
-See xref:role-system.adoc[The Role System] for the shared model.
+See xref:role-system.adoc[The Role System] for the shared model, and
+xref:role-system.adoc#usage-sequence[Usage sequence] for how to chain it with panel and crew.
 
 == Install
 

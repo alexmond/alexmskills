@@ -3,7 +3,8 @@
 
 Hand this skill a piece of targeted work and it decides who should be in the room and how they should work together, then runs them. The premise is that the best panel and the best process are *functions of the task* — a landing page needs a different room and rhythm than a contract clause or an algorithm. So the skill diagnoses first, proposes a role-specialized panel and a coordination style (with rationale), lets you edit the lineup, then runs a generate/critique/refine loop until it converges. The user just supplies the work.
 
-See xref:role-system.adoc[The Role System] for how panel seats are shared with the crew and evolve.
+See xref:role-system.adoc[The Role System] for how panel seats are shared with the crew and evolve, and
+xref:role-system.adoc#usage-sequence[Usage sequence] for how to chain it with research and crew.
 
 == Install
 
