@@ -7,6 +7,44 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-10
+
+### Added
+- **prompt-coach-beta 0.43.0** — new L5 rule **`workflow-fanout-no-verify`**
+  (36 rules / 36 positives now). Fires when the user orchestrates a fan-out
+  (workflow / parallel agents / sweep / subagents) to *discover* many items
+  but names no verification step — fan-out buys scale, not reliability, so a
+  large unpressured result is "confident-looking garbage at scale". The nudge:
+  add an adversarial verify + dedup stage after the fan-out (each finding
+  checked against its source, weak claims filtered before synthesis), or use
+  `research-sweep`, which builds the verify pass in; lock the output schema
+  before launching so results merge.
+  - **Complementary to `no-workflow-for-fanout`**, not overlapping: that rule
+    fires when *no* orchestration is named ("use a workflow"); this one
+    requires the mechanism to be named and fires on the missing *verification*.
+    The harness asserts they never double-fire on the same prompt.
+  - **Mirror positive `asked-fanout-verify`** praises pairing a fan-out with a
+    verify/dedup pass, so the rule can be *earned*-mastered by demonstration.
+  - Grounded in the Workflow tool's own guidance, Anthropic's multi-agent
+    research-system writeup (verifier pass), and `research-sweep`'s Step 7.
+  - Harness 27→28 (unit fires/vetoes + mirror positive + complementarity;
+    caught and fixed a trailing-`\b` regex bug that stopped the verify-veto
+    matching "verify"/"adversarially").
+- **prompt-coach-beta 0.43.0** — collaborator block honesty + new
+  `collaborator_gate` config (harness →29). Fixes two reported defects: the
+  block said *"reply yes to proceed"* but never waited (it continued in the
+  same turn), and it never said which prompt it then used.
+  - **Default (`collaborator_gate: false`) — honest proceed.** The closing
+    line now reads *"Proceeding with this rewrite now — reply 'no' to redo
+    from your original, or 'edit' to adjust"* (no false pretense of waiting),
+    and Claude must open its answer with a **`▸ Working from the rewrite.`** /
+    **`▸ Working from your original …`** marker so the transcript always shows
+    which prompt drove the work. Matches the v0.34→v0.42 anti-nag direction.
+  - **Opt-in (`collaborator_gate: true`) — a real gate.** Claude renders the
+    block, then STOPS and waits for yes/no/edit before doing any work — full
+    control, at one extra round-trip per fired prompt.
+  - The "which prompt was used" marker is on in **both** modes.
+
 ## 2026-07-07 (later)
 
 ### Added

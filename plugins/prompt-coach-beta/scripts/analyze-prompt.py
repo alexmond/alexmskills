@@ -60,6 +60,12 @@ DEFAULT_CONFIG = {
     # https URL so the user can Cmd/Ctrl-click to open the doc. Set false
     # for just the short anchor slug (e.g. "be-clear-and-direct").
     "show_source_urls": True,
+    # v0.43.0 — collaborator gate. Default False = HONEST proceed: the block
+    # states it's proceeding (not "reply yes to proceed"), Claude answers the
+    # same turn from the rewrite, and names which prompt it used. True = a
+    # real gate: Claude renders the block then STOPS and waits for yes/no/edit
+    # before doing the work (more control, one extra round-trip per fire).
+    "collaborator_gate": False,
     "graduation_threshold": 15,   # clean prompts in a row (recency/decay)
     # v0.27.0 — LEGACY evidence gate. Superseded by demonstration-driven
     # mastery in v0.40.0 (see `min_demonstrations`); retained for
@@ -218,6 +224,20 @@ CONFIG_SCHEMA = {
                        "'be-clear-and-direct') and keep the block compact.",
         "example": True,
         "since": "0.36.0",
+    },
+    "collaborator_gate": {
+        "category": "output",
+        "type": "bool",
+        "description": "Make the collaborator block a real confirmation gate. "
+                       "Default false = honest proceed: the block says it's "
+                       "proceeding (not 'reply yes to proceed'), Claude answers "
+                       "the same turn from the rewrite, and states which prompt "
+                       "it used (silence = accept; 'no'/'edit' next turn "
+                       "corrects). Set true to make Claude STOP after the block "
+                       "and wait for your yes/no/edit before doing the work — "
+                       "full control, at one extra round-trip per fired prompt.",
+        "example": False,
+        "since": "0.43.0",
     },
     "pause_until_prompt": {
         "category": "output",
@@ -1518,6 +1538,43 @@ def rule_incremental_routing(prompt: str) -> bool:
     return not bool(batched)
 
 
+def rule_workflow_fanout_no_verify(prompt: str) -> bool:
+    """v0.43.0 — the user is orchestrating a fan-out (names a workflow /
+    parallel agents / ultracode / a sweep / subagents) to DISCOVER many
+    items, but asks for no verification pass. Fan-out buys scale, not
+    reliability: without an adversarial verify + dedup stage a large result
+    is 'confident-looking garbage at scale'. Nudge to add a verify/dedup
+    stage after the fan-out (each finding checked against its source, weak
+    claims filtered) — or use research-sweep, which builds one in.
+
+    Complementary to no-workflow-for-fanout (which fires when NO orchestration
+    is named): this requires the mechanism to be named and fires on the
+    missing *verification*, not the missing parallelism. Vetoed when the
+    prompt already names a verify / dedup / cross-check step."""
+    pl = prompt.lower()
+    orchestrated = re.search(
+        r"\b(workflow|fan[- ]?out|parallel agents?|parallel subagents?|"
+        r"ultracode|pipeline of agents?|subagents?|swarm of agents?|"
+        r"fleet of agents?|one agent per|sweep (?:of|over|across|for))\b", pl)
+    if not orchestrated:
+        return False
+    discover = re.search(
+        r"\b(find|discover|collect|gather|catalog|catalogue|audit|scan|"
+        r"survey|enumerate|list all|search for|hunt for|identify|extract|"
+        r"map out|round up)\b", pl)
+    if not discover:
+        return False
+    # Match verify-family stems at a word boundary WITHOUT a trailing \b — a
+    # closing boundary would reject "verify"/"adversarially" (the stem runs on
+    # into y/ly), which is exactly the veto we need.
+    verified = re.search(
+        r"\b(?:verif|validat|adversarial|double[- ]?check|cross[- ]?check|"
+        r"de-?dup|dedup|spot[- ]?check|sanity[- ]?check|refut|"
+        r"fact[- ]?check|judge (?:each|every|the)|review each|"
+        r"check (?:them|each|it)?\s*against)", pl)
+    return not bool(verified)
+
+
 # ---- v0.20.0 — new rules covering Anthropic-guide gaps ---------------------
 
 def rule_no_xml_structure(prompt: str) -> bool:
@@ -1712,6 +1769,9 @@ SRC_BROWN_FEWSHOT = ("Brown et al. — Language models are few-shot learners (20
                      "https://arxiv.org/abs/2005.14165")
 SRC_CC_HOOKS = ("Claude Code — Hooks, subagents, and the Task tool",
                 "https://docs.anthropic.com/en/docs/claude-code/hooks")
+SRC_ANTHROPIC_MULTIAGENT = (
+    "Anthropic — How we built our multi-agent research system (verifier pass)",
+    "https://www.anthropic.com/engineering/built-multi-agent-research-system")
 
 # v0.20.0 — Anthropic prompting-best-practices sections (fetched 2026-07-03,
 # platform.claude.com is the current stable host; docs.anthropic.com still
@@ -2124,6 +2184,24 @@ RULES: list[Rule] = [
                  SRC_LANGCHAIN_PLANEXEC],
         check=rule_incremental_routing,
         anthropic_ref="chain-complex-prompts",
+    ),
+    Rule(
+        id="workflow-fanout-no-verify",
+        tier=5,
+        name="Fan-out without a verify pass",
+        guidance=(
+            "User is orchestrating a fan-out (workflow / parallel agents / "
+            "sweep / subagents) to discover many items, but named no "
+            "verification step. Fan-out buys scale, not reliability — a large "
+            "result nobody pressure-tested is a liability. Add an adversarial "
+            "verify + dedup stage after the fan-out (each finding checked "
+            "against its source, weak claims filtered before synthesis), or "
+            "use research-sweep, which builds the verify pass in. Lock the "
+            "output schema before launching so results merge."
+        ),
+        sources=[SRC_CC_BESTPRACTICE, SRC_CC_HOOKS, SRC_ANTHROPIC_MULTIAGENT],
+        check=rule_workflow_fanout_no_verify,
+        anthropic_ref="subagent-orchestration",
     ),
     # ---- L6 skill-awareness ----
     Rule(
@@ -2883,6 +2961,21 @@ def pos_asked_workflow(prompt: str) -> bool:
     return bool(fanout and counted and tool)
 
 
+def pos_asked_fanout_verify(prompt: str) -> bool:
+    """Mirrors workflow-fanout-no-verify: user paired an orchestrated fan-out
+    with a verification / dedup / adversarial-check pass — scale AND
+    reliability, not scale alone."""
+    pl = prompt.lower()
+    orchestrated = re.search(
+        r"\b(workflow|fan[- ]?out|parallel agents?|ultracode|pipeline|"
+        r"subagents?|swarm of agents?|one agent per|sweep)\b", pl)
+    verified = re.search(
+        r"\b(?:verif|validat|adversarial|double[- ]?check|cross[- ]?check|"
+        r"de-?dup|dedup|spot[- ]?check|refut|fact[- ]?check|"
+        r"judge (?:each|every|the)|review each|check .*? against)", pl)
+    return bool(orchestrated and verified)
+
+
 # ---- v0.40.0 — positive detectors for the 13 rules that previously had no
 # mirror. Every rule now has one so mastery can be *earned* by demonstrating
 # the good technique, not merely by not tripping the rule. ------------------
@@ -3123,6 +3216,11 @@ POSITIVES: list[Positive] = [
              pos_asked_workflow, [
                  "You reached for Workflow / parallel agents on a fan-out. That's not a for-loop, that's the whole show.",
                  "Fan-out with parallelism. You made 30 things fit in one thing's time budget.",
+             ], [SRC_MUELLER_DWECK, SRC_FOGG_TINY]),
+    Positive("asked-fanout-verify", "workflow-fanout-no-verify", 5,
+             pos_asked_fanout_verify, [
+                 "You paired the fan-out with a verify pass — scale AND reliability, not scale alone.",
+                 "Fan-out plus an adversarial check. That's the line between a dataset and confident-looking garbage.",
              ], [SRC_MUELLER_DWECK, SRC_FOGG_TINY]),
     # ---- L6 skill-awareness positives ----
     Positive("invoked-skill", "no-skill-lookup", 6,
@@ -3448,14 +3546,10 @@ Changes:
 
 Sources: <one per confirmed rule, per the Sources instruction above>
 
-Reply "yes" to proceed with this rewrite, "no" for original, or
-"edit" to change something.
+{proceed_line}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Then, below the block, address the user's actual question using
-your best judgment about which prompt to work from — default to the
-improved version unless the user's original had a specific
-constraint the rewrite loses.
+{after_block}
 
 Guardrails:
 - If your confidence that any candidate rule actually applies is LOW
@@ -3467,10 +3561,11 @@ Guardrails:
 - The coach is opinionated — every change must trace to one of the
   candidate rules above. No freewheeling improvements.
 - User's next turn is their signal:
-    "yes" / "y" / "ok"  → they accept your rewrite; you already
-                          proceeded correctly.
-    "no" / "n"          → they preferred the original; on your NEXT
-                          response, reset to the original and proceed.
+    "yes" / "y" / "ok"  → they accept the rewrite (honest mode: you
+                          already proceeded from it; gate mode: proceed
+                          from it now).
+    "no" / "n"          → they preferred the original; proceed (or, in
+                          honest mode, re-answer) from the original.
     "edit <thing>"      → adjust the rewrite as they specify.
 
   You don't need to record this — the coach's next-turn analyzer will
@@ -3514,9 +3609,19 @@ def _v34_candidate_rules_block(rule_ids: list[str],
 
 
 def _v34_context_for_claude(prompt_text: str, rule_ids: list[str],
-                            show_urls: bool = True) -> str:
+                            show_urls: bool = True,
+                            gate: bool = False) -> str:
     """Build the v0.34 additionalContext instruction telling Claude to run
-    the coach analysis inline as part of its response."""
+    the coach analysis inline as part of its response.
+
+    `gate` (v0.43.0) picks the block's closing line and after-block behavior:
+    - False (default) — HONEST proceed: the block says it's proceeding, Claude
+      answers the same turn and names which prompt it worked from. No pretense
+      of waiting.
+    - True — a real gate: Claude renders the block then STOPS and waits for the
+      user's yes/no/edit before doing any work.
+    Either way the transcript states which prompt was used (fixing the two
+    reported defects: false "reply yes" pretense + unclear prompt-used)."""
     sources_instruction = (
         "the FULL clickable doc URL shown for each confirmed rule in the "
         "candidate list above (render the bare https URL so the terminal "
@@ -3525,10 +3630,36 @@ def _v34_context_for_claude(prompt_text: str, rule_ids: list[str],
         "the Anthropic guide anchor slug for each confirmed rule (see the "
         "anchors above; use the exact strings)"
     )
+    if gate:
+        proceed_line = (
+            'Reply "yes" to proceed from this rewrite, "no" for your original, '
+            'or "edit <thing>" to adjust — I\'ll wait.')
+        after_block = (
+            "Then STOP. Do NOT answer the user's question yet — the block "
+            "above is a real gate. Wait for the user's next turn: on "
+            '"yes"/"ok" proceed from the rewrite; on "no" proceed from their '
+            'original; on "edit <thing>" adjust the rewrite first. When you '
+            "do proceed (next turn), open with which prompt you're working "
+            'from on its own line — "▸ Working from the rewrite." or '
+            '"▸ Working from your original."')
+    else:
+        proceed_line = (
+            'Proceeding with this rewrite now — reply "no" to redo from your '
+            'original, or "edit <thing>" to adjust. (Silence = it was fine.)')
+        after_block = (
+            "Then, below the block, state on its own line which prompt you're "
+            'working from — "▸ Working from the rewrite." OR "▸ Working from '
+            'your original — the rewrite dropped <constraint>." — and then '
+            "answer the user's actual question from that prompt. Default to "
+            "the rewrite unless the original carried a specific constraint the "
+            "rewrite loses. Do NOT wait for confirmation; you are proceeding "
+            "now, and the user's next turn is the accept/reject signal.")
     return _V34_INSTRUCTION_TEMPLATE.format(
         prompt_text=prompt_text[:2000],
         candidate_rules_block=_v34_candidate_rules_block(rule_ids, show_urls),
         sources_instruction=sources_instruction,
+        proceed_line=proceed_line,
+        after_block=after_block,
     )
 
 
@@ -4311,7 +4442,8 @@ def main() -> int:
         else:
             context_line = _v34_context_for_claude(
                 prompt_raw, list(fired),
-                show_urls=bool(cfg.get("show_source_urls", True)))
+                show_urls=bool(cfg.get("show_source_urls", True)),
+                gate=bool(cfg.get("collaborator_gate", False)))
             outcome = f"collaborator:candidates={len(fired)}"
             recent.append(int(g.get("prompt_count", 0)))
         g["recent_nudge_prompts"] = recent

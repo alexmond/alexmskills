@@ -203,6 +203,7 @@ Six tiers of rules, roughly five each. Only six rules are active at a time (`max
 | no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel
 | no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents
 | incremental-routing *(v0.39+)* | A multi-step task routed one terse step at a time ("continue", "one after another", "do the next one") instead of batched into a task list / Workflow
+| workflow-fanout-no-verify *(v0.43+)* | An orchestrated fan-out (workflow / parallel agents / sweep) to *discover* many items with no adversarial verify + dedup pass — fan-out buys scale, not reliability
 |===
 
 === L6 — skill-awareness
@@ -336,7 +337,7 @@ That acceptance rate then decides which rules fire:
 
 Mastery is driven by **demonstrations — the times you actively *used* the good technique**, not by the mere absence of the mistake. This fixed a real flaw: before v0.40 a rule graduated after a run of clean prompts, but "clean" only meant the anti-pattern was absent — and most prompts don't exercise most rules, so a rule could master on prompts that never had anything to do with it.
 
-Each of the 35 rules now has a **mirroring positive detector** (e.g. `improve-without-metric` ↔ `stated-metric`, `incremental-routing` ↔ `batched-routing`). When a positive fires, that's a demonstration:
+Each of the 36 rules now has a **mirroring positive detector** (e.g. `improve-without-metric` ↔ `stated-metric`, `incremental-routing` ↔ `batched-routing`). When a positive fires, that's a demonstration:
 
 [cols="1,3",options="header"]
 |===

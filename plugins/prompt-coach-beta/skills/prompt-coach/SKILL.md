@@ -35,11 +35,13 @@ Changes:
 
 Sources: https://…/be-clear-and-direct
 
-Reply "yes" to proceed, "no" for original, or "edit" to change something.
+Proceeding with this rewrite now — reply "no" to redo from your original, or "edit" to adjust.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+▸ Working from the rewrite.
+<Claude answers your question from here, using that prompt.>
 ```
 
-On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The coach is a suggestion, not a block — Claude answers your prompt normally. Rules graduate to "mastered" once you've **demonstrated** the good technique `min_demonstrations` times (default 3, v0.40 earned-mastery model), then the next dormant rule activates.
+On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The coach is a suggestion, not a block — Claude answers your prompt normally. By default (v0.43) it **proceeds honestly**: the block says it's proceeding (not "reply yes to proceed") and Claude opens with a **`▸ Working from the rewrite / your original`** line so you always see which prompt drove the answer; silence = accept, and a `no`/`edit` next turn corrects. Prefer a real pause? Set `collaborator_gate: true` and Claude stops after the block and waits for your yes/no/edit (one extra round-trip per fired prompt). Rules graduate to "mastered" once you've **demonstrated** the good technique `min_demonstrations` times (default 3, v0.40 earned-mastery model), then the next dormant rule activates.
 
 ### The 5 slash commands
 
@@ -156,6 +158,7 @@ activates in its place, and so on.
 | no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel |
 | no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents |
 | incremental-routing | Multi-step task routed one terse step at a time ("continue" / "one after another" / "do the next one") instead of a batched task list / Workflow |
+| workflow-fanout-no-verify | Orchestrated fan-out (workflow / parallel agents / sweep) to *discover* many items with no adversarial verify + dedup pass — scale without reliability |
 
 **L6 — skill-awareness**
 | Rule | Catches |
@@ -257,6 +260,7 @@ Config resolves in order: repo local → user global → default. Run
 - `enabled` — master switch; `false` = the hook returns immediately (default: true)
 - `ack_clean` / `ack_ratio` — the `✓` liveness heartbeat on clean prompts + its rate (default: true / 1)
 - `show_source_urls` — full clickable doc URLs in the coach block (default: true)
+- `collaborator_gate` — make the block a real confirmation gate (default: false = honest proceed + `▸ Working from` marker; true = stop & wait for yes/no/edit)
 - `min_demonstrations` — **earned mastery (v0.40)**: times the mirroring positive must fire (you *used* the technique) before a rule can master (default: 3)
 - `regression_guard` — clean prompts since the last fire required alongside the demonstrations (default: 3)
 - `inactive_after` — clean_streak with zero demonstrations after which a rule retires *inactive* (default: 15)
@@ -404,7 +408,7 @@ self-healing turn this on.
 
 The passive hook is quiet by design — it only checks the few *active* rules. But the skill
 carries the whole prompting-knowledge catalog, so you can point it at a prompt on demand and
-get a **full-catalog read** (all 35 rules × 6 tiers + positive detectors), not just the active
+get a **full-catalog read** (all 36 rules × 6 tiers + positive detectors), not just the active
 subset.
 
 Two modes:

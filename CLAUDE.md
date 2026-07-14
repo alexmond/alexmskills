@@ -119,6 +119,8 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-07 — **prompt-coach-ack-specific** — 0.41.1: clean-prompt ack names the rule (`you used <rule>` / `watching for: <rule>`) instead of "watching N rules". Harness 24/24. Why: user feedback — bare count told them nothing.
 - 2026-07-07 — **prompt-coach-acceptance-quality** — 0.42.0: acceptance signal made trustworthy + visible — #0 attribution (credit primary rule only), #1 blind-reject filter, #2 `config acceptance` verb. Ack "all mastered" → "coaching quiet — N/35 mastered". Harness 27/27. #3 downstream-quality → GitHub issue.
 - 2026-07-10 — **orchestrator-usage-sequence** — new Usage sequence section in role-system.adoc: chooser table, discover/decide/deliver hand-offs, worked example; xref'd from all 3 skill pages. Why: differences were documented, the sequence wasn't.
+- 2026-07-10 — **coach-workflow-verify-rule** — 0.43.0: L5 rule workflow-fanout-no-verify (36 rules); discovery fan-out with no verify pass; mirror positive asked-fanout-verify; harness 28/28. Why: coach nudged toward Workflow, not verifying it.
+- 2026-07-10 — **coach-collaborator-honesty** — 0.43.0: collaborator_gate config (default false = honest 'proceeding' + names which prompt was used; true = stop & wait). Why: block said 'reply yes to proceed' but never waited and hid the prompt used.
 
 ### Historic (older than 14 days · see git log for the build-up)
 

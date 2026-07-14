@@ -154,6 +154,32 @@ def t_mastery_congrats():
           "🎓 prompt-coach — " in ctx and "mastered" in ctx.lower(), ctx[:120])
 
 
+def t_collaborator_gate_configurable():
+    """collaborator_gate (v0.43) — default false renders an HONEST 'proceeding'
+    block that names which prompt it used and does NOT pretend to wait; true
+    renders a real gate that STOPS. Both must state the '▸ Working from' prompt
+    (the always-on clarity fix). Template must format without KeyError."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_an5", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_an5"] = m
+    spec.loader.exec_module(m)
+    default_off = m.DEFAULT_CONFIG.get("collaborator_gate") is False
+    honest = m._v34_context_for_claude("fix it", ["vague-reference"], gate=False)
+    gated = m._v34_context_for_claude("fix it", ["vague-reference"], gate=True)
+    honest_ok = ("Proceeding with this rewrite" in honest
+                 and "Do NOT wait for confirmation" in honest
+                 and "I'll wait" not in honest
+                 and "▸ Working from" in honest)
+    gated_ok = ("real gate" in gated and "STOP" in gated
+                and "I'll wait" in gated
+                and "Proceeding with this rewrite now" not in gated
+                and "▸ Working from" in gated)
+    check("collaborator_gate: default honest+names-prompt, gate=true stops+waits",
+          bool(default_off and honest_ok and gated_ok),
+          f"default_off={default_off} honest_ok={honest_ok} gated_ok={gated_ok}")
+
+
 def t_earned_mastery_demonstration_driven():
     """v0.40 — the core fix: mastery comes from DEMONSTRATIONS (using the
     technique), not from clean prompts that never exercise the rule.
@@ -301,6 +327,41 @@ def t_incremental_routing_rule():
     check("incremental-routing rule fires on per-step routing, quiet when batched",
           bool(registered and fires and quiet and conv_skip),
           f"registered={registered} fires={bool(fires)} quiet={bool(quiet)}")
+
+
+def t_workflow_fanout_no_verify_rule():
+    """workflow-fanout-no-verify (L5, v0.43) — fires when the user orchestrates
+    a fan-out to DISCOVER many items with no verify pass; quiet when a verify /
+    dedup step is named, or there's no orchestration, or no discovery intent.
+    Also asserts the mirror positive fires, and complementarity with
+    no-workflow-for-fanout (both must never fire on the same prompt)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_an4", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_an4"] = m
+    spec.loader.exec_module(m)
+    registered = any(r.id == "workflow-fanout-no-verify" for r in m.RULES)
+    fn = getattr(m, "rule_workflow_fanout_no_verify", None)
+    # fires: orchestrated fan-out + discovery + no verify
+    fires = fn and fn("run a workflow to find all the vulnerabilities across the codebase") and \
+        fn("fan out agents to catalog every API endpoint")
+    # quiet: verify named / no orchestration / orchestration but no discovery
+    quiet = fn and \
+        not fn("run a workflow to find all bugs, then adversarially verify each finding") and \
+        not fn("fix the login endpoint") and \
+        not fn("use a workflow to refactor the module")
+    # mirror positive fires on a verified fan-out
+    pos = getattr(m, "pos_asked_fanout_verify", None)
+    pos_ok = pos and pos("fan out agents to find all bugs, then verify each against its source") and \
+        not pos("just find all bugs")
+    # complementarity: naming the workflow silences no-workflow-for-fanout,
+    # so the two rules never double-fire on the same prompt
+    other = getattr(m, "rule_no_workflow_for_fanout", None)
+    complementary = other and not other("run a workflow to find all the vulnerabilities across the codebase")
+    check("workflow-fanout-no-verify fires unverified, quiet when verified; positive + complementary",
+          bool(registered and fires and quiet and pos_ok and complementary),
+          f"registered={registered} fires={bool(fires)} quiet={bool(quiet)} "
+          f"pos={bool(pos_ok)} complementary={bool(complementary)}")
 
 
 def t_acceptance_loop():
@@ -468,6 +529,8 @@ CHECKS = [
     t_sources_open,
     t_paths,
     t_incremental_routing_rule,
+    t_workflow_fanout_no_verify_rule,
+    t_collaborator_gate_configurable,
     t_earned_mastery_demonstration_driven,
     t_acceptance_loop,
     t_attribution_primary_only,

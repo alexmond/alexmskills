@@ -24,7 +24,7 @@ Render as a fenced block so it presents like a dashboard, under 60 lines.
 prompt-coach-beta v<VERSION>
 
 A UserPromptSubmit hook that watches every prompt you send Claude Code and nudges
-you toward better prompting habits. 35 rules across 6 tiers, 35 positive detectors,
+you toward better prompting habits. 36 rules across 6 tiers, 36 positive detectors,
 typo tolerance, conversational + picker-answer short-circuit. Rules quietly
 graduate as you master them and fade to occasional refreshers.
 
@@ -91,6 +91,7 @@ CURRENT CONFIG (resolved: default → global → this repo)
   ack_clean:                  <live value>  (✓ heartbeat on clean prompts)
   ack_ratio:                  <live value>  (1 = every clean prompt)
   show_source_urls:           <live value>  (clickable doc URLs in the coach block)
+  collaborator_gate:          <live value>  (false = honest proceed + name prompt; true = stop & wait)
   min_demonstrations:         <live value>  (times you USED the technique → mastered, v0.40)
   regression_guard:           <live value>  (clean prompts since last fire, needed w/ demos)
   inactive_after:             <live value>  (clean_streak w/ 0 demos → inactive)
@@ -117,6 +118,10 @@ CONFIG OPTIONS REFERENCE
   ack_clean                 ✓ liveness heartbeat on clean prompts (default: true)
   ack_ratio                 Emit the ack every Nth clean prompt (default: 1)
   show_source_urls          Full clickable doc URLs in the coach block (default: true)
+  collaborator_gate         Make the collaborator block a real confirmation gate (default: false).
+                            false = honest: block says it's proceeding, Claude answers the same
+                            turn and states which prompt it used (▸ Working from …). true = Claude
+                            STOPS after the block and waits for yes/no/edit (one extra round-trip).
 
   min_demonstrations        EARNED MASTERY (v0.40): times the mirroring positive must fire
                             — i.e. times you USED the technique — before a rule masters (default: 3)
