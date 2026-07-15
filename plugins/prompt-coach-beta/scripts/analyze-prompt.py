@@ -1900,6 +1900,7 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_CHAIN, SRC_CC_BESTPRACTICE],
         check=rule_missing_guardrails,
+        anthropic_ref="be-clear-and-direct",
     ),
     # ---- L2 ----
     Rule(

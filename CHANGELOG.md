@@ -10,6 +10,21 @@ unreleased/rolling (no global version).
 ## 2026-07-14
 
 ### Added
+- **prompt-coach-beta 0.44.1** — **rule reference in the docs, matched to the
+  dashboard** (harness →37). The Antora page's terse "what it watches for"
+  tables are replaced by a per-rule reference generated from the *same*
+  `build_dashboard` data the web UI renders — each rule shows its plain
+  "catches" line, a ✗ bad → ✓ good example, and its exact upstream reference
+  links — via a new reproducible generator (`scripts/gen-rules-doc.py
+  --inject`, bounded by `// BEGIN/END generated-rules` markers). Two new harness
+  checks fail on drift (regenerate) or a missing example/Refs line, so the docs
+  and dashboard can't diverge.
+  - **Source links researched + verified**: all 26 distinct reference URLs
+    resolve; the 16 Anthropic best-practices anchors were checked against the
+    live page's real section headings (exact). `missing-guardrails` gained its
+    `be-clear-and-direct` anchor (it was the one L1 rule missing the anchor its
+    four siblings share). The remaining coach/Claude-Code-specific rules (no
+    1:1 upstream section) keep their curated page-level sources.
 - **prompt-coach-beta 0.44.0** — **lightweight local web dashboard**
   (`/prompt-coach-beta:dashboard`, harness →30). A zero-dependency (Python
   **stdlib only**) server (`scripts/serve.py`) bound to `127.0.0.1` that shows

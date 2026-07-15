@@ -139,83 +139,311 @@ Read-only — it never touches mastery, config, or state.
 
 Six tiers of rules, roughly five each. Only six rules are active at a time (`max_active_rules`, default 6) — lower tiers dominate, and as a rule masters, the next dormant rule activates in its place. When all rules in a tier master, the next tier's rules take their place.
 
+A per-rule reference — what each rule catches, a ✗ bad → ✓ good example, and the exact upstream sections it draws on. Generated from the same data the xref:#web-dashboard[web dashboard] renders, so the two never drift.
+
+// BEGIN generated-rules (gen-rules-doc.py — do not edit by hand)
+
 === L1 — fundamentals
 
-[cols="1,3",options="header"]
-|===
-| Rule | Catches
-| vague-reference | "Fix it" / "improve this" with no named file/function
-| no-definition-of-done | Action verb with no acceptance criteria
-| unbounded-scope | "all / every / entire X" attached to a mutating verb
-| improve-without-metric | "better / faster / cleaner" with no measurable target
-| missing-guardrails | Heavy verb (refactor/rewrite/migrate) with no "don't touch X"
-| no-answer-shape | "What are X" / "how much of Y" question without a format spec
-|===
+`improve-without-metric` — *Improve without a metric*::
+'better / faster / cleaner' with no measurable target.
++
+✗ `make this faster` +
+✓ `cut this endpoint's p95 latency below 200ms`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+
+`missing-guardrails` — *Missing guardrails*::
+A broad change verb (refactor/rewrite/migrate) with no 'don't touch X'.
++
+✗ `refactor the auth module` +
+✓ `refactor auth/session.py — keep the public API and existing tests unchanged`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`no-answer-shape` — *Information ask without a shape*::
+A question with no answer format, so the reply's shape is unpredictable.
++
+✗ `what are the caching options?` +
+✓ `list the caching options as a table: name · when to use · one gotcha`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#control-the-format-of-responses[Anthropic guide: Control the format of responses^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^]
+
+`no-definition-of-done` — *No definition of done*::
+An action with no acceptance criteria — 'done' is left undefined.
++
+✗ `add rate limiting` +
+✓ `add rate limiting to POST /login; done = 5 req/min/IP, 429 + Retry-After, one test`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+
+`unbounded-scope` — *Unbounded scope*::
+'all / every / entire' attached to a change verb — unbounded blast radius.
++
+✗ `rename every getter in the project` +
+✓ `rename getters in src/models/ only; list them first, leave src/legacy/ alone`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`vague-reference` — *Vague reference*::
+Opens with 'it / this / that / them' and names no file, function, or error.
++
+✗ `fix it` +
+✓ `fix the null check in parseConfig() in config.ts`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
 
 === L2 — intermediate
 
-[cols="1,3",options="header"]
-|===
-| Rule | Catches
-| compound-tasks | Three+ action verbs joined by "and"
-| no-verify-loop | Implementation ask with no verification step
-| missing-context-fetch | "The failing test / the issue" with no identifier
-| no-format-spec | Ask for summary/list/report with no shape
-|===
+`compound-tasks` — *Compound tasks*::
+Several changes bundled with 'and' — order and scope get lost.
++
+✗ `add caching and fix the flaky test and update the docs` +
+✓ `3 tasks: 1) cache the user query 2) fix test X 3) update README — do 1, confirm, then go on`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+
+`missing-context-fetch` — *Missing context reference*::
+Names an artifact by role ('the failing test', 'the issue') but gives no ID.
++
+✗ `why is the failing test failing?` +
+✓ `why is test_login_expiry in tests/auth_test.py failing? error: <paste>`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#add-context-to-improve-performance[Anthropic guide: Add context to improve performance^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`no-format-spec` — *No output shape*::
+Asks for a summary / list / report with no shape.
++
+✗ `summarize the changes` +
+✓ `summarize the changes as ≤7 bullets, each 'file — what changed — why'`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#control-the-format-of-responses[Anthropic guide: Control the format of responses^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^]
+
+`no-verify-loop` — *No verify loop*::
+An implementation ask with no 'then run the tests / build'.
++
+✗ `implement the retry logic` +
+✓ `implement the retry logic, then run the unit tests and show the result`
++
+_Refs:_ https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^]
 
 === L3 — classical prompting techniques
 
-[cols="1,3",options="header"]
-|===
-| Rule | Catches
-| no-adversarial-check | High-stakes ask (security/migration/prod/delete) with no skeptic
-| retry-without-diagnosis | Short "try again" with no new information
-| no-few-shot | "Like X" / "in the style of Y" without an example
-| no-chain-of-thought | Reasoning ask (why/debug/trace) without "think first"
-| no-rubric | Judgment ask ("is this good?") without criteria/axes
-| no-uncertainty-budget | Investigative ask with no "if unsure, say so"
-| no-xml-structure *(v0.20+)* | ≥7-line paste (code fence or indented block) without `<code>` / `<data>` / `<logs>` tags
-| no-classical-role *(v0.20+)* | Review / audit / critique ask (>15 words) without "You are a X" / "act as"
-| test-goalseeking *(v0.20+)* | "Make tests pass" / "get CI green" without a stated correctness intent
-| no-verify-before-claim *(v0.20+)* | "Does X exist?" / "which files use Y?" without demanding file:line receipts
-|===
+`no-adversarial-check` — *No adversarial check*::
+A high-stakes ask (security / migration / prod / delete) with no skeptic pass.
++
+✗ `delete the unused columns in prod` +
+✓ `delete the unused prod columns — first list failure modes (FKs, backup, rollback), then wait`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+
+`no-chain-of-thought` — *Hard reasoning without 'think first'*::
+A reasoning ask (why / debug / trace) with no 'think it through first'.
++
+✗ `why is this leaking memory?` +
+✓ `think through the allocation path step by step, then tell me why it leaks`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#leverage-thinking-interleaved-thinking-capabilities[Anthropic guide: Leverage thinking interleaved thinking capabilities^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-of-thought[Anthropic — Let Claude think (chain of thought)^] · https://arxiv.org/abs/2201.11903[Wei et al. — Chain-of-Thought prompting elicits reasoning (2022)^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+
+`no-classical-role` — *Critique/review ask without a role*::
+A review / audit / critique ask with no expert lens named.
++
+✗ `review this migration` +
+✓ `as a DBA, review this migration for lock contention and data-loss risk`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+
+`no-few-shot` — *Pattern ask without example*::
+'like X / in the style of Y' with no example to match.
++
+✗ `write the commit message in our style` +
+✓ `write the commit msg in our style — e.g. 'fix(auth): reject expired tokens (#123)'`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#use-examples-effectively[Anthropic guide: Use examples effectively^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/multishot-prompting[Anthropic — Multishot prompting (give examples)^] · https://arxiv.org/abs/2005.14165[Brown et al. — Language models are few-shot learners (2020)^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+
+`no-rubric` — *Judgment without rubric*::
+A judgment ask ('is this good?') with no criteria.
++
+✗ `is this API design good?` +
+✓ `rate this API design on consistency, error handling, evolvability (1-5 each) with reasons`
++
+_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^]
+
+`no-uncertainty-budget` — *Investigative ask without uncertainty budget*::
+An investigative ask with no 'say so when you're not sure'.
++
+✗ `does this codebase rate-limit anywhere?` +
+✓ `does this codebase rate-limit anywhere? cite files; if you can't confirm, say so`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic guide: Minimizing hallucinations in agentic coding^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`no-verify-before-claim` — *Assertion ask without evidence demand*::
+A 'does X exist / is Y used' question with no demand for receipts.
++
+✗ `is the legacy logger still used?` +
+✓ `is the legacy logger still used? show file:line for each caller, or say 'none found'`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic guide: Minimizing hallucinations in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+
+`no-xml-structure` — *Pasted content without XML tags*::
+Pasted a big block of code/text with no tags delimiting it.
++
+✗ `<pastes 20 lines> fix this` +
+✓ `fix the bug in this function: <code> … </code>`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#structure-prompts-with-xml-tags[Anthropic guide: Structure prompts with xml tags^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`retry-without-diagnosis` — *Retry without diagnosis*::
+'try again' with no new information about what failed.
++
+✗ `still broken, try again` +
+✓ `still broken — new error: <paste>; it now fails at line 42, not 30`
++
+_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`test-goalseeking` — *Test-passing without correctness*::
+'make the tests pass / CI green' with no correctness intent stated.
++
+✗ `just make the tests pass` +
+✓ `fix the bug so test_x passes — don't hard-code the expected value; the logic must be right`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#avoid-focusing-on-passing-tests-and-hard-coding[Anthropic guide: Avoid focusing on passing tests and hard coding^] · https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic — Minimizing hallucinations in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
 
 === L4 — goals & loops
 
-[cols="1,3",options="header"]
-|===
-| Rule | Catches
-| implicit-goal | Action prompt with no "so that / in order to / why" clause
-| unbounded-iteration | "Keep improving" without a stopping condition
-| no-rubric-for-refine | "Refine this" without naming which axis to improve
-| overthinking-warning *(v0.20+)* | ≥60-word prompt with 3+ "make sure to / be very careful / please also / furthermore" elaboration markers
-|===
+`implicit-goal` — *Action without goal*::
+An action with no 'so that / why' — the underlying goal is unstated.
++
+✗ `add a caching layer` +
+✓ `add a caching layer so the dashboard loads under 1s — the DB query is the bottleneck`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+
+`no-rubric-for-refine` — *Refinement without rubric*::
+'refine / polish this' without naming which axis to improve.
++
+✗ `polish this copy` +
+✓ `tighten this copy for concision — keep meaning and tone, cut ~30% of the words`
++
+_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+
+`overthinking-warning` — *Over-elaborated ask*::
+Piled-on 'make sure to / be very careful / also' over-constrains a simple task.
++
+✗ `carefully make sure to also definitely handle every single edge case…` +
+✓ `handle the empty-list and null cases — those are the two that matter here`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overthinking-and-excessive-thoroughness[Anthropic guide: Overthinking and excessive thoroughness^] · https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overeagerness[Anthropic — Overeagerness in agentic systems^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`unbounded-iteration` — *Loop without stopping condition*::
+'keep improving' with no stopping condition.
++
+✗ `keep making it better` +
+✓ `improve until lint passes and p95 is under 200ms, then stop`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overthinking-and-excessive-thoroughness[Anthropic guide: Overthinking and excessive thoroughness^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
 
 === L5 — Claude-Code tool-native
 
-[cols="1,3",options="header"]
-|===
-| Rule | Catches
-| no-plan-mode-for-risky | Migration / delete / rewrite ask with no "plan first"
-| no-task-list-for-multi-step | 3+ action verbs without a TaskCreate / checklist ask
-| no-agents-for-parallel-lookup | Multiple independent lookups without parallel agents
-| no-role-for-critique | "Review my X" without invoking a role (skeptic / security / reviewer)
-| no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel
-| no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents
-| incremental-routing *(v0.39+)* | A multi-step task routed one terse step at a time ("continue", "one after another", "do the next one") instead of batched into a task list / Workflow
-| workflow-fanout-no-verify *(v0.43+)* | An orchestrated fan-out (workflow / parallel agents / sweep) to *discover* many items with no adversarial verify + dedup pass — fan-out buys scale, not reliability
-|===
+`incremental-routing` — *Routing a multi-step task one step at a time*::
+Driving a multi-step job one terse step at a time ('continue', 'next').
++
+✗ `do the next one` +
+✓ `here are the 8 files to migrate — task-list them and do all 8, verifying each`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://www.langchain.com/blog/planning-agents[LangChain — Plan-and-execute agents^]
+
+`no-agents-for-parallel-lookup` — *Multiple lookups without parallel agents*::
+Several independent lookups done serially instead of in parallel.
++
+✗ `check how auth, billing, and search each handle errors` +
+✓ `in parallel, 3 agents each report the error-handling pattern in auth/, billing/, search/`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#optimize-parallel-tool-calling[Anthropic guide: Optimize parallel tool calling^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^]
+
+`no-panel-for-contested-design` — *Contested design without a panel*::
+'which is better / torn between' with no multi-perspective weigh-in.
++
+✗ `REST or gRPC for this?` +
+✓ `REST vs gRPC here — weigh client-simplicity, perf, and ops, then recommend one`
++
+_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`no-plan-mode-for-risky` — *Risky change without a plan first*::
+A risky change (migrate / delete / rewrite) with no 'plan first'.
++
+✗ `migrate us off the old ORM` +
+✓ `plan the ORM migration first — steps, what stays, rollback — before touching code`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#balancing-autonomy-and-safety[Anthropic guide: Balancing autonomy and safety^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^]
+
+`no-role-for-critique` — *Review ask without a role*::
+'review my X' with no lens (correctness / security / perf) chosen.
++
+✗ `review my PR` +
+✓ `review my PR for security only — injection, authz, secret handling`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+
+`no-task-list-for-multi-step` — *Multi-step ask without a task list*::
+3+ discrete actions with no task list to track them.
++
+✗ `set up CI, add tests, write the README, and tag a release` +
+✓ `4 steps: CI, tests, README, release — make a task list and check them off`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^]
+
+`no-workflow-for-fanout` — *Fan-out ask without Workflow*::
+'for each of these 20+ things' with no parallel / Workflow plan.
++
+✗ `update the license header in all 60 files` +
+✓ `update the license header across all 60 files — fan out with a Workflow, not a serial loop`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#subagent-orchestration[Anthropic guide: Subagent orchestration^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^]
+
+`workflow-fanout-no-verify` — *Fan-out without a verify pass*::
+A fan-out to discover many items with no verify / dedup pass.
++
+✗ `fan out agents to find every SQL injection` +
+✓ `fan out to find every SQL-injection site, then a 2nd pass verifies each vs source and dedups`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#subagent-orchestration[Anthropic guide: Subagent orchestration^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://www.anthropic.com/engineering/built-multi-agent-research-system[Anthropic — How we built our multi-agent research system (verifier pass)^]
 
 === L6 — skill-awareness
 
-[cols="1,3",options="header"]
-|===
-| Rule | Catches
-| no-skill-lookup | "How do I X" / "what's the standard way" without checking existing skills
-| pattern-worth-abstracting | "Again / same as before / yet another" — rule of three, worth a skill?
-| no-skill-composition | Multi-step repeatable ceremony not named as a skill candidate
-| no-edit-preference *(v0.20+)* | "Create a new file/script/helper" without an edit-existing preference
-|===
+`no-edit-preference` — *Create-new without edit-existing preference*::
+'create a new file / script / helper' with no 'edit existing if you can'.
++
+✗ `write a new script to do the backup` +
+✓ `add backup support — extend the existing ops script if one fits; don't add a file unless needed`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#reduce-file-creation-in-agentic-coding[Anthropic guide: Reduce file creation in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://en.wikipedia.org/wiki/Unix_philosophy[McIlroy — The Unix philosophy (composition, do one thing well)^]
+
+`no-skill-composition` — *Repeatable ceremony not named as a skill*::
+A repeatable multi-step ceremony not named as a reusable skill.
++
+✗ `first bump the version, then tag, then deploy, then post to slack` +
+✓ `we do bump→tag→deploy→notify every release — should this be a skill? if so, draft it`
++
+_Refs:_ https://en.wikipedia.org/wiki/Unix_philosophy[McIlroy — The Unix philosophy (composition, do one thing well)^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^] · https://martinfowler.com/books/refactoring.html[Fowler — Refactoring: the rule of three (2nd ed., 2018)^]
+
+`no-skill-lookup` — *"How do I …" without checking existing skills*::
+'how do I X / what's the standard way' without checking existing skills.
++
+✗ `how do I take screenshots of the app?` +
+✓ `how do I take demo screenshots — is there a skill for it already? if so, use it`
++
+_Refs:_ https://mitpress.mit.edu/9780262525671/the-design-of-everyday-things/[Norman — The Design of Everyday Things: discoverability^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
+`pattern-worth-abstracting` — *Repetition without abstraction*::
+'again / same as before / yet another' — rule of three, worth abstracting?
++
+✗ `another one of those adapter classes again` +
+✓ `this is the 3rd adapter like this — worth a base/template? show me the shared shape`
++
+_Refs:_ https://martinfowler.com/books/refactoring.html[Fowler — Refactoring: the rule of three (2nd ed., 2018)^] · http://www.extremeprogramming.org/rules/early.html[Kent Beck — YAGNI (You Aren't Gonna Need It, XP)^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^]
+
+// END generated-rules
 
 == How it renders (v0.38: collaborator-only)
 
@@ -262,6 +490,7 @@ Flags: `--scope global` (default) or `--scope repo` chooses which config file wr
 
 The `quick` flow walks you through the high-value categorical settings (`ack_clean`, `show_source_urls`, `praise_ratio`, `tips_enabled`) with multiple-choice pickers.
 
+[#web-dashboard]
 == Web dashboard (v0.44+)
 
 `/prompt-coach-beta:dashboard` launches a **lightweight local web UI** — a zero-dependency (Python **stdlib only**) server (`scripts/serve.py`) bound to `127.0.0.1`. It renders:
@@ -281,7 +510,7 @@ Reads and writes reuse `config.py`'s `build_dashboard` / `api_set` / `api_action
 
 == Anthropic guide alignment (v0.20+)
 
-The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 26 of the 35 shipped rules link to a canonical section, and 9 are Claude-Code-specific or novel coach concepts with no direct upstream mapping. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
+The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 28 of the 36 shipped rules link to a canonical section (each slug verified against the guide's live section headings), and the remaining 8 are Claude-Code-specific or novel coach concepts with no direct upstream mapping. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
 
 == Encouragement layer
 

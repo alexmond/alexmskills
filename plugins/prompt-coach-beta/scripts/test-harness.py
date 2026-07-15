@@ -199,6 +199,30 @@ def t_rule_help_covers_all():
           not missing, f"missing/incomplete: {missing[:6]}")
 
 
+def t_rules_doc_in_sync():
+    """gen-rules-doc.py (v0.44.1) — the Antora per-rule reference is generated
+    from build_dashboard, one entry per rule, each with an example + a Refs
+    line. Also asserts the shipped .adoc is regenerated (no drift): its block
+    between the markers must equal a fresh render."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_gen", HERE / "gen-rules-doc.py")
+    gen = importlib.util.module_from_spec(spec)
+    sys.modules["_gen"] = gen
+    spec.loader.exec_module(gen)
+    cfg = gen._load_config()
+    fragment = gen.render(cfg.build_dashboard(Path("/tmp")))
+    n_rules = len(cfg.RULES)
+    ok_shape = (fragment.count("::") == n_rules
+                and fragment.count("_Refs:_") == n_rules
+                and "✗ `" in fragment and "✓ `" in fragment)
+    check(f"gen-rules-doc renders all {n_rules} rules with example + Refs",
+          ok_shape, f"::={fragment.count('::')} refs={fragment.count('_Refs:_')}")
+    adoc = gen.ADOC.read_text() if gen.ADOC.exists() else ""
+    in_sync = gen.BEGIN in adoc and fragment.strip() in adoc
+    check("shipped prompt-coach-beta.adoc is in sync (run gen-rules-doc --inject)",
+          in_sync, "docs drift — regenerate the rules block")
+
+
 def t_web_dashboard_serves():
     """serve.py (v0.44) — the localhost dashboard serves the page + JSON, a
     config POST validates+persists to the scoped file, an action resets, and a
@@ -601,6 +625,7 @@ CHECKS = [
     t_workflow_fanout_no_verify_rule,
     t_collaborator_gate_configurable,
     t_rule_help_covers_all,
+    t_rules_doc_in_sync,
     t_web_dashboard_serves,
     t_earned_mastery_demonstration_driven,
     t_acceptance_loop,
