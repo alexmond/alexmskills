@@ -10,6 +10,23 @@ unreleased/rolling (no global version).
 ## 2026-07-14
 
 ### Added
+- **prompt-coach-beta 0.46.0** — **three new rules mined from the researched
+  sources** (36 → 39 rules; harness +1). Each ships a grounded regex detector
+  (fire + veto + false-positive cases all tested before wiring), a mirror
+  positive detector, a RULE_HELP entry, and its own citations:
+  - **`untrusted-content-execution`** (L3, security) — pasting external content
+    (email / web page / issue / PR comment) and asking Claude to *act on the
+    instructions in it* — the prompt-injection vector. Anchor:
+    `balancing-autonomy-and-safety`. Source: Simon Willison — *Prompt injection
+    explained*.
+  - **`speculative-generality`** (L4) — justifying work by a hypothetical future
+    ("make it generic / pluggable / so we can add more later") instead of
+    today's concrete need. Anchor: `overeagerness`. Sources: Fowler *YAGNI*,
+    Refactoring.Guru *Speculative Generality*, c2 *DoTheSimplestThing*.
+  - **`premature-abstraction`** (L6) — deduplicating / extracting a shared
+    abstraction at only two occurrences (the counter-rule to
+    `pattern-worth-abstracting`). Sources: Sandi Metz *The Wrong Abstraction*,
+    Kent C. Dodds *AHA*, c2 *RuleOfThree*.
 - **prompt-coach-beta 0.45.0** — **researched source variety** (bibliography
   90 → 178 citations). A wide web sweep (one research pass per rule tier) added
   further authoritative, durable references to every rule so the catalog isn't

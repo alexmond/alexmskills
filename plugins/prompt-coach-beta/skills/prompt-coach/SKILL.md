@@ -151,6 +151,7 @@ activates in its place, and so on.
 | no-chain-of-thought | Reasoning ask (why/debug/trace) without "think first" |
 | no-rubric | Judgment ask ("is this good?") without criteria/axes |
 | no-uncertainty-budget | Investigative ask with no "if unsure, say so" |
+| untrusted-content-execution *(v0.46+)* | Paste external content (email/page/issue) + "do what it asks" — prompt-injection vector |
 
 **L4 — goals & loops**
 | Rule | Catches |
@@ -158,6 +159,7 @@ activates in its place, and so on.
 | implicit-goal | Action prompt with no "so that / in order to / why" clause |
 | unbounded-iteration | "Keep improving" without a stopping condition |
 | no-rubric-for-refine | "Refine this" without naming which axis to improve |
+| speculative-generality *(v0.46+)* | "Make it generic / pluggable / so we can add more later" — building for a hypothetical future (YAGNI) |
 
 **L5 — Claude-Code tool-native**
 | Rule | Catches |
@@ -177,6 +179,7 @@ activates in its place, and so on.
 | no-skill-lookup | "How do I X" / "what's the standard way" without checking existing skills |
 | pattern-worth-abstracting | "Again / same as before / yet another" — rule of three, worth a skill? |
 | no-skill-composition | Multi-step repeatable ceremony not named as a skill candidate |
+| premature-abstraction *(v0.46+)* | "These two are the same — extract a shared base" at N=2 — the wrong-abstraction trap (rule of three) |
 
 ## Encouragement layer (v0.3+)
 
@@ -419,7 +422,7 @@ self-healing turn this on.
 
 The passive hook is quiet by design — it only checks the few *active* rules. But the skill
 carries the whole prompting-knowledge catalog, so you can point it at a prompt on demand and
-get a **full-catalog read** (all 36 rules × 6 tiers + positive detectors), not just the active
+get a **full-catalog read** (all 39 rules × 6 tiers + positive detectors), not just the active
 subset.
 
 Two modes:
