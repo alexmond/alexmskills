@@ -43,15 +43,26 @@ Proceeding with this rewrite now — reply "no" to redo from your original, or "
 
 On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The coach is a suggestion, not a block — Claude answers your prompt normally. By default (v0.43) it **proceeds honestly**: the block says it's proceeding (not "reply yes to proceed") and Claude opens with a **`▸ Working from the rewrite / your original`** line so you always see which prompt drove the answer; silence = accept, and a `no`/`edit` next turn corrects. Prefer a real pause? Set `collaborator_gate: true` and Claude stops after the block and waits for your yes/no/edit (one extra round-trip per fired prompt). Rules graduate to "mastered" once you've **demonstrated** the good technique `min_demonstrations` times (default 3, v0.40 earned-mastery model), then the next dormant rule activates.
 
-### The 5 slash commands
+### The 6 slash commands
 
 | Command | When to use |
 |---|---|
 | `/prompt-coach-beta:stats` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status. |
 | `/prompt-coach-beta:mastery` | *"Which rules mastered, which need reset?"* Per-rule breakdown + analysis (well-tested / barely-tested / untested masteries; close-to-mastery). |
-| `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `set`, `describe`, `options`, `mastery`, `sources`, `diff`, `export`, `reset`. |
+| `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `set`, `describe`, `options`, `mastery`, `sources`, `diff`, `export`, `reset`, `dashboard`. |
+| `/prompt-coach-beta:dashboard` | *"Show me a UI."* Local web dashboard (v0.44) — stats, mastery by tier with reference URLs, live config editor. |
 | `/prompt-coach-beta:help` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet. |
 | `/prompt-coach-beta:report-issue` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only). |
+
+#### Web dashboard (v0.44)
+
+`/prompt-coach-beta:dashboard` launches a **zero-dependency (Python stdlib only) local server** on
+`127.0.0.1` (`scripts/serve.py`). It renders the coach's **stats**, **mastery** grouped by tier
+(status badge · `demos/min` · fires · clickable **reference URLs** · per-rule reset), and a **live
+config editor** — every schema key with its description and a type-aware control (checkbox / number /
+select / text) that **saves to global or repo scope** on change. Writes reuse `config.py`'s
+`build_dashboard` / `api_set` / `api_action`, so validation and scope rules are identical to the CLI.
+Local-only, no auth by design. Raw JSON without the server: `config.py … dashboard`.
 
 ### Say-it phrases (natural language)
 

@@ -46,6 +46,7 @@ _spec.loader.exec_module(_analyzer)
 CONFIG_SCHEMA = _analyzer.CONFIG_SCHEMA
 DEFAULT_CONFIG = _analyzer.DEFAULT_CONFIG
 RULES = _analyzer.RULES
+RULE_HELP = getattr(_analyzer, "RULE_HELP", {})
 POSITIVES = getattr(_analyzer, "POSITIVES", [])
 _anthropic_url = getattr(_analyzer, "_anthropic_url", lambda ref: None)
 config_key_source = _analyzer.config_key_source
@@ -1164,6 +1165,155 @@ def cmd_mastery_reset_all(cwd: Path, dry_run: bool = False) -> int:
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 
+# ── v0.44.0 — web dashboard data + write API (shared by serve.py + the CLI) ──
+
+def _plugin_version() -> str:
+    try:
+        pj = _HERE.parent / ".claude-plugin" / "plugin.json"
+        return json.loads(pj.read_text()).get("version", "unknown")
+    except Exception:
+        return "unknown"
+
+
+def build_dashboard(cwd: Path) -> dict:
+    """One consolidated JSON blob for the web dashboard: stats, every rule
+    (tier / status / demonstrations / reference URLs), every config key (schema
+    + resolved value + scope), and the mastery analysis. Pure read — the single
+    source the web UI renders."""
+    _, gcfg, rcfg = _resolve(cwd)
+    state = _load_json(_global_state_path())
+    rules_state = state.get("rules", {}) if isinstance(state, dict) else {}
+    snap = _mastery_snapshot()
+    analysis = _mastery_analysis(snap)
+    min_demos = _resolved_value("min_demonstrations", cwd)
+    min_demos = int(min_demos) if isinstance(min_demos, (int, float)) else 3
+
+    rules = []
+    for r in RULES:
+        rs = rules_state.get(r.id, {}) or {}
+        anth = (f"{_ANTHROPIC_BASE_URL}#{r.anthropic_ref}"
+                if r.anthropic_ref else None)
+        help_ = RULE_HELP.get(r.id, {})
+        rules.append({
+            "id": r.id,
+            "tier": r.tier,
+            "name": r.name,
+            "guidance": r.guidance,
+            "catches": help_.get("catches", ""),
+            "example_bad": help_.get("bad", ""),
+            "example_good": help_.get("good", ""),
+            "status": rs.get("status", "practicing"),
+            "fires_total": int(rs.get("fires_total", 0)),
+            "clean_streak": int(rs.get("clean_streak", 0)),
+            "demonstrations": int(rs.get("demonstrations", 0)),
+            "min_demonstrations": min_demos,
+            "anthropic_ref": r.anthropic_ref,
+            "anthropic_url": anth,
+            "sources": [{"title": t, "url": u} for t, u in r.sources],
+        })
+
+    config = []
+    for key, entry in CONFIG_SCHEMA.items():
+        if key in rcfg:
+            value, scope = rcfg[key], "repo"
+        elif key in gcfg:
+            value, scope = gcfg[key], "global"
+        else:
+            value, scope = DEFAULT_CONFIG.get(key), "default"
+        config.append({
+            "key": key,
+            "category": entry.get("category", "other"),
+            "type": entry.get("type", "str"),
+            "description": entry.get("description", ""),
+            "default": DEFAULT_CONFIG.get(key),
+            "value": value,
+            "scope": scope,
+            "choices": entry.get("choices"),
+            "since": entry.get("since"),
+        })
+
+    return {
+        "meta": {
+            "version": _plugin_version(),
+            "cwd": str(cwd),
+            "config_paths": {
+                "global": str(_global_config_path()),
+                "repo": str(_repo_config_path(cwd)),
+            },
+            "state_path": str(_global_state_path()),
+            "rule_count": len(RULES),
+            "anthropic_base_url": _ANTHROPIC_BASE_URL,
+        },
+        "stats": {
+            "prompt_count": snap["prompt_count"],
+            "totals": snap["totals"],
+        },
+        "rules": rules,
+        "config": config,
+        "mastery_analysis": {k: [r["id"] for r in v]
+                             for k, v in analysis.items()},
+    }
+
+
+def api_set(cwd: Path, key: str, value, scope: str) -> dict:
+    """Typed config write for the web UI. `value` arrives already JSON-typed
+    (bool/int/list/str); validate via the schema, write to the scope, return a
+    status dict. Same write path as cmd_set, minus the CLI printing."""
+    if key not in CONFIG_SCHEMA:
+        return {"ok": False, "error": f"unknown key: {key}"}
+    if scope not in ("global", "repo"):
+        return {"ok": False, "error": f"bad scope: {scope}"}
+    raw = value if isinstance(value, str) else json.dumps(value)
+    try:
+        typed = _coerce(key, raw)
+    except ValueError as e:
+        return {"ok": False, "error": str(e)}
+    path = _scope_path(scope, cwd)
+    merged = dict(_load_json(path))
+    merged[key] = typed
+    _save_json(path, merged)
+    return {"ok": True, "key": key, "scope": scope,
+            "value": typed, "resolved": _resolved_value(key, cwd)}
+
+
+def api_action(cwd: Path, payload: dict) -> dict:
+    """Web UI action dispatch: mastery-reset (rule_id), mastery-reset-all,
+    reset-key (key, scope). Returns a status dict."""
+    action = payload.get("action")
+    if action == "mastery-reset":
+        rid = payload.get("rule_id")
+        if rid not in _rule_id_set():
+            return {"ok": False, "error": f"unknown rule id: {rid}"}
+        st = _reset_rule_state(_load_json(_global_state_path()), rid)
+        _save_json(_global_state_path(), st)
+        return {"ok": True, "action": action, "rule_id": rid}
+    if action == "mastery-reset-all":
+        st = _load_json(_global_state_path())
+        for rid in _rule_id_set():
+            st = _reset_rule_state(st, rid)
+        _save_json(_global_state_path(), st)
+        return {"ok": True, "action": action}
+    if action == "reset-key":
+        key, scope = payload.get("key"), payload.get("scope", "global")
+        if key not in CONFIG_SCHEMA:
+            return {"ok": False, "error": f"unknown key: {key}"}
+        path = _scope_path(scope, cwd)
+        existing = _load_json(path)
+        if key in existing:
+            del existing[key]
+            _save_json(path, existing)
+        return {"ok": True, "action": action, "key": key,
+                "resolved": _resolved_value(key, cwd)}
+    return {"ok": False, "error": f"unknown action: {action}"}
+
+
+def cmd_dashboard(cwd: Path) -> int:
+    """v0.44.0 — emit the consolidated dashboard JSON (the web UI's data
+    source, also scriptable on its own)."""
+    print(json.dumps(build_dashboard(cwd), indent=2))
+    return 0
+
+
 def _main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(prog="config", description=__doc__)
     p.add_argument("--scope", choices=["global", "repo"], default="global")
@@ -1187,6 +1337,7 @@ def _main(argv: list[str]) -> int:
     sub.add_parser("mastery-reset").add_argument("rule_id")
     sub.add_parser("mastery-reset-all")
     sub.add_parser("acceptance")
+    sub.add_parser("dashboard")
     s_sources = sub.add_parser("sources")
     s_sources.add_argument("rule_id", nargs="?", default=None)
     s_sources.add_argument("--open", dest="open_browser", action="store_true",
@@ -1230,6 +1381,8 @@ def _main(argv: list[str]) -> int:
         return cmd_mastery_reset_all(cwd, args.dry_run)
     if verb == "acceptance":
         return cmd_acceptance(cwd, args.as_json)
+    if verb == "dashboard":
+        return cmd_dashboard(cwd)
     if verb == "sources":
         return cmd_sources(cwd, args.rule_id, args.as_json,
                            getattr(args, "open_browser", False))

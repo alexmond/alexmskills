@@ -7,6 +7,36 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-14
+
+### Added
+- **prompt-coach-beta 0.44.0** — **lightweight local web dashboard**
+  (`/prompt-coach-beta:dashboard`, harness →30). A zero-dependency (Python
+  **stdlib only**) server (`scripts/serve.py`) bound to `127.0.0.1` that shows
+  stats, mastery by tier with clickable reference URLs + per-rule reset, and a
+  **live config editor** (type-aware controls that save to global or repo
+  scope). The server is a thin view + write path over `config.py`'s new
+  `build_dashboard` / `api_set` / `api_action` helpers, so schema validation
+  and scope rules are identical to the CLI — no duplicated logic. New
+  `config.py dashboard` verb emits the same consolidated JSON for scripting.
+  Local-only, no auth by design.
+  - **UI**: multi-page toolbar (Stats / Mastery / Config / Options, hash-routed);
+    a level TOC (L1–L6) on Mastery; glanceable Stats with segmented progress
+    bars (mastered / in-progress / not-mastered + a mastery-quality bar that
+    flags untested "mastery by absence"); a **per-rule progress bar** on every
+    rule; object configs edited as **per-field controls** (not raw JSON);
+    explicit per-row **Save** + reset-to-default; each key's default shown; a
+    cool high-contrast bluish theme (light + dark).
+  - **Human-facing rule help** (`RULE_HELP` in the analyzer): every one of the 36
+    rules gains a plain-language "what it catches" line + a bad→good example
+    pair, surfaced on the dashboard (raw guidance demoted to a collapsible note)
+    and available to the CLI. The harness fails if any rule lacks it.
+  - **Optional Playwright UI test** (`tests/pw-dashboard.js`, `make
+    test-dashboard`) — self-contained (spawns its own server on a free port, a
+    throwaway repo), asserts page routing, the level TOC, object-field
+    alignment, and the Save-button column; **skips** if Playwright is absent so
+    it never blocks the stdlib-only `make test-coach` gate (now 31 checks).
+
 ## 2026-07-10
 
 ### Added

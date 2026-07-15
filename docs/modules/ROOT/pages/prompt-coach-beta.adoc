@@ -262,6 +262,17 @@ Flags: `--scope global` (default) or `--scope repo` chooses which config file wr
 
 The `quick` flow walks you through the high-value categorical settings (`ack_clean`, `show_source_urls`, `praise_ratio`, `tips_enabled`) with multiple-choice pickers.
 
+== Web dashboard (v0.44+)
+
+`/prompt-coach-beta:dashboard` launches a **lightweight local web UI** — a zero-dependency (Python **stdlib only**) server (`scripts/serve.py`) bound to `127.0.0.1`. It renders:
+
+* **Stats** — prompts analyzed, and mastered / inactive / in-progress / dormant counts.
+* **Mastery** — every rule grouped by tier (L1–L6) with a status badge, `demos/min` progress, fires, its guidance, clickable **reference URLs** (Anthropic guide + every cited source), and a per-rule **reset** button.
+* **Config editor** — every schema key with its description and a type-aware control (checkbox / number / select / text) that **saves live** to the chosen scope (global or repo). `↺` resets a key to default.
+* **Options** — reset-all-mastery, refresh, open the Anthropic guide.
+
+Reads and writes reuse `config.py`'s `build_dashboard` / `api_set` / `api_action`, so schema validation and scope rules are **identical to the CLI** — the UI is a view + thin write path, not a second implementation. Local-only, no auth by design (don't bind it off-host). For the raw consolidated JSON without the server: `config.py --cwd <repo> dashboard`.
+
 == Source URLs and skill access (v0.36+)
 
 * *Clickable sources* — the coach block's `Sources` line renders the full Anthropic-guide URL so your terminal linkifies it (Cmd/Ctrl-click to open). Toggle with `show_source_urls`.

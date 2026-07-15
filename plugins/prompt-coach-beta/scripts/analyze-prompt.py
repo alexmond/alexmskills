@@ -2647,6 +2647,163 @@ def _record_tip_fire(g: dict, tip_id: str) -> None:
     st["last_fired_at"] = _now_iso()
     st["last_fired_prompt"] = int(g.get("prompt_count", 0))
     tips_state[tip_id] = st
+# ── v0.44.0 — human-facing help per rule (plain "what it catches" + a bad→good
+# example pair). The Rule.guidance string is written AS AN INSTRUCTION TO CLAUDE;
+# this map is what humans read on the dashboard / in `sources`. One entry per
+# rule id — the harness asserts full coverage. ---------------------------------
+RULE_HELP = {
+    # L1
+    "vague-reference": {
+        "catches": "Opens with 'it / this / that / them' and names no file, function, or error.",
+        "bad": "fix it",
+        "good": "fix the null check in parseConfig() in config.ts"},
+    "no-definition-of-done": {
+        "catches": "An action with no acceptance criteria — 'done' is left undefined.",
+        "bad": "add rate limiting",
+        "good": "add rate limiting to POST /login; done = 5 req/min/IP, 429 + Retry-After, one test"},
+    "unbounded-scope": {
+        "catches": "'all / every / entire' attached to a change verb — unbounded blast radius.",
+        "bad": "rename every getter in the project",
+        "good": "rename getters in src/models/ only; list them first, leave src/legacy/ alone"},
+    "improve-without-metric": {
+        "catches": "'better / faster / cleaner' with no measurable target.",
+        "bad": "make this faster",
+        "good": "cut this endpoint's p95 latency below 200ms"},
+    "missing-guardrails": {
+        "catches": "A broad change verb (refactor/rewrite/migrate) with no 'don't touch X'.",
+        "bad": "refactor the auth module",
+        "good": "refactor auth/session.py — keep the public API and existing tests unchanged"},
+    "no-answer-shape": {
+        "catches": "A question with no answer format, so the reply's shape is unpredictable.",
+        "bad": "what are the caching options?",
+        "good": "list the caching options as a table: name · when to use · one gotcha"},
+    # L2
+    "compound-tasks": {
+        "catches": "Several changes bundled with 'and' — order and scope get lost.",
+        "bad": "add caching and fix the flaky test and update the docs",
+        "good": "3 tasks: 1) cache the user query 2) fix test X 3) update README — do 1, confirm, then go on"},
+    "missing-context-fetch": {
+        "catches": "Names an artifact by role ('the failing test', 'the issue') but gives no ID.",
+        "bad": "why is the failing test failing?",
+        "good": "why is test_login_expiry in tests/auth_test.py failing? error: <paste>"},
+    "no-format-spec": {
+        "catches": "Asks for a summary / list / report with no shape.",
+        "bad": "summarize the changes",
+        "good": "summarize the changes as ≤7 bullets, each 'file — what changed — why'"},
+    "no-verify-loop": {
+        "catches": "An implementation ask with no 'then run the tests / build'.",
+        "bad": "implement the retry logic",
+        "good": "implement the retry logic, then run the unit tests and show the result"},
+    # L3
+    "no-adversarial-check": {
+        "catches": "A high-stakes ask (security / migration / prod / delete) with no skeptic pass.",
+        "bad": "delete the unused columns in prod",
+        "good": "delete the unused prod columns — first list failure modes (FKs, backup, rollback), then wait"},
+    "retry-without-diagnosis": {
+        "catches": "'try again' with no new information about what failed.",
+        "bad": "still broken, try again",
+        "good": "still broken — new error: <paste>; it now fails at line 42, not 30"},
+    "no-few-shot": {
+        "catches": "'like X / in the style of Y' with no example to match.",
+        "bad": "write the commit message in our style",
+        "good": "write the commit msg in our style — e.g. 'fix(auth): reject expired tokens (#123)'"},
+    "no-chain-of-thought": {
+        "catches": "A reasoning ask (why / debug / trace) with no 'think it through first'.",
+        "bad": "why is this leaking memory?",
+        "good": "think through the allocation path step by step, then tell me why it leaks"},
+    "no-rubric": {
+        "catches": "A judgment ask ('is this good?') with no criteria.",
+        "bad": "is this API design good?",
+        "good": "rate this API design on consistency, error handling, evolvability (1-5 each) with reasons"},
+    "no-uncertainty-budget": {
+        "catches": "An investigative ask with no 'say so when you're not sure'.",
+        "bad": "does this codebase rate-limit anywhere?",
+        "good": "does this codebase rate-limit anywhere? cite files; if you can't confirm, say so"},
+    "no-classical-role": {
+        "catches": "A review / audit / critique ask with no expert lens named.",
+        "bad": "review this migration",
+        "good": "as a DBA, review this migration for lock contention and data-loss risk"},
+    "no-xml-structure": {
+        "catches": "Pasted a big block of code/text with no tags delimiting it.",
+        "bad": "<pastes 20 lines> fix this",
+        "good": "fix the bug in this function:\n<code>\n…\n</code>"},
+    "no-verify-before-claim": {
+        "catches": "A 'does X exist / is Y used' question with no demand for receipts.",
+        "bad": "is the legacy logger still used?",
+        "good": "is the legacy logger still used? show file:line for each caller, or say 'none found'"},
+    "test-goalseeking": {
+        "catches": "'make the tests pass / CI green' with no correctness intent stated.",
+        "bad": "just make the tests pass",
+        "good": "fix the bug so test_x passes — don't hard-code the expected value; the logic must be right"},
+    # L4
+    "implicit-goal": {
+        "catches": "An action with no 'so that / why' — the underlying goal is unstated.",
+        "bad": "add a caching layer",
+        "good": "add a caching layer so the dashboard loads under 1s — the DB query is the bottleneck"},
+    "unbounded-iteration": {
+        "catches": "'keep improving' with no stopping condition.",
+        "bad": "keep making it better",
+        "good": "improve until lint passes and p95 is under 200ms, then stop"},
+    "no-rubric-for-refine": {
+        "catches": "'refine / polish this' without naming which axis to improve.",
+        "bad": "polish this copy",
+        "good": "tighten this copy for concision — keep meaning and tone, cut ~30% of the words"},
+    "overthinking-warning": {
+        "catches": "Piled-on 'make sure to / be very careful / also' over-constrains a simple task.",
+        "bad": "carefully make sure to also definitely handle every single edge case…",
+        "good": "handle the empty-list and null cases — those are the two that matter here"},
+    # L5
+    "no-plan-mode-for-risky": {
+        "catches": "A risky change (migrate / delete / rewrite) with no 'plan first'.",
+        "bad": "migrate us off the old ORM",
+        "good": "plan the ORM migration first — steps, what stays, rollback — before touching code"},
+    "no-task-list-for-multi-step": {
+        "catches": "3+ discrete actions with no task list to track them.",
+        "bad": "set up CI, add tests, write the README, and tag a release",
+        "good": "4 steps: CI, tests, README, release — make a task list and check them off"},
+    "no-agents-for-parallel-lookup": {
+        "catches": "Several independent lookups done serially instead of in parallel.",
+        "bad": "check how auth, billing, and search each handle errors",
+        "good": "in parallel, 3 agents each report the error-handling pattern in auth/, billing/, search/"},
+    "no-role-for-critique": {
+        "catches": "'review my X' with no lens (correctness / security / perf) chosen.",
+        "bad": "review my PR",
+        "good": "review my PR for security only — injection, authz, secret handling"},
+    "no-panel-for-contested-design": {
+        "catches": "'which is better / torn between' with no multi-perspective weigh-in.",
+        "bad": "REST or gRPC for this?",
+        "good": "REST vs gRPC here — weigh client-simplicity, perf, and ops, then recommend one"},
+    "no-workflow-for-fanout": {
+        "catches": "'for each of these 20+ things' with no parallel / Workflow plan.",
+        "bad": "update the license header in all 60 files",
+        "good": "update the license header across all 60 files — fan out with a Workflow, not a serial loop"},
+    "incremental-routing": {
+        "catches": "Driving a multi-step job one terse step at a time ('continue', 'next').",
+        "bad": "do the next one",
+        "good": "here are the 8 files to migrate — task-list them and do all 8, verifying each"},
+    "workflow-fanout-no-verify": {
+        "catches": "A fan-out to discover many items with no verify / dedup pass.",
+        "bad": "fan out agents to find every SQL injection",
+        "good": "fan out to find every SQL-injection site, then a 2nd pass verifies each vs source and dedups"},
+    # L6
+    "no-skill-lookup": {
+        "catches": "'how do I X / what's the standard way' without checking existing skills.",
+        "bad": "how do I take screenshots of the app?",
+        "good": "how do I take demo screenshots — is there a skill for it already? if so, use it"},
+    "pattern-worth-abstracting": {
+        "catches": "'again / same as before / yet another' — rule of three, worth abstracting?",
+        "bad": "another one of those adapter classes again",
+        "good": "this is the 3rd adapter like this — worth a base/template? show me the shared shape"},
+    "no-skill-composition": {
+        "catches": "A repeatable multi-step ceremony not named as a reusable skill.",
+        "bad": "first bump the version, then tag, then deploy, then post to slack",
+        "good": "we do bump→tag→deploy→notify every release — should this be a skill? if so, draft it"},
+    "no-edit-preference": {
+        "catches": "'create a new file / script / helper' with no 'edit existing if you can'.",
+        "bad": "write a new script to do the backup",
+        "good": "add backup support — extend the existing ops script if one fits; don't add a file unless needed"},
+}
+
 RULE_ORDER = [r.id for r in RULES]  # tier-then-declaration order
 
 

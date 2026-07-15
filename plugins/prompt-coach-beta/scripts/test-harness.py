@@ -180,6 +180,75 @@ def t_collaborator_gate_configurable():
           f"default_off={default_off} honest_ok={honest_ok} gated_ok={gated_ok}")
 
 
+def t_rule_help_covers_all():
+    """RULE_HELP (v0.44) — every shipped rule has human-facing help: a plain
+    'catches' line + a bad and good example. A new rule can't ship without it.
+    Also asserts build_dashboard surfaces those fields."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_an6", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_an6"] = m
+    spec.loader.exec_module(m)
+    help_ = getattr(m, "RULE_HELP", {})
+    missing = []
+    for r in m.RULES:
+        h = help_.get(r.id)
+        if not h or not h.get("catches") or not h.get("bad") or not h.get("good"):
+            missing.append(r.id)
+    check("RULE_HELP covers all rules with catches + bad + good examples",
+          not missing, f"missing/incomplete: {missing[:6]}")
+
+
+def t_web_dashboard_serves():
+    """serve.py (v0.44) — the localhost dashboard serves the page + JSON, a
+    config POST validates+persists to the scoped file, an action resets, and a
+    bad key is rejected 400. Runs on an ephemeral 127.0.0.1 port in a throwaway
+    repo so it never touches real config."""
+    import importlib.util, threading, json as _json, tempfile, urllib.request
+    from urllib.error import HTTPError
+    spec = importlib.util.spec_from_file_location("_serve", HERE / "serve.py")
+    srv = importlib.util.module_from_spec(spec)
+    sys.modules["_serve"] = srv
+    spec.loader.exec_module(srv)
+    repo = Path(tempfile.mkdtemp())
+    s = srv.make_server(repo, 0)
+    threading.Thread(target=s.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{s.server_address[1]}"
+
+    def call(path, body=None):
+        req = urllib.request.Request(
+            base + path,
+            data=None if body is None else _json.dumps(body).encode(),
+            headers={"content-type": "application/json"},
+            method="POST" if body is not None else "GET")
+        try:
+            return json.loads(urllib.request.urlopen(req, timeout=5).read())
+        except HTTPError as e:            # 400 for a rejected write — read body
+            return json.loads(e.read())
+
+    try:
+        page = urllib.request.urlopen(base + "/", timeout=5).read()
+        data = call("/api/data")
+        wrote = call("/api/config",
+                     {"key": "collaborator_gate", "value": True, "scope": "repo"})
+        persisted = _json.loads(
+            (repo / ".claude" / "prompt-coach" / "config.json").read_text())
+        reset = call("/api/action",
+                     {"action": "reset-key", "key": "collaborator_gate", "scope": "repo"})
+        badkey = call("/api/config", {"key": "nope", "value": 1, "scope": "global"})
+        ok = (b"prompt-coach dashboard" in page
+              and len(data.get("rules", [])) == len(srv._cfg.RULES)
+              and len(data.get("config", [])) >= 1
+              and wrote.get("ok") and persisted.get("collaborator_gate") is True
+              and reset.get("ok") and badkey.get("ok") is False)
+    finally:
+        s.shutdown()
+    check("web dashboard: serves page + JSON, config POST persists, bad key 400",
+          bool(ok),
+          f"rules={len(data.get('rules',[]))} wrote={wrote.get('ok')} "
+          f"persisted={persisted.get('collaborator_gate')} badkey_ok={badkey.get('ok')}")
+
+
 def t_earned_mastery_demonstration_driven():
     """v0.40 — the core fix: mastery comes from DEMONSTRATIONS (using the
     technique), not from clean prompts that never exercise the rule.
@@ -531,6 +600,8 @@ CHECKS = [
     t_incremental_routing_rule,
     t_workflow_fanout_no_verify_rule,
     t_collaborator_gate_configurable,
+    t_rule_help_covers_all,
+    t_web_dashboard_serves,
     t_earned_mastery_demonstration_driven,
     t_acceptance_loop,
     t_attribution_primary_only,

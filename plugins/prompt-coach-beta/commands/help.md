@@ -45,8 +45,11 @@ COMMANDS
                                      catalog against a pasted prompt or your last N
                                      logged prompts, with a coached rewrite / pattern report
   /prompt-coach-beta:config          Structured config surface — show / get / describe /
-                                     set / reset / diff / export / mastery / acceptance / sources
-                                     (v0.18+)
+                                     set / reset / diff / export / mastery / acceptance /
+                                     sources / dashboard (v0.18+)
+  /prompt-coach-beta:dashboard       Local web dashboard (v0.44) — stats, mastery by tier with
+                                     reference URLs, and a live config editor. Zero-dependency
+                                     stdlib server on 127.0.0.1. (Raw JSON: `config dashboard`.)
 
   (Cross-repo daily review moved out in v0.23. Say "log review" or
    "daily review" to invoke ~/.claude/skills/log-review/ instead.)
