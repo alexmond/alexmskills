@@ -10,6 +10,19 @@ unreleased/rolling (no global version).
 ## 2026-07-14
 
 ### Added
+- **prompt-coach-beta 0.45.0** — **researched source variety** (bibliography
+  90 → 178 citations). A wide web sweep (one research pass per rule tier) added
+  further authoritative, durable references to every rule so the catalog isn't
+  opinion-of-one — seminal papers (G-Eval, MT-Bench, Self-Refine, Reflexion,
+  ReAct, Plan-and-Solve, Multiagent Debate, MapReduce…), canonical engineering
+  refs (Fowler bliki, Google Engineering Practices, Google SRE Book, the c2
+  wiki, Sandi Metz, Kent C. Dodds), and other vendors' prompt guides (OpenAI,
+  Google/Gemini, Microsoft Learn, DAIR.AI). **Every URL was curl-verified live**
+  before inclusion. The 8 rules with no Anthropic-guide anchor got priority
+  (each now carries 5–6 curated citations). Additions live in one auditable
+  `_EXTRA_SOURCES` block (deduped by URL, appended to each rule's `sources`), so
+  the Rule() definitions stay untouched; the docs' per-rule reference and the
+  web dashboard pick them up automatically.
 - **prompt-coach-beta 0.44.1** — **rule reference in the docs, matched to the
   dashboard** (harness →37). The Antora page's terse "what it watches for"
   tables are replaced by a per-rule reference generated from the *same*

@@ -2341,6 +2341,265 @@ RULES: list[Rule] = [
 
 RULES_BY_ID = {r.id: r for r in RULES}
 
+# ---------------------------------------------------------------------------
+# v0.45 — Additional cited sources (researched variety)
+# ---------------------------------------------------------------------------
+# A wide web sweep (one research pass per tier) gathered further authoritative,
+# durable references for each rule so the catalog isn't opinion-of-one. Every
+# URL below was curl-verified live (200, or a real page behind an anti-bot 403,
+# noted inline). Kept separate from the Rule() definitions so the extra variety
+# is auditable in one place; appended to each rule's `sources` (deduped by URL)
+# below. Priority went to the 8 rules that had no Anthropic-guide anchor.
+_EXTRA_SOURCES = {
+    # ---- L1 ----
+    "vague-reference": [
+        ("Prompt Engineering Guide (DAIR.AI) — Specificity & precision",
+         "https://www.promptingguide.ai/introduction/tips#specificity"),
+        ("Software requirements specification (unambiguous / verifiable) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Software_requirements_specification"),
+    ],
+    "no-definition-of-done": [
+        ("Agile Alliance — Definition of Done (glossary)",
+         "https://www.agilealliance.org/glossary/definition-of-done/"),
+        ("INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable) — Wikipedia",
+         "https://en.wikipedia.org/wiki/INVEST_(mnemonic)"),
+    ],
+    "unbounded-scope": [
+        ("Google Engineering Practices — Small CLs (one self-contained change)",
+         "https://google.github.io/eng-practices/review/developer/small-cls.html"),
+        ("Frequency Reduces Difficulty — Martin Fowler (bliki)",
+         "https://martinfowler.com/bliki/FrequencyReducesDifficulty.html"),
+    ],
+    "improve-without-metric": [
+        ("SMART criteria (Specific + Measurable) — Wikipedia",
+         "https://en.wikipedia.org/wiki/SMART_criteria"),
+    ],
+    "missing-guardrails": [
+        ("Prompt Engineering Guide (DAIR.AI) — To do or not to do (state constraints)",
+         "https://www.promptingguide.ai/introduction/tips#to-do-or-not-to-do"),
+        ("Google — Prompt design strategies (Constraints), Gemini API",
+         "https://ai.google.dev/gemini-api/docs/prompting-strategies"),
+    ],
+    "no-answer-shape": [
+        ("Microsoft Learn — Specifying the output structure (Azure OpenAI)",
+         "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering#specifying-the-output-structure"),
+        ("Google — Prompt design strategies (Response format), Gemini API",
+         "https://ai.google.dev/gemini-api/docs/prompting-strategies#response-format"),
+    ],
+    # ---- L2 ----
+    "compound-tasks": [
+        ("Single-responsibility principle (one reason to change) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Single-responsibility_principle"),
+        ("Microsoft Learn — Break the task down (Azure OpenAI)",
+         "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering#break-the-task-down"),
+    ],
+    "no-verify-loop": [  # PRIORITY
+        ("Self-Testing Code — Martin Fowler (bliki)",
+         "https://martinfowler.com/bliki/SelfTestingCode.html"),
+        ("Test-Driven Development (red-green-refactor) — Martin Fowler (bliki)",
+         "https://martinfowler.com/bliki/TestDrivenDevelopment.html"),
+        ("Weng et al. — LLMs are Better Reasoners with Self-Verification (2022)",
+         "https://arxiv.org/abs/2212.09561"),
+    ],
+    "missing-context-fetch": [
+        ("OpenAI — Include relevant context information (prompt engineering)",
+         "https://developers.openai.com/api/docs/guides/prompt-engineering#include-relevant-context-information"),
+        ("Microsoft Learn — Provide grounding context (Azure OpenAI)",
+         "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering#provide-grounding-context"),
+    ],
+    "no-format-spec": [
+        ("Google — Structured output (enforce a schema), Gemini API",
+         "https://ai.google.dev/gemini-api/docs/structured-output"),
+        ("Microsoft Learn — Specifying the output structure (Azure OpenAI)",
+         "https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering#specifying-the-output-structure"),
+    ],
+    # ---- L3 ----
+    "no-adversarial-check": [
+        ("Gary Klein — Performing a Project Premortem (HBR, 2007)",
+         "https://hbr.org/2007/09/performing-a-project-premortem"),
+        ("Failure mode and effects analysis (FMEA) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Failure_mode_and_effects_analysis"),
+        ("Red team (adversarial review) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Red_team"),
+    ],
+    "retry-without-diagnosis": [  # PRIORITY
+        ("Andreas Zeller — Introduction to Debugging (The Debugging Book)",
+         "https://www.debuggingbook.org/html/Intro_Debugging"),
+        ("Rubber duck debugging — Wikipedia",
+         "https://en.wikipedia.org/wiki/Rubber_duck_debugging"),
+        ("David Agans — Debugging: The 9 Indispensable Rules (Wheeler's review)",
+         "https://dwheeler.com/essays/debugging-agans.html"),
+    ],
+    "no-few-shot": [
+        ("Few-Shot Prompting — Prompt Engineering Guide (DAIR.AI)",
+         "https://www.promptingguide.ai/techniques/fewshot"),
+        ("Shot-based prompting (zero/one/few-shot) — Learn Prompting",
+         "https://learnprompting.org/docs/basics/few_shot"),
+    ],
+    "no-chain-of-thought": [
+        ("Kojima et al. — LLMs are Zero-Shot Reasoners ('Let's think step by step', 2022)",
+         "https://arxiv.org/abs/2205.11916"),
+        ("Chain-of-Thought Prompting — Prompt Engineering Guide (DAIR.AI)",
+         "https://www.promptingguide.ai/techniques/cot"),
+    ],
+    "no-rubric": [  # PRIORITY
+        ("Liu et al. — G-Eval: NLG evaluation with GPT-4 & explicit criteria (2023)",
+         "https://arxiv.org/abs/2303.16634"),
+        ("Zheng et al. — Judging LLM-as-a-Judge with MT-Bench (2023)",
+         "https://arxiv.org/abs/2306.05685"),
+        ("Rubric (academic) — analytic criteria with level descriptors — Wikipedia",
+         "https://en.wikipedia.org/wiki/Rubric_(academic)"),
+    ],
+    "no-uncertainty-budget": [
+        ("Lin, Hilton & Evans — Teaching Models to Express Their Uncertainty in Words (2022)",
+         "https://arxiv.org/abs/2205.14334"),
+        ("Xiong et al. — Can LLMs Express Their Uncertainty? Confidence elicitation (2023)",
+         "https://arxiv.org/abs/2306.13063"),
+    ],
+    "no-xml-structure": [
+        ("OpenAI — GPT-4.1 Prompting Guide (delimit long inputs) — OpenAI Cookbook",
+         "https://cookbook.openai.com/examples/gpt4-1_prompting_guide"),
+        ("Simon Willison — Prompt injection explained (why delimit untrusted content)",
+         "https://simonwillison.net/2023/May/2/prompt-injection-explained/"),
+    ],
+    "no-classical-role": [
+        ("Kong et al. — Better Zero-Shot Reasoning with Role-Play Prompting (2023)",
+         "https://arxiv.org/abs/2308.07702"),
+        ("Role Prompting — Learn Prompting",
+         "https://learnprompting.org/docs/advanced/zero_shot/role_prompting"),
+    ],
+    "test-goalseeking": [
+        ("Goodhart's law ('when a measure becomes a target…') — Wikipedia",
+         "https://en.wikipedia.org/wiki/Goodhart%27s_law"),
+        ("Krakovna et al. — Specification gaming: the flip side of AI ingenuity (DeepMind)",
+         "https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/"),
+    ],
+    "no-verify-before-claim": [
+        ("Weller et al. — 'According to…': prompting models to quote/ground answers (2023)",
+         "https://arxiv.org/abs/2305.13252"),
+        ("Hallucination (artificial intelligence) — grounding as mitigation — Wikipedia",
+         "https://en.wikipedia.org/wiki/Hallucination_(artificial_intelligence)"),
+    ],
+    # ---- L4 ----
+    "implicit-goal": [
+        ("The XY Problem (asking about the attempted fix, not the goal)",
+         "https://xyproblem.info/"),
+        ("Five whys (root-cause: surface the underlying why) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Five_whys"),
+    ],
+    "unbounded-iteration": [
+        ("Jeff Atwood — Gold Plating (polishing past value) — Coding Horror",
+         "https://blog.codinghorror.com/gold-plating/"),
+        ("Timeboxing (fix time, flex scope — a stopping mechanism) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Timeboxing"),
+    ],
+    "no-rubric-for-refine": [  # PRIORITY
+        ("Madaan et al. — Self-Refine: iterative refinement with self-feedback (2023)",
+         "https://arxiv.org/abs/2303.17651"),
+        ("Shinn et al. — Reflexion: verbal self-reflection as a directional signal (2023)",
+         "https://arxiv.org/abs/2303.11366"),
+        ("Levels of edit (nine named edit dimensions, JPL) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Levels_of_edit"),
+    ],
+    "overthinking-warning": [
+        ("YAGNI (You Aren't Gonna Need It) — Martin Fowler (bliki)",
+         "https://martinfowler.com/bliki/Yagni.html"),
+        ("KISS principle — Wikipedia",
+         "https://en.wikipedia.org/wiki/KISS_principle"),
+        ("Sui et al. — Stop Overthinking: efficient reasoning for LLMs (survey, 2025)",
+         "https://arxiv.org/abs/2503.16419"),
+    ],
+    # ---- L5 ----
+    "no-plan-mode-for-risky": [
+        ("Wang et al. — Plan-and-Solve prompting (devise a plan, then execute) (2023)",
+         "https://arxiv.org/abs/2305.04091"),
+        ("Yao et al. — ReAct: synergizing reasoning and acting (2022)",
+         "https://arxiv.org/abs/2210.03629"),
+    ],
+    "no-task-list-for-multi-step": [
+        ("Atul Gawande — The Checklist Manifesto (externalize multi-step procedures) — Wikipedia",
+         "https://en.wikipedia.org/wiki/The_Checklist_Manifesto"),
+        ("Zhou et al. — Least-to-Most prompting (ordered sub-problems) (2022)",
+         "https://arxiv.org/abs/2205.10625"),
+    ],
+    "no-agents-for-parallel-lookup": [
+        ("Anthropic — How we built our multi-agent research system (parallel subagents)",
+         "https://www.anthropic.com/engineering/built-multi-agent-research-system"),
+        ("OpenAI — Function calling: parallel (independent) tool calls",
+         "https://platform.openai.com/docs/guides/function-calling"),
+    ],
+    "no-role-for-critique": [
+        ("Google Engineering Practices — What to look for in a code review (review lenses)",
+         "https://google.github.io/eng-practices/review/reviewer/looking-for.html"),
+        ("Google Engineering Practices — The standard of code review",
+         "https://google.github.io/eng-practices/review/reviewer/standard.html"),
+    ],
+    "no-panel-for-contested-design": [  # PRIORITY
+        ("Du et al. — Improving factuality & reasoning via Multiagent Debate (2023)",
+         "https://arxiv.org/abs/2305.14325"),
+        ("Michael Nygard — Documenting Architecture Decisions (the original ADR post)",
+         "https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions"),
+        ("Edward de Bono — Six Thinking Hats (deliberate multi-perspective) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Six_Thinking_Hats"),
+    ],
+    "no-workflow-for-fanout": [
+        ("Anthropic — Building effective agents (orchestrator-workers pattern)",
+         "https://www.anthropic.com/engineering/building-effective-agents"),
+        ("Dean & Ghemawat — MapReduce: simplified data processing (OSDI'04)",
+         "https://research.google.com/archive/mapreduce-osdi04.pdf"),
+    ],
+    "incremental-routing": [
+        ("Xu et al. — ReWOO: plan the full step sequence up front (2023)",
+         "https://arxiv.org/abs/2305.18323"),
+        ("BabyAGI (generate the whole task list, then run it) — Yohei Nakajima",
+         "https://github.com/yoheinakajima/babyagi"),
+    ],
+    "workflow-fanout-no-verify": [
+        ("Wang et al. — Self-Consistency (reconcile many sampled outputs) (2022)",
+         "https://arxiv.org/abs/2203.11171"),
+        ("Anthropic — Building effective agents (evaluator-optimizer pattern)",
+         "https://www.anthropic.com/engineering/building-effective-agents"),
+    ],
+    # ---- L6 ----
+    "no-skill-lookup": [  # PRIORITY
+        ("Don't Repeat Yourself (DRY) — Portland Pattern Repository (c2 wiki)",
+         "https://wiki.c2.com/?DontRepeatYourself"),
+        ("Reinventing the wheel (the anti-pattern) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Reinventing_the_wheel"),
+        ("Hunt & Thomas — The Pragmatic Programmer: Tips (DRY, Know Your Tools)",
+         "https://pragprog.com/tips/"),
+    ],
+    "pattern-worth-abstracting": [  # PRIORITY
+        ("Rule Of Three (wait for the third occurrence) — Portland Pattern Repository (c2 wiki)",
+         "https://wiki.c2.com/?RuleOfThree"),
+        ("Sandi Metz — The Wrong Abstraction ('duplication is cheaper than the wrong abstraction')",
+         "https://sandimetz.com/blog/2016/1/20/the-wrong-abstraction"),
+        ("Kent C. Dodds — AHA Programming (Avoid Hasty Abstractions)",
+         "https://kentcdodds.com/blog/aha-programming"),
+    ],
+    "no-skill-composition": [  # PRIORITY
+        ("Google SRE Book — Eliminating Toil (engineer away repetitive work)",
+         "https://sre.google/sre-book/eliminating-toil/"),
+        ("Runbook (capture a repeatable procedure as a named artifact) — Wikipedia",
+         "https://en.wikipedia.org/wiki/Runbook"),
+        ("Three Strikes And You Refactor — Portland Pattern Repository (c2 wiki)",
+         "https://wiki.c2.com/?ThreeStrikesAndYouRefactor"),
+    ],
+    "no-edit-preference": [
+        ("YAGNI (don't add speculative new files) — Martin Fowler (bliki)",
+         "https://martinfowler.com/bliki/Yagni.html"),
+        ("Do The Simplest Thing That Could Possibly Work — Portland Pattern Repository (c2 wiki)",
+         "https://wiki.c2.com/?DoTheSimplestThingThatCouldPossiblyWork"),
+    ],
+}
+
+for _rule in RULES:
+    _have = {u for _, u in _rule.sources}
+    for _src in _EXTRA_SOURCES.get(_rule.id, []):
+        if _src[1] not in _have:
+            _rule.sources.append(_src)
+            _have.add(_src[1])
+
 
 # ---------------------------------------------------------------------------
 # v0.28.0 — Proactive tips (advanced-technique suggestions)

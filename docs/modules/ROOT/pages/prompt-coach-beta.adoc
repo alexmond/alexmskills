@@ -57,7 +57,7 @@ This is informational, not praise — a heartbeat that also shows your progress 
 [cols="1,3",options="header"]
 |===
 | Command | When to use
-| `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 35-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
+| `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 36-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
 | `+/prompt-coach-beta:stats+` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status.
 | `+/prompt-coach-beta:mastery+` | *"Which rules mastered, which need reset?"* Per-rule breakdown with well-tested / barely-tested / untested analysis + close-to-mastery.
 | `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `paths` / `analyze` / `diff` / `export` / `reset`.
@@ -151,7 +151,7 @@ A per-rule reference — what each rule catches, a ✗ bad → ✓ good example,
 ✗ `make this faster` +
 ✓ `cut this endpoint's p95 latency below 200ms`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://en.wikipedia.org/wiki/SMART_criteria[SMART criteria (Specific + Measurable) — Wikipedia^]
 
 `missing-guardrails` — *Missing guardrails*::
 A broad change verb (refactor/rewrite/migrate) with no 'don't touch X'.
@@ -159,7 +159,7 @@ A broad change verb (refactor/rewrite/migrate) with no 'don't touch X'.
 ✗ `refactor the auth module` +
 ✓ `refactor auth/session.py — keep the public API and existing tests unchanged`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://www.promptingguide.ai/introduction/tips#to-do-or-not-to-do[Prompt Engineering Guide (DAIR.AI) — To do or not to do (state constraints)^] · https://ai.google.dev/gemini-api/docs/prompting-strategies[Google — Prompt design strategies (Constraints), Gemini API^]
 
 `no-answer-shape` — *Information ask without a shape*::
 A question with no answer format, so the reply's shape is unpredictable.
@@ -167,7 +167,7 @@ A question with no answer format, so the reply's shape is unpredictable.
 ✗ `what are the caching options?` +
 ✓ `list the caching options as a table: name · when to use · one gotcha`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#control-the-format-of-responses[Anthropic guide: Control the format of responses^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#control-the-format-of-responses[Anthropic guide: Control the format of responses^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering#specifying-the-output-structure[Microsoft Learn — Specifying the output structure (Azure OpenAI)^] · https://ai.google.dev/gemini-api/docs/prompting-strategies#response-format[Google — Prompt design strategies (Response format), Gemini API^]
 
 `no-definition-of-done` — *No definition of done*::
 An action with no acceptance criteria — 'done' is left undefined.
@@ -175,7 +175,7 @@ An action with no acceptance criteria — 'done' is left undefined.
 ✗ `add rate limiting` +
 ✓ `add rate limiting to POST /login; done = 5 req/min/IP, 429 + Retry-After, one test`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://www.agilealliance.org/glossary/definition-of-done/[Agile Alliance — Definition of Done (glossary)^] · https://en.wikipedia.org/wiki/INVEST_(mnemonic)[INVEST (Independent, Negotiable, Valuable, Estimable, Small, Testable) — Wikipedia^]
 
 `unbounded-scope` — *Unbounded scope*::
 'all / every / entire' attached to a change verb — unbounded blast radius.
@@ -183,7 +183,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `rename every getter in the project` +
 ✓ `rename getters in src/models/ only; list them first, leave src/legacy/ alone`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://google.github.io/eng-practices/review/developer/small-cls.html[Google Engineering Practices — Small CLs (one self-contained change)^] · https://martinfowler.com/bliki/FrequencyReducesDifficulty.html[Frequency Reduces Difficulty — Martin Fowler (bliki)^]
 
 `vague-reference` — *Vague reference*::
 Opens with 'it / this / that / them' and names no file, function, or error.
@@ -191,7 +191,7 @@ Opens with 'it / this / that / them' and names no file, function, or error.
 ✗ `fix it` +
 ✓ `fix the null check in parseConfig() in config.ts`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://www.promptingguide.ai/introduction/tips#specificity[Prompt Engineering Guide (DAIR.AI) — Specificity & precision^] · https://en.wikipedia.org/wiki/Software_requirements_specification[Software requirements specification (unambiguous / verifiable) — Wikipedia^]
 
 === L2 — intermediate
 
@@ -201,7 +201,7 @@ Several changes bundled with 'and' — order and scope get lost.
 ✗ `add caching and fix the flaky test and update the docs` +
 ✓ `3 tasks: 1) cache the user query 2) fix test X 3) update README — do 1, confirm, then go on`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://en.wikipedia.org/wiki/Single-responsibility_principle[Single-responsibility principle (one reason to change) — Wikipedia^] · https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering#break-the-task-down[Microsoft Learn — Break the task down (Azure OpenAI)^]
 
 `missing-context-fetch` — *Missing context reference*::
 Names an artifact by role ('the failing test', 'the issue') but gives no ID.
@@ -209,7 +209,7 @@ Names an artifact by role ('the failing test', 'the issue') but gives no ID.
 ✗ `why is the failing test failing?` +
 ✓ `why is test_login_expiry in tests/auth_test.py failing? error: <paste>`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#add-context-to-improve-performance[Anthropic guide: Add context to improve performance^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#add-context-to-improve-performance[Anthropic guide: Add context to improve performance^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://developers.openai.com/api/docs/guides/prompt-engineering#include-relevant-context-information[OpenAI — Include relevant context information (prompt engineering)^] · https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering#provide-grounding-context[Microsoft Learn — Provide grounding context (Azure OpenAI)^]
 
 `no-format-spec` — *No output shape*::
 Asks for a summary / list / report with no shape.
@@ -217,7 +217,7 @@ Asks for a summary / list / report with no shape.
 ✗ `summarize the changes` +
 ✓ `summarize the changes as ≤7 bullets, each 'file — what changed — why'`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#control-the-format-of-responses[Anthropic guide: Control the format of responses^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#control-the-format-of-responses[Anthropic guide: Control the format of responses^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview[Anthropic — Prompt engineering overview^] · https://ai.google.dev/gemini-api/docs/structured-output[Google — Structured output (enforce a schema), Gemini API^] · https://learn.microsoft.com/en-us/azure/foundry/openai/concepts/prompt-engineering#specifying-the-output-structure[Microsoft Learn — Specifying the output structure (Azure OpenAI)^]
 
 `no-verify-loop` — *No verify loop*::
 An implementation ask with no 'then run the tests / build'.
@@ -225,7 +225,7 @@ An implementation ask with no 'then run the tests / build'.
 ✗ `implement the retry logic` +
 ✓ `implement the retry logic, then run the unit tests and show the result`
 +
-_Refs:_ https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^]
+_Refs:_ https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://martinfowler.com/bliki/SelfTestingCode.html[Self-Testing Code — Martin Fowler (bliki)^] · https://martinfowler.com/bliki/TestDrivenDevelopment.html[Test-Driven Development (red-green-refactor) — Martin Fowler (bliki)^] · https://arxiv.org/abs/2212.09561[Weng et al. — LLMs are Better Reasoners with Self-Verification (2022)^]
 
 === L3 — classical prompting techniques
 
@@ -235,7 +235,7 @@ A high-stakes ask (security / migration / prod / delete) with no skeptic pass.
 ✗ `delete the unused columns in prod` +
 ✓ `delete the unused prod columns — first list failure modes (FKs, backup, rollback), then wait`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://hbr.org/2007/09/performing-a-project-premortem[Gary Klein — Performing a Project Premortem (HBR, 2007)^] · https://en.wikipedia.org/wiki/Failure_mode_and_effects_analysis[Failure mode and effects analysis (FMEA) — Wikipedia^] · https://en.wikipedia.org/wiki/Red_team[Red team (adversarial review) — Wikipedia^]
 
 `no-chain-of-thought` — *Hard reasoning without 'think first'*::
 A reasoning ask (why / debug / trace) with no 'think it through first'.
@@ -243,7 +243,7 @@ A reasoning ask (why / debug / trace) with no 'think it through first'.
 ✗ `why is this leaking memory?` +
 ✓ `think through the allocation path step by step, then tell me why it leaks`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#leverage-thinking-interleaved-thinking-capabilities[Anthropic guide: Leverage thinking interleaved thinking capabilities^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-of-thought[Anthropic — Let Claude think (chain of thought)^] · https://arxiv.org/abs/2201.11903[Wei et al. — Chain-of-Thought prompting elicits reasoning (2022)^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#leverage-thinking-interleaved-thinking-capabilities[Anthropic guide: Leverage thinking interleaved thinking capabilities^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-of-thought[Anthropic — Let Claude think (chain of thought)^] · https://arxiv.org/abs/2201.11903[Wei et al. — Chain-of-Thought prompting elicits reasoning (2022)^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://arxiv.org/abs/2205.11916[Kojima et al. — LLMs are Zero-Shot Reasoners ('Let's think step by step', 2022)^] · https://www.promptingguide.ai/techniques/cot[Chain-of-Thought Prompting — Prompt Engineering Guide (DAIR.AI)^]
 
 `no-classical-role` — *Critique/review ask without a role*::
 A review / audit / critique ask with no expert lens named.
@@ -251,7 +251,7 @@ A review / audit / critique ask with no expert lens named.
 ✗ `review this migration` +
 ✓ `as a DBA, review this migration for lock contention and data-loss risk`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://arxiv.org/abs/2308.07702[Kong et al. — Better Zero-Shot Reasoning with Role-Play Prompting (2023)^] · https://learnprompting.org/docs/advanced/zero_shot/role_prompting[Role Prompting — Learn Prompting^]
 
 `no-few-shot` — *Pattern ask without example*::
 'like X / in the style of Y' with no example to match.
@@ -259,7 +259,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `write the commit message in our style` +
 ✓ `write the commit msg in our style — e.g. 'fix(auth): reject expired tokens (#123)'`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#use-examples-effectively[Anthropic guide: Use examples effectively^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/multishot-prompting[Anthropic — Multishot prompting (give examples)^] · https://arxiv.org/abs/2005.14165[Brown et al. — Language models are few-shot learners (2020)^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#use-examples-effectively[Anthropic guide: Use examples effectively^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/multishot-prompting[Anthropic — Multishot prompting (give examples)^] · https://arxiv.org/abs/2005.14165[Brown et al. — Language models are few-shot learners (2020)^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://www.promptingguide.ai/techniques/fewshot[Few-Shot Prompting — Prompt Engineering Guide (DAIR.AI)^] · https://learnprompting.org/docs/basics/few_shot[Shot-based prompting (zero/one/few-shot) — Learn Prompting^]
 
 `no-rubric` — *Judgment without rubric*::
 A judgment ask ('is this good?') with no criteria.
@@ -267,7 +267,7 @@ A judgment ask ('is this good?') with no criteria.
 ✗ `is this API design good?` +
 ✓ `rate this API design on consistency, error handling, evolvability (1-5 each) with reasons`
 +
-_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^]
+_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://platform.openai.com/docs/guides/prompt-engineering[OpenAI — Prompt engineering guide^] · https://arxiv.org/abs/2303.16634[Liu et al. — G-Eval: NLG evaluation with GPT-4 & explicit criteria (2023)^] · https://arxiv.org/abs/2306.05685[Zheng et al. — Judging LLM-as-a-Judge with MT-Bench (2023)^] · https://en.wikipedia.org/wiki/Rubric_(academic)[Rubric (academic) — analytic criteria with level descriptors — Wikipedia^]
 
 `no-uncertainty-budget` — *Investigative ask without uncertainty budget*::
 An investigative ask with no 'say so when you're not sure'.
@@ -275,7 +275,7 @@ An investigative ask with no 'say so when you're not sure'.
 ✗ `does this codebase rate-limit anywhere?` +
 ✓ `does this codebase rate-limit anywhere? cite files; if you can't confirm, say so`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic guide: Minimizing hallucinations in agentic coding^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic guide: Minimizing hallucinations in agentic coding^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://arxiv.org/abs/2205.14334[Lin, Hilton & Evans — Teaching Models to Express Their Uncertainty in Words (2022)^] · https://arxiv.org/abs/2306.13063[Xiong et al. — Can LLMs Express Their Uncertainty? Confidence elicitation (2023)^]
 
 `no-verify-before-claim` — *Assertion ask without evidence demand*::
 A 'does X exist / is Y used' question with no demand for receipts.
@@ -283,7 +283,7 @@ A 'does X exist / is Y used' question with no demand for receipts.
 ✗ `is the legacy logger still used?` +
 ✓ `is the legacy logger still used? show file:line for each caller, or say 'none found'`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic guide: Minimizing hallucinations in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic guide: Minimizing hallucinations in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://arxiv.org/abs/2305.13252[Weller et al. — 'According to…': prompting models to quote/ground answers (2023)^] · https://en.wikipedia.org/wiki/Hallucination_(artificial_intelligence)[Hallucination (artificial intelligence) — grounding as mitigation — Wikipedia^]
 
 `no-xml-structure` — *Pasted content without XML tags*::
 Pasted a big block of code/text with no tags delimiting it.
@@ -291,7 +291,7 @@ Pasted a big block of code/text with no tags delimiting it.
 ✗ `<pastes 20 lines> fix this` +
 ✓ `fix the bug in this function: <code> … </code>`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#structure-prompts-with-xml-tags[Anthropic guide: Structure prompts with xml tags^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#structure-prompts-with-xml-tags[Anthropic guide: Structure prompts with xml tags^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://cookbook.openai.com/examples/gpt4-1_prompting_guide[OpenAI — GPT-4.1 Prompting Guide (delimit long inputs) — OpenAI Cookbook^] · https://simonwillison.net/2023/May/2/prompt-injection-explained/[Simon Willison — Prompt injection explained (why delimit untrusted content)^]
 
 `retry-without-diagnosis` — *Retry without diagnosis*::
 'try again' with no new information about what failed.
@@ -299,7 +299,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `still broken, try again` +
 ✓ `still broken — new error: <paste>; it now fails at line 42, not 30`
 +
-_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://www.debuggingbook.org/html/Intro_Debugging[Andreas Zeller — Introduction to Debugging (The Debugging Book)^] · https://en.wikipedia.org/wiki/Rubber_duck_debugging[Rubber duck debugging — Wikipedia^] · https://dwheeler.com/essays/debugging-agans.html[David Agans — Debugging: The 9 Indispensable Rules (Wheeler's review)^]
 
 `test-goalseeking` — *Test-passing without correctness*::
 'make the tests pass / CI green' with no correctness intent stated.
@@ -307,7 +307,7 @@ _Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/
 ✗ `just make the tests pass` +
 ✓ `fix the bug so test_x passes — don't hard-code the expected value; the logic must be right`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#avoid-focusing-on-passing-tests-and-hard-coding[Anthropic guide: Avoid focusing on passing tests and hard coding^] · https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic — Minimizing hallucinations in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#avoid-focusing-on-passing-tests-and-hard-coding[Anthropic guide: Avoid focusing on passing tests and hard coding^] · https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#minimizing-hallucinations-in-agentic-coding[Anthropic — Minimizing hallucinations in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://en.wikipedia.org/wiki/Goodhart%27s_law[Goodhart's law ('when a measure becomes a target…') — Wikipedia^] · https://deepmind.google/discover/blog/specification-gaming-the-flip-side-of-ai-ingenuity/[Krakovna et al. — Specification gaming: the flip side of AI ingenuity (DeepMind)^]
 
 === L4 — goals & loops
 
@@ -317,7 +317,7 @@ An action with no 'so that / why' — the underlying goal is unstated.
 ✗ `add a caching layer` +
 ✓ `add a caching layer so the dashboard loads under 1s — the DB query is the bottleneck`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#be-clear-and-direct[Anthropic guide: Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://xyproblem.info/[The XY Problem (asking about the attempted fix, not the goal)^] · https://en.wikipedia.org/wiki/Five_whys[Five whys (root-cause: surface the underlying why) — Wikipedia^]
 
 `no-rubric-for-refine` — *Refinement without rubric*::
 'refine / polish this' without naming which axis to improve.
@@ -325,7 +325,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `polish this copy` +
 ✓ `tighten this copy for concision — keep meaning and tone, cut ~30% of the words`
 +
-_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^]
+_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/be-clear-and-direct[Anthropic — Be clear and direct^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://arxiv.org/abs/2303.17651[Madaan et al. — Self-Refine: iterative refinement with self-feedback (2023)^] · https://arxiv.org/abs/2303.11366[Shinn et al. — Reflexion: verbal self-reflection as a directional signal (2023)^] · https://en.wikipedia.org/wiki/Levels_of_edit[Levels of edit (nine named edit dimensions, JPL) — Wikipedia^]
 
 `overthinking-warning` — *Over-elaborated ask*::
 Piled-on 'make sure to / be very careful / also' over-constrains a simple task.
@@ -333,7 +333,7 @@ Piled-on 'make sure to / be very careful / also' over-constrains a simple task.
 ✗ `carefully make sure to also definitely handle every single edge case…` +
 ✓ `handle the empty-list and null cases — those are the two that matter here`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overthinking-and-excessive-thoroughness[Anthropic guide: Overthinking and excessive thoroughness^] · https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overeagerness[Anthropic — Overeagerness in agentic systems^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overthinking-and-excessive-thoroughness[Anthropic guide: Overthinking and excessive thoroughness^] · https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overeagerness[Anthropic — Overeagerness in agentic systems^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://martinfowler.com/bliki/Yagni.html[YAGNI (You Aren't Gonna Need It) — Martin Fowler (bliki)^] · https://en.wikipedia.org/wiki/KISS_principle[KISS principle — Wikipedia^] · https://arxiv.org/abs/2503.16419[Sui et al. — Stop Overthinking: efficient reasoning for LLMs (survey, 2025)^]
 
 `unbounded-iteration` — *Loop without stopping condition*::
 'keep improving' with no stopping condition.
@@ -341,7 +341,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `keep making it better` +
 ✓ `improve until lint passes and p95 is under 200ms, then stop`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overthinking-and-excessive-thoroughness[Anthropic guide: Overthinking and excessive thoroughness^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overthinking-and-excessive-thoroughness[Anthropic guide: Overthinking and excessive thoroughness^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://blog.codinghorror.com/gold-plating/[Jeff Atwood — Gold Plating (polishing past value) — Coding Horror^] · https://en.wikipedia.org/wiki/Timeboxing[Timeboxing (fix time, flex scope — a stopping mechanism) — Wikipedia^]
 
 === L5 — Claude-Code tool-native
 
@@ -351,7 +351,7 @@ Driving a multi-step job one terse step at a time ('continue', 'next').
 ✗ `do the next one` +
 ✓ `here are the 8 files to migrate — task-list them and do all 8, verifying each`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://www.langchain.com/blog/planning-agents[LangChain — Plan-and-execute agents^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://www.langchain.com/blog/planning-agents[LangChain — Plan-and-execute agents^] · https://arxiv.org/abs/2305.18323[Xu et al. — ReWOO: plan the full step sequence up front (2023)^] · https://github.com/yoheinakajima/babyagi[BabyAGI (generate the whole task list, then run it) — Yohei Nakajima^]
 
 `no-agents-for-parallel-lookup` — *Multiple lookups without parallel agents*::
 Several independent lookups done serially instead of in parallel.
@@ -359,7 +359,7 @@ Several independent lookups done serially instead of in parallel.
 ✗ `check how auth, billing, and search each handle errors` +
 ✓ `in parallel, 3 agents each report the error-handling pattern in auth/, billing/, search/`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#optimize-parallel-tool-calling[Anthropic guide: Optimize parallel tool calling^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#optimize-parallel-tool-calling[Anthropic guide: Optimize parallel tool calling^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://www.anthropic.com/engineering/built-multi-agent-research-system[Anthropic — How we built our multi-agent research system (parallel subagents)^] · https://platform.openai.com/docs/guides/function-calling[OpenAI — Function calling: parallel (independent) tool calls^]
 
 `no-panel-for-contested-design` — *Contested design without a panel*::
 'which is better / torn between' with no multi-perspective weigh-in.
@@ -367,7 +367,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `REST or gRPC for this?` +
 ✓ `REST vs gRPC here — weigh client-simplicity, perf, and ops, then recommend one`
 +
-_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://arxiv.org/abs/2305.14325[Du et al. — Improving factuality & reasoning via Multiagent Debate (2023)^] · https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions[Michael Nygard — Documenting Architecture Decisions (the original ADR post)^] · https://en.wikipedia.org/wiki/Six_Thinking_Hats[Edward de Bono — Six Thinking Hats (deliberate multi-perspective) — Wikipedia^]
 
 `no-plan-mode-for-risky` — *Risky change without a plan first*::
 A risky change (migrate / delete / rewrite) with no 'plan first'.
@@ -375,7 +375,7 @@ A risky change (migrate / delete / rewrite) with no 'plan first'.
 ✗ `migrate us off the old ORM` +
 ✓ `plan the ORM migration first — steps, what stays, rollback — before touching code`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#balancing-autonomy-and-safety[Anthropic guide: Balancing autonomy and safety^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#balancing-autonomy-and-safety[Anthropic guide: Balancing autonomy and safety^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://arxiv.org/abs/2305.04091[Wang et al. — Plan-and-Solve prompting (devise a plan, then execute) (2023)^] · https://arxiv.org/abs/2210.03629[Yao et al. — ReAct: synergizing reasoning and acting (2022)^]
 
 `no-role-for-critique` — *Review ask without a role*::
 'review my X' with no lens (correctness / security / perf) chosen.
@@ -383,7 +383,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `review my PR` +
 ✓ `review my PR for security only — injection, authz, secret handling`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://google.github.io/eng-practices/review/reviewer/looking-for.html[Google Engineering Practices — What to look for in a code review (review lenses)^] · https://google.github.io/eng-practices/review/reviewer/standard.html[Google Engineering Practices — The standard of code review^]
 
 `no-task-list-for-multi-step` — *Multi-step ask without a task list*::
 3+ discrete actions with no task list to track them.
@@ -391,7 +391,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `set up CI, add tests, write the README, and tag a release` +
 ✓ `4 steps: CI, tests, README, release — make a task list and check them off`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#chain-complex-prompts[Anthropic guide: Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://en.wikipedia.org/wiki/The_Checklist_Manifesto[Atul Gawande — The Checklist Manifesto (externalize multi-step procedures) — Wikipedia^] · https://arxiv.org/abs/2205.10625[Zhou et al. — Least-to-Most prompting (ordered sub-problems) (2022)^]
 
 `no-workflow-for-fanout` — *Fan-out ask without Workflow*::
 'for each of these 20+ things' with no parallel / Workflow plan.
@@ -399,7 +399,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `update the license header in all 60 files` +
 ✓ `update the license header across all 60 files — fan out with a Workflow, not a serial loop`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#subagent-orchestration[Anthropic guide: Subagent orchestration^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#subagent-orchestration[Anthropic guide: Subagent orchestration^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://www.anthropic.com/engineering/building-effective-agents[Anthropic — Building effective agents (orchestrator-workers pattern)^] · https://research.google.com/archive/mapreduce-osdi04.pdf[Dean & Ghemawat — MapReduce: simplified data processing (OSDI'04)^]
 
 `workflow-fanout-no-verify` — *Fan-out without a verify pass*::
 A fan-out to discover many items with no verify / dedup pass.
@@ -407,7 +407,7 @@ A fan-out to discover many items with no verify / dedup pass.
 ✗ `fan out agents to find every SQL injection` +
 ✓ `fan out to find every SQL-injection site, then a 2nd pass verifies each vs source and dedups`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#subagent-orchestration[Anthropic guide: Subagent orchestration^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://www.anthropic.com/engineering/built-multi-agent-research-system[Anthropic — How we built our multi-agent research system (verifier pass)^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#subagent-orchestration[Anthropic guide: Subagent orchestration^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://www.anthropic.com/engineering/built-multi-agent-research-system[Anthropic — How we built our multi-agent research system (verifier pass)^] · https://arxiv.org/abs/2203.11171[Wang et al. — Self-Consistency (reconcile many sampled outputs) (2022)^] · https://www.anthropic.com/engineering/building-effective-agents[Anthropic — Building effective agents (evaluator-optimizer pattern)^]
 
 === L6 — skill-awareness
 
@@ -417,7 +417,7 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✗ `write a new script to do the backup` +
 ✓ `add backup support — extend the existing ops script if one fits; don't add a file unless needed`
 +
-_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#reduce-file-creation-in-agentic-coding[Anthropic guide: Reduce file creation in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://en.wikipedia.org/wiki/Unix_philosophy[McIlroy — The Unix philosophy (composition, do one thing well)^]
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#reduce-file-creation-in-agentic-coding[Anthropic guide: Reduce file creation in agentic coding^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://en.wikipedia.org/wiki/Unix_philosophy[McIlroy — The Unix philosophy (composition, do one thing well)^] · https://martinfowler.com/bliki/Yagni.html[YAGNI (don't add speculative new files) — Martin Fowler (bliki)^] · https://wiki.c2.com/?DoTheSimplestThingThatCouldPossiblyWork[Do The Simplest Thing That Could Possibly Work — Portland Pattern Repository (c2 wiki)^]
 
 `no-skill-composition` — *Repeatable ceremony not named as a skill*::
 A repeatable multi-step ceremony not named as a reusable skill.
@@ -425,7 +425,7 @@ A repeatable multi-step ceremony not named as a reusable skill.
 ✗ `first bump the version, then tag, then deploy, then post to slack` +
 ✓ `we do bump→tag→deploy→notify every release — should this be a skill? if so, draft it`
 +
-_Refs:_ https://en.wikipedia.org/wiki/Unix_philosophy[McIlroy — The Unix philosophy (composition, do one thing well)^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^] · https://martinfowler.com/books/refactoring.html[Fowler — Refactoring: the rule of three (2nd ed., 2018)^]
+_Refs:_ https://en.wikipedia.org/wiki/Unix_philosophy[McIlroy — The Unix philosophy (composition, do one thing well)^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^] · https://martinfowler.com/books/refactoring.html[Fowler — Refactoring: the rule of three (2nd ed., 2018)^] · https://sre.google/sre-book/eliminating-toil/[Google SRE Book — Eliminating Toil (engineer away repetitive work)^] · https://en.wikipedia.org/wiki/Runbook[Runbook (capture a repeatable procedure as a named artifact) — Wikipedia^] · https://wiki.c2.com/?ThreeStrikesAndYouRefactor[Three Strikes And You Refactor — Portland Pattern Repository (c2 wiki)^]
 
 `no-skill-lookup` — *"How do I …" without checking existing skills*::
 'how do I X / what's the standard way' without checking existing skills.
@@ -433,7 +433,7 @@ _Refs:_ https://en.wikipedia.org/wiki/Unix_philosophy[McIlroy — The Unix philo
 ✗ `how do I take screenshots of the app?` +
 ✓ `how do I take demo screenshots — is there a skill for it already? if so, use it`
 +
-_Refs:_ https://mitpress.mit.edu/9780262525671/the-design-of-everyday-things/[Norman — The Design of Everyday Things: discoverability^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+_Refs:_ https://mitpress.mit.edu/9780262525671/the-design-of-everyday-things/[Norman — The Design of Everyday Things: discoverability^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://wiki.c2.com/?DontRepeatYourself[Don't Repeat Yourself (DRY) — Portland Pattern Repository (c2 wiki)^] · https://en.wikipedia.org/wiki/Reinventing_the_wheel[Reinventing the wheel (the anti-pattern) — Wikipedia^] · https://pragprog.com/tips/[Hunt & Thomas — The Pragmatic Programmer: Tips (DRY, Know Your Tools)^]
 
 `pattern-worth-abstracting` — *Repetition without abstraction*::
 'again / same as before / yet another' — rule of three, worth abstracting?
@@ -441,7 +441,7 @@ _Refs:_ https://mitpress.mit.edu/9780262525671/the-design-of-everyday-things/[No
 ✗ `another one of those adapter classes again` +
 ✓ `this is the 3rd adapter like this — worth a base/template? show me the shared shape`
 +
-_Refs:_ https://martinfowler.com/books/refactoring.html[Fowler — Refactoring: the rule of three (2nd ed., 2018)^] · http://www.extremeprogramming.org/rules/early.html[Kent Beck — YAGNI (You Aren't Gonna Need It, XP)^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^]
+_Refs:_ https://martinfowler.com/books/refactoring.html[Fowler — Refactoring: the rule of three (2nd ed., 2018)^] · http://www.extremeprogramming.org/rules/early.html[Kent Beck — YAGNI (You Aren't Gonna Need It, XP)^] · https://docs.anthropic.com/en/docs/claude-code/skills[Anthropic — Claude Code Skills^] · https://wiki.c2.com/?RuleOfThree[Rule Of Three (wait for the third occurrence) — Portland Pattern Repository (c2 wiki)^] · https://sandimetz.com/blog/2016/1/20/the-wrong-abstraction[Sandi Metz — The Wrong Abstraction ('duplication is cheaper than the wrong abstraction')^] · https://kentcdodds.com/blog/aha-programming[Kent C. Dodds — AHA Programming (Avoid Hasty Abstractions)^]
 
 // END generated-rules
 
@@ -510,7 +510,7 @@ Reads and writes reuse `config.py`'s `build_dashboard` / `api_set` / `api_action
 
 == Anthropic guide alignment (v0.20+)
 
-The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 28 of the 36 shipped rules link to a canonical section (each slug verified against the guide's live section headings), and the remaining 8 are Claude-Code-specific or novel coach concepts with no direct upstream mapping. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
+The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 28 of the 36 shipped rules link to a canonical section (each slug verified against the guide's live section headings), and the remaining 8 are Claude-Code-specific or novel coach concepts with no direct upstream mapping. Beyond the Anthropic guide, every rule also carries several curated external citations (seminal papers, canonical engineering references — Fowler, Google Engineering Practices, the c2 wiki, Sandi Metz — and other vendors' prompt guides) so the catalog isn't opinion-of-one; all were link-checked live. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
 
 == Encouragement layer
 
