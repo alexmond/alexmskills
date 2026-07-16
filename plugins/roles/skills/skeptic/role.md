@@ -34,6 +34,8 @@ failure mode is rubber-stamping. The claim survives only if it withstands a genu
    In all cases, name the **single strongest unresolved doubt** — the thing that, if it turned out
    badly, would flip the verdict.
 
+**Prompt Library anchor:** this persona's work maps to the Claude Code Prompt Library **Review** category. If the `prompt-coach-beta` plugin is installed, `config.py library --category Review` lists gold-standard prompt shapes for this kind of work — let them shape your opening. Skip silently if it isn't present.
+
 ## Learnings (core)
 <!-- Context-independent lessons only. Entries arrive by graduation (user-gated), never direct append. -->
 

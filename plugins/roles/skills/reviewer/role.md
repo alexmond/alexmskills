@@ -23,6 +23,8 @@ then improve — functionality stays identical, quality goes up.
 
 Rule: **behavior unchanged, quality enhanced.** No speculative rewrites — justify every change.
 
+**Prompt Library anchor:** this persona's work maps to the Claude Code Prompt Library **Review** category. If the `prompt-coach-beta` plugin is installed, `config.py library --category Review` lists gold-standard prompt shapes for this kind of work — let them shape your opening. Skip silently if it isn't present.
+
 ## Learnings (core)
 <!-- Context-independent lessons only. Entries arrive by graduation (user-gated), never direct append. -->
 

@@ -1342,7 +1342,8 @@ def cmd_dashboard(cwd: Path) -> int:
 
 
 def cmd_library(cwd: Path, query: str | None, as_json: bool = False,
-                k: int = 3) -> int:
+                k: int = 3, category: str | None = None,
+                role: str | None = None) -> int:
     """v0.47 — look up the closest gold-standard template(s) from Anthropic's
     Claude Code Prompt Library snapshot for a task the user describes, or list
     the library's taxonomy when no query is given. Read-only, offline."""
@@ -1354,6 +1355,24 @@ def cmd_library(cwd: Path, query: str | None, as_json: bool = False,
         print(json.dumps({"error": msg}) if as_json else msg,
               file=sys.stderr)
         return 1
+
+    if category or role:
+        picked = (_library.by_category(category) if category
+                  else _library.by_role(role))
+        label = f"category '{category}'" if category else f"role '{role}'"
+        if as_json:
+            print(json.dumps({"filter": label, "matches": picked,
+                              "source_url": lib.get("source_url")}, indent=2,
+                             ensure_ascii=False))
+            return 0
+        if not picked:
+            print(f"No library templates for {label}.")
+            return 0
+        print(f"Prompt Library templates for {label} ({len(picked)}):\n")
+        for e in picked:
+            print(f"  [{e['cat']} · {e['sdlc']}]  {e['_filled']}")
+        print(f"\nSource: {lib.get('source_url')} (vendored snapshot)")
+        return 0
 
     if not query:
         # Taxonomy overview.
@@ -1435,6 +1454,10 @@ def _main(argv: list[str]) -> int:
                            help="task to match against the prompt-library snapshot")
     s_library.add_argument("-k", dest="k", type=int, default=3,
                            help="how many matches to return (default 3)")
+    s_library.add_argument("--category", default=None,
+                           help="list all templates in a category (e.g. Review)")
+    s_library.add_argument("--role", default=None,
+                           help="list all templates tagged with an org role (e.g. security)")
 
     args = p.parse_args(argv)
     cwd = Path(args.cwd) if args.cwd else Path.cwd()
@@ -1479,7 +1502,9 @@ def _main(argv: list[str]) -> int:
                            args.as_json)
     if verb == "library":
         return cmd_library(cwd, getattr(args, "query", None), args.as_json,
-                           getattr(args, "k", 3))
+                           getattr(args, "k", 3),
+                           getattr(args, "category", None),
+                           getattr(args, "role", None))
     print(f"unknown verb: {verb}", file=sys.stderr)
     return 2
 

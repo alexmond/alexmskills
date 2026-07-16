@@ -22,6 +22,8 @@ time.
    |---|---|
    | "library for `<task>`" / "show me a prompt for `<task>`" | `--json library "<task>"` |
    | "what's in the prompt library?" / no argument | `--json library` (taxonomy) |
+   | "show the `<Category>` templates" (Review / Debug / Refactor / …) | `--json library --category <Category>` |
+   | "prompts for the `<role>` role" (security / pm / ops / …) | `--json library --role <role>` |
 
    Always pass `--json` (before the verb) and `--cwd <repo>`.
 
@@ -43,6 +45,8 @@ time.
   `scripts/gen-prompt-library.py` (fetches the live docs page). It is Anthropic
   documentation content, vendored with attribution — not this plugin's work.
 - Read-only: this never changes config, mastery, or state.
+- The `roles` plugin uses `--category` to anchor each persona (e.g. `reviewer` →
+  `--category Review`); see the role-system's Prompt Library anchors.
 - The coach ALSO uses this matcher passively: when a rule fires and
   `library_hints` is on (default), the collaborator rewrite is grounded in the
   closest library template's phrasing + slot structure.

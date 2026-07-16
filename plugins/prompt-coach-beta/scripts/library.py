@@ -107,3 +107,30 @@ def best(prompt: str, min_score: float = 3.0) -> dict | None:
     weak match is worse than none. `min_score` >= 3.0 requires a category hit."""
     m = match(prompt, k=1, min_score=min_score)
     return m[0] if m else None
+
+
+def by_category(cat: str) -> list[dict]:
+    """All templates in a library category (case-insensitive), each with slots
+    filled. Used by the roles system to anchor a persona in its canonical
+    prompt shapes (e.g. the `reviewer` role → the 'Review' templates)."""
+    cl = (cat or "").lower()
+    out = []
+    for e in load().get("entries", []):
+        if (e.get("cat", "").lower() == cl):
+            d = dict(e)
+            d["_filled"] = fill(e)
+            out.append(d)
+    return out
+
+
+def by_role(role: str) -> list[dict]:
+    """All templates tagged with an org role (pm / design / security / ops /
+    docs / data / marketing), each with slots filled."""
+    rl = (role or "").lower()
+    out = []
+    for e in load().get("entries", []):
+        if rl in [r.lower() for r in e.get("roles", [])]:
+            d = dict(e)
+            d["_filled"] = fill(e)
+            out.append(d)
+    return out

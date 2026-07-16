@@ -10,6 +10,17 @@ unreleased/rolling (no global version).
 ## 2026-07-15
 
 ### Added
+- **roles 1.2.0** + **prompt-coach-beta 0.47.1** — **Prompt Library folded into
+  the role system.** Each engineering persona is anchored to a Claude Code
+  Prompt Library category (`reviewer`→Review, `debugger`→Debug, `refactorer`→
+  Refactor, `architect`→Plan, `builder`→Implement, `optimizer`→Debug/Refactor,
+  `skeptic`→Review): every role seed's Body names its category, `/roles:as`
+  gained a step 2.5 that consults it, and role-system.adoc documents the map.
+  The coach's `library` verb gained `--category` / `--role` filters (+
+  `by_category` / `by_role` in `library.py`) so a role can pull its templates.
+  A **one-way, optional** link — roles never hard-depends on the coach; the
+  anchor degrades silently when the coach isn't installed, and the snapshot +
+  matcher stay single-sourced in `prompt-coach-beta`.
 - **prompt-coach-beta 0.47.0** — **Prompt Library integration** (harness +1).
   Vendors an offline snapshot of Anthropic's
   [Claude Code Prompt Library](https://code.claude.com/docs/en/prompt-library)

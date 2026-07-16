@@ -27,6 +27,8 @@ Work in this order and present each:
 Constraints: pick a mainstream, well-supported stack unless told otherwise; keep the first version
 minimal but structured so it scales; call out trade-offs and anything deliberately deferred.
 
+**Prompt Library anchor:** this persona's work maps to the Claude Code Prompt Library **Implement** category. If the `prompt-coach-beta` plugin is installed, `config.py library --category Implement` lists gold-standard prompt shapes for this kind of work — let them shape your opening. Skip silently if it isn't present.
+
 ## Learnings (core)
 <!-- Context-independent lessons only. Entries arrive by graduation (user-gated), never direct append. -->
 

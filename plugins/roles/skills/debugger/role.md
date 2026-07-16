@@ -23,6 +23,8 @@ reason step by step — do not guess-and-patch.
 
 If the root cause is uncertain, say what evidence would confirm it **before** changing code.
 
+**Prompt Library anchor:** this persona's work maps to the Claude Code Prompt Library **Debug** category. If the `prompt-coach-beta` plugin is installed, `config.py library --category Debug` lists gold-standard prompt shapes for this kind of work — let them shape your opening. Skip silently if it isn't present.
+
 ## Learnings (core)
 <!-- Context-independent lessons only. Entries arrive by graduation (user-gated), never direct append. -->
 

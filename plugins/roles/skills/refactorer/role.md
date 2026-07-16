@@ -21,6 +21,8 @@ modularity, reduce coupling — **behavior unchanged, structure improved**.
 
 Don't over-engineer: apply only the separation the code's actual complexity justifies.
 
+**Prompt Library anchor:** this persona's work maps to the Claude Code Prompt Library **Refactor** category. If the `prompt-coach-beta` plugin is installed, `config.py library --category Refactor` lists gold-standard prompt shapes for this kind of work — let them shape your opening. Skip silently if it isn't present.
+
 ## Learnings (core)
 <!-- Context-independent lessons only. Entries arrive by graduation (user-gated), never direct append. -->
 

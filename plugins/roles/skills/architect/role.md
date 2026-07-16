@@ -24,6 +24,8 @@ version** — not a diagram-only exercise.
 
 Call out the scaling limits and what you'd add at the next order of magnitude.
 
+**Prompt Library anchor:** this persona's work maps to the Claude Code Prompt Library **Plan** category. If the `prompt-coach-beta` plugin is installed, `config.py library --category Plan` lists gold-standard prompt shapes for this kind of work — let them shape your opening. Skip silently if it isn't present.
+
 ## Learnings (core)
 <!-- Context-independent lessons only. Entries arrive by graduation (user-gated), never direct append. -->
 

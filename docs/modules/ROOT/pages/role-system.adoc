@@ -309,6 +309,34 @@ recurring rung-3 hops to a missing owner are the trigger to mint a new role.
 | All of the above, sharing one evolving talent pool | install all three — registries link to shared cores automatically
 |===
 
+[#prompt-library-anchors]
+== Prompt Library anchors (optional enrichment)
+
+Each engineering persona maps to a category of Anthropic's
+https://code.claude.com/docs/en/prompt-library[Claude Code Prompt Library] — the canonical,
+slot-templated prompt shapes for that kind of work. When the `prompt-coach-beta` plugin is
+installed, a role can consult its matching category to ground its opening in a gold-standard shape;
+`/roles:as` does this automatically (step 2.5), and each role's Body names its category.
+
+[cols="1,2",options="header"]
+|===
+| Persona | Prompt Library category
+
+| `architect` | Plan (+ Design)
+| `builder` | Implement (+ Prototype)
+| `debugger` | Debug (+ Incident)
+| `optimizer` | Debug / Refactor (performance)
+| `refactorer` | Refactor
+| `reviewer` | Review (+ Understand)
+| `skeptic` | Review (adversarial lens)
+|===
+
+Pull a category's templates with `config.py library --category <Category>` (or `--role <org-role>`
+for the library's team tags: pm / design / security / ops / docs / data / marketing). This is a
+**one-way, optional** link — the roles plugin never hard-depends on the coach; the anchor degrades
+silently when the coach isn't present. The library snapshot + matcher live in `prompt-coach-beta`
+(single source), so there's no duplicated data.
+
 == Field position
 
 No surveyed public project has roles that *accumulate experience across orchestration contexts*. Large
