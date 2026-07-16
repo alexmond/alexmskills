@@ -47,9 +47,11 @@ COMMANDS
   /prompt-coach-beta:config          Structured config surface — show / get / describe /
                                      set / reset / diff / export / mastery / acceptance /
                                      sources / dashboard (v0.18+)
+  /prompt-coach-beta:library         Match your task to the closest gold-standard template from
+                                     Anthropic's Claude Code Prompt Library (v0.47; offline snapshot)
   /prompt-coach-beta:dashboard       Local web dashboard (v0.44) — stats, mastery by tier with
-                                     reference URLs, and a live config editor. Zero-dependency
-                                     stdlib server on 127.0.0.1. (Raw JSON: `config dashboard`.)
+                                     reference URLs, a live config editor, and a Library tab. Zero-
+                                     dependency stdlib server on 127.0.0.1. (Raw JSON: `config dashboard`.)
 
   (Cross-repo daily review moved out in v0.23. Say "log review" or
    "daily review" to invoke ~/.claude/skills/log-review/ instead.)
@@ -121,6 +123,7 @@ CONFIG OPTIONS REFERENCE
   ack_clean                 ✓ liveness heartbeat on clean prompts (default: true)
   ack_ratio                 Emit the ack every Nth clean prompt (default: 1)
   show_source_urls          Full clickable doc URLs in the coach block (default: true)
+  library_hints             Ground the rewrite in the closest Prompt Library template (default: true)
   collaborator_gate         Make the collaborator block a real confirmation gate (default: false).
                             false = honest: block says it's proceeding, Claude answers the same
                             turn and states which prompt it used (▸ Working from …). true = Claude

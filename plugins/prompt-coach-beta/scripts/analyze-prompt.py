@@ -30,6 +30,18 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Iterable
 
+# Optional sibling task-matcher over the vendored prompt-library snapshot. Used
+# to ground the collaborator rewrite (v0.47); degrades silently if unavailable
+# so the hook never breaks on a missing module/snapshot.
+try:
+    import importlib.util as _ilu
+    _lib_spec = _ilu.spec_from_file_location(
+        "_pc_library", Path(__file__).resolve().parent / "library.py")
+    _library = _ilu.module_from_spec(_lib_spec)
+    _lib_spec.loader.exec_module(_library)
+except Exception:  # noqa: BLE001 — the coach must run without the library
+    _library = None
+
 # ---------------------------------------------------------------------------
 # Paths + defaults
 # ---------------------------------------------------------------------------
@@ -60,6 +72,7 @@ DEFAULT_CONFIG = {
     # https URL so the user can Cmd/Ctrl-click to open the doc. Set false
     # for just the short anchor slug (e.g. "be-clear-and-direct").
     "show_source_urls": True,
+    "library_hints": True,
     # v0.43.0 — collaborator gate. Default False = HONEST proceed: the block
     # states it's proceeding (not "reply yes to proceed"), Claude answers the
     # same turn from the rewrite, and names which prompt it used. True = a
@@ -224,6 +237,18 @@ CONFIG_SCHEMA = {
                        "'be-clear-and-direct') and keep the block compact.",
         "example": True,
         "since": "0.36.0",
+    },
+    "library_hints": {
+        "category": "output",
+        "type": "bool",
+        "description": "When a rule fires, ground the collaborator rewrite in "
+                       "the closest gold-standard template from Anthropic's "
+                       "Claude Code Prompt Library (a vendored, offline "
+                       "snapshot). On by default; the hint is only added when a "
+                       "confident task match exists. Set false to keep rewrites "
+                       "un-anchored.",
+        "example": True,
+        "since": "0.47.0",
     },
     "collaborator_gate": {
         "category": "output",
@@ -987,7 +1012,22 @@ def rule_vague_reference(prompt: str) -> bool:
     pronoun = re.search(r"\b(it|this|that|these|those|the thing)\b", first)
     if not pronoun:
         return False
-    return not _has_referent(first)
+    if _has_referent(first):
+        return False
+    # v0.47 — false-positive fix (calibration against Anthropic's Prompt
+    # Library): a demonstrative followed by a concrete noun ("this codebase",
+    # "these changes", "this design") is a clear noun phrase, not a dangling
+    # pronoun. Only veto for this|that|these|those + a work noun — bare "fix
+    # it" / "improve this" (no following noun) still fires.
+    if re.search(r"\b(this|that|these|those)\s+(?:[a-z]+\s+)?"
+                 r"(codebase|code|repo|repository|changes?|diff|branch|pr|"
+                 r"design|function|file|module|component|class|method|feature|"
+                 r"bug|tests?|error|endpoint|api|script|config|ticket|issue|"
+                 r"project|package|directory|folder|docs?|page|prompt|flow|"
+                 r"logic|output|plan|schema|query|migration|hook|workflow|"
+                 r"pipeline|commit|refactor|patch)\b", first):
+        return False
+    return True
 
 
 ACTION_VERBS = (
@@ -4161,7 +4201,7 @@ The coach's regex fast-filter identified these candidate rules that MIGHT
 apply to this prompt (rule id · one-line concept · Anthropic guide anchor):
 
 {candidate_rules_block}
-
+{library_hint}
 Read the last few turns of our conversation as context. Then, in this
 same response, do the following BEFORE addressing the user's actual
 question:
@@ -4252,9 +4292,34 @@ def _v34_candidate_rules_block(rule_ids: list[str],
     return "\n".join(lines) if lines else "  (none — this shouldn't happen)"
 
 
+def _v34_library_hint(prompt_text: str, enabled: bool) -> str:
+    """v0.47 — if the vendored prompt-library snapshot has a confident
+    task-shape match for this prompt, return a block telling Claude to ground
+    its rewrite in that gold-standard template. Empty string when disabled, the
+    library is unavailable, or no confident match exists (a weak match is worse
+    than none)."""
+    if not enabled or _library is None:
+        return ""
+    try:
+        m = _library.best(prompt_text)
+    except Exception:  # noqa: BLE001
+        return ""
+    if not m:
+        return ""
+    return (
+        "\nAnthropic's Claude Code Prompt Library has a gold-standard template "
+        f"for this task shape ({m.get('cat')} · {m.get('sdlc')}):\n"
+        f"  «{m.get('_filled', '')}»\n"
+        "If it genuinely fits the user's intent, shape your rewrite after it — "
+        "match its phrasing and slot structure, and adapt its example values "
+        "(file paths, formats) to the user's actual context. Ignore it if the "
+        "task is different; do not force it.\n")
+
+
 def _v34_context_for_claude(prompt_text: str, rule_ids: list[str],
                             show_urls: bool = True,
-                            gate: bool = False) -> str:
+                            gate: bool = False,
+                            library_hints: bool = False) -> str:
     """Build the v0.34 additionalContext instruction telling Claude to run
     the coach analysis inline as part of its response.
 
@@ -4301,6 +4366,7 @@ def _v34_context_for_claude(prompt_text: str, rule_ids: list[str],
     return _V34_INSTRUCTION_TEMPLATE.format(
         prompt_text=prompt_text[:2000],
         candidate_rules_block=_v34_candidate_rules_block(rule_ids, show_urls),
+        library_hint=_v34_library_hint(prompt_text, library_hints),
         sources_instruction=sources_instruction,
         proceed_line=proceed_line,
         after_block=after_block,
@@ -5087,7 +5153,8 @@ def main() -> int:
             context_line = _v34_context_for_claude(
                 prompt_raw, list(fired),
                 show_urls=bool(cfg.get("show_source_urls", True)),
-                gate=bool(cfg.get("collaborator_gate", False)))
+                gate=bool(cfg.get("collaborator_gate", False)),
+                library_hints=bool(cfg.get("library_hints", True)))
             outcome = f"collaborator:candidates={len(fired)}"
             recent.append(int(g.get("prompt_count", 0)))
         g["recent_nudge_prompts"] = recent

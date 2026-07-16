@@ -46,6 +46,13 @@ _spec.loader.exec_module(_analyzer)
 CONFIG_SCHEMA = _analyzer.CONFIG_SCHEMA
 DEFAULT_CONFIG = _analyzer.DEFAULT_CONFIG
 RULES = _analyzer.RULES
+
+# Sibling task-matcher over the vendored prompt-library snapshot (optional).
+_lib_spec = importlib.util.spec_from_file_location(
+    "_prompt_coach_library", _HERE / "library.py")
+_library = importlib.util.module_from_spec(_lib_spec)
+sys.modules["_prompt_coach_library"] = _library
+_lib_spec.loader.exec_module(_library)
 RULE_HELP = getattr(_analyzer, "RULE_HELP", {})
 POSITIVES = getattr(_analyzer, "POSITIVES", [])
 _anthropic_url = getattr(_analyzer, "_anthropic_url", lambda ref: None)
@@ -1252,7 +1259,27 @@ def build_dashboard(cwd: Path) -> dict:
         "config": config,
         "mastery_analysis": {k: [r["id"] for r in v]
                              for k, v in analysis.items()},
+        "library": _library_section(),
     }
+
+
+def _library_section() -> dict:
+    """The vendored prompt-library snapshot, shaped for the dashboard's Library
+    tab: every template with its slots filled, plus the source URL."""
+    lib = _library.load()
+    entries = []
+    for e in lib.get("entries", []):
+        entries.append({
+            "id": e.get("id"),
+            "cat": e.get("cat"),
+            "sdlc": e.get("sdlc"),
+            "roles": e.get("roles", []),
+            "prompt": _library.fill(e),
+        })
+    return {"count": lib.get("count", len(entries)),
+            "source_url": lib.get("source_url"),
+            "note": lib.get("note"),
+            "entries": entries}
 
 
 def api_set(cwd: Path, key: str, value, scope: str) -> dict:
@@ -1314,6 +1341,59 @@ def cmd_dashboard(cwd: Path) -> int:
     return 0
 
 
+def cmd_library(cwd: Path, query: str | None, as_json: bool = False,
+                k: int = 3) -> int:
+    """v0.47 — look up the closest gold-standard template(s) from Anthropic's
+    Claude Code Prompt Library snapshot for a task the user describes, or list
+    the library's taxonomy when no query is given. Read-only, offline."""
+    lib = _library.load()
+    entries = lib.get("entries", [])
+    if not entries:
+        msg = ("prompt-library snapshot not found — run "
+               "`scripts/gen-prompt-library.py` to fetch it.")
+        print(json.dumps({"error": msg}) if as_json else msg,
+              file=sys.stderr)
+        return 1
+
+    if not query:
+        # Taxonomy overview.
+        cats: dict[str, int] = {}
+        phases: dict[str, int] = {}
+        for e in entries:
+            cats[e.get("cat", "?")] = cats.get(e.get("cat", "?"), 0) + 1
+            phases[e.get("sdlc", "?")] = phases.get(e.get("sdlc", "?"), 0) + 1
+        if as_json:
+            print(json.dumps({"count": len(entries), "categories": cats,
+                              "phases": phases, "source_url": lib.get("source_url")},
+                             indent=2))
+            return 0
+        print(f"Claude Code Prompt Library — {len(entries)} templates "
+              f"(source: {lib.get('source_url')})")
+        print("\n  By phase:    " + " · ".join(f"{k}({v})" for k, v in sorted(phases.items())))
+        print("  By category: " + " · ".join(f"{k}({v})" for k, v in sorted(cats.items())))
+        print("\n  Look one up:  config.py library \"review my auth changes\"")
+        return 0
+
+    matches = _library.match(query, k=k)
+    if as_json:
+        print(json.dumps({"query": query, "matches": matches,
+                          "source_url": lib.get("source_url")}, indent=2,
+                         ensure_ascii=False))
+        return 0
+    if not matches:
+        print(f"No close library template for: «{query}»")
+        return 0
+    print(f"Closest library templates for: «{query}»\n")
+    for e in matches:
+        print(f"  [{e['cat']} · {e['sdlc']}]  (score {e['_score']})")
+        print(f"    {e['_filled']}")
+        if e.get("roles"):
+            print(f"    roles: {', '.join(e['roles'])}")
+        print()
+    print(f"Source: {lib.get('source_url')} (vendored snapshot)")
+    return 0
+
+
 def _main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(prog="config", description=__doc__)
     p.add_argument("--scope", choices=["global", "repo"], default="global")
@@ -1350,6 +1430,11 @@ def _main(argv: list[str]) -> int:
                            help="a prompt to analyze against the full catalog")
     s_analyze.add_argument("--last", dest="last_n", type=int, default=None,
                            help="instead analyze the last N logged prompts")
+    s_library = sub.add_parser("library")
+    s_library.add_argument("query", nargs="?", default=None,
+                           help="task to match against the prompt-library snapshot")
+    s_library.add_argument("-k", dest="k", type=int, default=3,
+                           help="how many matches to return (default 3)")
 
     args = p.parse_args(argv)
     cwd = Path(args.cwd) if args.cwd else Path.cwd()
@@ -1392,6 +1477,9 @@ def _main(argv: list[str]) -> int:
     if verb == "analyze":
         return cmd_analyze(cwd, args.text, getattr(args, "last_n", None),
                            args.as_json)
+    if verb == "library":
+        return cmd_library(cwd, getattr(args, "query", None), args.as_json,
+                           getattr(args, "k", 3))
     print(f"unknown verb: {verb}", file=sys.stderr)
     return 2
 

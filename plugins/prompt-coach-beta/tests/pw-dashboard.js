@@ -63,6 +63,7 @@ const waitUp = (base, ms = 10000) => new Promise((res, rej) => {
     const pages = [
       ['stats', '.tiles', 'Stats'], ['mastery', '.rule', 'Mastery'],
       ['config', '.cfg .k', 'Config'], ['options', '#options', 'Options'],
+      ['library', '.libitem', 'Library'],
     ];
     for (const [hash, sel, label] of pages) {
       await page.goto(`${base}/#${hash}`, { waitUntil: 'networkidle' });

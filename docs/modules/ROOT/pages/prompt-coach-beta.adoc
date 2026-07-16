@@ -60,7 +60,8 @@ This is informational, not praise — a heartbeat that also shows your progress 
 | `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 39-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
 | `+/prompt-coach-beta:stats+` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status.
 | `+/prompt-coach-beta:mastery+` | *"Which rules mastered, which need reset?"* Per-rule breakdown with well-tested / barely-tested / untested analysis + close-to-mastery.
-| `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `paths` / `analyze` / `diff` / `export` / `reset`.
+| `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `paths` / `analyze` / `library` / `diff` / `export` / `reset`.
+| `+/prompt-coach-beta:library+` | *"Show me a prompt for X."* Matches your task to the closest gold-standard template from xref:#prompt-library[Anthropic's Claude Code Prompt Library].
 | `+/prompt-coach-beta:help+` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet.
 | `+/prompt-coach-beta:report-issue+` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only).
 |===
@@ -523,8 +524,23 @@ The `quick` flow walks you through the high-value categorical settings (`ack_cle
 * **Mastery** — every rule grouped by tier (L1–L6) with a status badge, `demos/min` progress, fires, its guidance, clickable **reference URLs** (Anthropic guide + every cited source), and a per-rule **reset** button.
 * **Config editor** — every schema key with its description and a type-aware control (checkbox / number / select / text) that **saves live** to the chosen scope (global or repo). `↺` resets a key to default.
 * **Options** — reset-all-mastery, refresh, open the Anthropic guide.
+* **Library** — browse xref:#prompt-library[Anthropic's Prompt Library] templates by phase / category / role, with a text filter.
 
 Reads and writes reuse `config.py`'s `build_dashboard` / `api_set` / `api_action`, so schema validation and scope rules are **identical to the CLI** — the UI is a view + thin write path, not a second implementation. Local-only, no auth by design (don't bind it off-host). For the raw consolidated JSON without the server: `config.py --cwd <repo> dashboard`.
+
+[#prompt-library]
+== Prompt Library integration (v0.47+)
+
+The coach doesn't only tell you what's *wrong* with a prompt — it can hand you the *right* one. It vendors an offline snapshot of https://code.claude.com/docs/en/prompt-library[Anthropic's Claude Code Prompt Library] (52 gold-standard, tagged, slot-templated prompts across 5 SDLC phases and 15 categories) and matches your task to the closest template with a zero-dependency keyword/tag matcher (no network, no embeddings — cheap enough to run in the hook).
+
+Two touchpoints:
+
+* **On-demand lookup** — `+/prompt-coach-beta:library "<task>"+` (or just say *"show me a prompt for X"*) returns the closest template(s), which Claude then offers to adapt to your actual file paths and run. `config.py library` with no query prints the taxonomy. Browse them all on the dashboard's **Library** tab.
+* **Rewrite grounding** — when a rule fires and `library_hints` is on (default), the collaborator rewrite is anchored to the closest template's phrasing and slot structure, so your improved prompt matches Anthropic's house style. The hint is only added when a *confident* task match exists (a weak match is worse than none).
+
+The snapshot lives at `data/prompt-library.json`; refresh it deliberately with `make library-refresh` (runs `scripts/gen-prompt-library.py`, which fetches + parses the live docs page). The prompts are Anthropic documentation content, vendored with attribution — not this plugin's work.
+
+The same snapshot doubles as a **calibration corpus** for the coach itself: running the analyzer over all 52 gold prompts surfaces which rules over-fire on genuinely good prompts (`make library-audit`).
 
 == Source URLs and skill access (v0.36+)
 

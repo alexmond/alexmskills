@@ -43,14 +43,15 @@ Proceeding with this rewrite now — reply "no" to redo from your original, or "
 
 On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The coach is a suggestion, not a block — Claude answers your prompt normally. By default (v0.43) it **proceeds honestly**: the block says it's proceeding (not "reply yes to proceed") and Claude opens with a **`▸ Working from the rewrite / your original`** line so you always see which prompt drove the answer; silence = accept, and a `no`/`edit` next turn corrects. Prefer a real pause? Set `collaborator_gate: true` and Claude stops after the block and waits for your yes/no/edit (one extra round-trip per fired prompt). Rules graduate to "mastered" once you've **demonstrated** the good technique `min_demonstrations` times (default 3, v0.40 earned-mastery model), then the next dormant rule activates.
 
-### The 6 slash commands
+### The slash commands
 
 | Command | When to use |
 |---|---|
 | `/prompt-coach-beta:stats` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status. |
 | `/prompt-coach-beta:mastery` | *"Which rules mastered, which need reset?"* Per-rule breakdown + analysis (well-tested / barely-tested / untested masteries; close-to-mastery). |
-| `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `set`, `describe`, `options`, `mastery`, `sources`, `diff`, `export`, `reset`, `dashboard`. |
-| `/prompt-coach-beta:dashboard` | *"Show me a UI."* Local web dashboard (v0.44) — stats, mastery by tier with reference URLs, live config editor. |
+| `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `set`, `describe`, `options`, `mastery`, `sources`, `library`, `diff`, `export`, `reset`, `dashboard`. |
+| `/prompt-coach-beta:library` | *"Show me a prompt for X."* Matches your task to the closest gold-standard template from Anthropic's Claude Code Prompt Library (v0.47). |
+| `/prompt-coach-beta:dashboard` | *"Show me a UI."* Local web dashboard (v0.44) — stats, mastery by tier with reference URLs, live config editor, and a Library tab. |
 | `/prompt-coach-beta:help` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet. |
 | `/prompt-coach-beta:report-issue` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only). |
 
@@ -63,6 +64,20 @@ config editor** — every schema key with its description and a type-aware contr
 select / text) that **saves to global or repo scope** on change. Writes reuse `config.py`'s
 `build_dashboard` / `api_set` / `api_action`, so validation and scope rules are identical to the CLI.
 Local-only, no auth by design. Raw JSON without the server: `config.py … dashboard`.
+
+#### Prompt Library integration (v0.47)
+
+The coach vendors an offline snapshot of [Anthropic's Claude Code Prompt Library](https://code.claude.com/docs/en/prompt-library)
+— 52 gold-standard, tagged, slot-templated prompts — and matches your task to the closest one with a
+zero-dependency keyword/tag matcher (`scripts/library.py`, no network/embeddings). Two touchpoints:
+
+- **On-demand** — `/prompt-coach-beta:library "<task>"` or *"show me a prompt for X"* returns the
+  closest template(s), offered adapted to your file paths. Browse all on the dashboard's **Library** tab.
+- **Rewrite grounding** — when a rule fires and `library_hints` is on (default), the collaborator
+  rewrite is anchored to the closest template's phrasing + slots (only when a confident match exists).
+
+Refresh the snapshot with `make library-refresh` (fetches the live docs). The prompts are Anthropic
+documentation content, vendored with attribution.
 
 ### Say-it phrases (natural language)
 

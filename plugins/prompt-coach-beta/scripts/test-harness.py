@@ -457,6 +457,48 @@ def t_workflow_fanout_no_verify_rule():
           f"pos={bool(pos_ok)} complementary={bool(complementary)}")
 
 
+def t_library_integration():
+    """v0.47 — the vendored prompt-library snapshot loads, the matcher returns a
+    sensible top hit for a task, junk matches nothing above the best() floor, and
+    the collaborator rewrite gets a library hint only when library_hints is on
+    and a confident match exists."""
+    import importlib.util
+    lspec = importlib.util.spec_from_file_location("_lib", HERE / "library.py")
+    lib = importlib.util.module_from_spec(lspec)
+    sys.modules["_lib"] = lib
+    lspec.loader.exec_module(lib)
+    loaded = lib.load().get("count", 0)
+    review = lib.match("review my auth changes for security issues", k=1)
+    review_ok = bool(review) and review[0]["cat"] == "Review"
+    junk_ok = lib.best("make me a sandwich") is None  # below the 3.0 floor
+
+    aspec = importlib.util.spec_from_file_location("_an47", ANALYZER)
+    an = importlib.util.module_from_spec(aspec)
+    sys.modules["_an47"] = an
+    aspec.loader.exec_module(an)
+    on = an._v34_context_for_claude("review my auth changes", ["no-role-for-critique"],
+                                    library_hints=True)
+    off = an._v34_context_for_claude("review my auth changes", ["no-role-for-critique"],
+                                     library_hints=False)
+    hint_ok = ("gold-standard template" in on) and ("gold-standard template" not in off)
+    cfg_ok = "library_hints" in an.DEFAULT_CONFIG and "library_hints" in an.CONFIG_SCHEMA
+
+    # v0.47 FP fix: demonstrative + concrete noun ("this codebase") is a
+    # referent, not a dangling pronoun — must NOT fire vague-reference, while a
+    # genuinely bare demonstrative still does.
+    vr = an.rule_vague_reference
+    fp_ok = (not vr("review this codebase for security issues")
+             and not vr("port this python module to rust cleanly")
+             and not vr("commit these changes with a clear message")
+             and vr("this is broken, please help me out")
+             and vr("clean up that and move on already"))
+
+    check("library snapshot loads, matcher ranks + gates, rewrite hint toggles, vague-ref FP fixed",
+          bool(loaded >= 40 and review_ok and junk_ok and hint_ok and cfg_ok and fp_ok),
+          f"loaded={loaded} review={review_ok} junk={junk_ok} hint={hint_ok} "
+          f"cfg={cfg_ok} fp_fix={fp_ok}")
+
+
 def t_v46_rules():
     """v0.46 — the three rules mined from the researched source sweep fire on
     their trigger, stay quiet on the veto/negative, are registered, and each
@@ -665,6 +707,7 @@ CHECKS = [
     t_incremental_routing_rule,
     t_workflow_fanout_no_verify_rule,
     t_v46_rules,
+    t_library_integration,
     t_collaborator_gate_configurable,
     t_rule_help_covers_all,
     t_rules_doc_in_sync,

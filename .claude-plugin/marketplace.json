@@ -177,7 +177,7 @@
       "displayName": "Prompt Coach (beta)",
       "source": "./plugins/prompt-coach-beta",
       "description": "Watches every prompt you send Claude Code and nudges you toward better prompting habits — fundamentals (definition-of-done, guardrails, verification), classical techniques (few-shot, chain-of-thought, rubric, uncertainty budget), goals & loops, Claude-Code-native tool delegation (plan mode, TaskCreate, parallel agents, roles, brainstorm-panel, Workflow), and skill-awareness (rule of three). Also cheers you on: 19 positive detectors with sparing, evidence-based praise (Brophy/Dweck/Fogg/Kohn). Conversational short-circuit skips analysis on approvals / multi-choice picks / continuations. Typo-tolerant Levenshtein pre-pass for dyslexic-friendly matching. Configurable nudge_style (both / silent / log-only). Beta — the `-beta` suffix is intentional; graduates to `prompt-coach` when it earns its stable slot.",
-      "version": "0.46.0",
+      "version": "0.47.0",
       "category": "beta",
       "keywords": [
         "prompt-engineering",

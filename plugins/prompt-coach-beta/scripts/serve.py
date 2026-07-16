@@ -142,6 +142,16 @@ PAGE = r"""<!doctype html>
   .catnav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
   .catnav button{background:transparent;color:var(--muted);border:1px solid var(--line)}
   .catnav button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .libphase{margin:16px 0}
+  .libphase>.h{text-transform:uppercase;font-size:11px;letter-spacing:.06em;color:var(--muted);
+    margin-bottom:6px;font-weight:700}
+  .libitem{background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;margin-bottom:8px}
+  .libtags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+  .tag{font-size:11px;padding:1px 8px;border-radius:20px;background:var(--accent);color:#fff}
+  .tag.role{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .libprompt{font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.5;
+    color:var(--ink);white-space:pre-wrap}
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
     background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;
     opacity:0;transition:opacity .2s;pointer-events:none;font-size:13px}
@@ -172,13 +182,22 @@ PAGE = r"""<!doctype html>
     <h2>Options</h2>
     <div class="card" id="options"></div>
   </section>
+  <section class="page" data-page="library">
+    <h2>Prompt Library <span class="note" id="libtot" style="font-weight:400"></span></h2>
+    <p class="note" id="libnote"></p>
+    <input id="libsearch" placeholder="filter templates…" oninput="renderLibrary()"
+           style="width:100%;padding:8px 10px;margin:6px 0 4px;border:1px solid var(--line);
+                  border-radius:8px;background:var(--card);color:var(--ink)">
+    <div class="catnav" id="libnav"></div>
+    <div id="library"></div>
+  </section>
 </main>
 <div id="toast"></div>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-let DATA=null, CAT='all', SCOPE='global';
-const PAGES=[['stats','Stats'],['mastery','Mastery'],['config','Config'],['options','Options']];
+let DATA=null, CAT='all', SCOPE='global', LIBCAT='all';
+const PAGES=[['stats','Stats'],['mastery','Mastery'],['config','Config'],['options','Options'],['library','Library']];
 const TIER={1:'fundamentals',2:'intermediate',3:'classical prompting',
   4:'goals & loops',5:'Claude-Code tool-native',6:'skill-awareness'};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -207,8 +226,32 @@ function render(){
   $('#nav').innerHTML=PAGES.map(([p,l])=>`<button data-p="${p}" onclick="location.hash='${p}'">${l}</button>`).join('');
   renderStats();
   $('#mtot').textContent=`(${DATA.stats.totals.mastered}/${DATA.stats.totals.all} mastered)`;
-  renderMastery(); renderCatnav(); renderConfig(); renderOptions();
+  renderMastery(); renderCatnav(); renderConfig(); renderOptions(); renderLibrary();
   route();
+}
+
+function setLibCat(c){LIBCAT=c;renderLibrary();}
+function renderLibrary(){
+  const lib=DATA.library||{entries:[],count:0};
+  $('#libtot').textContent=`(${lib.count} gold-standard templates)`;
+  $('#libnote').innerHTML=`Anthropic's Claude Code Prompt Library, vendored as an offline snapshot. `
+    +`Say <b>"show me a prompt for X"</b> or run <code>/prompt-coach-beta:library</code> to match one to your task. `
+    +(lib.source_url?`<a href="${esc(lib.source_url)}" target="_blank" rel="noopener">source ↗</a>`:'');
+  const cats=['all',...[...new Set(lib.entries.map(e=>e.cat))].sort()];
+  $('#libnav').innerHTML=cats.map(c=>`<button class="${c===LIBCAT?'on':''}" onclick="setLibCat('${c}')">${esc(c)}</button>`).join('');
+  const q=($('#libsearch').value||'').toLowerCase();
+  const rows=lib.entries.filter(e=>(LIBCAT==='all'||e.cat===LIBCAT)
+      &&(!q||e.prompt.toLowerCase().includes(q)||(e.cat||'').toLowerCase().includes(q)));
+  const byPhase={};
+  rows.forEach(e=>{(byPhase[e.sdlc]=byPhase[e.sdlc]||[]).push(e);});
+  const order=['discover','design','build','ship','operate'];
+  $('#library').innerHTML=order.filter(p=>byPhase[p]).map(p=>
+    `<div class="libphase"><div class="h">${esc(p)}</div>`
+    +byPhase[p].map(e=>`<div class="libitem">
+        <div class="libtags"><span class="tag">${esc(e.cat)}</span>`
+        +(e.roles||[]).map(r=>`<span class="tag role">${esc(r)}</span>`).join('')+`</div>
+        <div class="libprompt">${esc(e.prompt)}</div></div>`).join('')
+    +`</div>`).join('')||'<p class="note">No templates match that filter.</p>';
 }
 
 function segbar(segs,total){

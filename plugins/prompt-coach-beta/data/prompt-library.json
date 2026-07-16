@@ -1,0 +1,694 @@
+{
+  "source_url": "https://code.claude.com/docs/en/prompt-library",
+  "note": "Anthropic Claude Code Prompt Library — documentation content, vendored as an offline snapshot for local task-matching, with attribution. Not original to this plugin. Refresh with scripts/gen-prompt-library.py.",
+  "count": 52,
+  "entries": [
+    {
+      "id": "get-oriented-in-a",
+      "sdlc": "discover",
+      "cat": "Onboard",
+      "src": "workflows",
+      "nextHref": "/en/memory",
+      "prompt": "give me an overview of this codebase: architecture, key directories, and how the pieces connect",
+      "roles": [],
+      "startN": 1
+    },
+    {
+      "id": "explain-unfamiliar-code",
+      "sdlc": "discover",
+      "cat": "Understand",
+      "src": "workflows",
+      "nextHref": "/en/output-styles",
+      "prompt": "explain what {path} does and how data flows through it. write it up as {format}",
+      "roles": [],
+      "slots": {
+        "path": "src/scheduler/queue.ts",
+        "format": "an HTML page with a diagram, then open it in my browser"
+      }
+    },
+    {
+      "id": "find-where-something-happens",
+      "sdlc": "discover",
+      "cat": "Understand",
+      "src": "workflows",
+      "prompt": "where do we {behavior}?",
+      "roles": [],
+      "slots": {
+        "behavior": "validate uploaded file types"
+      },
+      "startN": 2
+    },
+    {
+      "id": "see-what-depends-on",
+      "sdlc": "discover",
+      "cat": "Understand",
+      "src": "workflows",
+      "prompt": "what would break if I deleted {target}?",
+      "roles": [],
+      "slots": {
+        "target": "the retryWithBackoff helper"
+      }
+    },
+    {
+      "id": "trace-how-code-evolved",
+      "sdlc": "discover",
+      "cat": "Understand",
+      "src": "best-practices",
+      "prompt": "look through the commit history of {path} and summarize how it evolved and why",
+      "roles": [],
+      "slots": {
+        "path": "internal/auth/session.go"
+      }
+    },
+    {
+      "id": "scope-a-change-before",
+      "sdlc": "discover",
+      "cat": "Understand",
+      "src": "teams",
+      "prompt": "which files would I need to touch to {change}?",
+      "roles": [
+        "pm",
+        "design"
+      ],
+      "slots": {
+        "change": "add a dark mode toggle to settings"
+      }
+    },
+    {
+      "id": "ask-the-codebase-a",
+      "sdlc": "discover",
+      "cat": "Understand",
+      "src": "teams",
+      "nextHref": "/en/output-styles",
+      "prompt": "I am a {role}. walk me through what happens when a user {action}, from the UI down to the result",
+      "roles": [
+        "pm"
+      ],
+      "slots": {
+        "role": "PM",
+        "action": "clicks Export to PDF"
+      }
+    },
+    {
+      "id": "plan-a-multi-file",
+      "sdlc": "design",
+      "cat": "Plan",
+      "src": "workflows",
+      "prompt": "plan how to refactor the {target} to {goal}. list the files you would change, but don\\",
+      "roles": [
+        "pm",
+        "design"
+      ],
+      "slots": {
+        "target": "payment module",
+        "goal": "support multiple currencies"
+      }
+    },
+    {
+      "id": "draft-a-spec-by",
+      "sdlc": "design",
+      "cat": "Plan",
+      "src": "best-practices",
+      "nextHref": "/en/skills",
+      "prompt": "I want to build {feature}. interview me about implementation, UX, edge cases, and tradeoffs until we have covered everything, then write the spec to SPEC.md",
+      "roles": [
+        "pm"
+      ],
+      "slots": {
+        "feature": "per-workspace rate limits"
+      }
+    },
+    {
+      "id": "turn-a-meeting-into",
+      "sdlc": "design",
+      "cat": "Plan",
+      "src": "teams",
+      "nextHref": "/en/skills",
+      "prompt": "read {input} and write up the action items, then create a {tracker} ticket for each with acceptance criteria",
+      "roles": [
+        "pm"
+      ],
+      "slots": {
+        "input": "@meeting-notes.md",
+        "tracker": "Linear"
+      }
+    },
+    {
+      "id": "map-edge-cases-before",
+      "sdlc": "design",
+      "cat": "Plan",
+      "src": "teams",
+      "prompt": "list the error states, empty states, and edge cases for {feature} that the design needs to cover",
+      "roles": [
+        "design",
+        "pm"
+      ],
+      "slots": {
+        "feature": "the file upload flow"
+      }
+    },
+    {
+      "id": "turn-a-mockup-into",
+      "sdlc": "design",
+      "cat": "Prototype",
+      "src": "teams",
+      "prompt": "here is a mockup. build a working prototype I can click through, matching the layout and states shown",
+      "roles": [
+        "design",
+        "pm",
+        "marketing"
+      ]
+    },
+    {
+      "id": "implement-from-a-screenshot",
+      "sdlc": "design",
+      "cat": "Prototype",
+      "src": "best-practices",
+      "nextHref": "/en/goal",
+      "prompt": "implement this design, then take a screenshot of the result, compare it to the original, and fix any differences",
+      "roles": [
+        "design"
+      ]
+    },
+    {
+      "id": "follow-an-existing-pattern",
+      "sdlc": "build",
+      "cat": "Implement",
+      "src": "best-practices",
+      "nextHref": "/en/memory",
+      "prompt": "look at how {example} is implemented to understand the pattern, then build {new} the same way",
+      "roles": [],
+      "slots": {
+        "example": "the GitHub webhook handler",
+        "new": "a Stripe webhook handler"
+      }
+    },
+    {
+      "id": "generate-docs-for-code",
+      "sdlc": "build",
+      "cat": "Implement",
+      "src": "workflows",
+      "prompt": "find {scope} without {format} comments and add them, matching the style already used in the file",
+      "roles": [
+        "docs"
+      ],
+      "slots": {
+        "scope": "the public functions in src/auth/",
+        "format": "JSDoc"
+      }
+    },
+    {
+      "id": "add-a-small-well",
+      "sdlc": "build",
+      "cat": "Implement",
+      "src": "workflows",
+      "prompt": "add a {endpoint} endpoint that returns {payload}",
+      "roles": [],
+      "slots": {
+        "endpoint": "/health",
+        "payload": "the app version and uptime"
+      }
+    },
+    {
+      "id": "build-a-small-internal",
+      "sdlc": "build",
+      "cat": "Implement",
+      "src": "teams",
+      "prompt": "create a {tool} using HTML, CSS, and vanilla JavaScript, then open it in my browser",
+      "roles": [
+        "pm",
+        "design",
+        "marketing",
+        "docs"
+      ],
+      "slots": {
+        "tool": "drag-and-drop Kanban board with three columns"
+      }
+    },
+    {
+      "id": "work-an-issue-end",
+      "sdlc": "build",
+      "cat": "Implement",
+      "src": "workflows",
+      "prompt": "read issue #{issue}, implement the fix, and run the tests",
+      "roles": [],
+      "slots": {
+        "issue": "312"
+      }
+    },
+    {
+      "id": "find-and-update-copy",
+      "sdlc": "build",
+      "cat": "Implement",
+      "src": "teams",
+      "prompt": "find every place we say \"{copy}\" or a close variant, show me each one in context, then update them all to \"{new}\". leave tests and the changelog alone",
+      "roles": [
+        "design",
+        "docs",
+        "marketing"
+      ],
+      "slots": {
+        "copy": "Sign up free",
+        "new": "Start free trial"
+      }
+    },
+    {
+      "id": "draft-from-past-examples",
+      "sdlc": "build",
+      "cat": "Implement",
+      "src": "legal",
+      "nextHref": "/en/skills",
+      "prompt": "read the {examples} in {folder} to learn the structure and voice, then draft a new one for {topic}",
+      "roles": [
+        "docs",
+        "marketing",
+        "pm"
+      ],
+      "slots": {
+        "examples": "privacy impact assessments",
+        "folder": "legal/pia/",
+        "topic": "the new analytics integration"
+      }
+    },
+    {
+      "id": "write-tests-run-them",
+      "sdlc": "build",
+      "cat": "Test",
+      "src": "workflows",
+      "nextHref": "/en/memory",
+      "prompt": "write tests for {path}, run them, and fix any failures",
+      "roles": [],
+      "slots": {
+        "path": "app/parsers/feed.py"
+      },
+      "startN": 4
+    },
+    {
+      "id": "drive-implementation-from-tests",
+      "sdlc": "build",
+      "cat": "Test",
+      "src": "ebook",
+      "prompt": "write tests for {feature} first, then implement it until they pass",
+      "roles": [],
+      "slots": {
+        "feature": "the password reset flow"
+      }
+    },
+    {
+      "id": "fill-gaps-from-a",
+      "sdlc": "build",
+      "cat": "Test",
+      "src": "workflows",
+      "nextHref": "/en/goal",
+      "prompt": "read {report} and add tests for the lowest-covered files until each is above {target}%",
+      "roles": [],
+      "slots": {
+        "report": "coverage/coverage-summary.json",
+        "target": "80"
+      }
+    },
+    {
+      "id": "migrate-a-pattern-across",
+      "sdlc": "build",
+      "cat": "Refactor",
+      "src": "workflows",
+      "prompt": "migrate everything from {from} to {to}: identify every place that needs to change, then make the changes",
+      "roles": [],
+      "slots": {
+        "from": "the old logging API",
+        "to": "the structured logger"
+      }
+    },
+    {
+      "id": "port-code-between-languages",
+      "sdlc": "build",
+      "cat": "Refactor",
+      "src": "teams",
+      "prompt": "port {source} to {target}, keeping the same {keep}",
+      "roles": [],
+      "slots": {
+        "source": "this Python module",
+        "target": "Rust",
+        "keep": "public API and test behavior"
+      }
+    },
+    {
+      "id": "optimize-against-a-measurable",
+      "sdlc": "build",
+      "cat": "Refactor",
+      "src": "ebook",
+      "nextHref": "/en/goal",
+      "prompt": "optimize {target} to bring {metric} from {current} down to under {goal}",
+      "roles": [
+        "data"
+      ],
+      "slots": {
+        "target": "the search query",
+        "metric": "p95 latency",
+        "current": "2s",
+        "goal": "500ms"
+      }
+    },
+    {
+      "id": "fix-a-precise-visual",
+      "sdlc": "build",
+      "cat": "Refactor",
+      "src": "ebook",
+      "nextHref": "/en/desktop#preview-your-app",
+      "prompt": "the {element} extends {amount} beyond the {container} on {viewport}. fix it.",
+      "roles": [
+        "design"
+      ],
+      "slots": {
+        "element": "login button",
+        "amount": "20px",
+        "container": "card border",
+        "viewport": "mobile"
+      }
+    },
+    {
+      "id": "review-your-changes-before",
+      "sdlc": "build",
+      "cat": "Review",
+      "src": "workflows",
+      "nextHref": "/en/commands",
+      "prompt": "review my uncommitted changes and flag anything that looks risky before I commit",
+      "roles": [],
+      "startN": 5
+    },
+    {
+      "id": "review-a-pull-request",
+      "sdlc": "build",
+      "cat": "Review",
+      "src": "workflows",
+      "nextHref": "/en/code-review",
+      "prompt": "review PR #{pr} and summarize what changed, then list any concerns",
+      "roles": [],
+      "slots": {
+        "pr": "247"
+      }
+    },
+    {
+      "id": "review-infrastructure-changes-before",
+      "sdlc": "build",
+      "cat": "Review",
+      "src": "teams",
+      "prompt": "here is my Terraform plan output. what is this going to do, and is anything here going to cause problems?",
+      "roles": [
+        "security",
+        "ops"
+      ]
+    },
+    {
+      "id": "run-a-security-review",
+      "sdlc": "build",
+      "cat": "Review",
+      "src": "best-practices",
+      "nextHref": "/en/sub-agents",
+      "prompt": "use a subagent to review {path} for security issues and report what it finds",
+      "roles": [
+        "security"
+      ],
+      "slots": {
+        "path": "src/api/"
+      }
+    },
+    {
+      "id": "review-content-before-sending",
+      "sdlc": "build",
+      "cat": "Review",
+      "src": "legal",
+      "nextHref": "/en/skills",
+      "prompt": "review {file} for {concerns} and list anything I should fix before it goes to {reviewer}",
+      "roles": [
+        "marketing",
+        "docs"
+      ],
+      "slots": {
+        "file": "launch-post.md",
+        "concerns": "unsupported claims, missing attributions, and brand-guideline issues",
+        "reviewer": "legal"
+      }
+    },
+    {
+      "id": "course-correct-a-wrong",
+      "sdlc": "build",
+      "cat": "Steer",
+      "src": "best-practices",
+      "nextHref": "/en/checkpointing",
+      "prompt": "that is not right: {feedback}. try a different approach",
+      "roles": [],
+      "slots": {
+        "feedback": "the function signature needs to stay backward-compatible"
+      }
+    },
+    {
+      "id": "narrow-the-scope-of",
+      "sdlc": "build",
+      "cat": "Steer",
+      "src": "best-practices",
+      "prompt": "that is too much. keep only the changes to {scope} and undo your other edits",
+      "roles": [],
+      "slots": {
+        "scope": "the validation logic in src/forms/"
+      }
+    },
+    {
+      "id": "turn-a-correction-into",
+      "sdlc": "build",
+      "cat": "Steer",
+      "src": "best-practices",
+      "nextHref": "/en/memory",
+      "prompt": "you keep {mistake}. add a rule to CLAUDE.md so this stops happening",
+      "roles": [],
+      "slots": {
+        "mistake": "using default exports when this project uses named exports"
+      }
+    },
+    {
+      "id": "resolve-merge-conflicts",
+      "sdlc": "ship",
+      "cat": "Git",
+      "src": "workflows",
+      "prompt": "resolve the merge conflicts in this branch and explain what you kept from each side",
+      "roles": []
+    },
+    {
+      "id": "commit-with-a-generated",
+      "sdlc": "ship",
+      "cat": "Git",
+      "src": "workflows",
+      "prompt": "commit these changes with a message that summarizes what I did",
+      "roles": []
+    },
+    {
+      "id": "open-a-pull-request",
+      "sdlc": "ship",
+      "cat": "Git",
+      "src": "workflows",
+      "prompt": "find the {tracker} ticket about {topic} and open a PR that implements it",
+      "roles": [],
+      "slots": {
+        "tracker": "Linear",
+        "topic": "the login timeout"
+      }
+    },
+    {
+      "id": "draft-release-notes-from",
+      "sdlc": "ship",
+      "cat": "Release",
+      "src": "workflows",
+      "nextHref": "/en/skills",
+      "prompt": "compare {from} to {to} and draft release notes grouped by feature, fix, and breaking change",
+      "roles": [
+        "pm",
+        "docs",
+        "marketing"
+      ],
+      "slots": {
+        "from": "v2.3.0",
+        "to": "v2.4.0"
+      }
+    },
+    {
+      "id": "write-a-ci-workflow",
+      "sdlc": "ship",
+      "cat": "Release",
+      "src": "workflows",
+      "prompt": "write a GitHub Actions workflow that {steps} on every push to {branch}",
+      "roles": [
+        "ops"
+      ],
+      "slots": {
+        "steps": "runs the tests and deploys to staging",
+        "branch": "main"
+      }
+    },
+    {
+      "id": "find-and-fix-a",
+      "sdlc": "operate",
+      "cat": "Debug",
+      "src": "workflows",
+      "prompt": "the {test} test is failing, find out why and fix it",
+      "roles": [],
+      "slots": {
+        "test": "UserAuth"
+      },
+      "startN": 3
+    },
+    {
+      "id": "investigate-a-reported-error",
+      "sdlc": "operate",
+      "cat": "Debug",
+      "src": "workflows",
+      "nextHref": "/en/web-quickstart#pre-fill-sessions",
+      "prompt": "users are seeing {symptom} on {where}. investigate and tell me what is going on",
+      "roles": [
+        "ops"
+      ],
+      "slots": {
+        "symptom": "500 errors",
+        "where": "/api/settings"
+      }
+    },
+    {
+      "id": "fix-a-build-error",
+      "sdlc": "operate",
+      "cat": "Debug",
+      "src": "best-practices",
+      "prompt": "here is a build error. fix the root cause and verify the build succeeds",
+      "roles": [
+        "ops"
+      ]
+    },
+    {
+      "id": "investigate-a-production-incident",
+      "sdlc": "operate",
+      "cat": "Incident",
+      "src": "workflows",
+      "nextHref": "/en/mcp",
+      "prompt": "{symptom}. check the logs, recent deploys, and config changes, then tell me the most likely cause",
+      "roles": [
+        "ops",
+        "security"
+      ],
+      "slots": {
+        "symptom": "the checkout endpoint started returning 500s an hour ago"
+      }
+    },
+    {
+      "id": "diagnose-from-a-console",
+      "sdlc": "operate",
+      "cat": "Incident",
+      "src": "teams",
+      "prompt": "here is a screenshot of {console}. walk me through why {resource} is failing and give me the exact commands to fix it",
+      "roles": [
+        "ops",
+        "data"
+      ],
+      "slots": {
+        "console": "the GCP Kubernetes dashboard",
+        "resource": "this pod"
+      }
+    },
+    {
+      "id": "query-logs-in-plain",
+      "sdlc": "operate",
+      "cat": "Incident",
+      "src": "cybersecurity",
+      "prompt": "show me all {events} for {scope} over {timeframe}. write the query, run it, and tell me what stands out",
+      "roles": [
+        "security",
+        "ops",
+        "data"
+      ],
+      "slots": {
+        "events": "failed logins",
+        "scope": "the auth service",
+        "timeframe": "the past 24 hours"
+      }
+    },
+    {
+      "id": "analyze-a-data-file",
+      "sdlc": "operate",
+      "cat": "Data",
+      "src": "teams",
+      "nextHref": "/en/mcp",
+      "prompt": "read {file}, summarize the key patterns, and write the results to {output}",
+      "roles": [
+        "data",
+        "pm",
+        "marketing"
+      ],
+      "slots": {
+        "file": "@reports/q1-signups.csv",
+        "output": "an HTML page with charts, then open it in my browser"
+      }
+    },
+    {
+      "id": "generate-variations-from-performance",
+      "sdlc": "operate",
+      "cat": "Data",
+      "src": "teams",
+      "nextHref": "/en/mcp",
+      "prompt": "read {file}, find the underperforming {items}, and generate {n} new variations that stay under {limit} characters",
+      "roles": [
+        "marketing",
+        "data"
+      ],
+      "slots": {
+        "file": "@ads-performance.csv",
+        "items": "headlines",
+        "n": "20",
+        "limit": "90"
+      }
+    },
+    {
+      "id": "turn-a-recurring-task",
+      "sdlc": "operate",
+      "cat": "Automate",
+      "src": "workflows",
+      "prompt": "create a /{name} skill for this project that {steps}",
+      "roles": [],
+      "slots": {
+        "name": "ship",
+        "steps": "runs the linter and tests, then drafts a commit message"
+      }
+    },
+    {
+      "id": "add-a-hook-for",
+      "sdlc": "operate",
+      "cat": "Automate",
+      "src": "best-practices",
+      "prompt": "write a hook that {action} after every {event}",
+      "roles": [],
+      "slots": {
+        "action": "runs prettier",
+        "event": "edit to a .ts or .tsx file"
+      }
+    },
+    {
+      "id": "connect-a-tool-with",
+      "sdlc": "operate",
+      "cat": "Automate",
+      "src": "workflows",
+      "prompt": "set up the {server} MCP server so you can read my {data} directly",
+      "roles": [],
+      "slots": {
+        "server": "Sentry",
+        "data": "error reports"
+      }
+    },
+    {
+      "id": "capture-what-to-remember",
+      "sdlc": "operate",
+      "cat": "Automate",
+      "src": "teams",
+      "prompt": "summarize what we did this session and suggest what to add to CLAUDE.md",
+      "roles": [
+        "pm",
+        "docs"
+      ]
+    }
+  ]
+}

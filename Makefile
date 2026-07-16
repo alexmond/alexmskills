@@ -1,7 +1,7 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump graduate install-help docs-build docs-rules dev-link dev-unlink test-coach test-dashboard
+.PHONY: help validate list bump graduate install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -15,6 +15,12 @@ test-coach: ## Run the prompt-coach-beta release test harness (run after each re
 
 docs-rules: ## Regenerate the prompt-coach per-rule reference in the Antora docs from RULE_HELP
 	@python3 plugins/prompt-coach-beta/scripts/gen-rules-doc.py --inject
+
+library-refresh: ## Refresh the vendored Claude Code Prompt Library snapshot (fetches live docs)
+	@python3 plugins/prompt-coach-beta/scripts/gen-prompt-library.py
+
+library-audit: ## Calibration report — run the rule catalog over the gold prompt-library prompts
+	@python3 plugins/prompt-coach-beta/scripts/audit-library.py
 
 test-dashboard: ## Playwright UI test for the coach web dashboard (optional; skips if playwright absent)
 	@NODE_PATH="$${NODE_PATH:-$$HOME/.local/lib/playwright/node_modules}" \

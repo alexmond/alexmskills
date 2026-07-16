@@ -7,6 +7,33 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-15
+
+### Added
+- **prompt-coach-beta 0.47.0** — **Prompt Library integration** (harness +1).
+  Vendors an offline snapshot of Anthropic's
+  [Claude Code Prompt Library](https://code.claude.com/docs/en/prompt-library)
+  (52 gold-standard, tagged, slot-templated prompts) and turns the coach from
+  corrective into *generative*.
+  - **Data asset**: `scripts/gen-prompt-library.py` fetches + parses the live
+    docs page into `data/prompt-library.json` (`make library-refresh`);
+    `scripts/library.py` is a zero-dependency keyword/tag matcher (no network,
+    no embeddings) cheap enough to run in the hook.
+  - **On-demand lookup**: `/prompt-coach-beta:library "<task>"` +
+    `config.py library` verb — matches your task to the closest template(s),
+    offered adapted to your context. Browse all on the dashboard's new
+    **Library** tab.
+  - **Rewrite grounding**: new `library_hints` config (default on) — when a
+    rule fires, the collaborator rewrite is anchored to the closest template's
+    phrasing + slots, but only when a *confident* match exists.
+  - **Calibration audit**: `scripts/audit-library.py` (`make library-audit`)
+    runs the full catalog over the 52 gold prompts and reports where the coach
+    over-fires — a report, not a gate.
+  - **False-positive fix** (from that audit): `vague-reference` no longer fires
+    on a demonstrative + concrete noun ("this codebase", "these changes",
+    "port this Python module") — those name a referent. Clean rate on the gold
+    corpus 27% → 31%; `vague-reference` firings 21 → 15.
+
 ## 2026-07-14
 
 ### Added
