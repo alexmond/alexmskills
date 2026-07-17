@@ -7,6 +7,40 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-17
+
+### Added
+- **prompt-coach-beta 0.48.0** — **Claude Code orchestration-command routing +
+  a ranked Sources dashboard tab.** Three new L5 tool-native rules detect the
+  prompt shapes that call for a native command and suggest it (each cites the
+  command's own doc plus curl-verified best-practice references):
+  - `no-scheduler-for-recurring` → a recurring clock/calendar task ("every
+    morning", "nightly", "at 9am") should be registered once with
+    `/loop --interval <cron>` (CLI) or `/schedule` (cloud/web), not re-run by
+    hand. (Google SRE distributed cron, Twelve-Factor admin processes.)
+  - `no-loop-for-polling` → "poll/retry/monitor until <state>" is a bounded
+    self-paced `/loop` with the observed state as its stopping condition (plus
+    max-attempts / backoff). (AWS backoff+jitter, k8s reconcile loop, AIP-151.)
+  - `no-goal-for-outcome` → a target end-state ("get the build green", "make all
+    tests pass") is a `/goal <condition>` handoff that self-evaluates. (Anthropic
+    "define success criteria", DeepMind specification-gaming.)
+  `/workflows` is **not** a command (workflows are a feature you ask Claude to
+  create) — already covered by `no-workflow-for-fanout`, so no new rule. The
+  catalog is now **42 rules + 42 mirror positives**; all fired rules co-surface
+  in the collaborator block, so a prompt matching several gets several
+  suggestions. Each rule has a grounded detector (fire + veto + look-alike
+  traps), RULE_HELP catch/bad→good, and extra-source variety; harness gained
+  `t_v48_command_rules`.
+- **prompt-coach-beta 0.48.0** — **Sources dashboard tab.** The web dashboard
+  (`serve.py`) gains a **Sources** tab: every citation in the catalog, deduped
+  by URL and **ranked by importance** — official Claude Code / Anthropic docs
+  first, then foundational engineering & research canon, then practitioner /
+  other-vendor material; within a tier, a source more rules rely on ranks
+  higher. Backed by `config._sources_section()` in `build_dashboard` (127
+  unique sources across 42 rules); each entry links out and lists the rules
+  that cite it. Dashboard harness now asserts the section is present and
+  correctly ranked.
+
 ## 2026-07-15
 
 ### Added

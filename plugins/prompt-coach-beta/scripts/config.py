@@ -1260,6 +1260,7 @@ def build_dashboard(cwd: Path) -> dict:
         "mastery_analysis": {k: [r["id"] for r in v]
                              for k, v in analysis.items()},
         "library": _library_section(),
+        "sources": _sources_section(),
     }
 
 
@@ -1280,6 +1281,80 @@ def _library_section() -> dict:
             "source_url": lib.get("source_url"),
             "note": lib.get("note"),
             "entries": entries}
+
+
+# Authority ranking for the Sources tab. Importance = (authority tier, then how
+# many rules lean on the source). Tier A is what's directly actionable + canonical
+# to this tool; B is widely-cited engineering/research canon; C is practitioner
+# and other-vendor material (variety, not canon). Classification is by host so it
+# stays honest as sources are added.
+_SOURCE_AUTHORITY = (
+    ("official", "Official docs — Claude Code & Anthropic",
+     ("code.claude.com", "docs.anthropic.com", "platform.claude.com",
+      "anthropic.com")),
+    ("foundational", "Foundational — standards, papers & engineering canon",
+     ("arxiv.org", "sre.google", "google.aip.dev", "research.google.com",
+      "kubernetes.io", "12factor.net", "google.github.io", "martinfowler.com",
+      "sandimetz.com", "aws.amazon.com", "learn.microsoft.com", "deepmind.google",
+      "docs.temporal.io", "docs.github.com", "en.wikipedia.org", "wiki.c2.com",
+      "psycnet.apa.org", "journals.sagepub.com", "mitpress.mit.edu",
+      "pragprog.com", "refactoring.guru")),
+)
+_AUTHORITY_ORDER = {"official": 0, "foundational": 1, "practitioner": 2}
+
+
+def _classify_source(url: str) -> tuple[str, str]:
+    from urllib.parse import urlparse
+    host = (urlparse(url).netloc or "").lower()
+    for rank, label, hosts in _SOURCE_AUTHORITY:
+        if any(h in host for h in hosts):
+            return rank, label
+    return "practitioner", "Practitioner & other-vendor references"
+
+
+def _sources_section() -> dict:
+    """Every citation in the catalog, deduped by URL and ranked by importance
+    for the dashboard's Sources tab. Importance = authority tier first
+    (official docs > foundational canon > practitioner), then citation count
+    (a source many rules rely on is more load-bearing). `r.sources` already
+    includes the merged _EXTRA_SOURCES, so iterating it + the anthropic_ref
+    anchor captures the full trail."""
+    agg: dict[str, dict] = {}
+
+    def add(title: str, url: str, rid: str) -> None:
+        if not url:
+            return
+        e = agg.get(url)
+        if e is None:
+            rank, label = _classify_source(url)
+            e = agg[url] = {"title": title, "url": url, "authority": rank,
+                            "authority_label": label, "rules": set()}
+        e["rules"].add(rid)
+
+    for r in RULES:
+        if getattr(r, "anthropic_ref", None):
+            add(f"Anthropic prompting guide — #{r.anthropic_ref}",
+                f"{_ANTHROPIC_BASE_URL}#{r.anthropic_ref}", r.id)
+        for t, u in r.sources:
+            add(t, u, r.id)
+
+    items = []
+    for e in agg.values():
+        items.append({
+            "title": e["title"], "url": e["url"],
+            "authority": e["authority"], "authority_label": e["authority_label"],
+            "cited_by": sorted(e["rules"]), "cite_count": len(e["rules"]),
+        })
+    items.sort(key=lambda x: (_AUTHORITY_ORDER.get(x["authority"], 9),
+                              -x["cite_count"], x["title"].lower()))
+
+    groups = []
+    for rank, label, _ in (*_SOURCE_AUTHORITY,
+                           ("practitioner", "Practitioner & other-vendor references", ())):
+        n = sum(1 for it in items if it["authority"] == rank)
+        groups.append({"authority": rank, "label": label, "count": n})
+
+    return {"total": len(items), "groups": groups, "items": items}
 
 
 def api_set(cwd: Path, key: str, value, scope: str) -> dict:

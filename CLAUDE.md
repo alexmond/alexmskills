@@ -87,6 +87,8 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-07-17 — **coach-command-routing** — 0.48.0: +3 L5 rules routing native cmds (recurring->/schedule|/loop --interval, poll-until->/loop, outcome->/goal). 42 rules/positives co-fire. Why: coach didn't know the orchestration commands.
+- 2026-07-17 — **coach-sources-tab** — 0.48.0: dashboard Sources tab - 127 citations deduped + ranked by importance (official>canon>practitioner, then cite-count) via _sources_section. Why: asked to surface sources prioritized.
 - 2026-06-21 — **research-sweep-learning** — 1.1.3 adds per-run log, thin-agent diagnosis (slice vs agent), demote/retire rule, `## Research sweep` graduation block. Why: closes the only orchestrator without a log.
 - 2026-06-26 — **evolve-audit** — 1.1.0 adds whole-file size check (25/40 KB), self-report on missing D&L heading, staleness trigger (closes #16). Why: siblings hit size cap; audit stayed silent.
 - 2026-06-27 — **evolve-merge** — 1.1.1 adds *merge same-session clusters* as 4th downward pressure (works pre-14-days when graduation+archive blocked). Why: audit can recommend with no available action.

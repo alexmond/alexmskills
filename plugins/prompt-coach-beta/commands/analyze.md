@@ -5,7 +5,7 @@ description: Analyze a specific prompt (or your last N prompts) against the full
 # `/prompt-coach-beta:analyze`
 
 On-demand prompt analysis. Unlike the passive hook — which only checks the handful of
-*active* rules and stays quiet — this runs the **full 35-rule catalog + positive detectors**
+*active* rules and stays quiet — this runs the **full 42-rule catalog + positive detectors**
 against either a prompt you name or your recent prompt history, then coaches concrete
 improvements using the skill's prompting knowledge.
 

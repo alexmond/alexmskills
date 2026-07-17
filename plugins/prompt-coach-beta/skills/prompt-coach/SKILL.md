@@ -187,6 +187,9 @@ activates in its place, and so on.
 | no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents |
 | incremental-routing | Multi-step task routed one terse step at a time ("continue" / "one after another" / "do the next one") instead of a batched task list / Workflow |
 | workflow-fanout-no-verify | Orchestrated fan-out (workflow / parallel agents / sweep) to *discover* many items with no adversarial verify + dedup pass — scale without reliability |
+| no-scheduler-for-recurring | A recurring clock/calendar task ("every morning" / "nightly" / "at 9am") phrased as a one-off — belongs in `/loop --interval <cron>` or `/schedule` |
+| no-loop-for-polling | "Poll / retry / monitor until <state>" with no bounded loop — a self-paced `/loop` with the observed state as its stopping condition |
+| no-goal-for-outcome | A target end-state ("get the build green" / "make all tests pass") with no `/goal <condition>` handoff to iterate + self-evaluate |
 
 **L6 — skill-awareness**
 | Rule | Catches |
@@ -198,7 +201,7 @@ activates in its place, and so on.
 
 ## Encouragement layer (v0.3+)
 
-The coach also *praises the specific positive behaviors* mirroring the negative rules — 35 detectors (one per rule),
+The coach also *praises the specific positive behaviors* mirroring the negative rules — 42 detectors (one per rule),
 sparing (default 1-in-10 clean prompts + always on mastery + always on first-after-fire), and
 grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan
 2000, Kohn 1993). Design choices:
@@ -437,7 +440,7 @@ self-healing turn this on.
 
 The passive hook is quiet by design — it only checks the few *active* rules. But the skill
 carries the whole prompting-knowledge catalog, so you can point it at a prompt on demand and
-get a **full-catalog read** (all 39 rules × 6 tiers + positive detectors), not just the active
+get a **full-catalog read** (all 42 rules × 6 tiers + positive detectors), not just the active
 subset.
 
 Two modes:

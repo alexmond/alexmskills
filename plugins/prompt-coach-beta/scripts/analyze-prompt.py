@@ -1615,6 +1615,122 @@ def rule_workflow_fanout_no_verify(prompt: str) -> bool:
     return not bool(verified)
 
 
+def rule_no_scheduler_for_recurring(prompt: str) -> bool:
+    """v0.48.0 — the user wants Claude to perform a task on a RECURRING clock/
+    calendar cadence ('every morning', 'nightly', 'weekly', 'at 9am') but
+    phrases it as a one-off. That's what a scheduler is for: `/loop --interval
+    <cron>` (available in the CLI) or `/schedule` (cloud/web routines). Nudge to
+    register the recurring run once rather than doing it by hand each time.
+
+    Vetoed when the user already names the scheduling affordance, OR is BUILDING
+    scheduled infra (a crontab / GitHub Actions / k8s CronJob) as the
+    deliverable — that's a task to write, not Claude scheduling itself. 'every
+    time <event>' is an event/hook trigger, not a cadence, and never matches."""
+    pl = prompt.lower()
+    recur = re.search(
+        r"\b(every|each)\s+(morning|evening|night|day|week|month|quarter|"
+        r"hour|mon(day)?|tues(day)?|wednesday|thurs(day)?|fri(day)?|"
+        r"sat(urday)?|sun(day)?|\d+\s*(minutes?|mins?|hours?|hrs?|days?|weeks?))\b"
+        r"|\b(daily|nightly|weekly|monthly|hourly|bi-?weekly|quarterly)\b"
+        r"|\bon a (regular )?(schedule|cadence|basis)\b"
+        r"|\b(recurring|periodically|regularly)\b"
+        r"|\bat \d{1,2}\s*(am|pm|:\d\d)\b"
+        r"|\bevery day at\b", pl)
+    if not recur:
+        return False
+    act = re.search(
+        r"\b(run|check|review|summar|report|send|email|post|remind|generat|"
+        r"back ?up|sync|scan|update|fetch|pull|digest|monitor|audit|clean|"
+        r"rotate|refresh|collect|compile|deploy|publish|notify)\b", pl)
+    if not act:
+        return False
+    if re.search(r"/schedule|/loop|\bcroncreate\b|\bcron ?job\b|"
+                 r"\bscheduled task\b|\binterval\b", pl):
+        return False
+    if re.search(
+        r"\b(crontab|systemd|timer unit|github actions?|gitlab ci|"
+        r"\.ya?ml|k8s|kubernetes|cronjob|airflow|temporal|jenkins|"
+        r"scheduled workflow|celery beat|launchd|windows task scheduler)\b", pl):
+        return False
+    return True
+
+
+def rule_no_loop_for_polling(prompt: str) -> bool:
+    """v0.48.0 — the user wants to repeat a check/action and WAIT for an
+    external state to change ('poll until healthy', 'retry until green',
+    'monitor until it drains'). That's a bounded self-paced loop: `/loop`
+    (adaptive) with the observed state as its stopping condition, so a human
+    isn't re-issuing the same check by hand.
+
+    Distinct from goal-seeking (varied work to CHANGE state -> /goal) and from a
+    fixed clock cadence (-> /schedule). Requires both a poll/monitor/retry verb
+    AND an explicit stopping/observation condition. Vetoed when the loop
+    affordance is already named, or when the cadence is clock-fixed."""
+    pl = prompt.lower()
+    poll = re.search(
+        r"\b(poll|polling|re-?run|re-?try|retry|re-?check|recheck|"
+        r"keep (checking|running|trying|watching|hitting|pinging)|"
+        r"monitor|watch)\b", pl)
+    if not poll:
+        return False
+    cond = re.search(
+        r"\b(until|till|til)\b"
+        r"|\bonce it('?s| is| has)?\b"
+        r"|\bwhen it('?s| is| has)?\b"
+        r"|\bas soon as\b"
+        r"|\bis (green|healthy|ready|done|passing|up|available|live|complete)\b"
+        r"|\bbecomes\b|\bcomes back\b|\bsettles\b|\bstabili[sz]es\b", pl)
+    if not cond:
+        return False
+    if re.search(r"/loop\b|\bschedulewakeup\b|\bin the background\b|"
+                 r"\bbackground task\b|/workflows?\b", pl):
+        return False
+    if re.search(r"\b(every (morning|day|night|week)|daily|nightly|weekly|"
+                 r"at \d{1,2}\s*(am|pm))\b", pl):
+        return False
+    return True
+
+
+def rule_no_goal_for_outcome(prompt: str) -> bool:
+    """v0.48.0 — the user states a target END-STATE and wants Claude to iterate
+    autonomously toward it ('get the build green', 'make all tests pass', 'keep
+    going until everything passes'). That's a `/goal <condition>` handoff:
+    Claude keeps working across turns, self-evaluating against the condition,
+    instead of the user steering each edit.
+
+    Vetoed when a poll/re-run verb is present (that's wait-for-state = /loop, not
+    do-work-toward = /goal), or when the goal handoff / success criteria are
+    already framed. Complements improve-without-metric (which wants a *metric*);
+    this wants the *autonomy affordance* once an outcome is stated."""
+    pl = prompt.lower()
+    outcome = re.search(
+        r"\b(get|make|drive|bring|push)\b[^.?!]*\b("
+        r"(build|ci|tests?|test ?suite|pipeline|suite|checks?|lint) "
+        r"?(green|passing|to pass|to green)|"
+        r"all (the )?tests? (to )?pass|everything (green|passing)|"
+        r"coverage (to|up to|above|over) \d+|to \d+ ?% ?(coverage)?|"
+        r"zero (errors?|warnings?|failures?)|it (working|to work|to compile|"
+        r"to build|to pass))\b"
+        r"|\b(all (the )?tests?|the (build|suite|ci|pipeline)) (should |must )?"
+        r"(pass|be green)\b", pl)
+    until = re.search(
+        r"\b(until|till)\b[^.?!]*\b(it (works|passes|compiles|builds|is green|"
+        r"succeeds)|everything (passes|is green|works)|all (tests? )?(pass|are "
+        r"green|green)|green|passing|done|no (errors?|failures?|warnings?))\b"
+        r"|\b(keep going|don'?t stop|work autonomously|iterate|keep at it)\b"
+        r"[^.?!]*\b(until|till|it (works|passes|is green|builds))\b", pl)
+    if not (outcome or until):
+        return False
+    if re.search(r"\b(poll|polling|re-?run|re-?try|retry|re-?check|recheck|"
+                 r"keep (checking|running|trying|watching|pinging)|"
+                 r"monitor|ping)\b", pl):
+        return False
+    if re.search(r"/goal\b|\bgoal[- ]?seek|\bsuccess criteria\b|"
+                 r"\bacceptance criteria\b", pl):
+        return False
+    return True
+
+
 def rule_speculative_generality(prompt: str) -> bool:
     """v0.46.0 — the user justifies building something by a HYPOTHETICAL future
     need ('so we can add more later', 'make it generic/pluggable', 'in case we
@@ -1988,6 +2104,31 @@ SRC_DODDS_AHA = ("Kent C. Dodds — AHA Programming (Avoid Hasty Abstractions)",
 SRC_C2_RULEOF3 = ("Rule Of Three (wait for the third occurrence) — c2 wiki",
                   "https://wiki.c2.com/?RuleOfThree")
 
+# v0.48 rule sources (Claude-Code native orchestration commands + best practices)
+SRC_CC_LOOP = ("Claude Code — /loop (repeat a prompt on a schedule)",
+               "https://code.claude.com/docs/en/scheduled-tasks")
+SRC_CC_GOAL = ("Claude Code — /goal (run until a condition is met)",
+               "https://code.claude.com/docs/en/goal")
+SRC_CC_SCHEDULE = ("Claude Code — /schedule (scheduled routines)",
+                   "https://code.claude.com/docs/en/routines")
+# recurring / scheduled
+SRC_SRE_CRON = ("Google SRE Book — Distributed periodic scheduling (cron as a service)",
+                "https://sre.google/sre-book/distributed-periodic-scheduling/")
+SRC_12FACTOR_ADMIN = ("Twelve-Factor App — Admin processes (recurring tasks as discrete runs)",
+                      "https://12factor.net/admin-processes")
+# goal-seeking / autonomous loop
+SRC_ANTHROPIC_DEFINE_SUCCESS = ("Anthropic — Define your success criteria (measurable targets)",
+                                "https://docs.anthropic.com/en/docs/build-with-claude/define-success")
+SRC_DEEPMIND_SPECGAMING = ("Google DeepMind — Specification gaming (a vague goal gets gamed)",
+                           "https://deepmind.google/blog/specification-gaming-the-flip-side-of-ai-ingenuity/")
+# bounded iteration / polling
+SRC_AWS_BACKOFF = ("AWS Architecture Blog — Exponential backoff and jitter",
+                   "https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/")
+SRC_K8S_RECONCILE = ("Kubernetes — Controllers (observe / diff / act reconcile loop)",
+                     "https://kubernetes.io/docs/concepts/architecture/controller/")
+SRC_AIP_LRO = ("Google AIP-151 — Long-running operations (poll until done)",
+               "https://google.aip.dev/151")
+
 
 RULES: list[Rule] = [
     Rule(
@@ -2356,6 +2497,55 @@ RULES: list[Rule] = [
         sources=[SRC_CC_BESTPRACTICE, SRC_CC_HOOKS, SRC_ANTHROPIC_MULTIAGENT],
         check=rule_workflow_fanout_no_verify,
         anthropic_ref="subagent-orchestration",
+    ),
+    Rule(
+        id="no-scheduler-for-recurring",
+        tier=5,
+        name="Recurring task without a scheduler",
+        guidance=(
+            "User wants a task done on a recurring clock/calendar cadence "
+            "(every morning / nightly / weekly / at 9am) but phrased it as a "
+            "one-off. Offer to register it once with a scheduler instead of "
+            "re-running it by hand: `/loop --interval <cron>` runs a prompt on a "
+            "cron schedule in the CLI; `/schedule` sets up a cloud/web routine "
+            "(also supports API + GitHub-event triggers). Confirm the cadence "
+            "and make the run idempotent (safe if it fires twice or a run is "
+            "missed) before scheduling."
+        ),
+        sources=[SRC_CC_SCHEDULE, SRC_SRE_CRON, SRC_12FACTOR_ADMIN],
+        check=rule_no_scheduler_for_recurring,
+    ),
+    Rule(
+        id="no-loop-for-polling",
+        tier=5,
+        name="Poll-until-state without a loop",
+        guidance=(
+            "User wants to repeat a check and WAIT for an external state "
+            "(poll until healthy / retry until green / monitor until it "
+            "drains). Offer `/loop` (self-paced) with the observed state as its "
+            "stopping condition, so a human isn't re-issuing the same check. "
+            "Bound it: name the success condition AND a max attempts / timeout, "
+            "and back off between polls — an unbounded 'keep trying' hammers the "
+            "dependency and never exits."
+        ),
+        sources=[SRC_CC_LOOP, SRC_AWS_BACKOFF, SRC_K8S_RECONCILE],
+        check=rule_no_loop_for_polling,
+    ),
+    Rule(
+        id="no-goal-for-outcome",
+        tier=5,
+        name="Outcome without a goal handoff",
+        guidance=(
+            "User named a target end-state to reach autonomously (get the build "
+            "green / make all tests pass / keep going until it works). Offer to "
+            "hand it off as `/goal <condition>` — Claude keeps working across "
+            "turns and self-evaluates against the condition — rather than "
+            "steering each edit. State the success condition as something "
+            "checkable (a passing test, zero warnings, a coverage number); a "
+            "vague goal gets gamed."
+        ),
+        sources=[SRC_CC_GOAL, SRC_ANTHROPIC_DEFINE_SUCCESS, SRC_DEEPMIND_SPECGAMING],
+        check=rule_no_goal_for_outcome,
     ),
     # ---- L6 skill-awareness ----
     Rule(
@@ -2763,6 +2953,24 @@ _EXTRA_SOURCES = {
          "https://arxiv.org/abs/2203.11171"),
         ("Anthropic — Building effective agents (evaluator-optimizer pattern)",
          "https://www.anthropic.com/engineering/building-effective-agents"),
+    ],
+    "no-scheduler-for-recurring": [
+        ("Robust Perception (Brian Brazil) — Idempotent cron jobs are operable",
+         "https://www.robustperception.io/idempotent-cron-jobs-are-operable-cron-jobs/"),
+        ("GitHub Actions — the schedule (cron) trigger",
+         "https://docs.github.com/actions/using-workflows/events-that-trigger-workflows"),
+    ],
+    "no-loop-for-polling": [
+        ("Google AIP-151 — Long-running operations (poll until done)",
+         "https://google.aip.dev/151"),
+        ("Martin Fowler — Circuit Breaker (stop probing a broken dependency)",
+         "https://martinfowler.com/bliki/CircuitBreaker.html"),
+    ],
+    "no-goal-for-outcome": [
+        ("Yao et al. — ReAct: reason+act loop until the task is complete (2022)",
+         "https://arxiv.org/abs/2210.03629"),
+        ("Claude Code — Best practices (TDD: iterate to 'all tests pass')",
+         "https://code.claude.com/docs/en/best-practices"),
     ],
     # ---- L6 ----
     "no-skill-lookup": [  # PRIORITY
@@ -3249,6 +3457,18 @@ RULE_HELP = {
         "catches": "A fan-out to discover many items with no verify / dedup pass.",
         "bad": "fan out agents to find every SQL injection",
         "good": "fan out to find every SQL-injection site, then a 2nd pass verifies each vs source and dedups"},
+    "no-scheduler-for-recurring": {
+        "catches": "A recurring clock/calendar task (every morning / nightly / at 9am) phrased as a one-off.",
+        "bad": "every morning summarize my open PRs and email me",
+        "good": "/loop --interval '0 9 * * *' — each morning, summarize my open PRs and email the digest (idempotent)"},
+    "no-loop-for-polling": {
+        "catches": "Repeating a check and waiting on external state, with no bounded loop.",
+        "bad": "keep checking the deploy until it's healthy",
+        "good": "/loop: poll the deploy health until it reports healthy — max 20 tries, back off between polls"},
+    "no-goal-for-outcome": {
+        "catches": "A target end-state ('build green', 'all tests pass') with no autonomous goal handoff.",
+        "bad": "make all the tests pass",
+        "good": "/goal: make the failing tests in tests/ pass — keep iterating until the suite is green, don't change the assertions"},
     "speculative-generality": {
         "catches": "Building for a hypothetical future ('generic', 'pluggable', 'so we can add more later') instead of today's need.",
         "bad": "make the exporter generic so we can add more formats later",
@@ -3645,6 +3865,44 @@ def pos_waited_rule_of_three(prompt: str) -> bool:
         r"leave the duplication|aha programming|avoid (?:a )?hasty abstraction)\b", pl))
 
 
+def pos_asked_scheduler(prompt: str) -> bool:
+    """Mirrors no-scheduler-for-recurring: user paired a recurring cadence with
+    a scheduling affordance (/loop --interval, /schedule, or an explicit cron)
+    instead of asking for a one-off re-run."""
+    pl = prompt.lower()
+    return bool(re.search(
+        r"/schedule\b|/loop\b.*\binterval\b|\binterval\b.*/loop\b|"
+        r"\bcron(tab| ?job| ?schedule| expression)?\b|\bscheduled (task|routine)\b|"
+        r"\bon a (cron|schedule)\b|\bregister (a|the) (recurring|scheduled)\b", pl))
+
+
+def pos_asked_loop(prompt: str) -> bool:
+    """Mirrors no-loop-for-polling: user reached for a bounded self-paced loop
+    (/loop, or a poll with an explicit max-attempts / backoff / stopping
+    condition) rather than an open-ended 'keep trying'."""
+    pl = prompt.lower()
+    named = re.search(r"/loop\b|\bself-?paced loop\b", pl)
+    bounded = re.search(
+        r"\b(poll|re-?run|re-?try|retry|re-?check|monitor|watch)\b", pl) and \
+        re.search(
+            r"\b(max(imum)? (attempts|retries|tries)|up to \d+ (times|tries|"
+            r"attempts)|back ?off|timeout|stop(ping)? (after|condition)|"
+            r"give up after|until it('?s| is)? (healthy|green|ready|done|up))\b", pl)
+    return bool(named or bounded)
+
+
+def pos_asked_goal(prompt: str) -> bool:
+    """Mirrors no-goal-for-outcome: user framed the work as a /goal handoff or
+    stated a checkable success condition for autonomous iteration, rather than
+    steering each edit toward a vague 'make it work'."""
+    pl = prompt.lower()
+    return bool(re.search(
+        r"/goal\b|\bset (a|the) goal\b|\bgoal[- ]?seek|\bsuccess criteria\b|"
+        r"\bacceptance criteria\b|\bkeep iterating until\b.*\b(green|pass(es|ing)?|"
+        r"zero (errors?|warnings?)|\d+ ?%)\b|"
+        r"\bwork (?:on this )?autonomously until\b", pl))
+
+
 # ---- v0.40.0 — positive detectors for the 13 rules that previously had no
 # mirror. Every rule now has one so mastery can be *earned* by demonstrating
 # the good technique, not merely by not tripping the rule. ------------------
@@ -3906,6 +4164,21 @@ POSITIVES: list[Positive] = [
                  "You held off abstracting at two — duplication is cheaper than the wrong abstraction.",
                  "Rule of three respected. The shared shape is clearer after the third caller, not the second.",
              ], [SRC_MUELLER_DWECK, SRC_FOGG_TINY]),
+    Positive("asked-scheduler", "no-scheduler-for-recurring", 5,
+             pos_asked_scheduler, [
+                 "You reached for a scheduler on a recurring task instead of re-running it by hand. Set it once, forget it.",
+                 "Cron / interval on a repeating job. Future-you doesn't have to remember 9am.",
+             ], [SRC_BROPHY_PRAISE, SRC_FOGG_TINY]),
+    Positive("asked-loop", "no-loop-for-polling", 5,
+             pos_asked_loop, [
+                 "You bounded the poll with a stopping condition — a loop that exits, not an open-ended 'keep trying'.",
+                 "Poll-until-state with a cap and backoff. That's a control loop, not a busy-wait.",
+             ], [SRC_MUELLER_DWECK, SRC_FOGG_TINY]),
+    Positive("asked-goal", "no-goal-for-outcome", 5,
+             pos_asked_goal, [
+                 "You handed off a checkable goal and let Claude iterate to it. One target beats ten steering edits.",
+                 "A success condition instead of a vague 'make it work'. The loop knows when it's done.",
+             ], [SRC_MUELLER_DWECK, SRC_BROPHY_PRAISE]),
     # ---- L6 skill-awareness positives ----
     Positive("invoked-skill", "no-skill-lookup", 6,
              pos_invoked_skill, [

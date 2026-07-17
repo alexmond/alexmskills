@@ -44,12 +44,20 @@ PAGE = r"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>prompt-coach dashboard</title>
 <style>
-  :root{ --bg:#e7edf6; --card:#ffffff; --ink:#0c1626; --muted:#465774;
-         --line:#c4d0e4; --accent:#2563eb; --ok:#0e9f6e; --warn:#b45309;
-         --idle:#6f83a2; }
+  /* Palettes. Default follows the OS (prefers-color-scheme); a manual toggle
+     stamps data-theme on <html>, which wins over the media query either way. */
+  :root, :root[data-theme="light"]{ --bg:#e7edf6; --card:#ffffff; --ink:#0c1626;
+         --muted:#465774; --line:#c4d0e4; --accent:#2563eb; --ok:#0e9f6e;
+         --warn:#b45309; --idle:#6f83a2; }
   @media (prefers-color-scheme:dark){ :root{ --bg:#0b1220; --card:#131f33;
          --ink:#eef4fe; --muted:#96a7c2; --line:#24344e; --accent:#5b9bff;
          --ok:#35d07f; --warn:#f0a83a; --idle:#6b7e9c; } }
+  :root[data-theme="dark"]{ --bg:#0b1220; --card:#131f33; --ink:#eef4fe;
+         --muted:#96a7c2; --line:#24344e; --accent:#5b9bff; --ok:#35d07f;
+         --warn:#f0a83a; --idle:#6b7e9c; }
+  .themebtn{margin-left:auto;background:transparent;border:1px solid var(--line);
+    color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:14px}
+  .themebtn:hover{color:var(--ink);border-color:var(--accent)}
   *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);
     font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
   /* top toolbar (sticky) */
@@ -152,6 +160,24 @@ PAGE = r"""<!doctype html>
   .tag.role{background:transparent;color:var(--muted);border:1px solid var(--line)}
   .libprompt{font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.5;
     color:var(--ink);white-space:pre-wrap}
+  .srcgrp{margin:18px 0}
+  .srcgrp>.h{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .srcgrp>.h b{font-size:13px}
+  .srcitem{display:flex;align-items:flex-start;gap:10px;background:var(--card);
+    border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin-bottom:7px}
+  .srcitem .rank{flex:0 0 34px;text-align:center;font-weight:700;font-size:12px;
+    font-family:ui-monospace,monospace;color:var(--muted);padding-top:2px}
+  .srcitem .body{flex:1;min-width:0}
+  .srcitem a{color:var(--accent);text-decoration:none;font-size:14px;word-break:break-word}
+  .srcitem a:hover{text-decoration:underline}
+  .srcmeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;align-items:center}
+  .cites{font-size:11px;color:var(--muted)}
+  .rchip{font-size:10px;padding:1px 6px;border-radius:20px;background:transparent;
+    color:var(--muted);border:1px solid var(--line);font-family:ui-monospace,monospace}
+  .authb{font-size:10px;padding:1px 8px;border-radius:20px;color:#fff;letter-spacing:.03em}
+  .authb.official{background:var(--accent)}
+  .authb.foundational{background:#3a7a4a}
+  .authb.practitioner{background:#8a7a3a}
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
     background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;
     opacity:0;transition:opacity .2s;pointer-events:none;font-size:13px}
@@ -160,6 +186,7 @@ PAGE = r"""<!doctype html>
 <div class="toolbar">
   <span class="brand">🧭 prompt-coach <small id="ver"></small></span>
   <nav id="nav"></nav>
+  <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="Toggle light / dark">🌙</button>
   <span class="cwd" id="cwd"></span>
 </div>
 <main>
@@ -191,13 +218,22 @@ PAGE = r"""<!doctype html>
     <div class="catnav" id="libnav"></div>
     <div id="library"></div>
   </section>
+  <section class="page" data-page="sources">
+    <h2>Sources <span class="note" id="srctot" style="font-weight:400"></span></h2>
+    <p class="note" id="srcnote"></p>
+    <input id="srcsearch" placeholder="filter sources…" oninput="renderSources()"
+           style="width:100%;padding:8px 10px;margin:6px 0 4px;border:1px solid var(--line);
+                  border-radius:8px;background:var(--card);color:var(--ink)">
+    <div class="catnav" id="srcnav"></div>
+    <div id="sources"></div>
+  </section>
 </main>
 <div id="toast"></div>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>[...r.querySelectorAll(s)];
-let DATA=null, CAT='all', SCOPE='global', LIBCAT='all';
-const PAGES=[['stats','Stats'],['mastery','Mastery'],['config','Config'],['options','Options'],['library','Library']];
+let DATA=null, CAT='all', SCOPE='global', LIBCAT='all', SRCGRP='all';
+const PAGES=[['stats','Stats'],['mastery','Mastery'],['config','Config'],['options','Options'],['library','Library'],['sources','Sources']];
 const TIER={1:'fundamentals',2:'intermediate',3:'classical prompting',
   4:'goals & loops',5:'Claude-Code tool-native',6:'skill-awareness'};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -226,7 +262,7 @@ function render(){
   $('#nav').innerHTML=PAGES.map(([p,l])=>`<button data-p="${p}" onclick="location.hash='${p}'">${l}</button>`).join('');
   renderStats();
   $('#mtot').textContent=`(${DATA.stats.totals.mastered}/${DATA.stats.totals.all} mastered)`;
-  renderMastery(); renderCatnav(); renderConfig(); renderOptions(); renderLibrary();
+  renderMastery(); renderCatnav(); renderConfig(); renderOptions(); renderLibrary(); renderSources();
   route();
 }
 
@@ -252,6 +288,38 @@ function renderLibrary(){
         +(e.roles||[]).map(r=>`<span class="tag role">${esc(r)}</span>`).join('')+`</div>
         <div class="libprompt">${esc(e.prompt)}</div></div>`).join('')
     +`</div>`).join('')||'<p class="note">No templates match that filter.</p>';
+}
+
+function setSrcGrp(g){SRCGRP=g;renderSources();}
+function renderSources(){
+  const src=DATA.sources||{items:[],groups:[],total:0};
+  $('#srctot').textContent=`(${src.total} unique citations across ${DATA.meta.rule_count} rules)`;
+  $('#srcnote').innerHTML=`Every reference the catalog cites, deduped and <b>ranked by importance</b> — `
+    +`official Claude Code / Anthropic docs first, then foundational engineering &amp; research canon, `
+    +`then practitioner and other-vendor material; within each tier, sources more rules rely on rank higher. `
+    +`Run <code>/prompt-coach-beta:config sources</code> for the per-rule trail.`;
+  const groups=src.groups||[];
+  const tabs=[['all',`all (${src.total})`],...groups.map(g=>[g.authority,`${g.label.split(' — ')[0]} (${g.count})`])];
+  $('#srcnav').innerHTML=tabs.map(([k,l])=>`<button class="${k===SRCGRP?'on':''}" onclick="setSrcGrp('${k}')">${esc(l)}</button>`).join('');
+  const q=($('#srcsearch').value||'').toLowerCase();
+  const rows=src.items.filter(it=>(SRCGRP==='all'||it.authority===SRCGRP)
+      &&(!q||it.title.toLowerCase().includes(q)||it.url.toLowerCase().includes(q)
+         ||it.cited_by.some(r=>r.toLowerCase().includes(q))));
+  const byAuth={};
+  rows.forEach(it=>{(byAuth[it.authority]=byAuth[it.authority]||[]).push(it);});
+  const order=(groups.length?groups.map(g=>g.authority):['official','foundational','practitioner']);
+  let rank=0;
+  $('#sources').innerHTML=order.filter(a=>byAuth[a]).map(a=>{
+    const g=groups.find(x=>x.authority===a)||{label:a};
+    return `<div class="srcgrp"><div class="h"><span class="authb ${a}">${esc(a)}</span>`
+      +`<b>${esc(g.label)}</b></div>`
+      +byAuth[a].map(it=>{rank++;return `<div class="srcitem">`
+        +`<div class="rank">#${rank}</div><div class="body">`
+        +`<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)} ↗</a>`
+        +`<div class="srcmeta"><span class="cites">cited by ${it.cite_count} rule${it.cite_count===1?'':'s'}:</span>`
+        +it.cited_by.map(r=>`<span class="rchip">${esc(r)}</span>`).join('')
+        +`</div></div></div>`;}).join('')
+      +`</div>`;}).join('')||'<p class="note">No sources match that filter.</p>';
 }
 
 function segbar(segs,total){
@@ -395,6 +463,25 @@ async function resetKey(key){const j=await post('/api/action',{action:'reset-key
 async function resetRule(id){const j=await post('/api/action',{action:'mastery-reset',rule_id:id});
   if(j.ok){toast('mastery reset: '+id);await load();}}
 async function doAction(b){const j=await post('/api/action',b);if(j.ok){toast('done');await load();}}
+function effectiveTheme(){
+  const set=document.documentElement.getAttribute('data-theme');
+  if(set) return set;
+  return matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+}
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  const b=$('#themebtn'); if(b) b.textContent=(t==='dark'?'☀️':'🌙');
+}
+function toggleTheme(){
+  const next=effectiveTheme()==='dark'?'light':'dark';
+  try{localStorage.setItem('pc-theme',next);}catch(e){}
+  applyTheme(next);
+}
+function initTheme(){
+  let t=null; try{t=localStorage.getItem('pc-theme');}catch(e){}
+  applyTheme(t||effectiveTheme());
+}
+initTheme();
 window.addEventListener('hashchange',route);
 load();
 </script></body></html>"""

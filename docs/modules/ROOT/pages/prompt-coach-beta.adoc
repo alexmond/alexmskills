@@ -57,7 +57,7 @@ This is informational, not praise — a heartbeat that also shows your progress 
 [cols="1,3",options="header"]
 |===
 | Command | When to use
-| `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 39-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
+| `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 42-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
 | `+/prompt-coach-beta:stats+` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status.
 | `+/prompt-coach-beta:mastery+` | *"Which rules mastered, which need reset?"* Per-rule breakdown with well-tested / barely-tested / untested analysis + close-to-mastery.
 | `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `paths` / `analyze` / `library` / `diff` / `export` / `reset`.
@@ -138,7 +138,15 @@ Read-only — it never touches mastery, config, or state.
 
 == What it watches for
 
-Six tiers of rules, roughly five each. Only six rules are active at a time (`max_active_rules`, default 6) — lower tiers dominate, and as a rule masters, the next dormant rule activates in its place. When all rules in a tier master, the next tier's rules take their place.
+Six tiers of rules. Only six rules are active at a time (`max_active_rules`, default 6) — lower tiers dominate, and as a rule masters, the next dormant rule activates in its place. When all rules in a tier master, the next tier's rules take their place. A single prompt can trip **several** rules at once; the collaborator block surfaces every one it confirms, so you get more than one suggestion when more than one applies.
+
+The **L5 tool-native** tier is where the coach routes you to a Claude Code affordance the prompt is implicitly asking for. Alongside plan mode, task lists, parallel agents, roles, panels, and Workflow fan-out, v0.48 adds routing to the orchestration commands:
+
+* `no-scheduler-for-recurring` → a recurring clock/calendar task ("every morning…", "nightly…", "at 9am…") should be registered once with `/loop --interval <cron>` (CLI) or `/schedule` (cloud/web routine), not re-run by hand.
+* `no-loop-for-polling` → "poll until healthy", "retry until green", "monitor until it drains" is a bounded self-paced `/loop` with the observed state as its stopping condition (plus a max-attempts / backoff so it actually exits).
+* `no-goal-for-outcome` → a target end-state ("get the build green", "make all tests pass") is a `/goal <condition>` handoff — Claude iterates and self-evaluates against a checkable condition instead of you steering each edit.
+
+Because these are distinct prompt shapes, a prompt like "every morning, keep retrying the deploy until it's green" can legitimately surface more than one of them together.
 
 A per-rule reference — what each rule catches, a ✗ bad → ✓ good example, and the exact upstream sections it draws on. Generated from the same data the xref:#web-dashboard[web dashboard] renders, so the two never drift.
 
@@ -378,6 +386,22 @@ Several independent lookups done serially instead of in parallel.
 +
 _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#optimize-parallel-tool-calling[Anthropic guide: Optimize parallel tool calling^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://www.anthropic.com/engineering/built-multi-agent-research-system[Anthropic — How we built our multi-agent research system (parallel subagents)^] · https://platform.openai.com/docs/guides/function-calling[OpenAI — Function calling: parallel (independent) tool calls^]
 
+`no-goal-for-outcome` — *Outcome without a goal handoff*::
+A target end-state ('build green', 'all tests pass') with no autonomous goal handoff.
++
+✗ `make all the tests pass` +
+✓ `/goal: make the failing tests in tests/ pass — keep iterating until the suite is green, don't change the assertions`
++
+_Refs:_ https://code.claude.com/docs/en/goal[Claude Code — /goal (run until a condition is met)^] · https://docs.anthropic.com/en/docs/build-with-claude/define-success[Anthropic — Define your success criteria (measurable targets)^] · https://deepmind.google/blog/specification-gaming-the-flip-side-of-ai-ingenuity/[Google DeepMind — Specification gaming (a vague goal gets gamed)^] · https://arxiv.org/abs/2210.03629[Yao et al. — ReAct: reason+act loop until the task is complete (2022)^] · https://code.claude.com/docs/en/best-practices[Claude Code — Best practices (TDD: iterate to 'all tests pass')^]
+
+`no-loop-for-polling` — *Poll-until-state without a loop*::
+Repeating a check and waiting on external state, with no bounded loop.
++
+✗ `keep checking the deploy until it's healthy` +
+✓ `/loop: poll the deploy health until it reports healthy — max 20 tries, back off between polls`
++
+_Refs:_ https://code.claude.com/docs/en/scheduled-tasks[Claude Code — /loop (repeat a prompt on a schedule)^] · https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/[AWS Architecture Blog — Exponential backoff and jitter^] · https://kubernetes.io/docs/concepts/architecture/controller/[Kubernetes — Controllers (observe / diff / act reconcile loop)^] · https://google.aip.dev/151[Google AIP-151 — Long-running operations (poll until done)^] · https://martinfowler.com/bliki/CircuitBreaker.html[Martin Fowler — Circuit Breaker (stop probing a broken dependency)^]
+
 `no-panel-for-contested-design` — *Contested design without a panel*::
 'which is better / torn between' with no multi-perspective weigh-in.
 +
@@ -401,6 +425,14 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✓ `review my PR for security only — injection, authz, secret handling`
 +
 _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role[Anthropic guide: Give claude a role^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://simonwillison.net/tags/promptengineering/[Simon Willison — Prompt engineering notes^] · https://google.github.io/eng-practices/review/reviewer/looking-for.html[Google Engineering Practices — What to look for in a code review (review lenses)^] · https://google.github.io/eng-practices/review/reviewer/standard.html[Google Engineering Practices — The standard of code review^]
+
+`no-scheduler-for-recurring` — *Recurring task without a scheduler*::
+A recurring clock/calendar task (every morning / nightly / at 9am) phrased as a one-off.
++
+✗ `every morning summarize my open PRs and email me` +
+✓ `/loop --interval '0 9 * * *' — each morning, summarize my open PRs and email the digest (idempotent)`
++
+_Refs:_ https://code.claude.com/docs/en/routines[Claude Code — /schedule (scheduled routines)^] · https://sre.google/sre-book/distributed-periodic-scheduling/[Google SRE Book — Distributed periodic scheduling (cron as a service)^] · https://12factor.net/admin-processes[Twelve-Factor App — Admin processes (recurring tasks as discrete runs)^] · https://www.robustperception.io/idempotent-cron-jobs-are-operable-cron-jobs/[Robust Perception (Brian Brazil) — Idempotent cron jobs are operable^] · https://docs.github.com/actions/using-workflows/events-that-trigger-workflows[GitHub Actions — the schedule (cron) trigger^]
 
 `no-task-list-for-multi-step` — *Multi-step ask without a task list*::
 3+ discrete actions with no task list to track them.
@@ -518,13 +550,28 @@ The `quick` flow walks you through the high-value categorical settings (`ack_cle
 [#web-dashboard]
 == Web dashboard (v0.44+)
 
-`/prompt-coach-beta:dashboard` launches a **lightweight local web UI** — a zero-dependency (Python **stdlib only**) server (`scripts/serve.py`) bound to `127.0.0.1`. It renders:
+`/prompt-coach-beta:dashboard` launches a **lightweight local web UI** — a zero-dependency (Python **stdlib only**) server (`scripts/serve.py`) bound to `127.0.0.1`. Six tabs give you the whole picture of your prompting at a glance:
 
-* **Stats** — prompts analyzed, and mastered / inactive / in-progress / dormant counts.
-* **Mastery** — every rule grouped by tier (L1–L6) with a status badge, `demos/min` progress, fires, its guidance, clickable **reference URLs** (Anthropic guide + every cited source), and a per-rule **reset** button.
+.Sources tab — every citation in the catalog, deduped and ranked by importance
+image::dashboard-sources-dark.png[prompt-coach dashboard — the Sources tab, ranked by importance,width=100%]
+
+* **Stats** — prompts analyzed, and mastered / inactive / in-progress / dormant counts, with rule-progress and mastery-quality bars.
+* **Mastery** — every rule grouped by tier (L1–L6) with a status badge, `demos/min` progress, fires, its guidance, a ✗ bad → ✓ good example, clickable **reference URLs** (Anthropic guide + every cited source), and a per-rule **reset** button.
 * **Config editor** — every schema key with its description and a type-aware control (checkbox / number / select / text) that **saves live** to the chosen scope (global or repo). `↺` resets a key to default.
 * **Options** — reset-all-mastery, refresh, open the Anthropic guide.
 * **Library** — browse xref:#prompt-library[Anthropic's Prompt Library] templates by phase / category / role, with a text filter.
+* **Sources** — every citation in the catalog, deduped and **ranked by importance**: official Claude Code / Anthropic docs first, then foundational engineering & research canon, then practitioner / other-vendor material; within each tier, a source more rules rely on ranks higher. Each entry links out and lists the rules that cite it, so you can trace the whole evidence base in one place. Filter by tier or free text.
+
+.Mastery tab — status badges, progress bars, and a bad→good example per rule
+image::dashboard-mastery-dark.png[prompt-coach dashboard — the Mastery tab,width=100%]
+
+.Library tab — Anthropic's gold-standard prompt templates, grouped by SDLC phase
+image::dashboard-library-dark.png[prompt-coach dashboard — the Library tab,width=100%]
+
+**Light or dark, your call.** The dashboard follows your OS theme by default and ships a one-click toggle (🌙 / ☀️ in the toolbar) that persists your choice:
+
+.Stats tab in light theme — the ☀️/🌙 toggle switches on demand
+image::dashboard-stats-light.png[prompt-coach dashboard — Stats tab in light theme,width=100%]
 
 Reads and writes reuse `config.py`'s `build_dashboard` / `api_set` / `api_action`, so schema validation and scope rules are **identical to the CLI** — the UI is a view + thin write path, not a second implementation. Local-only, no auth by design (don't bind it off-host). For the raw consolidated JSON without the server: `config.py --cwd <repo> dashboard`.
 
@@ -550,11 +597,11 @@ The same snapshot doubles as a **calibration corpus** for the coach itself: runn
 
 == Anthropic guide alignment (v0.20+)
 
-The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 30 of the 39 shipped rules link to a canonical section (each slug verified against the guide's live section headings), and the remaining 9 are Claude-Code-specific or novel coach concepts with no direct upstream mapping. Beyond the Anthropic guide, every rule also carries several curated external citations (seminal papers, canonical engineering references — Fowler, Google Engineering Practices, the c2 wiki, Sandi Metz — and other vendors' prompt guides) so the catalog isn't opinion-of-one; all were link-checked live. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
+The coach is aligned with Anthropic's live https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices[prompting best-practices guide]. Every rule optionally carries a `Rule.anthropic_ref` section slug; 30 of the 42 shipped rules link to a canonical section (each slug verified against the guide's live section headings), and the remaining 12 are Claude-Code-specific or novel coach concepts with no direct upstream mapping — including the v0.48 command-suggestion rules, which cite the Claude Code command docs directly. Beyond the Anthropic guide, every rule also carries several curated external citations (seminal papers, canonical engineering references — Fowler, Google Engineering Practices, the c2 wiki, Sandi Metz — and other vendors' prompt guides) so the catalog isn't opinion-of-one; all were link-checked live. `+/prompt-coach-beta:config sources+` surfaces the full citation trail, so you can trace *"why does this rule exist?"* back to authoritative material in one command.
 
 == Encouragement layer
 
-The coach also praises the *specific positive behaviors* that mirror the negative rules — **35 positive detectors, one per rule** (v0.40 filled the last 13 gaps). Praise is deliberately sparing (default 1 per 10 clean prompts with a positive, plus milestone events on rule mastery and first-after-fire), grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan 2000, Kohn 1993). Beyond praise, these detectors now do double duty: each positive fire is the **demonstration** that drives earned mastery (see <<earned-mastery>>).
+The coach also praises the *specific positive behaviors* that mirror the negative rules — **42 positive detectors, one per rule** (v0.40 filled the last 13 gaps). Praise is deliberately sparing (default 1 per 10 clean prompts with a positive, plus milestone events on rule mastery and first-after-fire), grounded in behavioral-science literature (Brophy 1981, Mueller & Dweck 1998, Fogg 2019, Deci & Ryan 2000, Kohn 1993). Beyond praise, these detectors now do double duty: each positive fire is the **demonstration** that drives earned mastery (see <<earned-mastery>>).
 
 Design constraints:
 
@@ -617,7 +664,7 @@ That acceptance rate then decides which rules fire:
 
 Mastery is driven by **demonstrations — the times you actively *used* the good technique**, not by the mere absence of the mistake. This fixed a real flaw: before v0.40 a rule graduated after a run of clean prompts, but "clean" only meant the anti-pattern was absent — and most prompts don't exercise most rules, so a rule could master on prompts that never had anything to do with it.
 
-Each of the 39 rules now has a **mirroring positive detector** (e.g. `improve-without-metric` ↔ `stated-metric`, `incremental-routing` ↔ `batched-routing`). When a positive fires, that's a demonstration:
+Each of the 42 rules now has a **mirroring positive detector** (e.g. `improve-without-metric` ↔ `stated-metric`, `incremental-routing` ↔ `batched-routing`). When a positive fires, that's a demonstration:
 
 [cols="1,3",options="header"]
 |===

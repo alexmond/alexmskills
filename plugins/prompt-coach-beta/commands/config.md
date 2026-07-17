@@ -39,7 +39,7 @@ since-version) so new options are picked up automatically when they're added.
    - `mastery-reset-all` → `python3 <path> mastery-reset-all` (dry-run once first, require explicit confirmation)
    - `sources [<rule-id>]` → `python3 <path> sources [<rule-id>]` (citation trail + doc URLs; add `--open` to open the URL(s) in a browser)
    - `paths` → `python3 <path> paths` (the skill's own folders, state files, and runnable scripts; add `--open` to open the folder + docs in a file browser)
-   - `analyze "<text>"` → `python3 <path> analyze "<text>"` (run the FULL 35-rule catalog against one prompt) — or `analyze --last N` for the last N logged prompts. Prefer `/prompt-coach-beta:analyze` for the coached narrative.
+   - `analyze "<text>"` → `python3 <path> analyze "<text>"` (run the FULL 42-rule catalog against one prompt) — or `analyze --last N` for the last N logged prompts. Prefer `/prompt-coach-beta:analyze` for the coached narrative.
 
    **Interactive flows (Claude-orchestrated via AskUserQuestion):**
 

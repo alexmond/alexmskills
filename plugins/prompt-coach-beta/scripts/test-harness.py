@@ -260,16 +260,29 @@ def t_web_dashboard_serves():
         reset = call("/api/action",
                      {"action": "reset-key", "key": "collaborator_gate", "scope": "repo"})
         badkey = call("/api/config", {"key": "nope", "value": 1, "scope": "global"})
+        src = data.get("sources", {})
+        items = src.get("items", [])
+        # ranked by importance: an official-tier source sorts before any
+        # practitioner-tier one, and every item is attributed to >=1 rule.
+        auth_rank = {"official": 0, "foundational": 1, "practitioner": 2}
+        ranked_ok = (bool(items)
+                     and all(it.get("cite_count", 0) >= 1 for it in items)
+                     and [auth_rank.get(it["authority"], 9) for it in items]
+                         == sorted(auth_rank.get(it["authority"], 9) for it in items))
+        srcpage_ok = b'data-page="sources"' in page
         ok = (b"prompt-coach dashboard" in page
               and len(data.get("rules", [])) == len(srv._cfg.RULES)
               and len(data.get("config", [])) >= 1
               and wrote.get("ok") and persisted.get("collaborator_gate") is True
-              and reset.get("ok") and badkey.get("ok") is False)
+              and reset.get("ok") and badkey.get("ok") is False
+              and src.get("total") == len(items) and ranked_ok and srcpage_ok)
     finally:
         s.shutdown()
-    check("web dashboard: serves page + JSON, config POST persists, bad key 400",
+    check("web dashboard: serves page + JSON (incl. ranked Sources tab), "
+          "config POST persists, bad key 400",
           bool(ok),
-          f"rules={len(data.get('rules',[]))} wrote={wrote.get('ok')} "
+          f"rules={len(data.get('rules',[]))} sources={src.get('total')} "
+          f"ranked={ranked_ok} srcpage={srcpage_ok} wrote={wrote.get('ok')} "
           f"persisted={persisted.get('collaborator_gate')} badkey_ok={badkey.get('ok')}")
 
 
@@ -540,6 +553,55 @@ def t_v46_rules():
           f"speculative={bool(sg_ok)} untrusted={bool(uc_ok)} premature={bool(pa_ok)}")
 
 
+def t_v48_command_rules():
+    """v0.48 — the three Claude-Code command-suggestion rules (scheduler /
+    loop / goal) fire on their shape, veto when the affordance is named, stay
+    quiet on look-alikes, and each has a working mirror positive. Also asserts
+    they can co-fire with other rules (multiple recommendations per prompt)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_an48", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_an48"] = m
+    spec.loader.exec_module(m)
+    ids = {r.id for r in m.RULES}
+
+    sc = getattr(m, "rule_no_scheduler_for_recurring", None)
+    sc_ok = (sc and "no-scheduler-for-recurring" in ids
+             and sc("every morning summarize my open PRs and email me")
+             and not sc("write a crontab entry that backs up nightly")   # building infra
+             and not sc("every time i save, run the linter")             # event, not cadence
+             and not sc("summarize my open PRs"))                        # one-off
+    sc_pos = getattr(m, "pos_asked_scheduler", None)
+    sc_ok = sc_ok and sc_pos and sc_pos("/loop --interval '0 9 * * *' summarize PRs")
+
+    lp = getattr(m, "rule_no_loop_for_polling", None)
+    lp_ok = (lp and "no-loop-for-polling" in ids
+             and lp("poll the deploy status until it's healthy")
+             and not lp("use /loop to poll until it's healthy")          # affordance named
+             and not lp("monitor performance of the endpoint"))          # no stop condition
+    lp_pos = getattr(m, "pos_asked_loop", None)
+    lp_ok = lp_ok and lp_pos and lp_pos("/loop: poll until healthy, max 20 tries with backoff")
+
+    gl = getattr(m, "rule_no_goal_for_outcome", None)
+    gl_ok = (gl and "no-goal-for-outcome" in ids
+             and gl("make all the tests pass")
+             and not gl("re-run the flaky test until it passes")         # poll -> /loop
+             and not gl("make this function faster"))                    # improve, not goal
+    gl_pos = getattr(m, "pos_asked_goal", None)
+    gl_ok = gl_ok and gl_pos and gl_pos("/goal: keep iterating until the suite is green")
+
+    # multiple-recommendation coexistence: an outcome prompt surfaces the goal
+    # rule ALONGSIDE the existing implicit-goal / no-verify-loop rules.
+    co = [r.id for r in m.RULES if r.check("make all the tests pass")]
+    multi_ok = "no-goal-for-outcome" in co and len(co) >= 2
+
+    check("v0.48 command rules (scheduler / loop / goal) fire, veto, mirror-"
+          "praise, and co-fire with sibling rules",
+          bool(sc_ok and lp_ok and gl_ok and multi_ok),
+          f"scheduler={bool(sc_ok)} loop={bool(lp_ok)} goal={bool(gl_ok)} "
+          f"multi={multi_ok} co={co}")
+
+
 def t_acceptance_loop():
     """v0.41 P1 — a yes/no/edit reply to a rewrite is recorded per rule."""
     h, c = _fresh()
@@ -707,6 +769,7 @@ CHECKS = [
     t_incremental_routing_rule,
     t_workflow_fanout_no_verify_rule,
     t_v46_rules,
+    t_v48_command_rules,
     t_library_integration,
     t_collaborator_gate_configurable,
     t_rule_help_covers_all,
