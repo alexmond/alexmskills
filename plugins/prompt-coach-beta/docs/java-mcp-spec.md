@@ -117,7 +117,7 @@ The Java service exposes an MCP server. Consumer discovery per standard.
   active rules, config, top corrections.
 
 **`configure`**
-- **Input:** per-user config diff (`nudge_style`, `disabled_rules`,
+- **Input:** per-user config diff (`collaborator_gate`, `disabled_rules`,
   `praise_ratio`, etc.).
 - **Output:** effective merged config after applying the diff.
 
@@ -203,7 +203,7 @@ state
 configs
   user_id
   scope
-  keys → jsonb (nudge_style, praise_ratio, disabled_rules, ...)
+  keys → jsonb (collaborator_gate, praise_ratio, disabled_rules, ...)
 
 analyses (short-retention rolling window)
   analysis_id

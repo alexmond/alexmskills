@@ -39,7 +39,7 @@ The emphasis is on **self-learning** tooling — skills that get better at _your
 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing.
 
 | xref:prompt-coach-beta.adoc[prompt-coach-beta] | beta
-| Watches every prompt and nudges toward better prompting habits — 28 rules across 6 tiers, variant pool + progressive disclosure to avoid habituation, typo tolerance, and evidence-based praise for good behaviors.
+| Watches every prompt and rewrites it toward better prompting habits (collaborator mode) — 42 rules across 6 tiers, mastery earned by demonstration, typo tolerance, and evidence-based praise for good behaviors.
 
 | xref:research-sweep.adoc[research-sweep] | research
 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies.

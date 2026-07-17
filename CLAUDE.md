@@ -87,6 +87,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-07-17 — **coach-docs-generated** — 0.48.1: doc audit vs code (nudge_style/counts/tiers/mastery were stale) + gen-rules-doc now injects summary + config-key ref blocks, harness drift-checked. Why: docs drifted; generate from data.
 - 2026-07-17 — **coach-command-routing** — 0.48.0: +3 L5 rules routing native cmds (recurring->/schedule|/loop --interval, poll-until->/loop, outcome->/goal). 42 rules/positives co-fire. Why: coach didn't know the orchestration commands.
 - 2026-07-17 — **coach-sources-tab** — 0.48.0: dashboard Sources tab - 127 citations deduped + ranked by importance (official>canon>practitioner, then cite-count) via _sources_section. Why: asked to surface sources prioritized.
 - 2026-06-21 — **research-sweep-learning** — 1.1.3 adds per-run log, thin-agent diagnosis (slice vs agent), demote/retire rule, `## Research sweep` graduation block. Why: closes the only orchestrator without a log.

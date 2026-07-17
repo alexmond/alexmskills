@@ -24,7 +24,7 @@ since-version) so new options are picked up automatically when they're added.
    Direct verbs (run the script and render its output):
 
    - `<empty>` or `show` → run `python3 <path> show` in the current cwd
-   - `show <category>` → `python3 <path> show <category>` (categories: output, voice, rule-activation, mastery, praise, typo-tolerance, anti-habituation, llm-fallback)
+   - `show <category>` → `python3 <path> show <category>` (categories: output, rule-activation, mastery, praise, typo-tolerance, llm-fallback)
    - `get <key>` → `python3 <path> get <key>`
    - `describe <key>` → `python3 <path> describe <key>`
    - `options <key>` → `python3 <path> options <key>` (lists legal values with per-choice explanations)
@@ -43,7 +43,7 @@ since-version) so new options are picked up automatically when they're added.
 
    **Interactive flows (Claude-orchestrated via AskUserQuestion):**
 
-   - `quick` → walk the user through the ~4 high-value categorical settings (`coach_style`, `ack_clean`, `show_source_urls`, `praise_ratio`) with multiple-choice pickers. (The old voice/nudge_style keys are deprecated as of v0.34/v0.29 — don't offer them.) For each key:
+   - `quick` → walk the user through the high-value categorical settings (`ack_clean`, `show_source_urls`, `praise_ratio`, `tips_enabled`, `collaborator_gate`) with multiple-choice pickers. (The old `nudge_style` / `coach_style` / voice keys were removed in v0.29–v0.38 — don't offer them.) For each key:
      1. Run `python3 <path> options <key> --json` to get the current value + choices + descriptions
      2. Present via AskUserQuestion, header ≤12 chars (e.g. "Voice"), each option's label = the value, description = the first ~60 chars of the choice_description
      3. If the user picks a value different from current, run `python3 <path> set <key> <picked> --scope global`
@@ -53,12 +53,6 @@ since-version) so new options are picked up automatically when they're added.
 3. Common flags:
 
    - `--dry-run` on set/reset/reset-all/mastery-reset* → show what would change without writing
-   - `--scope global` (default) or `--scope repo` → which config file
-   - `--json` → machine-readable output (for scripting)
-
-3. Common flags:
-
-   - `--dry-run` on set/reset/reset-all → show what would change without writing
    - `--scope global` (default) or `--scope repo` → which config file
    - `--json` → machine-readable output (for scripting)
 

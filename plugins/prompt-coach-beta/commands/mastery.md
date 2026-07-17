@@ -39,7 +39,10 @@ Direct top-level access to the mastery view. Same output as `/prompt-coach-beta:
    - **Rules close to mastery** → mention them; a couple more clean prompts
      and they graduate.
    - **Zero mastered rules** → first-time user; explain that mastery is
-     automatic after 15 clean prompts in a row per rule.
+     *earned by demonstration*: a rule masters once you actually use its good
+     technique (its positive detector fires) `min_demonstrations` times
+     (default 3) with no recent relapse — clean streaks alone no longer master
+     a rule.
 
 ## Natural-language routing
 

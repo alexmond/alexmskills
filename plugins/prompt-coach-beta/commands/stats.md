@@ -32,7 +32,7 @@ Read the coach's state files and log to produce a compact health dashboard.
 ## Present as
 
 ```
-prompt-coach v0.8.0 — <today's date>
+prompt-coach v<version> — <today's date>
 
 Volume (global): <prompt_count>
 Volume (this repo): <this_repo_prompt_count>
@@ -44,7 +44,7 @@ Emit rate (this repo):
 
 Rules:
   mastered (dormant):    <list rule ids graduated>
-  active (up to 5):      <list rule ids currently practicing>
+  active (up to 6):      <list rule ids currently practicing>
   most-fired top 5:      <rule: N fires>
 
 Acceptance (v0.42+):
@@ -56,7 +56,7 @@ Typo normalization (global):
   top 5 corrections: <original: count>
 
 Config in effect (this repo):
-  nudge_style: <both / silent / log-only>
+  enabled: <bool>   collaborator_gate: <bool>
   praise_ratio: <n>
   typo_tolerance: <n>
 ```

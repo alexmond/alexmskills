@@ -5,7 +5,7 @@ description: A hook-driven coach that watches your prompts to Claude Code and nu
 
 # prompt-coach (beta)
 
-## Quick start (v0.25+)
+## Quick start
 
 ### 60-second setup
 
@@ -49,9 +49,9 @@ On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The co
 |---|---|
 | `/prompt-coach-beta:stats` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status. |
 | `/prompt-coach-beta:mastery` | *"Which rules mastered, which need reset?"* Per-rule breakdown + analysis (well-tested / barely-tested / untested masteries; close-to-mastery). |
-| `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `set`, `describe`, `options`, `mastery`, `sources`, `library`, `diff`, `export`, `reset`, `dashboard`. |
+| `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `get`, `set`, `describe`, `options`, `mastery`, `acceptance`, `sources`, `paths`, `analyze`, `library`, `dashboard`, `diff`, `export`, `reset`. |
 | `/prompt-coach-beta:library` | *"Show me a prompt for X."* Matches your task to the closest gold-standard template from Anthropic's Claude Code Prompt Library (v0.47). |
-| `/prompt-coach-beta:dashboard` | *"Show me a UI."* Local web dashboard (v0.44) — stats, mastery by tier with reference URLs, live config editor, and a Library tab. |
+| `/prompt-coach-beta:dashboard` | *"Show me a UI."* Local web dashboard (v0.44) — six tabs: Stats, Mastery (by tier, with reference URLs), live Config editor, Options, Library, and the ranked Sources tab (v0.48). Light/dark toggle. |
 | `/prompt-coach-beta:help` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet. |
 | `/prompt-coach-beta:report-issue` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only). |
 
@@ -63,7 +63,10 @@ On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The co
 config editor** — every schema key with its description and a type-aware control (checkbox / number /
 select / text) that **saves to global or repo scope** on change. Writes reuse `config.py`'s
 `build_dashboard` / `api_set` / `api_action`, so validation and scope rules are identical to the CLI.
-Local-only, no auth by design. Raw JSON without the server: `config.py … dashboard`.
+Two more tabs: **Library** (browse the Prompt-Library templates) and **Sources** (v0.48 — every
+citation deduped and ranked by importance). A toolbar **light/dark toggle** (🌙/☀️) persists your
+choice on top of the OS default. Local-only, no auth by design. Raw JSON without the server:
+`config.py … dashboard`.
 
 #### Prompt Library integration (v0.47)
 
@@ -128,16 +131,18 @@ For cross-repo analytics of coach activity, say **"log review"** or **"daily rev
 
 ## How it works
 
-A `UserPromptSubmit` hook analyzes every prompt you send Claude Code, matches it against a small
-catalog of prompting-best-practice rules, and — at most once per prompt, with per-rule cooldowns —
-emits a short nudge. Rules graduate to "mastered" after `graduation_threshold` clean prompts in a
-row, at which point the next dormant rule activates. The coach fades as your prompts improve.
+A `UserPromptSubmit` hook analyzes every prompt you send Claude Code, matches it against a
+catalog of prompting-best-practice rules, and — in **collaborator mode** (v0.34+) — asks Claude
+to rewrite your prompt inline in the same response, addressing whichever candidate rules actually
+apply. Rules graduate to "mastered" once you've *demonstrated* the good technique
+`min_demonstrations` times (default 3) with no recent relapse (see Earned mastery), at which point
+the next dormant rule activates. The coach fades as your prompts improve.
 
 ## What it watches for
 
-**Six tiers** of ~5 rules each. Only 6 rules are active at once (`max_active_rules`,
-default 6 as of v0.12) — lower tiers dominate; as an L1 rule masters, an L2 rule
-activates in its place, and so on.
+**Six tiers, 42 rules total** — unevenly sized (L1 6, L2 4, L3 11, L4 5, L5 11, L6 5). Only 6
+rules are active at once (`max_active_rules`, default 6) — lower tiers dominate; as an L1 rule
+masters, an L2 rule activates in its place, and so on.
 
 **L1 — fundamentals**
 | Rule | Catches |
@@ -356,7 +361,7 @@ same forward-compat pattern as v0.18. Adding a new enum config means adding a
 
 ## Config surface (v0.18+)
 
-The coach's config has grown to 22 keys across 8 categories. `/prompt-coach-beta:config`
+The coach's config spans ~34 keys across six categories. `/prompt-coach-beta:config`
 is the structured surface — it reads a `CONFIG_SCHEMA` metadata dict alongside
 `DEFAULT_CONFIG`, so future options are picked up automatically once they land in the
 schema.
@@ -366,21 +371,27 @@ schema.
 /prompt-coach-beta:config show <category>         one category only
 /prompt-coach-beta:config get <key>               resolved value
 /prompt-coach-beta:config describe <key>          type, default, choices, since
+/prompt-coach-beta:config options <key>           legal values + per-choice notes
 /prompt-coach-beta:config set <key> <value>       validate + write
 /prompt-coach-beta:config reset <key>             remove your override
 /prompt-coach-beta:config reset-all               wipe scoped config (confirm!)
-/prompt-coach-beta:config diff                    only what you've changed
-/prompt-coach-beta:config export                  resolved config as JSON
+/prompt-coach-beta:config diff | export           changed keys | resolved JSON
+/prompt-coach-beta:config mastery | acceptance    mastery ledger | accept/reject rate
+/prompt-coach-beta:config sources [<rule>]        citation trail + doc URLs
+/prompt-coach-beta:config paths                   skill folders, state, scripts
+/prompt-coach-beta:config analyze "<text>"        full-catalog read of a prompt
+/prompt-coach-beta:config library ["<task>"]      match / list Prompt-Library templates
+/prompt-coach-beta:config dashboard               the consolidated dashboard JSON
 ```
 
 Flags: `--scope global|repo` (default `global`), `--dry-run` (on set/reset), `--json`
 (machine-readable).
 
-**Categories**: `output`, `voice`, `rule-activation`, `mastery`, `praise`,
-`typo-tolerance`, `anti-habituation`, `llm-fallback`.
+**Categories**: `output`, `rule-activation`, `mastery`, `praise`, `typo-tolerance`,
+`llm-fallback`.
 
-**Say-it phrases still work** — you can keep saying *"set prompt-coach to inline"*,
-*"coach off no-few-shot"*, etc. Claude routes those to `:config set` under the hood.
+**Say-it phrases still work** — you can keep saying *"coach off no-few-shot"*,
+*"disable praise"*, *"coach pause 10"*, etc. Claude routes those to `:config set` under the hood.
 The command is the discoverable path when you don't know what the options are called.
 
 Writes are deep-merged into the target JSON — keys the schema doesn't know about
@@ -394,7 +405,7 @@ mirroring positive detector fired), not by the absence of the mistake. Before v0
 graduated after a clean streak, but "clean" just meant the anti-pattern was absent — and since
 most prompts don't exercise most rules, a rule could master on prompts unrelated to it.
 
-Every rule now has a positive mirror (35/35). When a positive fires it's a demonstration:
+Every rule now has a positive mirror (42/42). When a positive fires it's a demonstration:
 `demonstrations` **drives mastery**, `clean_streak` is demoted to a recency guard, `fires_total`
 is a regression signal. A rule masters when `demonstrations ≥ min_demonstrations` (default 3)
 and it hasn't relapsed in the last `regression_guard` prompts. A rule neither demonstrated nor

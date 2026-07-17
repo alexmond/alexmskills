@@ -13,7 +13,7 @@ validate: ## Validate the marketplace + all plugin manifests
 test-coach: ## Run the prompt-coach-beta release test harness (run after each release)
 	@python3 plugins/prompt-coach-beta/scripts/test-harness.py
 
-docs-rules: ## Regenerate the prompt-coach per-rule reference in the Antora docs from RULE_HELP
+docs-rules: ## Regenerate the prompt-coach data-derived doc blocks (rules, catalog summary, config reference) from code
 	@python3 plugins/prompt-coach-beta/scripts/gen-rules-doc.py --inject
 
 library-refresh: ## Refresh the vendored Claude Code Prompt Library snapshot (fetches live docs)

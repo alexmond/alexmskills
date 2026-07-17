@@ -60,11 +60,35 @@ This is informational, not praise — a heartbeat that also shows your progress 
 | `+/prompt-coach-beta:analyze+` | *"Is this prompt any good?"* Runs the full 42-rule catalog against a pasted prompt or your last N logged prompts, with a coached rewrite / pattern report.
 | `+/prompt-coach-beta:stats+` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status.
 | `+/prompt-coach-beta:mastery+` | *"Which rules mastered, which need reset?"* Per-rule breakdown with well-tested / barely-tested / untested analysis + close-to-mastery.
-| `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `paths` / `analyze` / `library` / `diff` / `export` / `reset`.
+| `+/prompt-coach-beta:dashboard+` | *"Show me everything in a browser."* Launches the local xref:#web-dashboard[web dashboard] — stats, mastery, live config editor, the Prompt Library, and the ranked Sources tab.
+| `+/prompt-coach-beta:config+` | *"Change my settings."* Verbs: `show` / `set` / `describe` / `options` / `mastery` / `sources` / `paths` / `analyze` / `library` / `dashboard` / `diff` / `export` / `reset`.
 | `+/prompt-coach-beta:library+` | *"Show me a prompt for X."* Matches your task to the closest gold-standard template from xref:#prompt-library[Anthropic's Claude Code Prompt Library].
 | `+/prompt-coach-beta:help+` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet.
 | `+/prompt-coach-beta:report-issue+` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only).
 |===
+
+==== `+/prompt-coach-beta:analyze+` in depth (on-demand analysis)
+
+The passive hook is quiet by design — it only checks the handful of *active* rules. But the skill carries the whole prompting-knowledge catalog, so `+/prompt-coach-beta:analyze+` (or *"analyze this prompt: <text>"*) points it at a prompt on demand for a *complete* read across all 42 rules:
+
+* *A specific prompt* — every rule that fires (with tier, the fix, and a clickable doc URL) plus a rewritten prompt.
+* *Your recent history* (`--last N`) — reads this repo's coach log, runs the full catalog on the last N prompts, and reports your clean rate, the top recurring rules, and one habit to focus on next.
+
+[source,text]
+----
+$ …/config.py analyze "fix it and make it better and faster"
+── prompt analysis ─────────────────────────────────────
+  7 rule(s) fired (full catalog):
+    · L1 vague-reference — Vague reference
+    · L1 no-definition-of-done — No definition of done
+    · L1 improve-without-metric — Improve without a metric
+    · L2 no-verify-loop — No verify loop
+    · L4 implicit-goal — Action without goal
+    · L4 unbounded-iteration — Loop without stopping condition
+    …
+----
+
+Read-only — it never touches mastery, config, or state.
 
 === Say-it phrases (natural language)
 
@@ -114,31 +138,15 @@ If you're being coached too often:
 
 For cross-repo analytics of coach activity, say *"log review"* or *"daily review"*. That invokes the standalone `log-review` skill at `~/.claude/skills/log-review/` (redacted-by-default output, safe to paste anywhere).
 
-== On-demand analysis
-
-The passive hook is quiet by design — it only checks the handful of *active* rules. But the skill carries the whole prompting-knowledge catalog, so you can point it at a prompt on demand for a *complete* read via `+/prompt-coach-beta:analyze+`:
-
-* *A specific prompt* — every rule that fires (with tier, the fix, and a clickable doc URL) plus a rewritten prompt.
-* *Your recent history* — reads this repo's coach log, runs the full catalog on the last N prompts, and reports your clean rate, the top recurring rules, and one habit to focus on next.
-
-[source,text]
-----
-$ …/config.py analyze "fix it and make it better and faster"
-── prompt analysis ─────────────────────────────────────
-  7 rule(s) fired (full catalog):
-    · L1 vague-reference — Vague reference
-    · L1 no-definition-of-done — No definition of done
-    · L1 improve-without-metric — Improve without a metric
-    · L2 no-verify-loop — No verify loop
-    · L4 implicit-goal — Action without goal
-    …
-----
-
-Read-only — it never touches mastery, config, or state.
-
 == What it watches for
 
-Six tiers of rules. Only six rules are active at a time (`max_active_rules`, default 6) — lower tiers dominate, and as a rule masters, the next dormant rule activates in its place. When all rules in a tier master, the next tier's rules take their place. A single prompt can trip **several** rules at once; the collaborator block surfaces every one it confirms, so you get more than one suggestion when more than one applies.
+// BEGIN generated-summary (gen-rules-doc.py — do not edit by hand)
+
+The catalog ships **42 rules** across 6 tiers (L1 6 · L2 4 · L3 11 · L4 5 · L5 11 · L6 5), each with a mirroring **positive detector** (42 total) so mastery is *earned by demonstration*. Behavior is tuned by **34 configuration keys** (see <<config-reference>>).
+
+// END generated-summary
+
+Only six rules are active at a time (`max_active_rules`, default 6) — lower tiers dominate, and as a rule masters, the next dormant rule activates in its place. When all rules in a tier master, the next tier's rules take their place. A single prompt can trip **several** rules at once; the collaborator block surfaces every one it confirms, so you get more than one suggestion when more than one applies.
 
 The **L5 tool-native** tier is where the coach routes you to a Claude Code affordance the prompt is implicitly asking for. Alongside plan mode, task lists, parallel agents, roles, panels, and Workflow fan-out, v0.48 adds routing to the orchestration commands:
 
@@ -540,12 +548,93 @@ v0.38 removed the earlier `nudge_style` modes (`both` / `silent` / `log-only`), 
 | `sources [<rule>]` | Citation trail + doc URLs; add `--open` to open them in a browser
 | `paths` | The skill's own folders, state files, and runnable scripts; add `--open` to open them
 | `analyze "<text>"` / `analyze --last N` | Full-catalog analysis of a prompt or recent history
+| `library ["<task>"]` | Match a task to the closest Prompt-Library template, or print the taxonomy
+| `dashboard` | The consolidated dashboard JSON (what the web UI renders) — stats, rules, config, sources
 | `quick` / `full` | Interactive multi-choice config walk-throughs (via `AskUserQuestion`)
 |===
 
 Flags: `--scope global` (default) or `--scope repo` chooses which config file writes go to. `--dry-run` on `set`/`reset` previews without touching disk. `--json` produces machine-readable output. Writes are deep-merged so forward-compat keys the schema doesn't yet know about are preserved, not stripped.
 
 The `quick` flow walks you through the high-value categorical settings (`ack_clean`, `show_source_urls`, `praise_ratio`, `tips_enabled`) with multiple-choice pickers.
+
+[#config-reference]
+=== All configuration keys
+
+Generated from the plugin's `CONFIG_SCHEMA` — the exact table the validator, `describe`, and the dashboard read — so it can't drift from the code.
+
+// BEGIN generated-config (gen-rules-doc.py — do not edit by hand)
+
+.`output`
+[cols="2,1,1,4",options="header"]
+|===
+| Key | Type | Default | What it does
+| `ack_clean` | bool | `true` | Emit a compact ambient one-liner on a clean prompt (nothing else fired) confirming the coach ran + showing the active rule closest to mastery. A liveness heartbeat, not praise — distinct ✓ glyph, informational not evaluative. On by default; set false to go silent on clean prompts.
+| `ack_ratio` | int | `1` | Rate-limit for ack_clean: emit the liveness line every Nth clean prompt. 1 = every clean prompt (default; a steady heartbeat). Raise to 5/10 for a quieter pulse.
+| `collaborator_gate` | bool | `false` | Make the collaborator block a real confirmation gate. Default false = honest proceed: the block says it's proceeding (not 'reply yes to proceed'), Claude answers the same turn from the rewrite, and states which prompt it used (silence = accept; 'no'/'edit' next turn corrects). Set true to make Claude STOP after the block and wait for your yes/no/edit before doing the work — full control, at one extra round-trip per fired prompt.
+| `enabled` | bool | `true` | Master switch (v0.29+). When false, the coach's UserPromptSubmit hook returns immediately without analyzing, logging, or emitting. Use `pause_until_prompt` for temporary silence; use `enabled=false` to fully disable the coach for this scope. Rendering is always inline as of v0.29 — the pre-v0.29 nudge_style options (both/silent/log-only) are silently ignored.
+| `library_hints` | bool | `true` | When a rule fires, ground the collaborator rewrite in the closest gold-standard template from Anthropic's Claude Code Prompt Library (a vendored, offline snapshot). On by default; the hint is only added when a confident task match exists. Set false to keep rewrites un-anchored.
+| `max_nudges_per_window` | int | `6` | FATIGUE CAP (v0.41+): max visible rewrites within nudge_window prompts; over the cap, fires are still logged and bookkept but the rewrite isn't rendered. 0 disables.
+| `nudge_window` | int | `20` | Rolling window (in prompts) for the fatigue cap (v0.41+).
+| `pause_until_prompt` | int | `0` | Skip all nudging until global prompt_count exceeds this number. Use to silence the coach for N prompts (say 'coach pause N').
+| `show_source_urls` | bool | `true` | Show full clickable doc URLs in the coach's Sources line (the collaborator block), so you can Cmd/Ctrl-click to open the Anthropic guide section. On by default. Set false to show just the short anchor slug (e.g. 'be-clear-and-direct') and keep the block compact.
+| `tip_cooldown_prompts` | int | `100` | Minimum prompts between two fires of the same tip (v0.28+). Anti-nagging cap; the coach shouldn't remind you about the same technique every few prompts.
+| `tip_ratio` | int | `5` | Variable-ratio: 1 in N matching + cooldown-clear opportunities actually fires a tip (v0.28+). Lower = more frequent tips.
+| `tips_enabled` | bool | `true` | Enable proactive tips (v0.28+): 💡 suggestions pointing at advanced techniques you could try. Distinct from rules which fire on prompt problems — tips fire on-topic for techniques you haven't used. Fires on matching prompts (rate-limited) and on rule masteries (paired scaffolding).
+|===
+
+.`rule-activation`
+[cols="2,1,1,4",options="header"]
+|===
+| Key | Type | Default | What it does
+| `cooldown_prompts` | int | `5` | Minimum prompts between two fires of the same practicing rule (anti-nagging cap).
+| `disabled_rules` | list[str] | `[]` | Rule ids to permanently silence. Say 'coach off <rule-id>' to append or 'coach on <rule-id>' to remove.
+| `explore_period` | int | `10` | Explore/exploit (v0.41+): re-admit one dormant rule every N prompts to refresh its acceptance estimate so a rule noisy in only one context isn't buried forever. 0 disables.
+| `graduation_threshold` | int | `15` | Clean prompts in a row a rule tracks as a recency/decay signal. Since v0.40 this no longer drives mastery (see min_demonstrations); it feeds the regression guard and the inactive-after default.
+| `inactive_after` | int | `15` | Clean_streak with ZERO demonstrations after which a rule retires `inactive` ('N/A to how you work') instead of lingering as practicing (v0.40+). Defaults to graduation_threshold.
+| `max_active_rules` | int | `6` | Cap on practicing rules active at once. As lower-tier rules master, higher-tier ones activate up to this cap.
+| `min_demonstrations` | int | `3` | EARNED MASTERY (v0.40+). Number of times a rule's mirroring positive detector must fire — i.e. times you actively USED the good technique — before the rule can master. Absence of the mistake no longer counts; demonstration does.
+| `min_fires_for_mastery` | int | `1` | LEGACY (v0.27) evidence gate, superseded by min_demonstrations in v0.40. Retained for forward-compat; ignored by the demonstration-driven graduation path.
+| `min_outcomes_for_gating` | int | `4` | How many recorded accept/edit/reject outcomes a rule needs before the precision gate applies to it (v0.41+).
+| `precision_floor` | float | `0.15` | Acceptance-rate floor (v0.41+): a rule below this over min_outcomes_for_gating recorded outcomes is demoted dormant. Default 0.15 (only rules rejected ~85%+ of the time).
+| `precision_gating` | bool | `true` | ADAPTIVE ACTIVATION (v0.41+). When on, a rule whose acceptance rate (accepted+edited)/outcomes falls below precision_floor is demoted to `dormant` and stops firing; an explore slot periodically re-surfaces it.
+| `regression_guard` | int | `3` | Clean prompts since the last fire required alongside the demonstrations for mastery (v0.40+) — proves no active relapse at the moment of graduation.
+| `review_intervals_days` | list | `[30,90,180]` | DECAYING MASTERY (v0.41+): expanding review schedule in days of NON-USE. A mastered rule unused past the current interval decays to `watch` and must be re-demonstrated; each natural use resets + advances to the next interval.
+|===
+
+.`mastery`
+[cols="2,1,1,4",options="header"]
+|===
+| Key | Type | Default | What it does
+| `demote_on_regression` | obj | `{"enabled":false,"threshold":3,"window":30}` | Auto-demote a mastered rule that fires threshold+ times within window prompts. Shape: {enabled, threshold, window}. Off by default — surprise reactivation feels punitive.
+| `mastered_cooldown_prompts` | int | `50` | Cooldown between refresher fires on mastered rules. 10x the practicing cooldown by default. Set to 0 to disable refresher firing (permanent silence on mastered rules).
+|===
+
+.`praise`
+[cols="2,1,1,4",options="header"]
+|===
+| Key | Type | Default | What it does
+| `disable_praise` | bool | `false` | Silence all praise but keep nudges. Praise+correction on the same prompt would dilute both (Kohn).
+| `praise_novelty_window` | int | `5` | Don't repeat the same praise phrasing within N praises.
+| `praise_on_first_after_fire` | bool | `true` | Celebrate when you correct the exact thing you were nudged on in the previous prompt.
+| `praise_on_mastery` | bool | `true` | Celebrate whenever a rule graduates to mastered.
+| `praise_ratio` | int | `10` | 1 praise per N clean prompts with a positive fire (variable-ratio, Kohn's don't-dilute threshold). Lower = more frequent.
+|===
+
+.`typo-tolerance`
+[cols="2,1,1,4",options="header"]
+|===
+| Key | Type | Default | What it does
+| `typo_tolerance` | int | `2` | Levenshtein distance for typo normalization (0 disables). Adaptive: distance-1 for short tokens (≤6 chars), distance-2 for longer.
+|===
+
+.`llm-fallback`
+[cols="2,1,1,4",options="header"]
+|===
+| Key | Type | Default | What it does
+| `llm_fallback` | obj | `{"enabled":false,"model":null,"min_words":20}` | Opt-in stub. If enabled AND no rule fired via regex AND the prompt is long, an optional model call would classify against the rule catalog. Deferred until real-use data justifies it.
+|===
+
+// END generated-config
 
 [#web-dashboard]
 == Web dashboard (v0.44+)

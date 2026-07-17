@@ -4,9 +4,10 @@ prompt-coach — analyze the user's prompt against a tiered ruleset of prompt
 best practices, nudge (or stay silent) based on config, and evolve as clean
 runs accumulate.
 
-Reads UserPromptSubmit JSON on stdin. Writes hook JSON on stdout to inject
-context for Claude; writes a boxed nudge to stderr for the user (both
-optional, controlled by config.nudge_style). Never blocks the prompt.
+Reads UserPromptSubmit JSON on stdin. Writes hook JSON on stdout with
+additionalContext that asks Claude to rewrite the user's prompt inline in the
+same response (collaborator mode, v0.34+). Never blocks the prompt. The master
+switch is config `enabled`; there is no user-facing nudge_style (removed v0.29).
 
 State model:
   - Global (`~/.claude/prompt-coach/state.json`): mastery ledger shared

@@ -39,6 +39,14 @@ the same schema validation the CLI uses).
   live** to the chosen scope (global or repo, selectable top-right). `↺` resets
   a key to default.
 - **Options** — reset-all-mastery, refresh, open the Anthropic guide.
+- **Library** — browse Anthropic's Claude Code Prompt Library templates by phase /
+  category / role, with a text filter (v0.47).
+- **Sources** — every citation in the catalog, deduped and **ranked by importance**
+  (official Claude Code / Anthropic docs → foundational canon → practitioner), each
+  linking out and listing the rules that cite it (v0.48).
+
+A toolbar **light/dark toggle** (🌙 / ☀️) persists your theme choice on top of the OS
+default.
 
 ## Data-only alternative
 

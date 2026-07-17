@@ -68,7 +68,7 @@ Candidate #1  (flagged 2026-07-02T22:33:00Z)
 
 Coach analysis:
   fired:      [vague-reference]
-  chosen:     vague-reference (nudged:both)
+  chosen:     vague-reference (collaborator:rewrite)
   positives:  none
   corrections: publish→polish
 

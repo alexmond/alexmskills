@@ -22,7 +22,7 @@ The two-channel setup (`alexmskills` + `alexmskills-beta`) kept hitting edge cas
 | Plugin | What it does
 
 | xref:prompt-coach-beta.adoc[prompt-coach-beta]
-| Watches every prompt and nudges toward better prompting habits — 28 rules across 6 tiers, variant pool + progressive disclosure + silence-after-saturation to avoid habituation, typo tolerance, and evidence-based praise for good behaviors.
+| Watches every prompt and rewrites it toward better prompting habits (collaborator mode) — 42 rules across 6 tiers, mastery earned by demonstration, typo tolerance, and evidence-based praise for good behaviors.
 
 | xref:tune-repo.adoc[tune-repo-beta]
 | Audits and tightens a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately.

@@ -9,6 +9,26 @@ unreleased/rolling (no global version).
 
 ## 2026-07-17
 
+### Changed
+- **prompt-coach-beta 0.48.1** — **documentation audit + generate-from-data so it
+  can't drift again.** Deep review of every doc surface against the shipped code
+  fixed a batch of stale/wrong content: the collaborator model was still
+  described as the removed `nudge_style` "both/silent/log-only/inline" nudge
+  modes (SKILL.md, stats.md, config.md, report-issue.md); mastery was described
+  as "N clean prompts in a row" instead of earned-by-demonstration (SKILL.md,
+  mastery.md); rule/positive counts read 28/34/35/36 instead of 42 (SKILL.md,
+  help.md, config.py, channels/index.adoc); tier sizes claimed "~5 each" (really
+  L1 6 · L2 4 · L3 11 · L4 5 · L5 11 · L6 5); config category/key lists still
+  named the removed `voice` / `anti-habituation`; and `/prompt-coach-beta:dashboard`
+  was missing from the slash-command table. The on-demand-analysis section is
+  now a subsection of the slash commands (it *is* `/analyze`), and the dashboard
+  docs gained the Library + Sources tabs and the light/dark toggle.
+  To stop the drift at the source, `gen-rules-doc.py` now generates **three**
+  data-derived AsciiDoc blocks from `build_dashboard` / `CONFIG_SCHEMA` — the
+  per-rule reference (as before) plus a **catalog summary** (counts + tier sizes)
+  and the **full configuration-key reference** (34 keys, grouped by category) —
+  each guarded by a harness drift check (`make docs-rules`).
+
 ### Added
 - **prompt-coach-beta 0.48.0** — **Claude Code orchestration-command routing +
   a ranked Sources dashboard tab.** Three new L5 tool-native rules detect the

@@ -9,7 +9,7 @@ config to fill in the live values.
 
 ## What to do
 
-1. Read `~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/. claude-plugin/plugin.json`
+1. Read `~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/.claude-plugin/plugin.json`
    (whichever version exists) for `.version` and `.description`.
 2. Resolve current effective config by merging (in order): built-in defaults →
    `~/.claude/prompt-coach/config.json` → current repo's `.claude/prompt-coach/config.json`
@@ -29,7 +29,7 @@ typo tolerance, conversational + picker-answer short-circuit. Rules quietly
 graduate as you master them and fade to occasional refreshers.
 
 New to the coach? See SKILL.md's "Quick start" section — a 60-second setup,
-what a nudge looks like, the four slash commands, and the most-used say-it
+what a nudge looks like, the slash commands, and the most-used say-it
 phrases. Path:
   ~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/skills/prompt-coach/SKILL.md
 
@@ -154,11 +154,19 @@ CONFIG OPTIONS REFERENCE
   praise_on_mastery         Celebrate rule mastery events (default: true)
   praise_on_first_after_fire  Praise the immediate correction (default: true)
   disable_praise            Silence encouragement, keep nudges (default: false)
+  praise_novelty_window     Don't repeat a praise variant within N fires (default: 5)
+
+  TIPS (proactive advanced-technique nudges)
+  tips_enabled              Emit occasional 💡 technique tips on clean prompts (default: true)
+  tip_ratio                 One tip per N eligible clean prompts (default: 5)
+  tip_cooldown_prompts      Min prompts between tips (default: 100)
 
   typo_tolerance            Levenshtein edit-distance for typo normalization (default: 2)
   demote_on_regression      Object {enabled, threshold, window} — auto-demote mastered
                             rules that fire threshold+ times within window prompts.
                             Off by default.
+  llm_fallback              Object {enabled, model, min_words} — opt-in stub for a future
+                            LLM classifier when regex misses. Disabled by default.
 
   (v0.38 removed the legacy `nudge_style`, `voice_preset`/`voice_source`, and the
    anti-habituation keys along with the hand-written nudge path. The coach is
@@ -184,7 +192,7 @@ DOCS
 ## What NOT to do
 
 - Do NOT modify any state or config files as part of `/help`. Read-only.
-- Do NOT enumerate every rule id (28 rules × 2-line description = wall of text). Point at
+- Do NOT enumerate every rule id (42 rules × 2-line description = wall of text). Point at
   `/prompt-coach-beta:stats` for active rules and mastered rules if the user asks for them.
 - Do NOT run the coach's Python code — the help card is static content + config lookup, not
   a live analysis.
