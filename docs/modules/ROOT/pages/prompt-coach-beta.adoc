@@ -142,7 +142,7 @@ For cross-repo analytics of coach activity, say *"log review"* or *"daily review
 
 // BEGIN generated-summary (gen-rules-doc.py — do not edit by hand)
 
-The catalog ships **42 rules** across 6 tiers (L1 6 · L2 4 · L3 11 · L4 5 · L5 11 · L6 5), each with a mirroring **positive detector** (42 total) so mastery is *earned by demonstration*. Behavior is tuned by **34 configuration keys** (see <<config-reference>>).
+The catalog ships **42 rules** across 6 tiers (L1 6 · L2 4 · L3 11 · L4 5 · L5 11 · L6 5), each with a mirroring **positive detector** (42 total) so mastery is *earned by demonstration*. Behavior is tuned by **35 configuration keys** (see <<config-reference>>).
 
 // END generated-summary
 
@@ -597,6 +597,7 @@ Generated from the plugin's `CONFIG_SCHEMA` — the exact table the validator, `
 | `min_outcomes_for_gating` | int | `4` | How many recorded accept/edit/reject outcomes a rule needs before the precision gate applies to it (v0.41+).
 | `precision_floor` | float | `0.15` | Acceptance-rate floor (v0.41+): a rule below this over min_outcomes_for_gating recorded outcomes is demoted dormant. Default 0.15 (only rules rejected ~85%+ of the time).
 | `precision_gating` | bool | `true` | ADAPTIVE ACTIVATION (v0.41+). When on, a rule whose acceptance rate (accepted+edited)/outcomes falls below precision_floor is demoted to `dormant` and stops firing; an explore slot periodically re-surfaces it.
+| `record_silence_as_accept` | bool | `true` | In honest mode (collaborator_gate=false), if a collaborator rewrite was rendered last turn and you move on without objecting, record that as an implicit acceptance (v0.49+). Populates the acceptance ledger so precision-gating has a denominator; without it the ledger stays near-empty and gating never activates. Explicit 'no'/'redo' still counts as a rejection. Ignored in gate mode.
 | `regression_guard` | int | `3` | Clean prompts since the last fire required alongside the demonstrations for mastery (v0.40+) — proves no active relapse at the moment of graduation.
 | `review_intervals_days` | list | `[30,90,180]` | DECAYING MASTERY (v0.41+): expanding review schedule in days of NON-USE. A mastered rule unused past the current interval decays to `watch` and must be re-demonstrated; each natural use resets + advances to the next interval.
 |===

@@ -140,6 +140,7 @@ CONFIG OPTIONS REFERENCE
   precision_gating          Demote rules you consistently reject to dormant (default: true)
   precision_floor           Acceptance-rate floor below which a rule is demoted (default: 0.15)
   min_outcomes_for_gating   Recorded accept/edit/reject outcomes needed before gating (default: 4)
+  record_silence_as_accept  Honest mode: moving on w/o objecting to a rendered rewrite = implicit accept (default: true)
   explore_period            Re-admit one dormant rule every N prompts (default: 10; 0=off)
   max_nudges_per_window     Max visible rewrites per nudge_window prompts (default: 6; 0=off)
   nudge_window              Rolling window (prompts) for the fatigue cap (default: 20)

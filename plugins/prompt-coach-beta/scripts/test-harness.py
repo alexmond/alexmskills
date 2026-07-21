@@ -613,6 +613,61 @@ def t_v48_command_rules():
           f"multi={multi_ok} co={co}")
 
 
+def t_v49_calibration():
+    """v0.49 — real-log calibration + hygiene: (1) the question/conversational
+    guards stop the observed false positives while genuine triggers still fire;
+    (2) secret-shaped tokens are redacted from the log preview; (3) silence in
+    honest mode records an implicit acceptance so precision-gating has data."""
+    import importlib.util, json as _json, tempfile, subprocess
+    spec = importlib.util.spec_from_file_location("_an49", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_an49"] = m
+    spec.loader.exec_module(m)
+    R = m.RULES_BY_ID
+
+    guard_cases = [
+        ("no-adversarial-check", "what is portainer password", False),
+        ("no-adversarial-check", "delete the production database and drop the schema", True),
+        ("no-few-shot", "does forge have a github-similar integration for build results", False),
+        ("no-few-shot", "write the validator like the one in utils.py", True),
+        ("vague-reference", "does it have to be 6 or it could be 8 ?", False),
+        ("vague-reference", "fix it and make it faster", True),
+        ("pattern-worth-abstracting", "ask again", False),
+        ("pattern-worth-abstracting", "i keep having to write this same retry loop again and again", True),
+    ]
+    guards_ok = all(R[rid].check(p) == want for rid, p, want in guard_cases)
+
+    red = m._redact_secrets("token glpat-U5U4iD6Yfry6rHdbvyxxvWM6MQpvOjEKdT now")
+    redact_ok = "glpat-" not in red and "redacted" in red
+
+    # silence = accept end-to-end (throwaway HOME so real state is untouched)
+    home = Path(tempfile.mkdtemp()); cwd = Path(tempfile.mkdtemp())
+    (home / ".claude/prompt-coach").mkdir(parents=True)
+    (cwd / ".claude/prompt-coach").mkdir(parents=True)
+    env = dict(os.environ); env["HOME"] = str(home)
+
+    def _hk(p):
+        subprocess.run([sys.executable, str(ANALYZER)],
+                       input=_json.dumps({"cwd": str(cwd), "prompt": p}),
+                       capture_output=True, text=True, env=env)
+    _hk("fix it and make it better")                  # renders a collaborator block
+    _hk("add a health endpoint to the server")        # silence -> implicit accept
+    st = _json.loads((home / ".claude/prompt-coach/state.json").read_text())
+    acc = st.get("acceptance", {})
+    silence_ok = int(acc.get("implicit", 0)) >= 1 and int(acc.get("accepted", 0)) >= 1
+
+    # self-ignoring .gitignore dropped into the repo's coach state dir so its
+    # logs never get committed regardless of the host repo's own rules.
+    gi = cwd / ".claude/prompt-coach/.gitignore"
+    gitignore_ok = gi.exists() and gi.read_text().strip().endswith("*")
+
+    check("v0.49 calibration: question guards + secret redaction + silence-as-"
+          "accept + self-ignoring state dir",
+          bool(guards_ok and redact_ok and silence_ok and gitignore_ok),
+          f"guards={guards_ok} redact={redact_ok} silence={silence_ok} "
+          f"gitignore={gitignore_ok} acc={acc}")
+
+
 def t_acceptance_loop():
     """v0.41 P1 — a yes/no/edit reply to a rewrite is recorded per rule."""
     h, c = _fresh()
@@ -781,6 +836,7 @@ CHECKS = [
     t_workflow_fanout_no_verify_rule,
     t_v46_rules,
     t_v48_command_rules,
+    t_v49_calibration,
     t_library_integration,
     t_collaborator_gate_configurable,
     t_rule_help_covers_all,

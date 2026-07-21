@@ -108,6 +108,7 @@ DEFAULT_CONFIG = {
     "precision_gating": True,
     "precision_floor": 0.15,          # demote below this acceptance rate
     "min_outcomes_for_gating": 4,     # need this many outcomes before gating
+    "record_silence_as_accept": True, # honest mode: moving on w/o objecting = accept
     "explore_period": 10,             # re-admit a dormant rule every N prompts
     "nudge_window": 20,               # rolling window (prompts) for the cap
     "max_nudges_per_window": 6,       # max visible rewrites per window (0=off)
@@ -365,6 +366,19 @@ CONFIG_SCHEMA = {
                        "before the precision gate applies to it (v0.41+).",
         "example": 4,
         "since": "0.41.0",
+    },
+    "record_silence_as_accept": {
+        "category": "rule-activation",
+        "type": "bool",
+        "description": "In honest mode (collaborator_gate=false), if a collaborator "
+                       "rewrite was rendered last turn and you move on without "
+                       "objecting, record that as an implicit acceptance (v0.49+). "
+                       "Populates the acceptance ledger so precision-gating has a "
+                       "denominator; without it the ledger stays near-empty and "
+                       "gating never activates. Explicit 'no'/'redo' still counts "
+                       "as a rejection. Ignored in gate mode.",
+        "example": True,
+        "since": "0.49.0",
     },
     "explore_period": {
         "category": "rule-activation",
@@ -1010,6 +1024,13 @@ def rule_vague_reference(prompt: str) -> bool:
     first = _first_line(prompt).lower()
     if len(first.split()) < 3:
         return False
+    # v0.49.0 — a short clarifying question led by an auxiliary + pronoun ("does
+    # it have to be 6 or 8?", "is it ok to merge?") is a context-resolved
+    # follow-up, not a dangling reference. Collaborator mode would veto it in
+    # context anyway; skip the fire so it doesn't churn the log/streaks.
+    if re.match(r"^\s*(does|do|is|are|can|could|should|would|will|has|have|did)\s+"
+                r"(it|this|that|these|those|they)\b", first):
+        return False
     pronoun = re.search(r"\b(it|this|that|these|those|the thing)\b", first)
     if not pronoun:
         return False
@@ -1268,6 +1289,15 @@ def rule_no_adversarial_check(prompt: str) -> bool:
     )
     if not stakes:
         return False
+    # v0.49.0 (calibration vs real logs) — a bare info-lookup question ("what is
+    # the portainer password", "where is the api token") is retrieval, not a
+    # high-stakes *change*; no skeptic pass is warranted. Veto when the prompt is
+    # such a question and names no mutating verb.
+    if (re.match(r"^\s*(what|where|which|who|whats?|what'?s|how\s+(do|much|many|to)|"
+                 r"is\s+there|are\s+there|do\s+we\s+have|does\s+\w+\s+have)\b", pl)
+            and not re.search(r"\b(change|delete|drop|remove|migrat|deploy|rotate|"
+                              r"reset|revoke|grant|update|modify|alter|apply|push)\b", pl)):
+        return False
     adversarial = re.search(
         r"\b(review|critique|adversarial|skeptic|refute|challenge|"
         r"edge\s+case|risk|threat|panel|red[- ]team|second\s+opinion)\b",
@@ -1295,6 +1325,10 @@ def rule_retry_without_diagnosis(prompt: str) -> bool:
 
 def rule_no_few_shot(prompt: str) -> bool:
     pl = prompt.lower()
+    # v0.49.0 — a yes/no capability question ("does forge have a github-similar
+    # integration?") isn't a generate-in-a-style ask, so few-shot doesn't apply.
+    if re.match(r"^\s*(does|do|is|are|can|could|has|have|will|would|should|did)\b", pl):
+        return False
     pattern = re.search(
         r"\b(like|similar to|in the style of|matching|same pattern|"
         r"same as|following the same|analogous to|the way \w+ does)\b", pl)
@@ -1501,6 +1535,10 @@ def rule_no_skill_lookup(prompt: str) -> bool:
 
 def rule_pattern_worth_abstracting(prompt: str) -> bool:
     pl = prompt.lower()
+    # v0.49.0 — a bare 2-3 word retry ("ask again", "do it again") is a
+    # continuation, not a rule-of-three abstraction signal.
+    if len(pl.split()) <= 3:
+        return False
     repeat = re.search(
         r"\bagain\b|\bonce more\b|\bsame as (last time|before)\b|"
         r"\byet another\b|\bthird time\b|\bnth time\b|"
@@ -4306,8 +4344,26 @@ def load_json(path: Path, default: dict) -> dict:
         return dict(default)
 
 
+def _ensure_state_gitignore(d: Path) -> None:
+    """v0.49.0 — drop a self-ignoring `.gitignore` into the coach's state dir so
+    its log + local state (which contain prompt text, and — even after
+    redaction — potentially sensitive context) are NEVER committed, regardless
+    of the host repo's own .gitignore. Idempotent; failures are non-fatal."""
+    try:
+        if d.name != "prompt-coach":
+            return
+        gi = d / ".gitignore"
+        if not gi.exists():
+            gi.write_text(
+                "# prompt-coach: never commit local coach state (logs, ledgers).\n*\n",
+                encoding="utf-8")
+    except OSError:
+        pass
+
+
 def save_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_state_gitignore(path.parent)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, indent=2, sort_keys=False), encoding="utf-8")
     tmp.replace(path)
@@ -4971,7 +5027,8 @@ def _blind_reject_gap(cwd) -> bool:
         return False
 
 
-def _record_acceptance(g: dict, l: dict, prompt_raw: str, cwd=None) -> str | None:
+def _record_acceptance(g: dict, l: dict, prompt_raw: str, cwd=None,
+                       silence_accept: bool = False) -> str | None:
     """If a collaborator rewrite was offered last prompt and THIS prompt is a
     clear yes/no/edit reply, record the outcome. Returns the recorded bucket
     or None. Idempotent per reply — clears last_prompt_fired_rules.
@@ -4988,8 +5045,19 @@ def _record_acceptance(g: dict, l: dict, prompt_raw: str, cwd=None) -> str | Non
     if not offered:
         return None
     verdict = _classify_reply(prompt_raw)
+    implicit = False
     if verdict is None:
-        return None
+        # v0.49.0 — silence = accept (honest mode only). If a collaborator
+        # rewrite was actually RENDERED last turn (not a refresher / ack /
+        # capped fire) and the user moved on without an explicit no/redo, that's
+        # a weak positive signal. Recording it gives precision-gating a
+        # denominator so it can activate; without it the ledger stays empty and
+        # gating is inert. Tracked in a distinct `implicit` sub-count so the
+        # ledger stays honest about how the acceptance was inferred.
+        if not (silence_accept and l.get("last_collab_rendered")):
+            return None
+        verdict = "accepted"
+        implicit = True
     bucket = verdict
     if verdict == "rejected" and cwd is not None and _blind_reject_gap(cwd):
         bucket = "blind_reject"
@@ -5000,7 +5068,11 @@ def _record_acceptance(g: dict, l: dict, prompt_raw: str, cwd=None) -> str | Non
     rs["last_outcome_at"] = _now_iso()
     tally = g.setdefault("acceptance", {"accepted": 0, "edited": 0, "rejected": 0})
     tally[bucket] = int(tally.get(bucket, 0)) + 1
+    if implicit:
+        tally["implicit"] = int(tally.get("implicit", 0)) + 1
+        rs["implicit_accepts"] = int(rs.get("implicit_accepts", 0)) + 1
     l["last_prompt_fired_rules"] = []        # consumed
+    l["last_collab_rendered"] = False        # consumed
     return bucket
 
 
@@ -5060,9 +5132,33 @@ def _set_review_due(gr: dict, cfg: dict, stage: int) -> None:
     gr["review_due_at"] = due.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# v0.49.0 — redact secret-shaped tokens from prompt previews before they hit
+# the on-disk log. The log is gitignored, but a live credential sitting in a
+# plaintext file is a latent leak (real logs captured GitLab PATs). Known
+# prefixes + JWT + PEM headers; conservative so ordinary prose isn't mangled.
+_SECRET_PATTERNS = [
+    re.compile(r"glpat-[A-Za-z0-9_\-]{20,}"),
+    re.compile(r"gh[posru]_[A-Za-z0-9]{20,}"),
+    re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),
+    re.compile(r"sk-(?:ant-)?[A-Za-z0-9_\-]{20,}"),
+    re.compile(r"AKIA[0-9A-Z]{16}"),
+    re.compile(r"xox[baprs]-[A-Za-z0-9\-]{10,}"),
+    re.compile(r"AIza[0-9A-Za-z_\-]{35}"),
+    re.compile(r"eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}"),  # JWT
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+]
+
+
+def _redact_secrets(text: str) -> str:
+    for pat in _SECRET_PATTERNS:
+        text = pat.sub("<redacted-secret>", text)
+    return text
+
+
 def append_log(local_dir: Path, entry: dict) -> None:
     log = local_dir / "log.md"
     log.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_state_gitignore(log.parent)
     date = _today()
     lines_out = []
     if not log.exists():
@@ -5078,7 +5174,7 @@ def append_log(local_dir: Path, entry: dict) -> None:
     praise = entry.get("praise") or "—"
     corrections = ", ".join(entry.get("corrections", []) or [])
     outcome = entry.get("outcome", "?")
-    prompt_preview = entry.get("prompt", "").replace("\n", " ")[:120]
+    prompt_preview = _redact_secrets(entry.get("prompt", "").replace("\n", " "))[:120]
     lines_out.append(
         f"- [{entry['t']}] fired=[{fired}] chosen={chosen} "
         f"positives=[{positives}] "
@@ -5162,7 +5258,10 @@ def main() -> int:
     # offered last prompt and THIS prompt is a clear yes/no/edit reply,
     # record the per-rule outcome BEFORE the conversational short-circuit
     # (which would otherwise swallow "yes"/"no" and lose the signal).
-    _acceptance_verdict = _record_acceptance(g, l, prompt_raw, cwd)
+    _silence_accept = (bool(cfg.get("record_silence_as_accept", True))
+                       and not bool(cfg.get("collaborator_gate", False)))
+    _acceptance_verdict = _record_acceptance(g, l, prompt_raw, cwd,
+                                             silence_accept=_silence_accept)
 
     # Conversational short-circuit — "sure", "publish", "1 and 2", "go for
     # it" etc. are fragments answering an implicit question, not full
@@ -5519,6 +5618,10 @@ def main() -> int:
     # Remember which rules fired THIS prompt so next prompt's "first-after-fire"
     # praise can trigger.
     l["last_prompt_fired_rules"] = list(fired)
+    # v0.49.0 — track whether a real collaborator rewrite was RENDERED this turn
+    # (not a refresher / ack / capped fire), so next turn's silence-as-accept
+    # only credits prompts the user actually saw a rewrite for.
+    l["last_collab_rendered"] = str(outcome or "").startswith("collaborator")
 
     # v0.28.0 — proactive tips. Two firing modes:
     #   Mode B (graduation-unlock): rule masters → fire paired tip on same

@@ -7,6 +7,37 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-19
+
+### Changed
+- **prompt-coach-beta 0.49.0** — **calibration + hygiene from a cross-repo log
+  review** (15 repos, ~3.5 days). Three fixes:
+  - **Secret redaction in the log.** The gitignored `log.md` was capturing live
+    credentials in prompt previews (real GitLab PATs showed up). `append_log`
+    now redacts known secret shapes (`glpat-`/`gh?_`/`github_pat_`/`sk-`(+`ant-`)/
+    `AKIA…`/`xox?-`/`AIza…`/JWT/PEM private-key headers) before writing.
+  - **Tighter question / conversational guards.** Real logs showed full rewrites
+    firing on info-lookups and clarifiers: `no-adversarial-check` on "what is the
+    portainer password" (a lookup, not a risky change), `no-few-shot` on "does X
+    have a Y-similar integration?" (a yes/no question), `vague-reference` on "does
+    it have to be 6 or 8?" (context-resolved), `pattern-worth-abstracting` on "ask
+    again" (a 2-word retry). Each rule gained a targeted veto; genuine triggers
+    still fire.
+  - **Silence = accept (honest mode).** With `record_silence_as_accept` (new,
+    default true), moving on without objecting to a *rendered* collaborator
+    rewrite records an implicit acceptance (tracked in a distinct `implicit`
+    sub-count). The acceptance ledger was near-empty (8 lifetime outcomes), so
+    precision-gating never had a denominator to act on; now it does. Explicit
+    "no"/"redo" still counts as rejection; ignored in gate mode.
+  - **Self-ignoring state dir.** The coach now drops a `.gitignore` (`*`) into
+    its `.claude/prompt-coach/` dir on write, so its logs/ledgers are never
+    committed regardless of the host repo's own rules. (A cross-repo audit found
+    5 repos had `log.md` tracked in git and ~17 more unignored — all one
+    `git add .` from committing prompt text.)
+  Harness gained `t_v49_calibration` (guards + redaction + silence-accept +
+  self-ignoring dir, end-to-end). Config reference is now 35 keys (generated
+  block auto-updated).
+
 ## 2026-07-17
 
 ### Changed
