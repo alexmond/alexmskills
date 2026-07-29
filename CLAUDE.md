@@ -21,8 +21,8 @@ Makefile                          # validate / list / bump helpers
 
 ## Catalog (see README for descriptions)
 
-`evolving-claude-md`, `dev-crew`, `brainstorm-panel`, `learn-on-failure`, `prompt-coach`
-(self-learning) · `implement-issue`, `maven-quality`, `security-audit` (workflow) ·
+`evolving-claude-md`, `dev-crew`, `brainstorm-panel`, `learn-on-failure`, `roles`, `prompt-coach`
+(self-learning) · `implement-issue`, `maven-quality`, `security-audit`, `screenshot-tour` (workflow) ·
 `review-agents` (review) · `research-sweep` (research). Beta (`-beta` suffix): `tune-repo-beta`.
 
 ## Conventions
