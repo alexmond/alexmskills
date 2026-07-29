@@ -17,16 +17,18 @@ that captures every multi-cycle debugging detour.
 
 | Plugin | Category | Version | What it does |
 |---|---|---|---|
-| [`evolving-claude-md`](plugins/evolving-claude-md) | self-learning | 1.0.0 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks. |
-| [`dev-crew`](plugins/dev-crew) | self-learning | 1.1.0 | A self-evolving delivery crew that composes a task-fit roster (like a panel, but to *ship* a target) and runs it as a gated relay with machine-enforced phase gates + an escalation ladder; each role a subagent on its own tier. (architect → dev → qa → deployer is one example lineup.) |
-| [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.1.0 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. |
+| [`evolving-claude-md`](plugins/evolving-claude-md) | self-learning | 1.1.1 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks. |
+| [`dev-crew`](plugins/dev-crew) | self-learning | 1.2.0 | A self-evolving delivery crew that composes a task-fit roster (like a panel, but to *ship* a target) and runs it as a gated relay with machine-enforced phase gates + an escalation ladder; each role a subagent on its own tier. (architect → dev → qa → deployer is one example lineup.) |
+| [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.2.1 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. |
 | [`learn-on-failure`](plugins/learn-on-failure) | self-learning | 1.0.0 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle. |
-| [`roles`](plugins/roles) | self-learning | 1.0.0 | A per-repo repository of evolving roles (.claude/roles/) usable solo via /roles:as, as dev-crew roles, brainstorm-panel seats, and research-sweep coverage roles; ships seed personas + a graduation-audit hook. |
+| [`roles`](plugins/roles) | self-learning | 1.2.0 | A per-repo repository of evolving roles (.claude/roles/) usable solo via /roles:as, as dev-crew roles, brainstorm-panel seats, and research-sweep coverage roles; ships seed personas + a graduation-audit hook. |
+| [`prompt-coach`](plugins/prompt-coach) | self-learning | 1.0.0 | A `UserPromptSubmit` hook that rewrites each prompt you send toward better prompting habits (collaborator mode) — 42 rules across 6 tiers, mastery earned by demonstration, adaptive precision-gating, typo tolerance, and a zero-dependency local web dashboard. |
 | [`implement-issue`](plugins/implement-issue) | workflow | 1.0.0 | Drives a GitHub issue from branch → implement → verify → PR with a guided workflow. |
 | [`maven-quality`](plugins/maven-quality) | workflow | 1.0.0 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects (codestyle, precommit, jacoco). |
 | [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
+| [`screenshot-tour`](plugins/screenshot-tour) | workflow | 1.0.0 | Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product (CLI/web/library/TUI) under `presentation/`. |
 | [`review-agents`](plugins/review-agents) | review | 1.0.0 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers. |
-| [`research-sweep`](plugins/research-sweep) | research | 1.0.0 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
+| [`research-sweep`](plugins/research-sweep) | research | 1.1.3 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
 
 ## The Role System
 
@@ -64,9 +66,11 @@ Then install what you want — copy-paste any of these:
 /plugin install brainstorm-panel@alexmskills
 /plugin install learn-on-failure@alexmskills
 /plugin install roles@alexmskills
+/plugin install prompt-coach@alexmskills
 /plugin install implement-issue@alexmskills
 /plugin install maven-quality@alexmskills
 /plugin install security-audit@alexmskills
+/plugin install screenshot-tour@alexmskills
 /plugin install review-agents@alexmskills
 /plugin install research-sweep@alexmskills
 ```
