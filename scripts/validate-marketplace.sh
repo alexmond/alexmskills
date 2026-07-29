@@ -4,7 +4,7 @@
 #
 # One channel, one catalog: .claude-plugin/marketplace.json at the repo root.
 # In-progress plugins live alongside stable ones under plugins/ with a
-# `-beta` suffix in the name (e.g. `prompt-coach-beta`) — no separate
+# `-beta` suffix in the name (e.g. `prompt-coach`) — no separate
 # marketplace file, no dual clone-root logic, no extraKnownMarketplaces
 # needed on the consumer side.
 #

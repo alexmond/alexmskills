@@ -1,4 +1,4 @@
-# prompt-coach-beta tests
+# prompt-coach tests
 
 Two layers, deliberately separate by dependency weight:
 

@@ -10,21 +10,21 @@ help: ## Show this help
 validate: ## Validate the marketplace + all plugin manifests
 	@bash scripts/validate-marketplace.sh
 
-test-coach: ## Run the prompt-coach-beta release test harness (run after each release)
-	@python3 plugins/prompt-coach-beta/scripts/test-harness.py
+test-coach: ## Run the prompt-coach release test harness (run after each release)
+	@python3 plugins/prompt-coach/scripts/test-harness.py
 
 docs-rules: ## Regenerate the prompt-coach data-derived doc blocks (rules, catalog summary, config reference) from code
-	@python3 plugins/prompt-coach-beta/scripts/gen-rules-doc.py --inject
+	@python3 plugins/prompt-coach/scripts/gen-rules-doc.py --inject
 
 library-refresh: ## Refresh the vendored Claude Code Prompt Library snapshot (fetches live docs)
-	@python3 plugins/prompt-coach-beta/scripts/gen-prompt-library.py
+	@python3 plugins/prompt-coach/scripts/gen-prompt-library.py
 
 library-audit: ## Calibration report — run the rule catalog over the gold prompt-library prompts
-	@python3 plugins/prompt-coach-beta/scripts/audit-library.py
+	@python3 plugins/prompt-coach/scripts/audit-library.py
 
 test-dashboard: ## Playwright UI test for the coach web dashboard (optional; skips if playwright absent)
 	@NODE_PATH="$${NODE_PATH:-$$HOME/.local/lib/playwright/node_modules}" \
-		node plugins/prompt-coach-beta/tests/pw-dashboard.js
+		node plugins/prompt-coach/tests/pw-dashboard.js
 
 list: ## List catalog: name, version, description
 	@jq -r '.plugins[] | [.name, .version, .description] | @tsv' \
@@ -42,7 +42,7 @@ bump: ## Bump a plugin version: make bump PLUGIN=dev-crew VERSION=1.1.0
 			.claude-plugin/marketplace.json > "$$mtmp" && mv "$$mtmp" .claude-plugin/marketplace.json; \
 		echo "Bumped $(PLUGIN) -> $(VERSION) in plugin.json and marketplace.json"
 
-graduate: ## Graduate a -beta plugin to stable: make graduate PLUGIN=prompt-coach-beta
+graduate: ## Graduate a -beta plugin to stable: make graduate PLUGIN=prompt-coach
 	@test -n "$(PLUGIN)" || { echo "Usage: make graduate PLUGIN=<name>-beta"; exit 1; }
 	@echo "$(PLUGIN)" | grep -q -- '-beta$$' || { echo "Only -beta plugins can be graduated"; exit 1; }
 	@new="$$(echo $(PLUGIN) | sed 's/-beta$$//')"; \

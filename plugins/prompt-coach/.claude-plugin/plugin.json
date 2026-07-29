@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
-  "name": "prompt-coach-beta",
-  "description": "Analyzes each prompt you submit against a tiered ruleset of prompting best practices; nudges you toward better prompts (definition-of-done, scoped references, guardrails, verification steps) and quietly graduates rules you consistently follow. Beta — local until proven.",
-  "version": "0.49.0",
+  "name": "prompt-coach",
+  "description": "Analyzes each prompt you submit against a tiered ruleset of prompting best practices; nudges you toward better prompts (definition-of-done, scoped references, guardrails, verification steps) and quietly graduates rules you consistently follow.",
+  "version": "1.0.0",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"

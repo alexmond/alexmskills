@@ -1,9 +1,9 @@
 ---
 name: prompt-coach
-description: A hook-driven coach that watches your prompts to Claude Code and nudges you toward proven prompting best practices (definition-of-done, scoped references, guardrails, verification). Ships a tiered rule catalog; rules quietly graduate once you consistently apply them so the coach fades as you improve. Beta.
+description: A hook-driven coach that watches your prompts to Claude Code and nudges you toward proven prompting best practices (definition-of-done, scoped references, guardrails, verification). Ships a tiered rule catalog; rules quietly graduate once you consistently apply them so the coach fades as you improve.
 ---
 
-# prompt-coach (beta)
+# prompt-coach
 
 ## Quick start
 
@@ -11,7 +11,7 @@ description: A hook-driven coach that watches your prompts to Claude Code and nu
 
 ```
 /plugin marketplace add alexmond/alexmskills
-/plugin install prompt-coach-beta@alexmskills
+/plugin install prompt-coach@alexmskills
 /reload-plugins
 ```
 
@@ -47,17 +47,17 @@ On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The co
 
 | Command | When to use |
 |---|---|
-| `/prompt-coach-beta:stats` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status. |
-| `/prompt-coach-beta:mastery` | *"Which rules mastered, which need reset?"* Per-rule breakdown + analysis (well-tested / barely-tested / untested masteries; close-to-mastery). |
-| `/prompt-coach-beta:config` | *"Change my settings."* Verbs: `show`, `get`, `set`, `describe`, `options`, `mastery`, `acceptance`, `sources`, `paths`, `analyze`, `library`, `dashboard`, `diff`, `export`, `reset`. |
-| `/prompt-coach-beta:library` | *"Show me a prompt for X."* Matches your task to the closest gold-standard template from Anthropic's Claude Code Prompt Library (v0.47). |
-| `/prompt-coach-beta:dashboard` | *"Show me a UI."* Local web dashboard (v0.44) — six tabs: Stats, Mastery (by tier, with reference URLs), live Config editor, Options, Library, and the ranked Sources tab (v0.48). Light/dark toggle. |
-| `/prompt-coach-beta:help` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet. |
-| `/prompt-coach-beta:report-issue` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only). |
+| `/prompt-coach:stats` | *"How am I doing?"* Health dashboard: prompts analyzed, emit rate, top-fired rules, mastery status. |
+| `/prompt-coach:mastery` | *"Which rules mastered, which need reset?"* Per-rule breakdown + analysis (well-tested / barely-tested / untested masteries; close-to-mastery). |
+| `/prompt-coach:config` | *"Change my settings."* Verbs: `show`, `get`, `set`, `describe`, `options`, `mastery`, `acceptance`, `sources`, `paths`, `analyze`, `library`, `dashboard`, `diff`, `export`, `reset`. |
+| `/prompt-coach:library` | *"Show me a prompt for X."* Matches your task to the closest gold-standard template from Anthropic's Claude Code Prompt Library (v0.47). |
+| `/prompt-coach:dashboard` | *"Show me a UI."* Local web dashboard (v0.44) — six tabs: Stats, Mastery (by tier, with reference URLs), live Config editor, Options, Library, and the ranked Sources tab (v0.48). Light/dark toggle. |
+| `/prompt-coach:help` | *"What are my options?"* Compact live-config card + command list + say-it cheatsheet. |
+| `/prompt-coach:report-issue` | *"The coach was wrong."* Files a redacted GitHub issue (first-5-words + structural signature only). |
 
 #### Web dashboard (v0.44)
 
-`/prompt-coach-beta:dashboard` launches a **zero-dependency (Python stdlib only) local server** on
+`/prompt-coach:dashboard` launches a **zero-dependency (Python stdlib only) local server** on
 `127.0.0.1` (`scripts/serve.py`). It renders the coach's **stats**, **mastery** grouped by tier
 (status badge · `demos/min` · fires · clickable **reference URLs** · per-rule reset), and a **live
 config editor** — every schema key with its description and a type-aware control (checkbox / number /
@@ -74,7 +74,7 @@ The coach vendors an offline snapshot of [Anthropic's Claude Code Prompt Library
 — 52 gold-standard, tagged, slot-templated prompts — and matches your task to the closest one with a
 zero-dependency keyword/tag matcher (`scripts/library.py`, no network/embeddings). Two touchpoints:
 
-- **On-demand** — `/prompt-coach-beta:library "<task>"` or *"show me a prompt for X"* returns the
+- **On-demand** — `/prompt-coach:library "<task>"` or *"show me a prompt for X"* returns the
   closest template(s), offered adapted to your file paths. Browse all on the dashboard's **Library** tab.
 - **Rewrite grounding** — when a rule fires and `library_hints` is on (default), the collaborator
   rewrite is anchored to the closest template's phrasing + slots (only when a confident match exists).
@@ -292,7 +292,7 @@ Set `typo_tolerance: 0` in config to disable the normalization pass entirely.
 ## Configuration
 
 Config resolves in order: repo local → user global → default. Run
-`/prompt-coach-beta:config show` for the live, schema-backed list. Key knobs:
+`/prompt-coach:config show` for the live, schema-backed list. Key knobs:
 
 - `enabled` — master switch; `false` = the hook returns immediately (default: true)
 - `ack_clean` / `ack_ratio` — the `✓` liveness heartbeat on clean prompts + its rate (default: true / 1)
@@ -322,7 +322,7 @@ Full source citations behind each rule: [`docs/sources.md`](../../docs/sources.m
 
 ## Cross-repo daily review — moved out (v0.23+)
 
-The v0.21-v0.22 `/prompt-coach-beta:daily-review` command was extracted
+The v0.21-v0.22 `/prompt-coach:daily-review` command was extracted
 to a standalone user skill at `~/.claude/skills/log-review/`. Rationale:
 its output (repo names, per-repo activity) shouldn't be produced by the
 coach; keeping it separate means the coach never generates content that
@@ -338,21 +338,21 @@ picks up the skill from `~/.claude/skills/log-review/`. Redacted-by-default
 
 Three additions on top of v0.18's `:config`:
 
-- `+/prompt-coach-beta:config options <key>+` — enumerates legal values for a key
+- `+/prompt-coach:config options <key>+` — enumerates legal values for a key
   with per-choice explanations. For int/bool/list, shows current + default +
   example + description. Answers *"what modes exist?"* without needing to already know.
-- `+/prompt-coach-beta:config quick+` — interactive multi-choice picker for the
+- `+/prompt-coach:config quick+` — interactive multi-choice picker for the
   ~4 high-value settings (`ack_clean`, `show_source_urls`, `praise_ratio`, `tips_enabled`).
   Claude walks you through with AskUserQuestion; each answer routes to `:config set`.
-- `+/prompt-coach-beta:config full+` — same pattern for every schema key. Enum
+- `+/prompt-coach:config full+` — same pattern for every schema key. Enum
   keys → picker; numeric/bool → "keep current / type new value / reset to
   default". Longer flow; you can skip categories.
-- `+/prompt-coach-beta:config mastery+` — dashboard of rule states: *mastered*
+- `+/prompt-coach:config mastery+` — dashboard of rule states: *mastered*
   (with mastery date), *in-progress* (fires_total > 0, streak/threshold),
   *dormant* count by tier. Answers *"how am I doing?"*.
-- `+/prompt-coach-beta:config mastery-reset <rule-id>+` — resets one rule's
+- `+/prompt-coach:config mastery-reset <rule-id>+` — resets one rule's
   fires/streak/status/mastered_at (dry-run first).
-- `+/prompt-coach-beta:config mastery-reset-all+` — wipes all rule state
+- `+/prompt-coach:config mastery-reset-all+` — wipes all rule state
   (preserves `prompt_count` and non-rule state; dry-run first).
 
 Under the hood, enum keys now carry `choice_descriptions` in `CONFIG_SCHEMA` —
@@ -361,27 +361,27 @@ same forward-compat pattern as v0.18. Adding a new enum config means adding a
 
 ## Config surface (v0.18+)
 
-The coach's config spans ~34 keys across six categories. `/prompt-coach-beta:config`
+The coach's config spans ~34 keys across six categories. `/prompt-coach:config`
 is the structured surface — it reads a `CONFIG_SCHEMA` metadata dict alongside
 `DEFAULT_CONFIG`, so future options are picked up automatically once they land in the
 schema.
 
 ```
-/prompt-coach-beta:config                         categorized dashboard
-/prompt-coach-beta:config show <category>         one category only
-/prompt-coach-beta:config get <key>               resolved value
-/prompt-coach-beta:config describe <key>          type, default, choices, since
-/prompt-coach-beta:config options <key>           legal values + per-choice notes
-/prompt-coach-beta:config set <key> <value>       validate + write
-/prompt-coach-beta:config reset <key>             remove your override
-/prompt-coach-beta:config reset-all               wipe scoped config (confirm!)
-/prompt-coach-beta:config diff | export           changed keys | resolved JSON
-/prompt-coach-beta:config mastery | acceptance    mastery ledger | accept/reject rate
-/prompt-coach-beta:config sources [<rule>]        citation trail + doc URLs
-/prompt-coach-beta:config paths                   skill folders, state, scripts
-/prompt-coach-beta:config analyze "<text>"        full-catalog read of a prompt
-/prompt-coach-beta:config library ["<task>"]      match / list Prompt-Library templates
-/prompt-coach-beta:config dashboard               the consolidated dashboard JSON
+/prompt-coach:config                         categorized dashboard
+/prompt-coach:config show <category>         one category only
+/prompt-coach:config get <key>               resolved value
+/prompt-coach:config describe <key>          type, default, choices, since
+/prompt-coach:config options <key>           legal values + per-choice notes
+/prompt-coach:config set <key> <value>       validate + write
+/prompt-coach:config reset <key>             remove your override
+/prompt-coach:config reset-all               wipe scoped config (confirm!)
+/prompt-coach:config diff | export           changed keys | resolved JSON
+/prompt-coach:config mastery | acceptance    mastery ledger | accept/reject rate
+/prompt-coach:config sources [<rule>]        citation trail + doc URLs
+/prompt-coach:config paths                   skill folders, state, scripts
+/prompt-coach:config analyze "<text>"        full-catalog read of a prompt
+/prompt-coach:config library ["<task>"]      match / list Prompt-Library templates
+/prompt-coach:config dashboard               the consolidated dashboard JSON
 ```
 
 Flags: `--scope global|repo` (default `global`), `--dry-run` (on set/reset), `--json`
@@ -447,7 +447,7 @@ if a mastered rule fires 3+ times within 30 prompts, demote it back to practicin
 default — being surprised by a graduated rule reactivating is unpleasant. Users who want strict
 self-healing turn this on.
 
-## On-demand analysis — `/prompt-coach-beta:analyze` (v0.37+)
+## On-demand analysis — `/prompt-coach:analyze` (v0.37+)
 
 The passive hook is quiet by design — it only checks the few *active* rules. But the skill
 carries the whole prompting-knowledge catalog, so you can point it at a prompt on demand and
@@ -478,9 +478,9 @@ $ …/config.py analyze "fix it and make it better and faster"
     …
 ```
 
-## Introspection — `/prompt-coach-beta:stats`
+## Introspection — `/prompt-coach:stats`
 
-Type `/prompt-coach-beta:stats` (v0.8+) to see a compact dashboard: total prompts analyzed,
+Type `/prompt-coach:stats` (v0.8+) to see a compact dashboard: total prompts analyzed,
 nudge/praise/skipped counts, emit rate, most-fired rules, mastered rules, top typo corrections,
 and current config. Answers "is this thing actually doing anything?" without opening files.
 
@@ -501,7 +501,7 @@ The analyzer flags the PRIOR substantive prompt's analysis (not the current comp
 `.claude/prompt-coach/candidates.jsonl`. Later, run:
 
 ```
-/prompt-coach-beta:report-issue
+/prompt-coach:report-issue
 ```
 
 The command reads the queue, computes a structural signature (word count, verb-shape,
@@ -543,7 +543,7 @@ Full prompts stay in `log.md` locally. You see the exact payload before it's pos
 - Global counter: `jq '.prompt_count' ~/.claude/prompt-coach/state.json` should increment per
   prompt.
 - If neither happens, the hook may not be registered — check `enabledPlugins` in
-  `.claude/settings.json` for `prompt-coach-beta@alexmskills`.
+  `.claude/settings.json` for `prompt-coach@alexmskills`.
 
 ## Future — Java MCP server
 
@@ -557,7 +557,7 @@ migration path from the current Python plugin.
 
 The prerequisite for building the server is **training data from real
 users at scale**, not a single maintainer's log. The
-`/prompt-coach-beta:report-issue` command already produces
+`/prompt-coach:report-issue` command already produces
 training-data-shaped payloads (structural signature + first-5-words +
 user annotation) — that's the collection mechanism the future server
 will consume.
@@ -570,5 +570,7 @@ will consume.
   clean prompts even in the face of an over-eager rule.
 - **Sources are diverse.** Each rule cites 2–3 outside-of-Anthropic and inside-Anthropic sources
   so the catalog isn't opinion-of-one.
-- **Beta.** Local until it earns its stable slot. Graduation criteria for the plugin itself: two
-  weeks of nightly use across ≥2 repos + at least one rule graduated to mastered per repo.
+- **Graduated to 1.0.0** (2026-07-28). It cleared its own bar — nightly use across dozens of
+  repos with rules mastered per repo — and dropped the `-beta` suffix. Development continues on
+  the stable line; see the roadmap for the eval harness (measured per-rule precision) and the
+  planned Java MCP server.

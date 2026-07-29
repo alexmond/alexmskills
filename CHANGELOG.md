@@ -7,10 +7,36 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-07-28
+
+### Graduated
+
+- **prompt-coach 1.0.0** — **graduated from `prompt-coach-beta` to a stable
+  `1.0.0` release.** The plugin, its directory, its command namespace
+  (`/prompt-coach:*`), skill, docs, and marketplace entry all drop the `-beta`
+  suffix; the marketplace entry moves from the `beta` category to
+  `self-learning`. It cleared its own graduation bar — nightly use across dozens
+  of repos with rules mastered per repo.
+
+  Rolled into this release, the typo-normalizer fix (was staged as 0.49.1): the
+  normalizer no longer corrupts valid English words that sit within edit
+  distance of a trigger. A 1526-prompt cross-repo review surfaced four evidenced
+  collisions — `mastery`→`faster`, `against`→`again`, `integration`→`iteration`,
+  `improve`→`improved` — each cascading into a rule false positive. Added the
+  four to `_PROTECTED_ENGLISH_WORDS`; a new harness check guards them while
+  confirming real typos (`refacotr`→`refactor`) still correct.
+
+  Known follow-ups tracked for the stable line: an eval harness for measured
+  per-rule precision ([#31]) and verification of mastery-validity / refresher
+  noise findings ([#32]).
+
+  [#31]: https://github.com/alexmond/alexmskills/issues/31
+  [#32]: https://github.com/alexmond/alexmskills/issues/32
+
 ## 2026-07-19
 
 ### Changed
-- **prompt-coach-beta 0.49.0** — **calibration + hygiene from a cross-repo log
+- **prompt-coach 0.49.0** — **calibration + hygiene from a cross-repo log
   review** (15 repos, ~3.5 days). Three fixes:
   - **Secret redaction in the log.** The gitignored `log.md` was capturing live
     credentials in prompt previews (real GitLab PATs showed up). `append_log`
@@ -41,7 +67,7 @@ unreleased/rolling (no global version).
 ## 2026-07-17
 
 ### Changed
-- **prompt-coach-beta 0.48.1** — **documentation audit + generate-from-data so it
+- **prompt-coach 0.48.1** — **documentation audit + generate-from-data so it
   can't drift again.** Deep review of every doc surface against the shipped code
   fixed a batch of stale/wrong content: the collaborator model was still
   described as the removed `nudge_style` "both/silent/log-only/inline" nudge
@@ -50,7 +76,7 @@ unreleased/rolling (no global version).
   mastery.md); rule/positive counts read 28/34/35/36 instead of 42 (SKILL.md,
   help.md, config.py, channels/index.adoc); tier sizes claimed "~5 each" (really
   L1 6 · L2 4 · L3 11 · L4 5 · L5 11 · L6 5); config category/key lists still
-  named the removed `voice` / `anti-habituation`; and `/prompt-coach-beta:dashboard`
+  named the removed `voice` / `anti-habituation`; and `/prompt-coach:dashboard`
   was missing from the slash-command table. The on-demand-analysis section is
   now a subsection of the slash commands (it *is* `/analyze`), and the dashboard
   docs gained the Library + Sources tabs and the light/dark toggle.
@@ -61,7 +87,7 @@ unreleased/rolling (no global version).
   each guarded by a harness drift check (`make docs-rules`).
 
 ### Added
-- **prompt-coach-beta 0.48.0** — **Claude Code orchestration-command routing +
+- **prompt-coach 0.48.0** — **Claude Code orchestration-command routing +
   a ranked Sources dashboard tab.** Three new L5 tool-native rules detect the
   prompt shapes that call for a native command and suggest it (each cites the
   command's own doc plus curl-verified best-practice references):
@@ -82,7 +108,7 @@ unreleased/rolling (no global version).
   suggestions. Each rule has a grounded detector (fire + veto + look-alike
   traps), RULE_HELP catch/bad→good, and extra-source variety; harness gained
   `t_v48_command_rules`.
-- **prompt-coach-beta 0.48.0** — **Sources dashboard tab.** The web dashboard
+- **prompt-coach 0.48.0** — **Sources dashboard tab.** The web dashboard
   (`serve.py`) gains a **Sources** tab: every citation in the catalog, deduped
   by URL and **ranked by importance** — official Claude Code / Anthropic docs
   first, then foundational engineering & research canon, then practitioner /
@@ -95,7 +121,7 @@ unreleased/rolling (no global version).
 ## 2026-07-15
 
 ### Added
-- **roles 1.2.0** + **prompt-coach-beta 0.47.1** — **Prompt Library folded into
+- **roles 1.2.0** + **prompt-coach 0.47.1** — **Prompt Library folded into
   the role system.** Each engineering persona is anchored to a Claude Code
   Prompt Library category (`reviewer`→Review, `debugger`→Debug, `refactorer`→
   Refactor, `architect`→Plan, `builder`→Implement, `optimizer`→Debug/Refactor,
@@ -105,8 +131,8 @@ unreleased/rolling (no global version).
   `by_category` / `by_role` in `library.py`) so a role can pull its templates.
   A **one-way, optional** link — roles never hard-depends on the coach; the
   anchor degrades silently when the coach isn't installed, and the snapshot +
-  matcher stay single-sourced in `prompt-coach-beta`.
-- **prompt-coach-beta 0.47.0** — **Prompt Library integration** (harness +1).
+  matcher stay single-sourced in `prompt-coach`.
+- **prompt-coach 0.47.0** — **Prompt Library integration** (harness +1).
   Vendors an offline snapshot of Anthropic's
   [Claude Code Prompt Library](https://code.claude.com/docs/en/prompt-library)
   (52 gold-standard, tagged, slot-templated prompts) and turns the coach from
@@ -115,7 +141,7 @@ unreleased/rolling (no global version).
     docs page into `data/prompt-library.json` (`make library-refresh`);
     `scripts/library.py` is a zero-dependency keyword/tag matcher (no network,
     no embeddings) cheap enough to run in the hook.
-  - **On-demand lookup**: `/prompt-coach-beta:library "<task>"` +
+  - **On-demand lookup**: `/prompt-coach:library "<task>"` +
     `config.py library` verb — matches your task to the closest template(s),
     offered adapted to your context. Browse all on the dashboard's new
     **Library** tab.
@@ -133,7 +159,7 @@ unreleased/rolling (no global version).
 ## 2026-07-14
 
 ### Added
-- **prompt-coach-beta 0.46.0** — **three new rules mined from the researched
+- **prompt-coach 0.46.0** — **three new rules mined from the researched
   sources** (36 → 39 rules; harness +1). Each ships a grounded regex detector
   (fire + veto + false-positive cases all tested before wiring), a mirror
   positive detector, a RULE_HELP entry, and its own citations:
@@ -150,7 +176,7 @@ unreleased/rolling (no global version).
     abstraction at only two occurrences (the counter-rule to
     `pattern-worth-abstracting`). Sources: Sandi Metz *The Wrong Abstraction*,
     Kent C. Dodds *AHA*, c2 *RuleOfThree*.
-- **prompt-coach-beta 0.45.0** — **researched source variety** (bibliography
+- **prompt-coach 0.45.0** — **researched source variety** (bibliography
   90 → 178 citations). A wide web sweep (one research pass per rule tier) added
   further authoritative, durable references to every rule so the catalog isn't
   opinion-of-one — seminal papers (G-Eval, MT-Bench, Self-Refine, Reflexion,
@@ -163,7 +189,7 @@ unreleased/rolling (no global version).
   `_EXTRA_SOURCES` block (deduped by URL, appended to each rule's `sources`), so
   the Rule() definitions stay untouched; the docs' per-rule reference and the
   web dashboard pick them up automatically.
-- **prompt-coach-beta 0.44.1** — **rule reference in the docs, matched to the
+- **prompt-coach 0.44.1** — **rule reference in the docs, matched to the
   dashboard** (harness →37). The Antora page's terse "what it watches for"
   tables are replaced by a per-rule reference generated from the *same*
   `build_dashboard` data the web UI renders — each rule shows its plain
@@ -178,8 +204,8 @@ unreleased/rolling (no global version).
     `be-clear-and-direct` anchor (it was the one L1 rule missing the anchor its
     four siblings share). The remaining coach/Claude-Code-specific rules (no
     1:1 upstream section) keep their curated page-level sources.
-- **prompt-coach-beta 0.44.0** — **lightweight local web dashboard**
-  (`/prompt-coach-beta:dashboard`, harness →30). A zero-dependency (Python
+- **prompt-coach 0.44.0** — **lightweight local web dashboard**
+  (`/prompt-coach:dashboard`, harness →30). A zero-dependency (Python
   **stdlib only**) server (`scripts/serve.py`) bound to `127.0.0.1` that shows
   stats, mastery by tier with clickable reference URLs + per-rule reset, and a
   **live config editor** (type-aware controls that save to global or repo
@@ -208,7 +234,7 @@ unreleased/rolling (no global version).
 ## 2026-07-10
 
 ### Added
-- **prompt-coach-beta 0.43.0** — new L5 rule **`workflow-fanout-no-verify`**
+- **prompt-coach 0.43.0** — new L5 rule **`workflow-fanout-no-verify`**
   (36 rules / 36 positives now). Fires when the user orchestrates a fan-out
   (workflow / parallel agents / sweep / subagents) to *discover* many items
   but names no verification step — fan-out buys scale, not reliability, so a
@@ -228,7 +254,7 @@ unreleased/rolling (no global version).
   - Harness 27→28 (unit fires/vetoes + mirror positive + complementarity;
     caught and fixed a trailing-`\b` regex bug that stopped the verify-veto
     matching "verify"/"adversarially").
-- **prompt-coach-beta 0.43.0** — collaborator block honesty + new
+- **prompt-coach 0.43.0** — collaborator block honesty + new
   `collaborator_gate` config (harness →29). Fixes two reported defects: the
   block said *"reply yes to proceed"* but never waited (it continued in the
   same turn), and it never said which prompt it then used.
@@ -246,7 +272,7 @@ unreleased/rolling (no global version).
 ## 2026-07-07 (later)
 
 ### Added
-- **prompt-coach-beta 0.42.0** — trustworthy acceptance signal (three
+- **prompt-coach 0.42.0** — trustworthy acceptance signal (three
   source-backed refinements to the v0.41 acceptance loop) + it's now visible.
   - **#0 Attribution.** When several rules fire on one prompt, the yes/no/edit
     reply now credits only the **primary** (highest-priority) fired rule, not
@@ -259,7 +285,7 @@ unreleased/rolling (no global version).
     and **excluded** from the acceptance rate — a reflex, not a considered
     rejection (arXiv 2601.21379). Conservative: any missing/unparseable
     timing → not flagged.
-  - **#2 Acceptance in stats.** New `+/prompt-coach-beta:config acceptance+`
+  - **#2 Acceptance in stats.** New `+/prompt-coach:config acceptance+`
     verb (+ `--json`) renders the ledger: overall accept/edit/reject rate +
     a per-rule table, low-acceptance rules flagged `⚠ dormant-risk`. Wired
     into the `/stats` card. `edited` counts as a hit; blind rejects shown
@@ -274,7 +300,7 @@ unreleased/rolling (no global version).
 ## 2026-07-07
 
 ### Changed
-- **prompt-coach-beta 0.41.1** — the clean-prompt `✓` ack is now **specific**:
+- **prompt-coach 0.41.1** — the clean-prompt `✓` ack is now **specific**:
   it names the rule involved instead of a bare count. User feedback: "watching
   1 rule" told them nothing. Priority: `you used <rule> (2/3 toward mastery)`
   when the clean prompt demonstrated a technique → `closest to mastery:
@@ -285,7 +311,7 @@ unreleased/rolling (no global version).
 ## 2026-07-06 (later)
 
 ### Added
-- **prompt-coach-beta 0.41.0** — **adaptive coaching**: three research-backed
+- **prompt-coach 0.41.0** — **adaptive coaching**: three research-backed
   improvements on a shared per-rule ledger (fires · accept/edit/reject ·
   last-natural-use). Motivated by the coach's own telemetry (506 prompts):
   46 rewrites produced with 0 acceptance recorded, only 2/35 rules ever
@@ -320,7 +346,7 @@ unreleased/rolling (no global version).
 ## 2026-07-06
 
 ### Fixed
-- **prompt-coach-beta 0.40.1** — `mastery-reset` / `mastery-reset-all` now
+- **prompt-coach 0.40.1** — `mastery-reset` / `mastery-reset-all` now
   zero the `demonstrations` counter and drop the `mastery_basis` tag.
   - **Why:** v0.40 made `demonstrations` the mastery driver, but the reset
     helper (`_reset_rule_state`) only zeroed `fires_total` / `clean_streak`
@@ -337,7 +363,7 @@ unreleased/rolling (no global version).
 ## 2026-07-05 (later 8)
 
 ### Changed
-- **prompt-coach-beta 0.40.0** — **earned mastery**. Mastery is now driven
+- **prompt-coach 0.40.0** — **earned mastery**. Mastery is now driven
   by *demonstrations* — the number of times a rule's mirroring positive
   detector fired (i.e. the user actively USED the good technique) — instead
   of by a clean streak (mere absence of the mistake).
@@ -372,7 +398,7 @@ unreleased/rolling (no global version).
 ## 2026-07-05 (later 7)
 
 ### Added
-- **prompt-coach-beta 0.39.0** — new L5 rule **`incremental-routing`**
+- **prompt-coach 0.39.0** — new L5 rule **`incremental-routing`**
   (35 rules total). Fires when a multi-step task is routed one terse
   step at a time ("continue one after another", "do the next one",
   "keep going through them") instead of batched into a `TaskCreate`
@@ -397,7 +423,7 @@ unreleased/rolling (no global version).
 ## 2026-07-05 (later 6)
 
 ### Removed
-- **prompt-coach-beta 0.38.1** — the `variants` data-layer cleanup
+- **prompt-coach 0.38.1** — the `variants` data-layer cleanup
   deferred from 0.38.0. Removed the ~200 hand-written nudge strings
   the coach no longer uses (collaborator mode writes each rewrite
   fresh).
@@ -416,7 +442,7 @@ unreleased/rolling (no global version).
 ## 2026-07-05 (later 5)
 
 ### Changed / Removed
-- **prompt-coach-beta 0.38.0** — collaborator-only + big cleanup + a
+- **prompt-coach 0.38.0** — collaborator-only + big cleanup + a
   release test harness. User: "also remove legacy mode, the mode
   works very well and cleanup, confirm that everything still works,
   we also need a test harness that can be done after each release."
@@ -460,12 +486,12 @@ unreleased/rolling (no global version).
 ## 2026-07-05 (later 4)
 
 ### Added
-- **prompt-coach-beta 0.37.0** — on-demand prompt analysis. User: "the
+- **prompt-coach 0.37.0** — on-demand prompt analysis. User: "the
   skill now contains a lot of information about prompting so it can be
   asked to analyze a specific prompt or prompt history for the last N
   requests … review skill for that purpose, extend if needed, and add
   to examples."
-  - **New `config analyze` verb + `/prompt-coach-beta:analyze`
+  - **New `config analyze` verb + `/prompt-coach:analyze`
     command.** The passive hook only checks the few *active* rules;
     this runs the **full 34-rule catalog + positive detectors** on
     demand.
@@ -491,7 +517,7 @@ unreleased/rolling (no global version).
 ## 2026-07-05 (later 3)
 
 ### Added
-- **prompt-coach-beta 0.36.0** — source URLs, skill-folder access,
+- **prompt-coach 0.36.0** — source URLs, skill-folder access,
   runnable scripts. User: "bring back sources url to sources display,
   but make it configurable and included in quick set … urls should be
   clickable and open a browser window"; "skill also should allow
@@ -533,7 +559,7 @@ unreleased/rolling (no global version).
 ## 2026-07-05 (later 2)
 
 ### Fixed
-- **prompt-coach-beta 0.35.1** — honest ack carrot. The v0.35.0 ack
+- **prompt-coach 0.35.1** — honest ack carrot. The v0.35.0 ack
   advertised the highest-streak practicing rule as "closest to
   mastery" regardless of `fires_total`. But under the v0.27 evidence
   gate, a rule that reaches the streak threshold with fires_total <
@@ -561,7 +587,7 @@ unreleased/rolling (no global version).
 ## 2026-07-05 (later)
 
 ### Added / Fixed
-- **prompt-coach-beta 0.35.0** — liveness + restored positive layer.
+- **prompt-coach 0.35.0** — liveness + restored positive layer.
   User: "the current skill is too silent… I would like some
   indication that it is working, for example when prompt is correct
   post a short message about a prompt and mastery increase, research
@@ -612,7 +638,7 @@ unreleased/rolling (no global version).
 ## 2026-07-05
 
 ### Fixed
-- **prompt-coach-beta 0.34.1** — picker-answer heuristic
+- **prompt-coach 0.34.1** — picker-answer heuristic
   false-positive flood. User: "since last release i did not see a
   single nudge, is there a problem?" Diagnosed: 10 of the last 13
   log entries in the maintainer's alexmskills repo were
@@ -653,7 +679,7 @@ unreleased/rolling (no global version).
 ## 2026-07-04 (later 6)
 
 ### Added
-- **prompt-coach-beta 0.34.0** — **collaborator mode** (C+D
+- **prompt-coach 0.34.0** — **collaborator mode** (C+D
   architecture). User: "actually i like combination of c and d";
   "no need for mode, always inline, none other work"; "2 is not
   relevant we are analizing same promt user already sent to
@@ -701,7 +727,7 @@ unreleased/rolling (no global version).
 ## 2026-07-04 (later 5)
 
 ### Changed
-- **prompt-coach-beta 0.29.0** — nudge_style deleted, rendering always
+- **prompt-coach 0.29.0** — nudge_style deleted, rendering always
   inline, new master `enabled` switch. User: "no need for mode, always
   inline, none other work." Right — inline is the only rendering that
   worked reliably in a Claude Code CLI; `both` (stderr box), `silent`
@@ -739,7 +765,7 @@ unreleased/rolling (no global version).
 ## 2026-07-04 (later 4)
 
 ### Added
-- **prompt-coach-beta 0.28.0** — proactive tips (advanced-technique
+- **prompt-coach 0.28.0** — proactive tips (advanced-technique
   suggestions). User: "some of more advance concept will not fire if
   a user did not provide complex enough prompt, we need not just a
   correction on the prompts but also a nudge to a more advanced
@@ -795,7 +821,7 @@ unreleased/rolling (no global version).
 ## 2026-07-04 (later 3)
 
 ### Added
-- **prompt-coach-beta 0.27.0** — evidence-based mastery + `inactive`
+- **prompt-coach 0.27.0** — evidence-based mastery + `inactive`
   status + graduation event logging. User: "it feels like we need
   better protection against false mastery, something is missing here
   either detection or false counting; it also can't be clearly
@@ -858,13 +884,13 @@ unreleased/rolling (no global version).
 ## 2026-07-04 (later 2)
 
 ### Added
-- **prompt-coach-beta 0.26.0** — top-level `/prompt-coach-beta:mastery`
+- **prompt-coach 0.26.0** — top-level `/prompt-coach:mastery`
   command + mastery evidence-quality analysis. User asked: "do not see
   :mastery or is it a different name , should be an easy way to check
   current mastery, analyze it and check if some of it needs reset."
   - **New slash command** `commands/mastery.md` — direct top-level
-    access. `/prompt-coach-beta:mastery` runs the same code as
-    `/prompt-coach-beta:config mastery`; you don't have to type the
+    access. `/prompt-coach:mastery` runs the same code as
+    `/prompt-coach:config mastery`; you don't have to type the
     `config` prefix anymore.
   - **Enhanced `cmd_mastery` output** — new ANALYSIS section at the
     bottom that classifies mastered rules by evidence quality:
@@ -894,12 +920,12 @@ unreleased/rolling (no global version).
   - **SKILL.md Quick Start** updated: 4 commands table → 5 commands
     table, mastery added.
   - **help.md COMMANDS block** updated to include
-    `/prompt-coach-beta:mastery`.
+    `/prompt-coach:mastery`.
 
 ## 2026-07-04 (later)
 
 ### Added
-- **prompt-coach-beta 0.25.0** — Quick Start documentation. User asked
+- **prompt-coach 0.25.0** — Quick Start documentation. User asked
   for a "quick start document section for setup and main functions".
   Added to three places so it surfaces wherever someone discovers the
   coach:
@@ -914,9 +940,9 @@ unreleased/rolling (no global version).
     - First-day tweaks for common situations (non-native, inline
       preference, nudged-too-often)
     - Pointer at the companion `log-review` skill
-  - **`docs/modules/ROOT/pages/prompt-coach-beta.adoc`**: same
+  - **`docs/modules/ROOT/pages/prompt-coach.adoc`**: same
     content in Antora format so it publishes to
-    alexmond.org/alexmskills/prompt-coach-beta/. Placed between
+    alexmond.org/alexmskills/prompt-coach/. Placed between
     Install and What-it-watches-for.
   - **`commands/help.md`**: updated the intro to mention the
     Quick Start section + point at its path in the plugin cache.
@@ -929,7 +955,7 @@ unreleased/rolling (no global version).
 ## 2026-07-04
 
 ### Added
-- **prompt-coach-beta 0.24.0** — transcript-aware picker-answer skip.
+- **prompt-coach 0.24.0** — transcript-aware picker-answer skip.
   User asked: "when Claude asks me multiple choice questions I have no
   way of adapting my prompt but it still triggers a nudge" (and the
   same for pre-drafted continuations). The picked option's text became
@@ -985,7 +1011,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 11)
 
 ### Removed
-- **prompt-coach-beta 0.23.0** — `/prompt-coach-beta:daily-review`
+- **prompt-coach 0.23.0** — `/prompt-coach:daily-review`
   extracted to a standalone user skill at `~/.claude/skills/log-review/`.
   User asked: "the review should not be shipped to internet, it has
   private info like repo locations" and clarified "it should be
@@ -996,7 +1022,7 @@ unreleased/rolling (no global version).
     generates content that can leak repo topology when pasted into
     a GitHub commit, issue, or PR. Moving it out enforces the
     separation the user wanted ("no reference from coach").
-  - **Deleted from prompt-coach-beta**:
+  - **Deleted from prompt-coach**:
     - `scripts/daily-review.py` (moved + evolved to
       `~/.claude/skills/log-review/scripts/log-review.py`)
     - `commands/daily-review.md`
@@ -1029,7 +1055,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 10)
 
 ### Added
-- **prompt-coach-beta 0.22.0** — daily-review watermark. User asked
+- **prompt-coach 0.22.0** — daily-review watermark. User asked
   "after done should probably rename the logs so we do not reprocess
   them again". Chose a watermark file instead of renaming, because
   the coach's `UserPromptSubmit` hook writes to `log.md` continuously
@@ -1060,10 +1086,10 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 9)
 
 ### Added
-- **prompt-coach-beta 0.21.0** — `/prompt-coach-beta:daily-review`
+- **prompt-coach 0.21.0** — `/prompt-coach:daily-review`
   cross-repo brief. User asked for a daily-runnable analytics
   view over prompts across all repos, since the existing
-  `/prompt-coach-beta:stats` command is point-in-time from global
+  `/prompt-coach:stats` command is point-in-time from global
   state.json and doesn't see the per-repo log.md files.
   - **New script** `scripts/daily-review.py` — reads every
     `.claude/prompt-coach/log.md` under a search root (default
@@ -1099,7 +1125,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 8)
 
 ### Added
-- **prompt-coach-beta 0.20.0** — align with Anthropic's live prompt
+- **prompt-coach 0.20.0** — align with Anthropic's live prompt
   engineering best-practices guide. Two-part change: 6 new rules
   closing gaps in the coach's coverage, and a new `sources` verb
   that surfaces the citation trail per rule.
@@ -1135,7 +1161,7 @@ unreleased/rolling (no global version).
     25/34 rules link to a canonical Anthropic-guide section; 9 are
     Claude-Code-specific or novel coach concepts with no direct
     upstream mapping.
-  - **`/prompt-coach-beta:config sources`** — new verb that shows the
+  - **`/prompt-coach:config sources`** — new verb that shows the
     citation mapping. No arg: full overview (linked + unlinked, base
     URL). With rule id: per-rule detail card (anthropic_ref, cited
     sources, URLs). `--json` for scripting.
@@ -1163,7 +1189,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 7)
 
 ### Added
-- **prompt-coach-beta 0.19.0** — `/prompt-coach-beta:config` grew four
+- **prompt-coach 0.19.0** — `/prompt-coach:config` grew four
   new verbs to answer "what options exist?" and "how am I doing?"
   without needing to already know the answer.
   - **`options <key>`** — enumerates legal values with per-choice
@@ -1210,7 +1236,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 6)
 
 ### Added
-- **prompt-coach-beta 0.18.0** — `/prompt-coach-beta:config` structured
+- **prompt-coach 0.18.0** — `/prompt-coach:config` structured
   surface. The config catalog grew to 22 keys across 8 categories over
   v0.5→v0.17; say-it phrases still work for individual settings but the
   user had no scannable, categorized view. Fixed by adding a
@@ -1243,7 +1269,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 5)
 
 ### Added
-- **prompt-coach-beta 0.17.0** — voice presets + voice source + inline
+- **prompt-coach 0.17.0** — voice presets + voice source + inline
   medium/short bug fix. Rolls three things into one release.
   - **Voice presets (`voice_preset`).** `Rule.nudge` now accepts
     `str | list[str] | dict[preset → list[str]]` — full backward-compat with
@@ -1273,7 +1299,7 @@ unreleased/rolling (no global version).
     path is the intentional way to get situated composition, with
     guardrails that prevent the disagreement mode.
   - **Emit path logs `p=<preset>:src=<source>`** on every fire outcome,
-    so `/prompt-coach-beta:stats` can mine which combination the user
+    so `/prompt-coach:stats` can mine which combination the user
     actually converges on.
   - **Say-it phrases**: *"set prompt-coach voice to plain"*,
     *"set prompt-coach source to llm-compose"*, *"set prompt-coach source
@@ -1288,7 +1314,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 4)
 
 ### Fixed
-- **prompt-coach-beta 0.16.1** — inline-refresher bug + SKILL.md drift.
+- **prompt-coach 0.16.1** — inline-refresher bug + SKILL.md drift.
   - Fixed three code paths that rendered `rule.nudge` (now `list[str]`
     since v0.16.0) as a raw Python list literal instead of picking a
     variant. Affected: `_refresher_box`, `_inline_context_for_claude`,
@@ -1301,7 +1327,7 @@ unreleased/rolling (no global version).
     default 3 → 10 (matches the v0.7 revert), added `inline` to the
     consolidated Configuration section, removed the duplicate Configuration
     block at the bottom, fixed the plugin id in "Verify it's on" from
-    `prompt-coach@alexmskills-beta` to `prompt-coach-beta@alexmskills`
+    `prompt-coach@alexmskills-beta` to `prompt-coach@alexmskills`
     (matches the v0.5-era channel retirement).
   - **help.md config surface updated** to include the v0.16 anti-habituation
     knobs (`saturation_threshold`, `silence_window`, `silence_duration`,
@@ -1311,7 +1337,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 3)
 
 ### Added
-- **prompt-coach-beta 0.16.0** — anti-habituation (variant pool + novelty +
+- **prompt-coach 0.16.0** — anti-habituation (variant pool + novelty +
   progressive disclosure + silence-after-saturation). Motivated by real
   observation that seeing the exact same nudge text every fire trained the
   eye to skip it. Literature-backed (Hattie & Timperley 2007, Sasse & Rashid
@@ -1347,7 +1373,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later 2)
 
 ### Changed
-- **prompt-coach-beta 0.15.0** — evidence-based rule fixes from a 75-entry
+- **prompt-coach 0.15.0** — evidence-based rule fixes from a 75-entry
   post-reset log audit. Coach behavior on all 75 entries was reviewed;
   identified 30 substantive prompts that missed, tested each against v0.14
   rules, found 15 still-active gaps, and traced 7 to root causes with fixes:
@@ -1382,7 +1408,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03 (later)
 
 ### Added
-- **prompt-coach-beta 0.14.0** — `/prompt-coach-beta:help` slash command.
+- **prompt-coach 0.14.0** — `/prompt-coach:help` slash command.
   Compact dashboard-style help card with the live plugin version, current
   resolved config values (defaults → global override → per-repo override),
   the command list (stats / report-issue / help), all say-it phrases
@@ -1392,7 +1418,7 @@ unreleased/rolling (no global version).
 ## 2026-07-03
 
 ### Added
-- **prompt-coach-beta 0.13.0** — privacy-safe bug reporting workflow.
+- **prompt-coach 0.13.0** — privacy-safe bug reporting workflow.
   - **Mark-phrase detection.** Say *"coach that was wrong"* / *"coach
     missed this"* / *"coach false positive"* / *"bad nudge"* on the turn
     right after a mistreated prompt. The analyzer flags the PRIOR
@@ -1400,7 +1426,7 @@ unreleased/rolling (no global version).
     `.claude/prompt-coach/candidates.jsonl`. Twelve trigger phrases,
     verified against 4 negatives ("this coach is helpful" / "please
     coach me" don't false-fire).
-  - **`/prompt-coach-beta:report-issue` slash command.** Reads the
+  - **`/prompt-coach:report-issue` slash command.** Reads the
     candidates queue, computes a structural signature per case
     (word_count, starts_with_action, starts_with_hedge, has_file_ref,
     has_ticket_id, has_backticks, has_url, has_goal_clause,
@@ -1421,7 +1447,7 @@ unreleased/rolling (no global version).
 ## 2026-07-02 (latest 7)
 
 ### Changed
-- **prompt-coach-beta 0.12.0** — log-mined 34 substantive missed prompts,
+- **prompt-coach 0.12.0** — log-mined 34 substantive missed prompts,
   found three fixable classes still slipping through:
   - **`no-answer-shape` elevated L2 → L1.** Info-seeking questions
     without a shape ("what are lsp servers", "Are there java libs...",
@@ -1440,7 +1466,7 @@ unreleased/rolling (no global version).
 ## 2026-07-02 (latest 6)
 
 ### Added
-- **prompt-coach-beta 0.11.0** — hedge stripping + release-family verbs.
+- **prompt-coach 0.11.0** — hedge stripping + release-family verbs.
   Evidence: a real-log prompt `"try to deploy"` fired ZERO rules — a
   genuinely risky no-DoD, no-guardrail ask that got silently ignored.
   - **Hedge prefix stripping** in `_starts_with_action` — strips
@@ -1459,7 +1485,7 @@ unreleased/rolling (no global version).
 ## 2026-07-02 (latest 5)
 
 ### Added
-- **prompt-coach-beta 0.10.0** — new **`nudge_style: "inline"`** mode. The
+- **prompt-coach 0.10.0** — new **`nudge_style: "inline"`** mode. The
   nudge box is rendered as the opening block of Claude's response instead
   of going to stderr — so the coaching is visible *in your transcript*
   rather than in the dim hook-stderr area that some TUIs swallow.
@@ -1477,7 +1503,7 @@ unreleased/rolling (no global version).
 ## 2026-07-02 (latest 4)
 
 ### Added
-- **prompt-coach-beta 0.9.0** — the "no permanent mastery" model. User's
+- **prompt-coach 0.9.0** — the "no permanent mastery" model. User's
   insight: even mastered rules should occasionally fire, and if a mastered
   rule matches a real prompt that's actually the *highest-signal event in
   the whole system* (evidence a habit is regressing).
@@ -1503,8 +1529,8 @@ unreleased/rolling (no global version).
 ## 2026-07-02 (latest 3)
 
 ### Added
-- **prompt-coach-beta 0.8.0** — surfacing + praise coverage.
-  - **`/prompt-coach-beta:stats` slash command** — read-only dashboard summarizing
+- **prompt-coach 0.8.0** — surfacing + praise coverage.
+  - **`/prompt-coach:stats` slash command** — read-only dashboard summarizing
     prompts analyzed, nudge/praise/skipped counts, emit rate, most-fired and
     mastered rules, top typo corrections, and current config. Answers "is this
     thing actually doing anything?" without opening `state.json` by hand.
@@ -1529,7 +1555,7 @@ unreleased/rolling (no global version).
 ## 2026-07-02 (latest 2)
 
 ### Added
-- **prompt-coach-beta 0.7.0** — evidence-based improvements from log-mining a
+- **prompt-coach 0.7.0** — evidence-based improvements from log-mining a
   day of real prompts (34 across 6 sibling repos). Every change is keyed to a
   specific observed failure:
   - **False-positive typo corrections killed** (5/6 observed corrections were
@@ -1570,7 +1596,7 @@ unreleased/rolling (no global version).
 ## 2026-07-02 (latest)
 
 ### Changed
-- **prompt-coach-beta 0.6.0** — two behavior changes based on real-session feedback:
+- **prompt-coach 0.6.0** — two behavior changes based on real-session feedback:
   - **Conversational short-circuit.** Many prompts are approvals (`sure`, `publish`,
     `go`, `ship it`), multi-choice picks (`1 and 2`, `a and b`, `option a`), or
     continuations (`continue`, `next`, `thanks`). The rules misfire on these and the
@@ -1592,7 +1618,7 @@ unreleased/rolling (no global version).
 - **Retired the beta channel entirely.** The `alexmskills-beta` marketplace
   (previously at `beta/.claude-plugin/marketplace.json`) is gone. In-progress
   plugins now live in the single stable marketplace with a `-beta` suffix in
-  the name — the current examples are `prompt-coach-beta` (0.5.0) and
+  the name — the current examples are `prompt-coach` (0.5.0) and
   `tune-repo-beta` (0.1.1). Same catalog, same install command, obvious at a
   glance that it's beta quality.
 - **Why the pivot.** The two-channel setup kept hitting edge cases in the
@@ -1608,7 +1634,7 @@ unreleased/rolling (no global version).
 
   ```
   /plugin marketplace add alexmond/alexmskills
-  /plugin install prompt-coach-beta@alexmskills
+  /plugin install prompt-coach@alexmskills
   ```
 
 - **`make graduate PLUGIN=<name>-beta`** replaces `make new-beta` +

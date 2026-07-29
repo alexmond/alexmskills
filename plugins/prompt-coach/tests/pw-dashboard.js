@@ -7,7 +7,7 @@
  * asserts layout invariants that plain unit tests can't see — page routing,
  * the level TOC, object sub-field alignment, and the Save-button column.
  *
- *   node plugins/prompt-coach-beta/tests/pw-dashboard.js
+ *   node plugins/prompt-coach/tests/pw-dashboard.js
  *   PC_PW_OUT=/tmp/shots node .../pw-dashboard.js   # also write screenshots
  *
  * Playwright is an OPTIONAL dev dependency (the plugin itself is stdlib-only).

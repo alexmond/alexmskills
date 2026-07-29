@@ -96,11 +96,11 @@ claude --plugin-dir ./plugins/dev-crew
 ## Beta plugins
 
 In-progress / unproven plugins live in the same marketplace as stable ones, distinguished by a
-`-beta` suffix in the name (e.g. `prompt-coach-beta`, `tune-repo-beta`). No separate channel, no
+`-beta` suffix in the name (e.g. `tune-repo-beta`). No separate channel, no
 extra marketplace to opt into — you install them the same way as any other plugin:
 
 ```
-/plugin install prompt-coach-beta@alexmskills
+/plugin install tune-repo-beta@alexmskills
 ```
 
 The suffix is intentional: it makes it obvious at install time and in the enabled-plugins list
@@ -108,9 +108,11 @@ that this is a beta plugin. When one earns its stable slot, it graduates — the
 renamed, the `-beta` drops from the name and marketplace entry, and the version bumps:
 
 ```bash
-make graduate PLUGIN=prompt-coach-beta         # renames -> prompt-coach, updates marketplace
-make bump     PLUGIN=prompt-coach VERSION=1.0.0
+make graduate PLUGIN=tune-repo-beta       # renames -> tune-repo, updates marketplace
+make bump     PLUGIN=tune-repo VERSION=1.0.0
 ```
+
+`prompt-coach` graduated this way from `prompt-coach-beta` to `1.0.0` on 2026-07-28.
 
 ## Versioning
 

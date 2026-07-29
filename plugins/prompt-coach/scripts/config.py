@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""prompt-coach-beta v0.18+ — /prompt-coach-beta:config helper.
+"""prompt-coach v0.18+ — /prompt-coach:config helper.
 
 Reads CONFIG_SCHEMA + DEFAULT_CONFIG from the sibling analyze-prompt.py and
 implements the verbs used by the config slash command:
@@ -190,7 +190,7 @@ def cmd_show(cwd: Path, category_filter: str | None = None,
         print(f"known: {', '.join(config_categories())}", file=sys.stderr)
         return 2
 
-    print(f"prompt-coach-beta — resolved config (default → global → repo)")
+    print(f"prompt-coach — resolved config (default → global → repo)")
     print(f"  global: {_global_config_path()} {'(present)' if _global_config_path().exists() else '(none)'}")
     print(f"  repo:   {_repo_config_path(cwd)} {'(present)' if _repo_config_path(cwd).exists() else '(none)'}")
     print()
@@ -260,8 +260,8 @@ def cmd_describe(cwd: Path, key: str, as_json: bool = False) -> int:
         print()
         print("  " + body["description"])
         print()
-        print(f"  Set with:   /prompt-coach-beta:config set {key} <value>")
-        print(f"  Reset with: /prompt-coach-beta:config reset {key}")
+        print(f"  Set with:   /prompt-coach:config set {key} <value>")
+        print(f"  Reset with: /prompt-coach:config reset {key}")
     return 0
 
 
@@ -430,16 +430,16 @@ def cmd_options(cwd: Path, key: str, as_json: bool = False) -> int:
                                           subsequent_indent="    "):
                     print(line)
             print()
-        print(f"  Set with: /prompt-coach-beta:config set {key} <value>")
-        print(f"  Reset:    /prompt-coach-beta:config reset {key}")
+        print(f"  Set with: /prompt-coach:config set {key} <value>")
+        print(f"  Reset:    /prompt-coach:config reset {key}")
     else:
         if entry.get("example") is not None:
             print(f"  example:   {_fmt_value(entry['example'])}")
         print()
         print(f"  {entry['description']}")
         print()
-        print(f"  Set with: /prompt-coach-beta:config set {key} <value>")
-        print(f"  Reset:    /prompt-coach-beta:config reset {key}")
+        print(f"  Set with: /prompt-coach:config set {key} <value>")
+        print(f"  Reset:    /prompt-coach:config reset {key}")
     return 0
 
 
@@ -558,7 +558,7 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
         return 0
 
     t = snap["totals"]
-    print(f"prompt-coach-beta — mastery snapshot")
+    print(f"prompt-coach — mastery snapshot")
     print(f"  Global state:  {_global_state_path()} "
           f"{'(present)' if _global_state_path().exists() else '(none — no fires yet)'}")
     print(f"  Total prompts analyzed: {snap['prompt_count']}")
@@ -638,7 +638,7 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
             print(f"  These graduated with clean_streak alone — they never "
                   f"actually caught you.")
             print(f"  If you want them to actively check you, reset one:")
-            print(f"    /prompt-coach-beta:config mastery-reset <rule-id>")
+            print(f"    /prompt-coach:config mastery-reset <rule-id>")
             print(f"  Or leave them mastered — the coach won't nag on them.")
             print()
 
@@ -652,8 +652,8 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
             print(f"  A few more clean prompts and these graduate.")
             print()
 
-    print("Reset one rule:    /prompt-coach-beta:config mastery-reset <rule-id>")
-    print("Reset everything:  /prompt-coach-beta:config mastery-reset-all")
+    print("Reset one rule:    /prompt-coach:config mastery-reset <rule-id>")
+    print("Reset everything:  /prompt-coach:config mastery-reset-all")
     return 0
 
 
@@ -695,7 +695,7 @@ def cmd_acceptance(cwd: Path, as_json: bool = False) -> int:
               "rules": rows}, indent=2))
         return 0
 
-    print("prompt-coach-beta — acceptance ledger")
+    print("prompt-coach — acceptance ledger")
     print(f"  Global state: {sp} {'(present)' if sp.exists() else '(none)'}")
     if ga + ge + gr + gb == 0:
         print("  No rewrite replies recorded yet — reply yes/no/edit to a "
@@ -758,7 +758,7 @@ def cmd_mastery_reset(cwd: Path, rule_id: str, dry_run: bool = False) -> int:
     if rule_id not in _rule_id_set():
         print(f"unknown rule id: {rule_id}", file=sys.stderr)
         print(f"  {len(RULES)} rules shipped. Run "
-              "`/prompt-coach-beta:config mastery` to see all ids.",
+              "`/prompt-coach:config mastery` to see all ids.",
               file=sys.stderr)
         return 2
     state_path = _global_state_path()
@@ -1016,7 +1016,7 @@ def cmd_paths(cwd: Path, as_json: bool = False,
                 if ship and p.exists()][:3]  # plugin root, scripts/, SKILL.md
         return 0 if _open_urls(urls) else 1
 
-    print("prompt-coach-beta — skill folders & state files")
+    print("prompt-coach — skill folders & state files")
     print("  (paths are clickable in most terminals; `--open` launches them)")
     print()
     for label, p, _ in entries:
@@ -1030,7 +1030,7 @@ def cmd_paths(cwd: Path, as_json: bool = False,
         print(f"        {cmd}")
     print()
     print("Open in browser/file-manager: "
-          "/prompt-coach-beta:config paths --open")
+          "/prompt-coach:config paths --open")
     return 0
 
 
@@ -1064,7 +1064,7 @@ def cmd_sources(cwd: Path, rule_id: str | None = None,
             return 0
         linked_count = sum(1 for r in RULES if r.anthropic_ref)
         total = len(RULES)
-        print(f"prompt-coach-beta — sources mapping ({linked_count}/{total} "
+        print(f"prompt-coach — sources mapping ({linked_count}/{total} "
               f"rules link to an Anthropic-guide section)")
         print(f"  Anthropic guide: {_ANTHROPIC_BASE_URL}")
         print()
@@ -1081,14 +1081,14 @@ def cmd_sources(cwd: Path, rule_id: str | None = None,
             for rid in sorted(unlinked):
                 print(f"  · {rid}")
             print()
-        print("Per-rule detail: /prompt-coach-beta:config sources <rule-id>")
+        print("Per-rule detail: /prompt-coach:config sources <rule-id>")
         return 0
 
     # Single-rule detail
     rule = next((r for r in RULES if r.id == rule_id), None)
     if rule is None:
         print(f"unknown rule id: {rule_id}", file=sys.stderr)
-        print(f"  Run `/prompt-coach-beta:config sources` for the full list.",
+        print(f"  Run `/prompt-coach:config sources` for the full list.",
               file=sys.stderr)
         return 2
 

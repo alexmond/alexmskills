@@ -2,7 +2,7 @@
 description: Launch the local prompt-coach web dashboard (stats, mastery, live config editor)
 ---
 
-# `/prompt-coach-beta:dashboard`
+# `/prompt-coach:dashboard`
 
 Start the coach's **lightweight local web dashboard** — a zero-dependency
 (Python stdlib only) server bound to `127.0.0.1` that shows stats, mastery by
@@ -12,7 +12,7 @@ the same schema validation the CLI uses).
 ## What to do
 
 1. Locate the plugin's `scripts/serve.py` (installed cache path
-   `~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/scripts/serve.py`,
+   `~/.claude/plugins/cache/alexmskills/prompt-coach/*/scripts/serve.py`,
    else the dev checkout).
 2. Launch it **in the background** so this session stays interactive, pointed at
    the current repo (for repo-scoped config):

@@ -2,7 +2,7 @@
 description: Show prompt-coach health metrics — fires, praises, corrections, mastery, active rules
 ---
 
-# `/prompt-coach-beta:stats`
+# `/prompt-coach:stats`
 
 Read the coach's state files and log to produce a compact health dashboard.
 

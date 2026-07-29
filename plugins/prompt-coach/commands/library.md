@@ -2,7 +2,7 @@
 description: Find a gold-standard prompt template from Anthropic's Claude Code Prompt Library for a task
 ---
 
-# `/prompt-coach-beta:library`
+# `/prompt-coach:library`
 
 Look up the closest **gold-standard prompt template** from Anthropic's
 [Claude Code Prompt Library](https://code.claude.com/docs/en/prompt-library) for
@@ -14,7 +14,7 @@ time.
 ## What to do
 
 1. Locate the plugin's `scripts/config.py` (installed cache path
-   `~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/scripts/config.py`,
+   `~/.claude/plugins/cache/alexmskills/prompt-coach/*/scripts/config.py`,
    else the dev checkout).
 2. Route on the argument:
 

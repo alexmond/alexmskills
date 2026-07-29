@@ -180,7 +180,7 @@ DEFAULT_CONFIG = {
 # ---------------------------------------------------------------------------
 # CONFIG_SCHEMA — metadata for every DEFAULT_CONFIG key (v0.18+).
 # ---------------------------------------------------------------------------
-# Single source of truth used by scripts/config.py (the /prompt-coach-beta:config
+# Single source of truth used by scripts/config.py (the /prompt-coach:config
 # slash command) to render the dashboard, describe keys, and validate `set`.
 # Adding a new config option in a future release means one entry here — the
 # dashboard, describer, and validator pick it up automatically.
@@ -571,10 +571,19 @@ _ENGLISH_INFLECTION_SUFFIXES = ("s", "es", "ed", "ing", "ly", "er", "est",
 # otherwise get falsely normalized. Evidence-based list (grow as false
 # positives appear in log.md):
 #   - `publish` was normalized to `polish` (loop refinement trigger)
+#   - v0.49.1, from a 1526-prompt cross-repo review: four valid words were
+#     mapped onto trigger words, and each corruption cascaded into a rule FP
+#     (e.g. a prompt about "mastery" analyzed as "faster" -> improve-without-
+#     metric). Guarded here:
+#       mastery -> faster        (improve-without-metric trigger)
+#       against -> again         (unbounded-iteration trigger)
+#       integration -> iteration (unbounded-iteration trigger)
+#       improve -> improved      (improve-without-metric trigger)
 _PROTECTED_ENGLISH_WORDS = frozenset({
     "publish", "please", "answer", "review", "reason",
     "finish", "punish", "release", "class", "field", "method",
     "issue", "ticket", "packet", "action", "always",
+    "mastery", "against", "integration", "improve",
 })
 
 
@@ -659,7 +668,7 @@ _CONVERSATIONAL_PICK = re.compile(r"\b\d+\b|\boption\s+[a-e]\b")
 # v0.13.0 — bug-report marker phrases. When present in a prompt, the
 # analyzer flags the PREVIOUS non-conversational prompt's analysis into
 # `.claude/prompt-coach/candidates.jsonl` for later review via the
-# /prompt-coach-beta:report-issue slash command.
+# /prompt-coach:report-issue slash command.
 _BUG_REPORT_PHRASE = re.compile(
     r"\b(coach\s+(that\s+was\s+|was\s+)?wrong|"
     r"coach\s+missed|"
@@ -997,7 +1006,7 @@ class Rule:
     # traces to. None = no upstream mapping (Claude-Code-specific rules like
     # no-skill-lookup have no Anthropic-guide equivalent). Format: section
     # slug from platform.claude.com/docs/en/build-with-claude/prompt-engineering/
-    # claude-prompting-best-practices — used by /prompt-coach-beta:config
+    # claude-prompting-best-practices — used by /prompt-coach:config
     # sources <rule-id> to surface a traceable citation.
     anthropic_ref: str | None = None
 
@@ -4828,7 +4837,7 @@ def pick_praise(positive_fires: list[str], mastery_events: list[str],
 def _flag_previous_for_review(local_dir: Path, mark_prompt: str) -> None:
     """v0.13.0 — bug-report phrase detected. Find the most recent
     non-conversational log entry and copy it into candidates.jsonl for
-    later review via /prompt-coach-beta:report-issue."""
+    later review via /prompt-coach:report-issue."""
     log = local_dir / "log.md"
     if not log.exists():
         return

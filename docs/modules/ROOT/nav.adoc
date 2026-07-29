@@ -19,5 +19,5 @@
 ** xref:review-agents.adoc[Review Agents]
 ** xref:research-sweep.adoc[Research Sweep]
 * Beta plugins
-** xref:prompt-coach-beta.adoc[Prompt Coach]
+** xref:prompt-coach.adoc[Prompt Coach]
 ** xref:tune-repo.adoc[Tune Repo]

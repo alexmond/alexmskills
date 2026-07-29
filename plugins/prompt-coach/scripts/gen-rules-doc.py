@@ -12,7 +12,7 @@ the code:
                         (key / type / default / description), from CONFIG_SCHEMA
 
 Each block lives between a `// BEGIN generated-<name>` / `// END generated-<name>`
-marker pair in `docs/modules/ROOT/pages/prompt-coach-beta.adoc`; --inject
+marker pair in `docs/modules/ROOT/pages/prompt-coach.adoc`; --inject
 replaces everything between each pair it finds (missing pairs are skipped with a
 note). Re-run after any rule / count / config-schema change.
 
@@ -29,8 +29,8 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[2]  # plugins/prompt-coach-beta/scripts -> repo root
-ADOC = REPO / "docs/modules/ROOT/pages/prompt-coach-beta.adoc"
+REPO = HERE.parents[2]  # plugins/prompt-coach/scripts -> repo root
+ADOC = REPO / "docs/modules/ROOT/pages/prompt-coach.adoc"
 BEGIN = "// BEGIN generated-rules (gen-rules-doc.py — do not edit by hand)"
 END = "// END generated-rules"
 SUM_BEGIN = "// BEGIN generated-summary (gen-rules-doc.py — do not edit by hand)"

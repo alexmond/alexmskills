@@ -161,7 +161,7 @@ Every prompt produces one of five signals:
 
 ## Java MCP server — what it actually does
 
-The existing spec at `plugins/prompt-coach-beta/docs/java-mcp-spec.md` frames MCP as "port the Python to Java + add multi-user telemetry." Under v1.0, MCP has a different job:
+The existing spec at `plugins/prompt-coach/docs/java-mcp-spec.md` frames MCP as "port the Python to Java + add multi-user telemetry." Under v1.0, MCP has a different job:
 
 1. **Hosts LLM inference** — batches Haiku/Sonnet calls, handles API keys, rate-limiting, cost caps
 2. **Caches rewrite templates** — same prompt shape produces the same-shape rewrite; cache the LLM output for common patterns

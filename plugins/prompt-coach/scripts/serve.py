@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""prompt-coach-beta v0.44.0 — lightweight local web dashboard.
+"""prompt-coach v0.44.0 — lightweight local web dashboard.
 
 A zero-dependency (Python stdlib only) localhost server that renders the
 coach's stats, mastery, rule catalog with reference URLs, and a live config
@@ -271,7 +271,7 @@ function renderLibrary(){
   const lib=DATA.library||{entries:[],count:0};
   $('#libtot').textContent=`(${lib.count} gold-standard templates)`;
   $('#libnote').innerHTML=`Anthropic's Claude Code Prompt Library, vendored as an offline snapshot. `
-    +`Say <b>"show me a prompt for X"</b> or run <code>/prompt-coach-beta:library</code> to match one to your task. `
+    +`Say <b>"show me a prompt for X"</b> or run <code>/prompt-coach:library</code> to match one to your task. `
     +(lib.source_url?`<a href="${esc(lib.source_url)}" target="_blank" rel="noopener">source ↗</a>`:'');
   const cats=['all',...[...new Set(lib.entries.map(e=>e.cat))].sort()];
   $('#libnav').innerHTML=cats.map(c=>`<button class="${c===LIBCAT?'on':''}" onclick="setLibCat('${c}')">${esc(c)}</button>`).join('');
@@ -297,7 +297,7 @@ function renderSources(){
   $('#srcnote').innerHTML=`Every reference the catalog cites, deduped and <b>ranked by importance</b> — `
     +`official Claude Code / Anthropic docs first, then foundational engineering &amp; research canon, `
     +`then practitioner and other-vendor material; within each tier, sources more rules rely on rank higher. `
-    +`Run <code>/prompt-coach-beta:config sources</code> for the per-rule trail.`;
+    +`Run <code>/prompt-coach:config sources</code> for the per-rule trail.`;
   const groups=src.groups||[];
   const tabs=[['all',`all (${src.total})`],...groups.map(g=>[g.authority,`${g.label.split(' — ')[0]} (${g.count})`])];
   $('#srcnav').innerHTML=tabs.map(([k,l])=>`<button class="${k===SRCGRP?'on':''}" onclick="setSrcGrp('${k}')">${esc(l)}</button>`).join('');

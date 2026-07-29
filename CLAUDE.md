@@ -21,9 +21,9 @@ Makefile                          # validate / list / bump helpers
 
 ## Catalog (see README for descriptions)
 
-`evolving-claude-md`, `dev-crew`, `brainstorm-panel`, `learn-on-failure` (self-learning) ·
-`implement-issue`, `maven-quality`, `security-audit` (workflow) · `review-agents` (review) ·
-`research-sweep` (research).
+`evolving-claude-md`, `dev-crew`, `brainstorm-panel`, `learn-on-failure`, `prompt-coach`
+(self-learning) · `implement-issue`, `maven-quality`, `security-audit` (workflow) ·
+`review-agents` (review) · `research-sweep` (research). Beta (`-beta` suffix): `tune-repo-beta`.
 
 ## Conventions
 
@@ -68,8 +68,9 @@ Makefile                          # validate / list / bump helpers
 - **The PreToolUse lint hook enforces the D&L entry format** on any CLAUDE.md edit (date, **topic-tag**,
   ≤200 chars). Malformed entries are rejected — fix and retry.
 - **No separate beta channel.** In-progress plugins live in the stable catalog with a `-beta`
-  suffix in the name (e.g. `prompt-coach-beta`). Graduation renames the directory + updates
-  `marketplace.json`. The two-marketplace setup was retired 2026-07-02 after too many CLI edge
+  suffix in the name (e.g. `tune-repo-beta`). Graduation renames the directory + updates
+  `marketplace.json` + drops the `beta` category/keyword (see `make graduate`; `prompt-coach`
+  graduated 2026-07-28). The two-marketplace setup was retired 2026-07-02 after too many CLI edge
   cases (bare-string source resolution vs clone root, `sparsePaths` ignored, dual `marketplace.json`
   confusing install vs reload, `extraKnownMarketplaces` schema drift).
 
@@ -87,6 +88,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-07-28 — **coach-graduation** — 1.0.0: graduated prompt-coach-beta -> prompt-coach (dropped -beta suffix + beta category, self-learning). Rolled in the typo-stoplist fix (mastery->faster etc + harness guard). Why: cleared its own bar across many repos. Caveat: current code not yet dogfooded, no precision gate (#31/#32).
 - 2026-07-19 — **coach-log-calibration** — 0.49.0 from cross-repo log review: redact secrets in log.md (captured live GitLab PATs), question/conversational guards for 4 real FPs, silence=accept (record_silence_as_accept) feeds precision-gating. Why: logs showed the gaps.
 - 2026-07-17 — **coach-docs-generated** — 0.48.1: doc audit vs code (nudge_style/counts/tiers/mastery were stale) + gen-rules-doc now injects summary + config-key ref blocks, harness drift-checked. Why: docs drifted; generate from data.
 - 2026-07-17 — **coach-command-routing** — 0.48.0: +3 L5 rules routing native cmds (recurring->/schedule|/loop --interval, poll-until->/loop, outcome->/goal). 42 rules/positives co-fire. Why: coach didn't know the orchestration commands.
@@ -102,18 +104,18 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-07-03 — **prompt-coach-evolution** — full v0.1→v0.18 narrative at docs/decisions/2026-07-03-prompt-coach-evolution.md. Compacts 20 D&L entries. Why: 2-day cluster was overflowing D&L.
 - 2026-07-03 — **prompt-coach-options-mastery** — 0.19.0: `:config options <key>` (per-choice explanations); `quick`/`full` interactive flows via AskUserQuestion; `mastery` dashboard + `mastery-reset[-all]`. Why: discoverability + reset path.
 - 2026-07-03 — **prompt-coach-anthropic-align** — 0.20.0: 6 new rules (xml-tags/classical-role/test-goalseeking/verify-claim/overthinking/edit-preference) + `anthropic_ref` field + `:config sources` verb. 25/34 rules linked. Why: audit-driven coverage.
-- 2026-07-03 — **prompt-coach-daily-review** — 0.21.0/0.22.0: `/prompt-coach-beta:daily-review` reads every repo's log.md + watermark for "since last review". Superseded by log-review skill (0.23.0). Why: cross-repo temporal analytics.
+- 2026-07-03 — **prompt-coach-daily-review** — 0.21.0/0.22.0: `/prompt-coach:daily-review` reads every repo's log.md + watermark for "since last review". Superseded by log-review skill (0.23.0). Why: cross-repo temporal analytics.
 - 2026-07-03 — **log-review-extract** — 0.23.0: daily-review moved to `~/.claude/skills/log-review/`. Redacted by default; watermark auto-migrates. Why: coach output shouldn't leak repo names to GitHub.
 - 2026-07-04 — **prompt-coach-picker-skip** — 0.24.0: reads session transcript, skips AskUserQuestion answers + `?`/`:`+list prefills. 17/17 real turns caught. Why: picker answers can't be rephrased to dodge a rule.
 - 2026-07-04 — **prompt-coach-quickstart** — 0.25.0: Quick Start section added to SKILL.md + Antora page + help card intro. Covers install, nudge preview, 4 commands, say-it phrases. Why: new users needed onboarding path.
-- 2026-07-04 — **prompt-coach-mastery-cmd** — 0.26.0: top-level `/prompt-coach-beta:mastery` + analysis (well-tested/barely-tested/untested + close-to-mastery). 18/29 real masteries flagged as untested. Why: discoverability + audit.
+- 2026-07-04 — **prompt-coach-mastery-cmd** — 0.26.0: top-level `/prompt-coach:mastery` + analysis (well-tested/barely-tested/untested + close-to-mastery). 18/29 real masteries flagged as untested. Why: discoverability + audit.
 - 2026-07-04 — **prompt-coach-inactive** — 0.27.0: `min_fires_for_mastery` + new `inactive` status + graduation events in log + auto-migration. Legacy false-masteries move to `inactive`. Why: evidence-based mastery.
 - 2026-07-04 — **prompt-coach-tips** — 0.28.0: 6 proactive tips (💡) — Mode A (matching) + Mode B (graduation-unlock paired to L1 masteries). Rate-limited variable-ratio; enabled by default. Why: advanced-technique nudging.
 - 2026-07-04 — **prompt-coach-inline-only** — 0.29.0: `nudge_style` deleted, rendering always inline, new master `enabled: bool`. Legacy configs silently ignored. Why: 3 of 4 modes were dead surface.
 - 2026-07-04 — **prompt-coach-collaborator** — 0.34.0: coach_style=collaborator (C+D). Hook tells Claude via additionalContext to rewrite the user's prompt in-place; no external API. `nudge` legacy path preserved. Why: nagger → collaborator.
 - 2026-07-05 — **prompt-coach-liveness** — 0.35.0: praise had no inline branch (dead since v0.29); restored it + 🎓 mastery congrats + `ack_clean` clean-prompt heartbeat; fixed v0.34 fires_total double-count. Why: "too silent" was real.
 - 2026-07-05 — **prompt-coach-access** — 0.36.0: `show_source_urls` (clickable doc URLs in coach block, in quick-set) + `sources --open` browser + new `paths` verb (skill folders, state, runnable scripts). Why: access to docs + own files.
-- 2026-07-05 — **prompt-coach-analyze** — 0.37.0: on-demand `analyze "<text>"` / `--last N` + `/prompt-coach-beta:analyze` runs full 34-rule catalog on any prompt/history, coached. Why: knowledge on demand, not passive.
+- 2026-07-05 — **prompt-coach-analyze** — 0.37.0: on-demand `analyze "<text>"` / `--last N` + `/prompt-coach:analyze` runs full 34-rule catalog on any prompt/history, coached. Why: knowledge on demand, not passive.
 - 2026-07-05 — **prompt-coach-collab-only** — 0.38.0: removed legacy `nudge` mode + `coach_style` + 16 dead fns + voice/anti-habituation cfg (~570 lines); added `make test-coach` (15-check harness). Why: collaborator won; need a gate.
 - 2026-07-05 — **prompt-coach-variants-gone** — 0.38.1: stripped ~200 dead nudge strings — `nudge={}` from all 34 rules + field + 5 accessors (AST-span). analyzer 4292→3835 lines; harness 15/15. Why: collaborator writes fresh.
 - 2026-07-05 — **prompt-coach-incremental-routing** — 0.39.0: L5 rule (35 total) — terse per-step routing ("one after another") → batch into TaskCreate/Workflow. Research-backed; harness 16/16. Why: user routes a lot; fell between conversational-skip and verbose L5 regexes.

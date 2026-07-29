@@ -1,6 +1,6 @@
 # prompt-coach — Java MCP server spec (target architecture)
 
-**Status:** living draft • **Last updated:** with `prompt-coach-beta 0.15.0`
+**Status:** living draft • **Last updated:** with `prompt-coach 0.15.0`
 **Update policy:** review + touch on every minor version bump. Anything that
 would change the MCP surface, data model, or migration path gets logged here
 first.
@@ -112,7 +112,7 @@ The Java service exposes an MCP server. Consumer discovery per standard.
 
 **`get_stats`**
 - **Input:** `{ scope?: "global" | "repo:<name>" | "since:<iso-date>" }`
-- **Output:** parallel to `/prompt-coach-beta:stats` output today —
+- **Output:** parallel to `/prompt-coach:stats` output today —
   prompt counts, nudge/praise counts, top-fired rules, mastered rules,
   active rules, config, top corrections.
 
@@ -138,7 +138,7 @@ The Java service exposes an MCP server. Consumer discovery per standard.
 
 - `catalog://rules` — full rule catalog with descriptions + sources.
 - `catalog://positives` — parallel view for positive detectors.
-- `docs://help` — the equivalent of `/prompt-coach-beta:help` output.
+- `docs://help` — the equivalent of `/prompt-coach:help` output.
 
 ## Canonical rule catalog (shared source of truth)
 
@@ -340,12 +340,12 @@ catalog update PR.
 
 ## Related work in this repo
 
-- `plugins/prompt-coach-beta/scripts/analyze-prompt.py` — current Python
+- `plugins/prompt-coach/scripts/analyze-prompt.py` — current Python
   analyzer. Ground truth for behavior parity.
-- `plugins/prompt-coach-beta/commands/report-issue.md` — bug-report
+- `plugins/prompt-coach/commands/report-issue.md` — bug-report
   workflow that already produces training-data-shaped payloads
   (structural signature + first-5-words + annotation).
-- `plugins/prompt-coach-beta/docs/sources.md` — bibliography that will
+- `plugins/prompt-coach/docs/sources.md` — bibliography that will
   be preserved in the Java catalog.
 
 ## Update log

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""prompt-coach-beta — release test harness.
+"""prompt-coach — release test harness.
 
 Run after every release to confirm the plugin's live behaviors still work.
 Self-contained: spins up throwaway HOME + repo dirs per check, drives the
@@ -230,7 +230,7 @@ def t_rules_doc_in_sync():
           f"summary_ok={summ_ok} config_rows_ok={cfg_ok}")
     in_sync = (gen.BEGIN in adoc and fragment.strip() in adoc
                and summary.strip() in adoc and config.strip() in adoc)
-    check("shipped prompt-coach-beta.adoc is in sync (run gen-rules-doc --inject)",
+    check("shipped prompt-coach.adoc is in sync (run gen-rules-doc --inject)",
           in_sync, "docs drift — regenerate the rules/summary/config blocks")
 
 
@@ -668,6 +668,36 @@ def t_v49_calibration():
           f"gitignore={gitignore_ok} acc={acc}")
 
 
+def t_typo_protects_valid_words():
+    """v0.49.1 — the typo normalizer must not corrupt valid English words that
+    sit within edit distance of a trigger (mastery->faster, against->again,
+    integration->iteration, improve->improved), evidenced by a 1526-prompt
+    cross-repo review. Real typos must still correct."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_antp", ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules["_antp"] = m
+    spec.loader.exec_module(m)
+    tol = m.DEFAULT_CONFIG.get("typo_tolerance", 2)
+
+    protected = ["mastery tracking", "run against prod", "the integration test",
+                 "improve the parser"]
+    prot_ok, prot_bad = True, []
+    for p in protected:
+        _, corr = m.normalize_prompt(p, tol)
+        if corr:
+            prot_ok = False
+            prot_bad.append((p, corr))
+
+    # a genuine typo must still be corrected (guard against over-protecting)
+    _, real = m.normalize_prompt("refacotr the module", tol)
+    real_ok = any(c[1] == "refactor" for c in real)
+
+    check("typo normalizer protects valid words, still fixes real typos",
+          bool(prot_ok and real_ok),
+          f"prot_ok={prot_ok} bad={prot_bad[:3]} real_ok={real_ok}")
+
+
 def t_acceptance_loop():
     """v0.41 P1 — a yes/no/edit reply to a rewrite is recorded per rule."""
     h, c = _fresh()
@@ -837,6 +867,7 @@ CHECKS = [
     t_v46_rules,
     t_v48_command_rules,
     t_v49_calibration,
+    t_typo_protects_valid_words,
     t_library_integration,
     t_collaborator_gate_configurable,
     t_rule_help_covers_all,
@@ -873,7 +904,7 @@ def main(argv: list[str]) -> int:
                         for n, ok, d in _results],
         }, indent=2))
     else:
-        print(f"\nprompt-coach-beta test harness — {passed}/{total} passed\n")
+        print(f"\nprompt-coach test harness — {passed}/{total} passed\n")
         for name, ok, detail in _results:
             mark = "✓" if ok else "✗"
             line = f"  {mark} {name}"

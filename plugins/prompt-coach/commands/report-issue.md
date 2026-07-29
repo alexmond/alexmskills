@@ -2,7 +2,7 @@
 description: File a privacy-safe bug report about a prompt the coach mistreated or missed
 ---
 
-# `/prompt-coach-beta:report-issue`
+# `/prompt-coach:report-issue`
 
 Help the user file a redacted bug report about a prompt the coach handled badly.
 **Never file automatically** — the user must explicitly confirm the payload before
@@ -48,7 +48,7 @@ The analyzer has a `compute_signature(prompt, corrections)` function you can inv
 ```python
 python3 -c "
 import sys, json
-sys.path.insert(0, '<path-to>/plugins/prompt-coach-beta/scripts')
+sys.path.insert(0, '<path-to>/plugins/prompt-coach/scripts')
 # rename hyphen for import
 import importlib.util
 spec = importlib.util.spec_from_file_location('ap', '<path-to>/scripts/analyze-prompt.py')
@@ -105,7 +105,7 @@ Combine all confirmed candidates into ONE issue body, in this format:
 ```markdown
 # prompt-coach bug report
 
-**Plugin version:** <read from `~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/.claude-plugin/plugin.json` `.version`>
+**Plugin version:** <read from `~/.claude/plugins/cache/alexmskills/prompt-coach/*/.claude-plugin/plugin.json` `.version`>
 **Report date:** <today>
 **Candidate count:** <N>
 
@@ -143,7 +143,7 @@ Combine all confirmed candidates into ONE issue body, in this format:
 ---
 
 **Notes for the maintainer:**
-- Reporting mechanism: /prompt-coach-beta:report-issue slash command.
+- Reporting mechanism: /prompt-coach:report-issue slash command.
 - Full prompts intentionally omitted for privacy — only shape + first 5 words.
 - Coach version: <plugin_version>
 ```

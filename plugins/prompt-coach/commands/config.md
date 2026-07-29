@@ -2,7 +2,7 @@
 description: View or edit prompt-coach config — categorized dashboard, per-key describe/set/reset, diff, export
 ---
 
-# `/prompt-coach-beta:config`
+# `/prompt-coach:config`
 
 Structured surface for the coach's growing config catalog. Backs onto a schema
 of every option (category, type, default, allowed values, description, example,
@@ -13,13 +13,13 @@ since-version) so new options are picked up automatically when they're added.
 1. Locate the config script. It's shipped in the plugin cache:
 
    ```bash
-   ls ~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/scripts/config.py 2>/dev/null | tail -1
+   ls ~/.claude/plugins/cache/alexmskills/prompt-coach/*/scripts/config.py 2>/dev/null | tail -1
    ```
 
    If not present, fall back to the source path if the user is in a dev checkout:
-   `~/IdeaProjects/alexmskills/plugins/prompt-coach-beta/scripts/config.py`.
+   `~/IdeaProjects/alexmskills/plugins/prompt-coach/scripts/config.py`.
 
-2. Parse the user's input after `/prompt-coach-beta:config`:
+2. Parse the user's input after `/prompt-coach:config`:
 
    Direct verbs (run the script and render its output):
 
@@ -39,7 +39,7 @@ since-version) so new options are picked up automatically when they're added.
    - `mastery-reset-all` → `python3 <path> mastery-reset-all` (dry-run once first, require explicit confirmation)
    - `sources [<rule-id>]` → `python3 <path> sources [<rule-id>]` (citation trail + doc URLs; add `--open` to open the URL(s) in a browser)
    - `paths` → `python3 <path> paths` (the skill's own folders, state files, and runnable scripts; add `--open` to open the folder + docs in a file browser)
-   - `analyze "<text>"` → `python3 <path> analyze "<text>"` (run the FULL 42-rule catalog against one prompt) — or `analyze --last N` for the last N logged prompts. Prefer `/prompt-coach-beta:analyze` for the coached narrative.
+   - `analyze "<text>"` → `python3 <path> analyze "<text>"` (run the FULL 42-rule catalog against one prompt) — or `analyze --last N` for the last N logged prompts. Prefer `/prompt-coach:analyze` for the coached narrative.
 
    **Interactive flows (Claude-orchestrated via AskUserQuestion):**
 
@@ -82,8 +82,8 @@ to the appropriate command:
 | "where are the skill files" / "show me the skill folders" / "where's the config/log" | `paths` |
 | "open the skill folder" / "open SKILL.md" / "let me see the scripts" | `paths --open` |
 | "show me clickable urls" / "turn on source links" | `set show_source_urls true` |
-| "analyze this prompt: …" / "was my last prompt good" | `analyze "<text>"` (or `/prompt-coach-beta:analyze`) |
-| "analyze my last N prompts" / "how have I been prompting" | `analyze --last N` (or `/prompt-coach-beta:analyze`) |
+| "analyze this prompt: …" / "was my last prompt good" | `analyze "<text>"` (or `/prompt-coach:analyze`) |
+| "analyze my last N prompts" / "how have I been prompting" | `analyze --last N` (or `/prompt-coach:analyze`) |
 | "show me my mastery" / "what have I mastered" / "how am I doing" | `mastery` |
 | "reset my mastery on <rule>" / "reset <rule> mastery" | `mastery-reset <rule>` |
 | "reset all my mastery" / "start mastery over" | `mastery-reset-all` (require confirmation!) |

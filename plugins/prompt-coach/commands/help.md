@@ -2,14 +2,14 @@
 description: Show prompt-coach help — commands, config options, and say-it phrases
 ---
 
-# `/prompt-coach-beta:help`
+# `/prompt-coach:help`
 
 Print a compact help card for the coach. Read the current installed version and resolved
 config to fill in the live values.
 
 ## What to do
 
-1. Read `~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/.claude-plugin/plugin.json`
+1. Read `~/.claude/plugins/cache/alexmskills/prompt-coach/*/.claude-plugin/plugin.json`
    (whichever version exists) for `.version` and `.description`.
 2. Resolve current effective config by merging (in order): built-in defaults →
    `~/.claude/prompt-coach/config.json` → current repo's `.claude/prompt-coach/config.json`
@@ -21,7 +21,7 @@ config to fill in the live values.
 Render as a fenced block so it presents like a dashboard, under 60 lines.
 
 ```
-prompt-coach-beta v<VERSION>
+prompt-coach v<VERSION>
 
 A UserPromptSubmit hook that watches every prompt you send Claude Code and nudges
 you toward better prompting habits. 42 rules across 6 tiers, 42 positive detectors,
@@ -31,34 +31,34 @@ graduate as you master them and fade to occasional refreshers.
 New to the coach? See SKILL.md's "Quick start" section — a 60-second setup,
 what a nudge looks like, the slash commands, and the most-used say-it
 phrases. Path:
-  ~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/skills/prompt-coach/SKILL.md
+  ~/.claude/plugins/cache/alexmskills/prompt-coach/*/skills/prompt-coach/SKILL.md
 
 ────────────────────────────────────────────────────────────────────
 COMMANDS
 
-  /prompt-coach-beta:stats           Health dashboard — prompts analyzed, emit rate,
+  /prompt-coach:stats           Health dashboard — prompts analyzed, emit rate,
                                      top-fired rules, mastery, typo corrections, config
-  /prompt-coach-beta:mastery         Which rules mastered, which need reset — with
+  /prompt-coach:mastery         Which rules mastered, which need reset — with
                                      analysis (well-tested / barely-tested / untested);
                                      surfaces close-to-mastery rules (v0.26+)
-  /prompt-coach-beta:analyze         On-demand analysis (v0.37+): run the FULL 42-rule
+  /prompt-coach:analyze         On-demand analysis (v0.37+): run the FULL 42-rule
                                      catalog against a pasted prompt or your last N
                                      logged prompts, with a coached rewrite / pattern report
-  /prompt-coach-beta:config          Structured config surface — show / get / describe /
+  /prompt-coach:config          Structured config surface — show / get / describe /
                                      set / reset / diff / export / mastery / acceptance /
                                      sources / dashboard (v0.18+)
-  /prompt-coach-beta:library         Match your task to the closest gold-standard template from
+  /prompt-coach:library         Match your task to the closest gold-standard template from
                                      Anthropic's Claude Code Prompt Library (v0.47; offline snapshot)
-  /prompt-coach-beta:dashboard       Local web dashboard (v0.44) — stats, mastery by tier with
+  /prompt-coach:dashboard       Local web dashboard (v0.44) — stats, mastery by tier with
                                      reference URLs, a live config editor, and a Library tab. Zero-
                                      dependency stdlib server on 127.0.0.1. (Raw JSON: `config dashboard`.)
 
   (Cross-repo daily review moved out in v0.23. Say "log review" or
    "daily review" to invoke ~/.claude/skills/log-review/ instead.)
-  /prompt-coach-beta:report-issue    File a privacy-safe bug report for prompts the coach
+  /prompt-coach:report-issue    File a privacy-safe bug report for prompts the coach
                                      mistreated. Uses candidates.jsonl seeded by the
                                      say-it phrases below.
-  /prompt-coach-beta:help            This card.
+  /prompt-coach:help            This card.
 
 ────────────────────────────────────────────────────────────────────
 SAY-IT PHRASES (talk to Claude naturally; Claude edits the right file)
@@ -187,13 +187,13 @@ DOCS
 
   Full SKILL.md:  <plugin dir>/skills/prompt-coach/SKILL.md
   Sources:        <plugin dir>/docs/sources.md — bibliography per rule
-  Marketplace:    alexmond/alexmskills → prompt-coach-beta
+  Marketplace:    alexmond/alexmskills → prompt-coach
 ```
 
 ## What NOT to do
 
 - Do NOT modify any state or config files as part of `/help`. Read-only.
 - Do NOT enumerate every rule id (42 rules × 2-line description = wall of text). Point at
-  `/prompt-coach-beta:stats` for active rules and mastered rules if the user asks for them.
+  `/prompt-coach:stats` for active rules and mastered rules if the user asks for them.
 - Do NOT run the coach's Python code — the help card is static content + config lookup, not
   a live analysis.

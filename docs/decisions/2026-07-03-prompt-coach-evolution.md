@@ -1,4 +1,4 @@
-# prompt-coach-beta — evolution log (v0.1.0 → v0.18.0)
+# prompt-coach — evolution log (v0.1.0 → v0.18.0)
 
 Consolidates 20 D&L entries from 2026-07-01 → 2026-07-03. In two days the plugin
 grew from a first-cut heuristic (v0.1: 11 rules, one nudge mode) to a
@@ -17,18 +17,18 @@ that emerged, and the key lessons — so CLAUDE.md stops overflowing.
 | 0.5.0 | 2026-07-02 | Levenshtein typo pre-pass on ~90 trigger words; adaptive tolerance | Dyslexic-friendly; rising fallback rate self-reports catalog gaps |
 | 0.6.0 | 2026-07-02 | Conversational short-circuit (approvals / multi-choice / continuations); praise_ratio default 10→3 for trial visibility | Coach misfired on `sure` / `1 and 2` |
 | 0.7.0 | 2026-07-02 | Log-mined 34 prompts: inflection guard kills 5/6 bad corrections; +15 action verbs; +L2 no-answer-shape; praise_ratio reverted 3→10 | Evidence over guessing |
-| 0.8.0 | 2026-07-02 | `/prompt-coach-beta:stats` slash command; broadened cited-context/stated-goal; new grounded-scope positive | 0 positives fired in 34 prompts (dark layer) |
+| 0.8.0 | 2026-07-02 | `/prompt-coach:stats` slash command; broadened cited-context/stated-goal; new grounded-scope positive | 0 positives fired in 34 prompts (dark layer) |
 | 0.9.0 | 2026-07-02 | Refresher tier: mastered rules still evaluate, fire rarely (50-prompt cooldown); softer refresher box; opt-in auto-demotion | Mastery ≠ permanent silence |
 | 0.10.0 | 2026-07-02 | `nudge_style="inline"` renders nudge as opening block of Claude's response | TUI hook-stderr rendering is unreliable |
 | 0.11.0 | 2026-07-02 | Hedge stripping (`try to / let's / need to`); +deploy/publish/release/ship action verbs | `try to deploy` fired nothing |
 | 0.12.0 | 2026-07-02 | `no-answer-shape` elevated L2→L1; broader question regex; +`commit` verb; `max_active_rules` cap 5→6 | 5 info-seeking prompts missed |
 | 0.13.0 | 2026-07-03 | `"coach that was wrong"` bug-flag phrase; `/report-issue` command with first-5-words redaction + structural signature | User-driven bug loop |
-| 0.14.0 | 2026-07-03 | `/prompt-coach-beta:help` card: live version, resolved config, commands, say-it phrases, state file pointers | Discoverability |
+| 0.14.0 | 2026-07-03 | `/prompt-coach:help` card: live version, resolved config, commands, say-it phrases, state file pointers | Discoverability |
 | 0.15.0 | 2026-07-03 | 75-entry log audit: +8 hedges, +`run/review` action verbs, tighter `check` DoD, broader no-role critique. 5/7 gaps closed | Continued coverage tuning |
 | 0.16.0 | 2026-07-03 | Anti-habituation: variant pool (3/rule) + novelty rotation + progressive disclosure + silence-after-saturation. Voice rewrite (technical → colleague) | Same message every fire (Hattie & Timperley, Sasse & Rashid) |
 | 0.16.1 | 2026-07-03 | Fixed 3 code paths rendering variant list literal; SKILL.md drift (tier count, no-answer-shape tier, defaults); help.md v0.16 knobs | Doc/code out of sync post-v0.16 |
 | 0.17.0 | 2026-07-03 | `voice_preset` (colleague / plain, L1+L2 both, L3-L6 fall back); `voice_source` (static / llm-compose / hybrid) with 6 anti-disagreement guardrails; medium/short inline static bug fix | Non-native readers + user-noticed LLM-composed disagreement |
-| 0.18.0 | 2026-07-03 | `/prompt-coach-beta:config`: show/get/describe/set/reset/diff/export. `CONFIG_SCHEMA` metadata (22 keys × 8 categories); deep-merge preserves forward-compat keys | Config knob count outgrew ad-hoc say-it phrases |
+| 0.18.0 | 2026-07-03 | `/prompt-coach:config`: show/get/describe/set/reset/diff/export. `CONFIG_SCHEMA` metadata (22 keys × 8 categories); deep-merge preserves forward-compat keys | Config knob count outgrew ad-hoc say-it phrases |
 
 ## Design principles that emerged
 
@@ -100,7 +100,7 @@ that emerged, and the key lessons — so CLAUDE.md stops overflowing.
 ## Future direction
 
 - **Java MCP server** — living design spec at
-  `plugins/prompt-coach-beta/docs/java-mcp-spec.md`. Prerequisite is
+  `plugins/prompt-coach/docs/java-mcp-spec.md`. Prerequisite is
   multi-user training data; `/report-issue` already produces the shape
   (structural signature + first-5-words + user annotation).
 - **`plain` preset expansion to L3–L6** — currently falls back to

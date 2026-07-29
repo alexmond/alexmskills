@@ -22,7 +22,7 @@ Input: $ARGUMENTS — the **first word** is the role name; the rest is the targe
    Anthropic's [Claude Code Prompt Library](https://code.claude.com/docs/en/prompt-library) —
    `architect`→Plan, `builder`→Implement, `debugger`→Debug, `optimizer`→Debug, `refactorer`→Refactor,
    `reviewer`→Review, `skeptic`→Review (the role's Body also names its category). If the
-   `prompt-coach-beta` plugin is installed, run its `config.py library --category <Category>` for
+   `prompt-coach` plugin is installed, run its `config.py library --category <Category>` for
    gold-standard prompt shapes in this role's domain and let them inform your opening. Degrade
    silently — this is enrichment, not a dependency; skip it if the plugin/command isn't present.
 3. **Work the target** following the Body's method and deliverables.

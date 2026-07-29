@@ -2,7 +2,7 @@
 description: Analyze a specific prompt (or your last N prompts) against the full rule catalog and coach improvements
 ---
 
-# `/prompt-coach-beta:analyze`
+# `/prompt-coach:analyze`
 
 On-demand prompt analysis. Unlike the passive hook — which only checks the handful of
 *active* rules and stays quiet — this runs the **full 42-rule catalog + positive detectors**
@@ -11,7 +11,7 @@ improvements using the skill's prompting knowledge.
 
 ## What to do
 
-1. Locate the config script (same resolution as `/prompt-coach-beta:config`):
+1. Locate the config script (same resolution as `/prompt-coach:config`):
    `${CLAUDE_PLUGIN_ROOT}/scripts/config.py`, else the dev checkout path.
 
 2. Route on the argument:

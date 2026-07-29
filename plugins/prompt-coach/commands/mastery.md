@@ -2,20 +2,20 @@
 description: Show current mastery — which rules mastered, which are in progress, which need reset. Enhanced analysis (v0.26+) flags untested masteries so you can spot rules that may be irrelevant to your patterns rather than truly internalized.
 ---
 
-# `/prompt-coach-beta:mastery`
+# `/prompt-coach:mastery`
 
-Direct top-level access to the mastery view. Same output as `/prompt-coach-beta:config mastery` but you don't have to type the `config` prefix.
+Direct top-level access to the mastery view. Same output as `/prompt-coach:config mastery` but you don't have to type the `config` prefix.
 
 ## What to do
 
 1. Locate the config script (same helper the other commands use):
 
    ```bash
-   ls ~/.claude/plugins/cache/alexmskills/prompt-coach-beta/*/scripts/config.py 2>/dev/null | tail -1
+   ls ~/.claude/plugins/cache/alexmskills/prompt-coach/*/scripts/config.py 2>/dev/null | tail -1
    ```
 
    Fallback for dev checkout:
-   `~/IdeaProjects/alexmskills/plugins/prompt-coach-beta/scripts/config.py`
+   `~/IdeaProjects/alexmskills/plugins/prompt-coach/scripts/config.py`
 
 2. Parse the user's input:
 

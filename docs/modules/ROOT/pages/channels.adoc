@@ -1,12 +1,12 @@
 = Marketplace & Beta Plugins
 :navtitle: Marketplace & Beta Plugins
 
-`alexmskills` ships from a single marketplace catalog (`.claude-plugin/marketplace.json`). In-progress plugins live alongside stable ones, distinguished by a `-beta` suffix in the name (for example `prompt-coach-beta`). No separate channel, no extra marketplace to opt into — install them the same way as any other plugin.
+`alexmskills` ships from a single marketplace catalog (`.claude-plugin/marketplace.json`). In-progress plugins live alongside stable ones, distinguished by a `-beta` suffix in the name (for example `tune-repo-beta`). No separate channel, no extra marketplace to opt into — install them the same way as any other plugin.
 
 [source,text]
 ----
 /plugin marketplace add alexmond/alexmskills
-/plugin install prompt-coach-beta@alexmskills
+/plugin install prompt-coach@alexmskills
 ----
 
 The `-beta` suffix is intentional: it makes it obvious at install time and in the enabled-plugins list that the plugin is beta quality. When a beta plugin earns its stable slot, it graduates — the directory is renamed, the `-beta` drops from the name and marketplace entry, and the version bumps to `1.0.0`.
@@ -20,9 +20,6 @@ The two-channel setup (`alexmskills` + `alexmskills-beta`) kept hitting edge cas
 [cols="1,3",options="header"]
 |===
 | Plugin | What it does
-
-| xref:prompt-coach-beta.adoc[prompt-coach-beta]
-| Watches every prompt and rewrites it toward better prompting habits (collaborator mode) — 42 rules across 6 tiers, mastery earned by demonstration, typo tolerance, and evidence-based praise for good behaviors.
 
 | xref:tune-repo.adoc[tune-repo-beta]
 | Audits and tightens a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately.
