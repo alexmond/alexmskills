@@ -7,6 +7,10 @@ description: Generate a presentation-worthy screenshot deck of the current produ
 
 > **Try it:** `/screenshot-tour:screenshot-tour` — or say "build a presentation deck of this product".
 
+> Not `screenshot-sweep`, which *audits* a capture you already have for defects.
+> This one *produces* a deck. If a tour capture shows something broken, that is a
+> sweep finding — file it, don't put it in the deck.
+
 A *presentation deck* is not a screenshot — it's the **set of aspects** a stranger needs to see to understand what the product does, ordered as a narrative they can follow without you talking over it. A single capture answers "what does it look like"; a deck answers "what does it do, end to end, in the moments that matter." The skill's job is to make sure the deck is **complete enough** to substitute for a 5-minute live demo, and **consistent enough** that every image reads as one product.
 
 The deliverable is the deck itself — a numbered set of images plus a one-page manifest under `presentation/`. Slide-deck export, README integration, and docs-site embedding are *optional follow-ups* (see the bottom of this file), not part of the core loop.
