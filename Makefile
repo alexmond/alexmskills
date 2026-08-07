@@ -1,7 +1,7 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump graduate test-mindmap install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
+.PHONY: help validate list bump graduate test-mindmap test-canvas install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -15,6 +15,10 @@ test-coach: ## Run the prompt-coach release test harness (run after each release
 
 test-mindmap: ## Run the mindmap-prompt compiler harness (golden fixture + graph invariants)
 	@python3 plugins/mindmap-prompt/scripts/test-harness.py
+
+test-canvas: ## Playwright UI test for the mindmap canvas (optional; skips if playwright absent)
+	@NODE_PATH="$${NODE_PATH:-$$HOME/.local/lib/playwright/node_modules}" \
+		node plugins/mindmap-prompt/tests/pw-canvas.js
 
 docs-rules: ## Regenerate the prompt-coach data-derived doc blocks (rules, catalog summary, config reference) from code
 	@python3 plugins/prompt-coach/scripts/gen-rules-doc.py --inject

@@ -16,6 +16,7 @@
 ** xref:maven-quality.adoc[Maven Quality Gate]
 ** xref:security-audit.adoc[Security Audit]
 ** xref:screenshot-tour.adoc[Screenshot Tour]
+** xref:mindmap-prompt.adoc[Mindmap Prompt]
 * Agents & research
 ** xref:review-agents.adoc[Review Agents]
 ** xref:research-sweep.adoc[Research Sweep]

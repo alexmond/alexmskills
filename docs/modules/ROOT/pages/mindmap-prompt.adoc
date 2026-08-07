@@ -1,0 +1,111 @@
+= Mindmap Prompt
+:navtitle: mindmap-prompt
+:description: Sketch ideas on a canvas and compile the map into an organized prompt. Offline, dependency-free, saves as JSON Canvas.
+
+Some ideas don't arrive in order. You drop them, connect them, and *then* the shape appears. `mindmap-prompt` gives you a canvas for that, plus a deterministic compiler that turns the finished map into an organized Markdown prompt.
+
+The compile step is plain Python — no LLM, no network. The same map always produces the same prompt.
+
+== Install
+
+[source,text]
+----
+/plugin install mindmap-prompt@alexmskills
+----
+
+== Open the canvas
+
+[source,bash]
+----
+python3 <plugin>/scripts/serve.py --cwd .
+----
+
+Serves `http://127.0.0.1:8770/`. Click anywhere and start typing. Or use the slash command:
+
+[cols="1,3",options="header"]
+|===
+| Command | What it does
+
+| `/mindmap-prompt:open`
+| Start the canvas against the current repo (optionally on an existing map).
+
+| `/mindmap-prompt:compile`
+| Compile a saved map into a prompt — and act on it.
+
+| `/mindmap-prompt:list`
+| Show the maps saved in this repo.
+|===
+
+== Capture
+
+Capture is keyboard-first, because stopping to hunt for a toolbar is what breaks a train of thought.
+
+[cols="1,2",options="header"]
+|===
+| Key | Does
+
+| click empty canvas | new node, already in edit mode
+| `Enter` | commit + new sibling (`Shift+Enter` for a new line inside a node)
+| `Tab` | commit + new child
+| `Ctrl/Cmd` + arrow | new connected node in that direction
+| drag the ● handle | connect two nodes
+| `1` `2` `3` `4` | goal · feature · idea · constraint
+| double-click | edit a node
+| `Del` | delete the selected node
+| `Ctrl/Cmd+S` | save
+| `Ctrl/Cmd+Enter` | validate + compile
+| wheel / drag empty | zoom / pan
+|===
+
+== The four kinds
+
+[cols="1,2,2",options="header"]
+|===
+| Kind | Use it for | Where it lands
+
+| *goal* | the task, and what "done" means | the `#` title + opening paragraph
+| *feature* | a deliverable or major section | a `==` section
+| *idea* | detail hanging off something else | a nested heading
+| *constraint* | what must *not* change | a `Constraints` bullet
+|===
+
+Exactly one goal per map — it's the entry point the compiler starts from. Kinds are stored as a leading tag in the node's text (`#goal Ship dark mode`), so a `.canvas` file round-trips through Obsidian Canvas unchanged.
+
+== How a map becomes a prompt
+
+. *Order comes from your layout.* Siblings compile top-to-bottom, then left-to-right. You already arrange ideas spatially while thinking — that arrangement _is_ the document order, so there's no re-ordering step.
+. *Structure comes from a spanning tree.* Every node is owned by its shortest-path parent from the goal, so anything wired straight to the goal stays a top-level section. (A naive depth-first walk lets a long branch capture a node and bury it — this avoids that.)
+. *Cross-links become references.* A second edge into an already-placed node compiles to `→ see "That node"` instead of repeating it. Cross-links and cycles are fine: nothing is duplicated, nothing is lost.
+. *Edge labels survive.* Label an edge `depends on` and it appears on the target's heading.
+
+== Validation runs first
+
+Compile always validates. Errors block; warnings don't.
+
+* *Errors* — no goal, more than one goal, an empty node, a goal with no connections.
+* *Warnings* — nodes not connected to the goal; a goal that never says what "done" means.
+* *Info* — no constraints yet.
+
+Orphan nodes are never silently dropped. Connect them, or compile with `--include-orphans` and they land under `Unsorted notes`.
+
+== Headless
+
+The canvas is optional — the compiler is a normal CLI, so a map works in a script or in CI:
+
+[source,bash]
+----
+python3 <plugin>/scripts/mindmap.py validate .claude/mindmap/feature.canvas
+python3 <plugin>/scripts/mindmap.py compile  .claude/mindmap/feature.canvas -o prompt.md
+----
+
+`validate` exits non-zero when the map has errors, so it works as a gate.
+
+== Storage & privacy
+
+* Maps live in `.claude/mindmap/*.canvas` in the *consuming* repo — plain JSON, diffs cleanly, opens in Obsidian.
+* The page makes no external requests; the server binds `127.0.0.1` only.
+* Zero dependencies: hand-rolled SVG and DOM, a stdlib Python server.
+
+== Deliberately not
+
+A chain builder or an agent canvas. Tools like Langflow, Rivet and ChainForge wire up runtime pipelines; this compiles *one prompt* and gets out of the way.

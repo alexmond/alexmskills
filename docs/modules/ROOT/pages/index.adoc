@@ -35,6 +35,9 @@ The emphasis is on **self-learning** tooling — skills that get better at _your
 | xref:security-audit.adoc[security-audit] | workflow
 | Scans a codebase for OWASP-style vulnerabilities and reports them with remediation.
 
+| xref:mindmap-prompt.adoc[mindmap-prompt] | workflow
+| Sketch ideas on an offline canvas and compile the map into an organized Markdown prompt; saves as JSON Canvas.
+
 | xref:review-agents.adoc[review-agents] | review
 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing.
 

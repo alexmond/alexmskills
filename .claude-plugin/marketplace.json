@@ -188,6 +188,21 @@
       ]
     },
     {
+      "name": "mindmap-prompt",
+      "displayName": "Mindmap Prompt",
+      "source": "./plugins/mindmap-prompt",
+      "description": "Think on a canvas, then compile the map into an organized prompt. Drop idea nodes, connect them freely, and a deterministic compiler turns the map into structured Markdown — goal as the title, features and ideas as nested sections, constraints as their own list, cross-links as references rather than repeats. Order comes from your canvas layout, so there is no re-ordering step. Validation runs first and never silently drops a node. Maps save as JSON Canvas (.canvas) in the repo, so they are git-diffable, reworkable later, and open in Obsidian. Zero dependencies, fully offline: a self-contained page plus a stdlib server on 127.0.0.1.",
+      "version": "0.1.0",
+      "category": "workflow",
+      "keywords": [
+        "mindmap",
+        "canvas",
+        "prompt",
+        "json-canvas",
+        "ideation"
+      ]
+    },
+    {
       "name": "tune-repo-beta",
       "displayName": "Tune Repo (beta)",
       "source": "./plugins/tune-repo-beta",

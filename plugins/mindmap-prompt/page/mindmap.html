@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mindmap-prompt</title>
+<style>
+/* ---------------------------------------------------------------- theme
+   Light and dark both first-class. Kind is never conveyed by colour alone —
+   every node carries a text chip — so the map still reads without colour. */
+:root {
+  --bg:#f6f7f9; --grid:#e3e6ea; --fg:#1c2024; --muted:#6b7280;
+  --panel:#ffffff; --line:#cbd2d9; --edge:#98a2b3; --accent:#2f6fd0;
+  --goal:#1f8a54; --feature:#2f6fd0; --idea:#6b7280; --constraint:#c0392b;
+  --shadow:0 1px 2px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+  --node-w:260px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:#15181c; --grid:#22262c; --fg:#e6e9ee; --muted:#9aa4b2;
+    --panel:#1c2026; --line:#333a44; --edge:#5b6675; --accent:#6ea8ff;
+    --goal:#4ec98a; --feature:#6ea8ff; --idea:#9aa4b2; --constraint:#ff7d6b;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+  }
+}
+* { box-sizing:border-box; }
+html,body { height:100%; margin:0; }
+body {
+  font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:var(--fg); background:var(--bg); overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------------------------------------------------------------- chrome */
+#bar {
+  position:fixed; inset:0 0 auto 0; height:52px; z-index:30;
+  display:flex; align-items:center; gap:8px; padding:0 12px;
+  background:var(--panel); border-bottom:1px solid var(--line);
+}
+#bar .grow { flex:1; }
+button, input[type=text] {
+  font:inherit; color:var(--fg); background:var(--panel);
+  border:1px solid var(--line); border-radius:8px; padding:7px 12px;
+}
+button { cursor:pointer; }
+button:hover { border-color:var(--accent); }
+button:focus-visible, input:focus-visible, .node:focus-visible {
+  outline:2px solid var(--accent); outline-offset:2px;
+}
+button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+#name { width:180px; }
+#status { color:var(--muted); font-size:13px; white-space:nowrap; }
+
+/* ---------------------------------------------------------------- canvas */
+#stage {
+  position:fixed; inset:52px 0 0 0; overflow:hidden; touch-action:none;
+  background-image:radial-gradient(var(--grid) 1px, transparent 1px);
+  background-size:24px 24px;
+}
+#world { position:absolute; left:0; top:0; transform-origin:0 0; }
+#wires { position:absolute; left:0; top:0; overflow:visible; pointer-events:none; }
+#wires path { fill:none; stroke:var(--edge); stroke-width:2; }
+#wires text { fill:var(--muted); font-size:12px; paint-order:stroke;
+  stroke:var(--bg); stroke-width:4px; }
+
+.node {
+  position:absolute; width:var(--node-w); padding:10px 12px 12px;
+  background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--idea);
+  border-radius:10px; box-shadow:var(--shadow); cursor:grab;
+  white-space:pre-wrap; overflow-wrap:anywhere;
+}
+.node.k-goal       { border-left-color:var(--goal); }
+.node.k-feature    { border-left-color:var(--feature); }
+.node.k-constraint { border-left-color:var(--constraint); }
+.node.sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent), var(--shadow); }
+.node.editing { cursor:text; }
+.node .chip {
+  display:inline-block; font-size:10.5px; letter-spacing:.08em; font-weight:700;
+  text-transform:uppercase; color:var(--idea); margin-bottom:4px; user-select:none;
+}
+.node.k-goal .chip       { color:var(--goal); }
+.node.k-feature .chip    { color:var(--feature); }
+.node.k-constraint .chip { color:var(--constraint); }
+.node .txt { outline:none; min-height:1.5em; }
+.node .txt:empty::before { content:"Type…"; color:var(--muted); }
+/* the connector: drag from here to another node ("patch cable") */
+.node .plug {
+  position:absolute; right:-9px; top:50%; width:18px; height:18px;
+  margin-top:-9px; border-radius:50%; background:var(--panel);
+  border:2px solid var(--edge); cursor:crosshair;
+}
+.node .plug:hover { border-color:var(--accent); background:var(--accent); }
+.node.drop { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+
+/* ---------------------------------------------------------------- panels */
+.panel {
+  position:fixed; right:16px; top:68px; width:min(460px, 44vw); max-height:calc(100vh - 96px);
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  box-shadow:var(--shadow); z-index:25; display:none; flex-direction:column;
+}
+.panel.open { display:flex; }
+.panel h2 { font-size:14px; margin:0; padding:12px 14px; border-bottom:1px solid var(--line); }
+.panel .body { padding:12px 14px; overflow:auto; }
+.panel .foot { padding:10px 14px; border-top:1px solid var(--line); display:flex; gap:8px; }
+pre#md {
+  margin:0; white-space:pre-wrap; overflow-wrap:anywhere;
+  font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.rep { margin:0 0 10px; padding:0; list-style:none; font-size:13.5px; }
+.rep li { padding:5px 0; border-bottom:1px solid var(--line); }
+.rep li:last-child { border-bottom:0; }
+.rep .lv { font-weight:700; }
+.rep .error .lv { color:var(--constraint); }
+.rep .warn  .lv { color:#c07d1a; }
+.rep .info  .lv { color:var(--muted); }
+kbd {
+  font:12px ui-monospace,monospace; border:1px solid var(--line); border-bottom-width:2px;
+  border-radius:5px; padding:1px 6px; background:var(--bg);
+}
+#help .body { display:grid; grid-template-columns:auto 1fr; gap:8px 14px; align-items:baseline; }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <strong>mindmap-prompt</strong>
+  <input id="name" type="text" value="map" aria-label="Map name" title="Map name">
+  <button id="b-save">Save</button>
+  <button id="b-open">Open</button>
+  <button id="b-validate">Validate</button>
+  <button id="b-compile" class="primary">Compile →</button>
+  <span class="grow"></span>
+  <span id="status" role="status" aria-live="polite"></span>
+  <button id="b-help" aria-label="Keyboard help">?</button>
+</div>
+
+<div id="stage">
+  <div id="world">
+    <svg id="wires">
+      <defs>
+        <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--edge)" stroke="none"/>
+        </marker>
+      </defs>
+      <g id="g-edges"></g>
+      <path id="ghost" stroke-dasharray="5 4" style="display:none"></path>
+    </svg>
+  </div>
+</div>
+
+<div class="panel" id="out">
+  <h2>Compiled prompt</h2>
+  <div class="body"><ul class="rep" id="out-rep"></ul><pre id="md"></pre></div>
+  <div class="foot">
+    <button id="b-copy" class="primary">Copy</button>
+    <button id="b-write">Save as .md</button>
+    <span class="grow"></span>
+    <button data-close="out">Close</button>
+  </div>
+</div>
+
+<div class="panel" id="help">
+  <h2>Keys</h2>
+  <div class="body">
+    <kbd>click</kbd><span>new node on empty canvas — just start typing</span>
+    <kbd>Enter</kbd><span>commit + new sibling (<kbd>Shift</kbd>+<kbd>Enter</kbd> = new line)</span>
+    <kbd>Tab</kbd><span>commit + new child</span>
+    <kbd>Ctrl</kbd>+<kbd>↑↓←→</kbd><span>new connected node in that direction</span>
+    <kbd>drag ●</kbd><span>connect two nodes</span>
+    <kbd>double-click</kbd><span>edit a node</span>
+    <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd><span>goal · feature · idea · constraint</span>
+    <kbd>Esc</kbd><span>commit / deselect</span>
+    <kbd>Del</kbd><span>delete selected node</span>
+    <kbd>Ctrl</kbd>+<kbd>S</kbd><span>save the map</span>
+    <kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>validate + compile</span>
+    <kbd>wheel</kbd><span>zoom · drag empty canvas to pan</span>
+  </div>
+  <div class="foot"><span class="grow"></span><button data-close="help">Close</button></div>
+</div>
+
+<script>
+"use strict";
+/* mindmap-prompt canvas.
+   Zero dependencies, no network beyond this page's own origin. Edges are
+   hand-rolled SVG, nodes are DOM — small enough that a graph library would
+   cost more than it saves.
+
+   The page is only an editor for JSON Canvas. It never compiles the prompt
+   itself: Compile POSTs the map to the server, which runs scripts/mindmap.py.
+   One compiler, one source of truth. */
+
+const KINDS = ["goal", "feature", "idea", "constraint"];
+const KIND_COLOR = { goal: "4", feature: "5", idea: "", constraint: "1" };
+const NODE_W = 260, GAP_X = 320, GAP_Y = 150;
+
+const $ = (s) => document.querySelector(s);
+const stage = $("#stage"), world = $("#world"), gEdges = $("#g-edges"), ghost = $("#ghost");
+
+const S = {
+  nodes: new Map(),          // id -> {id, kind, text, x, y, h}
+  edges: [],                 // {id, fromNode, toNode, label}
+  sel: null,
+  pan: { x: 60, y: 40 }, zoom: 1,
+  seq: 1,
+  dirty: false,
+};
+
+const uid = (p) => `${p}${(S.seq++).toString(36)}${Date.now().toString(36).slice(-3)}`;
+const nodeOf = (id) => S.nodes.get(id);
+
+function status(msg) { $("#status").textContent = msg || ""; }
+function markDirty(v = true) { S.dirty = v; if (v) status("unsaved changes"); }
+
+/* --------------------------------------------------------------- kind tag */
+// Kind lives as a leading Markdown tag inside the node text, because JSON
+// Canvas has no custom node type. Keeps Obsidian round-trips clean.
+const TAG_RE = new RegExp(`^\\s*#(${KINDS.join("|")})\\b[ \\t]*`, "i");
+
+function splitKind(raw) {
+  const m = (raw || "").match(TAG_RE);
+  return m
+    ? { kind: m[1].toLowerCase(), text: raw.slice(m[0].length) }
+    : { kind: "idea", text: raw || "" };
+}
+const joinKind = (kind, text) => (kind === "idea" ? text : `#${kind} ${text}`);
+
+/* --------------------------------------------------------------- geometry */
+const toWorld = (cx, cy) => {
+  const r = stage.getBoundingClientRect();
+  return { x: (cx - r.left - S.pan.x) / S.zoom, y: (cy - r.top - S.pan.y) / S.zoom };
+};
+
+function applyView() {
+  world.style.transform = `translate(${S.pan.x}px, ${S.pan.y}px) scale(${S.zoom})`;
+}
+
+/** Where a line from `from` to `to` crosses `from`'s border. Keeps arrows off
+ *  the node body instead of burying them under it. */
+function anchor(from, to) {
+  const w = NODE_W / 2, h = (from.h || 80) / 2;
+  const cx = from.x + w, cy = from.y + h;
+  const dx = (to.x + NODE_W / 2) - cx, dy = (to.y + (to.h || 80) / 2) - cy;
+  if (!dx && !dy) return { x: cx, y: cy };
+  const s = Math.min(w / Math.abs(dx || 1e-6), h / Math.abs(dy || 1e-6));
+  return { x: cx + dx * s, y: cy + dy * s };
+}
+
+/* --------------------------------------------------------------- render */
+function render() {
+  for (const n of S.nodes.values()) {
+    let el = document.getElementById(n.id);
+    if (!el) {
+      el = document.createElement("div");
+      el.id = n.id;
+      el.className = "node";
+      el.tabIndex = 0;
+      el.innerHTML = `<span class="chip"></span><div class="txt"></div><div class="plug" title="Drag to connect"></div>`;
+      world.appendChild(el);
+    }
+    const txt = el.querySelector(".txt");
+    if (!el.classList.contains("editing") && txt.innerText !== n.text) txt.innerText = n.text;
+    el.querySelector(".chip").textContent = n.kind === "constraint" ? "must not" : n.kind;
+    el.className = `node k-${n.kind}${S.sel === n.id ? " sel" : ""}${el.classList.contains("editing") ? " editing" : ""}`;
+    el.style.left = n.x + "px";
+    el.style.top = n.y + "px";
+    n.h = el.offsetHeight;
+  }
+  for (const el of [...world.querySelectorAll(".node")]) {
+    if (!S.nodes.has(el.id)) el.remove();
+  }
+  renderEdges();
+}
+
+function renderEdges() {
+  gEdges.textContent = "";
+  const NS = "http://www.w3.org/2000/svg";
+  for (const e of S.edges) {
+    const a = nodeOf(e.fromNode), b = nodeOf(e.toNode);
+    if (!a || !b) continue;
+    const p1 = anchor(a, b), p2 = anchor(b, a);
+    const path = document.createElementNS(NS, "path");
+    const mx = (p1.x + p2.x) / 2;
+    path.setAttribute("d", `M${p1.x},${p1.y} C${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`);
+    path.setAttribute("marker-end", "url(#arw)");
+    gEdges.appendChild(path);
+    if (e.label) {
+      const t = document.createElementNS(NS, "text");
+      t.setAttribute("x", mx);
+      t.setAttribute("y", (p1.y + p2.y) / 2 - 6);
+      t.setAttribute("text-anchor", "middle");
+      t.textContent = e.label;
+      gEdges.appendChild(t);
+    }
+  }
+}
+
+/* --------------------------------------------------------------- model ops */
+function addNode({ x, y, kind = "idea", text = "" }) {
+  // First node on an empty canvas is the goal — the map needs exactly one, and
+  // this way the common case needs no thought.
+  if (S.nodes.size === 0) kind = "goal";
+  const n = { id: uid("n"), kind, text, x: Math.round(x), y: Math.round(y), h: 80 };
+  S.nodes.set(n.id, n);
+  markDirty();
+  return n;
+}
+
+function connect(fromId, toId, label = "") {
+  if (fromId === toId) return;
+  if (S.edges.some((e) => e.fromNode === fromId && e.toNode === toId)) return;
+  S.edges.push({ id: uid("e"), fromNode: fromId, toNode: toId, label });
+  markDirty();
+}
+
+function removeNode(id) {
+  S.nodes.delete(id);
+  S.edges = S.edges.filter((e) => e.fromNode !== id && e.toNode !== id);
+  if (S.sel === id) S.sel = null;
+  markDirty();
+}
+
+const parentOf = (id) => (S.edges.find((e) => e.toNode === id) || {}).fromNode;
+
+function select(id, edit = false) {
+  S.sel = id;
+  render();
+  const el = id && document.getElementById(id);
+  if (el) { el.focus({ preventScroll: true }); if (edit) beginEdit(id); }
+}
+
+/** Create a node at (x, y), wire `fromId` to it, and drop straight into typing —
+ *  the whole point is capture without ceremony.
+ *
+ *  Callers pass an absolute position rather than a delta so a *sibling* can be
+ *  placed under the node you were just typing in, while a *child* goes to the
+ *  right of its parent. Offsetting everything from the parent made siblings
+ *  stack under the parent instead of under each other. */
+function spawnAt(fromId, x, y, kind) {
+  const base = { x: Math.round(x), y: Math.round(y) };
+  while ([...S.nodes.values()].some((n) => Math.abs(n.x - base.x) < 40 && Math.abs(n.y - base.y) < 40)) {
+    base.y += 40;
+  }
+  const n = addNode({ ...base, kind: kind || (fromId ? "idea" : "goal") });
+  if (fromId) connect(fromId, n.id);
+  render();
+  select(n.id, true);
+  return n;
+}
+
+const below = (n) => n.y + (n.h || 80) + 40;
+const rightOf = (n) => n.x + GAP_X;
+
+/* --------------------------------------------------------------- editing */
+function beginEdit(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add("editing");
+  const txt = el.querySelector(".txt");
+  txt.contentEditable = "true";
+  txt.focus();
+  const r = document.createRange();
+  r.selectNodeContents(txt);
+  r.collapse(false);
+  const sel = getSelection();
+  sel.removeAllRanges();
+  sel.addRange(r);
+}
+
+function endEdit(id) {
+  const el = document.getElementById(id);
+  if (!el || !el.classList.contains("editing")) return;
+  const txt = el.querySelector(".txt");
+  txt.contentEditable = "false";
+  el.classList.remove("editing");
+  const n = nodeOf(id);
+  if (n) {
+    const v = txt.innerText.replace(/ /g, " ").replace(/\n{3,}/g, "\n\n").trim();
+    if (v !== n.text) { n.text = v; markDirty(); }
+  }
+  render();
+}
+const editingId = () => (document.querySelector(".node.editing") || {}).id;
+
+/* --------------------------------------------------------------- pointer */
+let drag = null;
+
+stage.addEventListener("pointerdown", (ev) => {
+  const plug = ev.target.closest(".plug");
+  const nodeEl = ev.target.closest(".node");
+  const cur = editingId();
+  if (cur && (!nodeEl || nodeEl.id !== cur)) endEdit(cur);
+
+  if (plug && nodeEl) {                                   // start a connection
+    ev.preventDefault();
+    drag = { kind: "wire", from: nodeEl.id, ...toWorld(ev.clientX, ev.clientY) };
+    stage.setPointerCapture(ev.pointerId);
+    return;
+  }
+  if (nodeEl) {                                           // move a node
+    select(nodeEl.id);
+    if (nodeEl.classList.contains("editing")) return;
+    ev.preventDefault();
+    const n = nodeOf(nodeEl.id), p = toWorld(ev.clientX, ev.clientY);
+    drag = { kind: "node", id: nodeEl.id, ox: p.x - n.x, oy: p.y - n.y, moved: false };
+    stage.setPointerCapture(ev.pointerId);
+    return;
+  }
+  // empty canvas: pan, or (if it turns out to be a click) create a node
+  drag = { kind: "pan", sx: ev.clientX, sy: ev.clientY, px: S.pan.x, py: S.pan.y, moved: false };
+  stage.setPointerCapture(ev.pointerId);
+});
+
+stage.addEventListener("pointermove", (ev) => {
+  if (!drag) return;
+  if (drag.kind === "pan") {
+    const dx = ev.clientX - drag.sx, dy = ev.clientY - drag.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    S.pan.x = drag.px + dx; S.pan.y = drag.py + dy;
+    applyView();
+  } else if (drag.kind === "node") {
+    const p = toWorld(ev.clientX, ev.clientY), n = nodeOf(drag.id);
+    n.x = Math.round(p.x - drag.ox); n.y = Math.round(p.y - drag.oy);
+    drag.moved = true;
+    render();
+  } else if (drag.kind === "wire") {
+    const a = nodeOf(drag.from), p = toWorld(ev.clientX, ev.clientY);
+    const p1 = anchor(a, { x: p.x, y: p.y, h: 0 });
+    ghost.style.display = "";
+    ghost.setAttribute("d", `M${p1.x},${p1.y} L${p.x},${p.y}`);
+    const over = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".node");
+    world.querySelectorAll(".node.drop").forEach((el) => el.classList.remove("drop"));
+    if (over && over.id !== drag.from) over.classList.add("drop");
+  }
+});
+
+stage.addEventListener("pointerup", (ev) => {
+  if (!drag) return;
+  if (drag.kind === "pan" && !drag.moved) {
+    const p = toWorld(ev.clientX, ev.clientY);
+    const n = addNode({ x: p.x - NODE_W / 2, y: p.y - 30 });
+    render(); select(n.id, true);
+  } else if (drag.kind === "node" && drag.moved) {
+    markDirty();
+  } else if (drag.kind === "wire") {
+    const over = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".node");
+    if (over && over.id !== drag.from) connect(drag.from, over.id);
+    ghost.style.display = "none";
+    world.querySelectorAll(".node.drop").forEach((el) => el.classList.remove("drop"));
+    render();
+  }
+  drag = null;
+});
+
+stage.addEventListener("dblclick", (ev) => {
+  const el = ev.target.closest(".node");
+  if (el) { ev.preventDefault(); select(el.id, true); }
+});
+
+stage.addEventListener("wheel", (ev) => {
+  ev.preventDefault();
+  const f = ev.deltaY < 0 ? 1.1 : 1 / 1.1;
+  const z = Math.min(2.5, Math.max(0.25, S.zoom * f));
+  const r = stage.getBoundingClientRect();
+  const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  S.pan.x = mx - (mx - S.pan.x) * (z / S.zoom);
+  S.pan.y = my - (my - S.pan.y) * (z / S.zoom);
+  S.zoom = z;
+  applyView();
+}, { passive: false });
+
+/* --------------------------------------------------------------- keyboard */
+document.addEventListener("keydown", (ev) => {
+  const editing = editingId();
+  const inField = ev.target.tagName === "INPUT";
+  const meta = ev.ctrlKey || ev.metaKey;
+
+  if (meta && ev.key.toLowerCase() === "s") { ev.preventDefault(); return save(); }
+  if (meta && ev.key === "Enter") { ev.preventDefault(); return compile(); }
+  if (inField) return;
+
+  if (editing) {
+    if (ev.key === "Escape") { ev.preventDefault(); endEdit(editing); return select(editing); }
+    if (ev.key === "Enter" && !ev.shiftKey) {           // commit + sibling
+      ev.preventDefault();
+      endEdit(editing);
+      const p = parentOf(editing), me = nodeOf(editing);
+      // A sibling stacks under the node you just typed, not under the parent.
+      return p ? spawnAt(p, me.x, below(me)) : spawnAt(editing, rightOf(me), me.y);
+    }
+    if (ev.key === "Tab") {                              // commit + child
+      ev.preventDefault();
+      endEdit(editing);
+      const me = nodeOf(editing);
+      return spawnAt(editing, rightOf(me), me.y);
+    }
+    return;                                              // otherwise: just typing
+  }
+
+  if (!S.sel) return;
+  const me = nodeOf(S.sel);
+  if (meta && ev.key.startsWith("Arrow")) {
+    ev.preventDefault();
+    const d = { ArrowRight: [GAP_X, 0], ArrowLeft: [-GAP_X, 0], ArrowDown: [0, GAP_Y], ArrowUp: [0, -GAP_Y] }[ev.key];
+    return spawnAt(S.sel, me.x + d[0], me.y + d[1]);
+  }
+  if (ev.key === "Enter") { ev.preventDefault(); return beginEdit(S.sel); }
+  if (ev.key === "Tab") { ev.preventDefault(); return spawnAt(S.sel, rightOf(me), me.y); }
+  if (ev.key === "Escape") { S.sel = null; return render(); }
+  if (ev.key === "Delete" || ev.key === "Backspace") {
+    ev.preventDefault(); removeNode(S.sel); return render();
+  }
+  const k = KINDS[Number(ev.key) - 1];
+  if (k) { nodeOf(S.sel).kind = k; markDirty(); render(); }
+});
+
+/* --------------------------------------------------------------- canvas io */
+function toCanvas() {
+  return {
+    nodes: [...S.nodes.values()].map((n) => {
+      const o = {
+        id: n.id, type: "text", x: n.x, y: n.y,
+        width: NODE_W, height: Math.max(60, Math.round(n.h || 80)),
+        text: joinKind(n.kind, n.text),
+      };
+      if (KIND_COLOR[n.kind]) o.color = KIND_COLOR[n.kind];
+      return o;
+    }),
+    edges: S.edges.map((e) => ({
+      id: e.id, fromNode: e.fromNode, toNode: e.toNode, ...(e.label ? { label: e.label } : {}),
+    })),
+  };
+}
+
+function fromCanvas(data) {
+  S.nodes.clear(); S.edges = []; S.sel = null;
+  for (const n of data.nodes || []) {
+    if (n.type !== "text") continue;               // group/file/link carry no ideas
+    const { kind, text } = splitKind(n.text || "");
+    S.nodes.set(n.id, { id: n.id, kind, text: text.trim(), x: n.x | 0, y: n.y | 0, h: n.height || 80 });
+  }
+  for (const e of data.edges || []) {
+    if (S.nodes.has(e.fromNode) && S.nodes.has(e.toNode)) {
+      S.edges.push({ id: e.id || uid("e"), fromNode: e.fromNode, toNode: e.toNode, label: e.label || "" });
+    }
+  }
+  render();
+  markDirty(false);
+}
+
+async function api(path, body) {
+  const r = await fetch(path, body
+    ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }
+    : undefined);
+  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
+  return r.json();
+}
+
+const mapName = () => ($("#name").value.trim() || "map").replace(/[^\w.-]/g, "-");
+
+async function save() {
+  try {
+    const r = await api("/api/map", { name: mapName(), canvas: toCanvas() });
+    markDirty(false);
+    status(`saved ${r.path}`);
+  } catch (err) {                       // no server (file://) — fall back to a download
+    download(mapName() + ".canvas", JSON.stringify(toCanvas(), null, 2));
+    markDirty(false);
+    status("downloaded (no server)");
+  }
+}
+
+async function openMap() {
+  try {
+    const { maps } = await api("/api/maps");
+    if (!maps.length) return status("no saved maps yet");
+    const pick = prompt(`Open which map?\n\n${maps.join("\n")}`, maps[0]);
+    if (!pick) return;
+    const { canvas } = await api("/api/map?name=" + encodeURIComponent(pick));
+    $("#name").value = pick.replace(/\.canvas$/, "");
+    fromCanvas(canvas);
+    status(`opened ${pick}`);
+  } catch (err) { status("open needs the server: " + err.message); }
+}
+
+function download(fname, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function showReport(report) {
+  $("#out-rep").innerHTML = (report || [])
+    .map(([lv, msg]) => `<li class="${lv}"><span class="lv">${lv}</span> — ${escapeHtml(msg)}</li>`)
+    .join("");
+}
+const escapeHtml = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+async function validate() {
+  const cur = editingId(); if (cur) endEdit(cur);
+  try {
+    const r = await api("/api/compile", { canvas: toCanvas(), validateOnly: true });
+    showReport(r.report);
+    $("#md").textContent = "";
+    $("#out").classList.add("open");
+    status(r.report.some(([l]) => l === "error") ? "not ready — see errors" : "map is prompt-ready");
+  } catch (err) { status("validate needs the server: " + err.message); }
+}
+
+async function compile() {
+  const cur = editingId(); if (cur) endEdit(cur);
+  try {
+    const r = await api("/api/compile", { canvas: toCanvas(), includeOrphans: false });
+    showReport(r.report);
+    $("#md").textContent = r.markdown || "";
+    $("#out").classList.add("open");
+    status(r.ok ? "compiled" : "fix the errors first");
+  } catch (err) { status("compile needs the server: " + err.message); }
+}
+
+/* --------------------------------------------------------------- wiring */
+$("#b-save").onclick = save;
+$("#b-open").onclick = openMap;
+$("#b-validate").onclick = validate;
+$("#b-compile").onclick = compile;
+$("#b-help").onclick = () => $("#help").classList.toggle("open");
+$("#b-copy").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#md").textContent); status("copied"); }
+  catch { status("copy blocked — select the text instead"); }
+};
+$("#b-write").onclick = () => download(mapName() + ".md", $("#md").textContent);
+document.querySelectorAll("[data-close]").forEach((b) => {
+  b.onclick = () => $("#" + b.dataset.close).classList.remove("open");
+});
+addEventListener("beforeunload", (e) => { if (S.dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+applyView();
+(async function boot() {
+  const pre = new URLSearchParams(location.search).get("map");
+  if (pre) {
+    try {
+      const { canvas } = await api("/api/map?name=" + encodeURIComponent(pre));
+      $("#name").value = pre.replace(/\.canvas$/, "");
+      fromCanvas(canvas);
+      return status(`opened ${pre}`);
+    } catch { /* fall through to an empty canvas */ }
+  }
+  status("click anywhere to start — press ? for keys");
+})();
+</script>
+</body>
+</html>

@@ -7,6 +7,37 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-07
+
+### Added
+
+- **mindmap-prompt 0.1.0** — new plugin. Sketch ideas on an offline canvas,
+  connect them, and compile the map into an organized Markdown prompt.
+  - **Capture** is keyboard-first (click empty canvas and type, `Tab` = child,
+    `Enter` = sibling, `Ctrl/Cmd`+arrow = connected node, drag the handle to
+    connect) on a hand-rolled SVG + DOM canvas — zero dependencies, no CDN, and
+    the page makes no external requests.
+  - **Compilation is deterministic Python, not an LLM.** A BFS spanning tree from
+    the goal gives every node its shortest-path parent, so anything wired straight
+    to the goal stays a top-level section; non-tree edges (cross-links, cycles,
+    second parents) compile to `see "..."` references instead of duplicating
+    content. Sibling order comes from canvas layout (y, then x), so the way the
+    map is arranged *is* the document order.
+  - **Validation runs first** and mirrors prompt-coach's vocabulary — errors for a
+    missing/duplicate goal, empty nodes, or a goal with no edges; warnings for
+    orphans and a goal with no done-criteria. Orphans are never silently dropped.
+  - **Saves as JSON Canvas 1.0** (`.canvas`) under `.claude/mindmap/` in the
+    consuming repo: plain JSON, git-diffable, and it opens in Obsidian. Node kinds
+    (goal/feature/idea/constraint) ride as a leading Markdown tag, since the spec
+    has no custom node type.
+  - The canvas is optional — `mindmap.py compile|validate` is a normal CLI, and
+    `validate` exits non-zero so it works as a gate.
+  - Gates: `make test-mindmap` (11 checks incl. a byte-for-byte golden fixture)
+    and `make test-canvas` (Playwright UI, skips when absent) — the UI test
+    asserts the page and the headless CLI produce identical output.
+  - Research behind the decision: `docs/decisions/2026-08-05-...-research.md`
+    (build-vs-adopt) and `2026-08-07-...-design.md`.
+
 ## 2026-07-28
 
 ### Graduated
