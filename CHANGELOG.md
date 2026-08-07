@@ -11,6 +11,18 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **mindmap-prompt 0.1.1** — canvas redesigned around mind-map visual language
+  after studying MindMeister and Lucidspark. Nodes now render **by depth**: the
+  goal is large type with no card, branches are solid colour-coded pills, leaves
+  are bare text. One hue per top-level branch, inherited by descendants and their
+  connectors, so colour means "same branch" rather than "same type". Connectors
+  became **tapering filled ribbons** (thick at the trunk, thin at the twig) with
+  side anchors and a junction dot; cross-links draw faint so the spanning tree
+  still reads. Nodes are auto-width instead of a fixed 260px. Kind stays legible
+  without chips: `goal` gets an eyebrow, `constraint` a dashed outline + glyph at
+  any depth. Fixed an empty-state placeholder that leaked a literal `…` into node
+  text when editing began.
+
 - **mindmap-prompt 0.1.0** — new plugin. Sketch ideas on an offline canvas,
   connect them, and compile the map into an organized Markdown prompt.
   - **Capture** is keyboard-first (click empty canvas and type, `Tab` = child,

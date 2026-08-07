@@ -222,6 +222,46 @@ reading order), then that tree renders depth-first. Direct children of the goal 
 top-level. Non-tree edges (cross-links, back-edges, second parents) render as
 `→ see "..."` references. `t_bfs_ownership` in the harness is the regression guard.
 
+## 7b. Visual language (added 2026-08-07, after the first build)
+
+The first canvas rendered every node as an identical 260px bordered card with a
+shadow and an uppercase kind chip. It worked, and it looked like a **flowchart**.
+Screenshots of MindMeister and Lucidspark showed why that reads wrong: in a real
+mind map, **hierarchy is carried visually**, and colour means *branch*, not *type*.
+
+Adopted (MindMeister is the model — Alex's preference, and the clearer of the two):
+
+| Depth | Rendering |
+|---|---|
+| 0 — the goal | no card at all: large 26px type + a `GOAL` eyebrow + a branch-coloured underline. It's the title of the map. |
+| 1 — a branch | solid pill (`border-radius:999px`) filled with the branch hue, white text |
+| 2+ — a leaf | bare text, high contrast, no box — the ribbon carries the colour |
+
+- **One hue per top-level branch**, inherited by every descendant *and* its
+  connectors, assigned in canvas reading order so it stays stable as the map moves.
+  Six-hue palette; the colour says "same branch", nothing else.
+- **Tapering ribbons, not strokes.** Connectors are *filled* bezier paths whose
+  width shrinks from trunk (7px) to twig (1.8px), built by sampling the curve and
+  offsetting along the normal. This is the signature element — a uniform grey
+  stroke is what made the old canvas read as a diagram tool.
+- **Side anchors** (exit right / enter left) so the map fans horizontally.
+- **Junction dot** where a node's branches split.
+- **Cross-links drawn at 38% opacity** so the spanning tree still reads as the
+  structure — matching what the compiler actually does with them.
+- **Kind survives without chips.** Only two kinds change compilation, so only two
+  need a marker: `goal` (the eyebrow + root treatment) and `constraint` (dashed
+  outline + `⊘`, at any depth — never colour alone). `feature` and `idea` compile
+  identically today, so giving them distinct visuals would be a lie.
+- **Nodes are auto-width** (`max-content`, capped) instead of a fixed 260px, so a
+  three-word leaf stops looking as heavy as the goal.
+- Accessibility held: kind never by colour alone, leaf text stays near-ink rather
+  than tinted, light + dark both styled, full keyboard operation unchanged.
+
+Two bugs surfaced only by *looking at screenshots*, not by the passing assertions:
+a new sibling was positioned relative to its parent rather than the previous
+sibling, and an empty-state `…` placeholder was a literal DOM character that got
+picked up as the node's text when editing began (`## …Theme toggle` in the output).
+
 ## 8. Build order (once the above is settled)
 
 1. `compile.py` + `validate.py` + harness fixtures — **the algorithm first, headless**.

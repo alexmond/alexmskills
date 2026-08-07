@@ -26,7 +26,7 @@ that captures every multi-cycle debugging detour.
 | [`implement-issue`](plugins/implement-issue) | workflow | 1.0.0 | Drives a GitHub issue from branch → implement → verify → PR with a guided workflow. |
 | [`maven-quality`](plugins/maven-quality) | workflow | 1.0.0 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects (codestyle, precommit, jacoco). |
 | [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
-| [`mindmap-prompt`](plugins/mindmap-prompt) | workflow | 0.1.0 | Sketch ideas on an offline canvas, connect them, and compile the map into an organized Markdown prompt. Saves as JSON Canvas (`.canvas`) so maps are git-diffable, reworkable, and open in Obsidian. |
+| [`mindmap-prompt`](plugins/mindmap-prompt) | workflow | 0.1.1 | Sketch ideas on an offline canvas, connect them, and compile the map into an organized Markdown prompt. Saves as JSON Canvas (`.canvas`) so maps are git-diffable, reworkable, and open in Obsidian. |
 | [`screenshot-tour`](plugins/screenshot-tour) | workflow | 1.0.0 | Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product (CLI/web/library/TUI) under `presentation/`. |
 | [`review-agents`](plugins/review-agents) | review | 1.0.0 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers. |
 | [`research-sweep`](plugins/research-sweep) | research | 1.1.3 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
