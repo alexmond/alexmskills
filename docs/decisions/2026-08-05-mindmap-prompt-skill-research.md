@@ -12,48 +12,76 @@ Precedent for a skill shipping a local JS page: prompt-coach's dashboard, screen
 ## How this was researched
 
 Two background `deep-research` workflows (fan-out search → fetch → adversarial verify).
-Both completed but the final *synthesis* step was cut off by a session/token limit, so
-below is a hand synthesis of the verified claims. **Resume pointers at the bottom.**
 
-- Prior-art / build-vs-adopt: run `wf_49d7e3d4-a76`
-- Design patterns: run `wf_9c1a5e58-4e3`
+- **Prior-art / build-vs-adopt: run `wf_49d7e3d4-a76` — COMPLETE (resumed 2026-08-07).**
+  105/105 agents, 0 errors. 6 angles → 22 sources → 94 claims extracted → 25 verified →
+  **25 confirmed, 0 refuted, 0 unverified** → 6 synthesized findings. High confidence.
+- Design patterns: run `wf_9c1a5e58-4e3` — **synthesis still incomplete.** First pass had
+  its synthesis cut by the token limit; the resume then failed on quota (30/105, all
+  verify panels errored — the harness itself flagged this as "an infrastructure failure,
+  not a research finding"). The design claims below are therefore *extracted but not
+  adversarially confirmed*. They are low-risk descriptive facts about public specs
+  (JSON Canvas shape, keybindings, licenses) — treat as directional, verify before
+  relying on any exact license claim.
 
-## Verdict: BUILD (the niche is real)
+## Verdict: BUILD (the niche is real) — CONFIRMED, high confidence
 
 No existing tool is an **offline, dependency-free, Claude-Code-native map → *one
 organized prompt* with save-for-later**. Everything close is either Obsidian-locked,
-cloud/commercial, or a runtime-chain builder (not an idea-map compiler).
+cloud/commercial, or a runtime-chain builder (not an idea-map compiler). **Exactly two**
+tools do the target direction at all, and neither is adoptable.
 
-### Closest genuine matches (same core idea: user-built map → prompt)
-- **obsidian-llm-plugin (LLeen)** — reads selected Obsidian Canvas nodes, walks graph
-  topology, RENDERS a structured Markdown prompt (incl. a Graph TD/Mermaid section).
-  *Genuinely map→prompt* — the closest true prior art. But: Obsidian-bound, calls an
-  OpenAI-compatible API, not standalone. **Emulate its compile logic**, don't adopt.
+### The only two genuine map → organized-prompt tools (both unadoptable)
 - **ContextMinds** (contextminds.com) — "the map becomes a living prompt: generate a
-  summary/outline/draft in one click." Genuine, but **commercial cloud SaaS (Prague),
-  not open/offline** — cannot fork/vendor. (verified 3-0 commercial; 2-1 same-idea)
-- **Nodus MD** — visual flow editor, connected nodes → clean Markdown. Same idea, but
-  commercial/cloud, product-flow niche.
-- **prompt-canvas (JohnnyJi1)** — local-first single-page app, no backend, LocalStorage,
-  **MIT, vanilla JS**. BUT it manages connected *prompt* nodes (chaining), not
-  idea-map → *one* organized prompt. Adjacent. (Worth reading its single-file structure
-  as a build reference — MIT so vendorable.)
-- **kepano/obsidian-skills → json-canvas skill** — official Obsidian agent skill to
-  read/write JSON Canvas; oriented to *authoring* the canvas, not compiling map→prompt.
+  summary/outline/draft in one click." A real user-built-map→prompt flow. **But:**
+  Prague-based proprietary SaaS (~$8–84/mo), no repo, no license → **cannot be forked or
+  vendored.**
+- **obsidian-llm-plugin (LLeen)** — README describes `Canvas selection → ContextPacket →
+  Markdown prompt → LLM request`; walks graph topology and renders a structured prompt
+  (incl. a Graph TD/Mermaid section). The **closest true prior art**. **But:** bound to
+  the Obsidian Plugin API (Node/TS), requires an external LLM API key via `requestUrl`,
+  and is aspirational WIP (still carries community-plugin boilerplate, not in the plugin
+  directory). **Emulate its compile logic; do not adopt it.**
 
-### Not matches — runtime-chain / agent builders (verified adjacent, NOT the idea)
-ChainForge (prompt eval), Rivet (agent builder), Langflow (runtime flows), LLM Canvas
-(conversation viz), pipelineLLM (runtime pipeline). All confirmed *adjacent*, not
-map→organized-prompt.
+### Closest reusable CODE (not the same idea)
+- **prompt-canvas (JohnnyJi1)** — MIT (LICENSE: "Copyright (c) 2026 JohnnyJi1"), fully
+  offline (`open index.html`, LocalStorage), **no backend / no build step / vanilla JS**
+  → legally vendorable. **But** it organizes, versions and reuses *connected prompt
+  nodes* (with `{{variable}}` templating), not idea-map → one organized prompt — and the
+  repo is **2 commits, 0 stars**. Read it for single-file structure; don't build on it.
 
-### Opposite direction (fail the map→prompt test — do NOT count as prior art)
-Mapify/ChatMind/XMind AI (text→map), markmap (Markdown→mindmap), claude-canvas
-(text→canvas), NotebookLM→Canvas plugin. All generate maps *from* text — the reverse.
+### Not matches — runtime chain / agent / chat canvases (all verified 3-0 adjacent)
+- **Langflow** — "create and serve flows … functional representations of application
+  workflows"; output is a served app/API, not a prompt.
+- **Rivet** — "visual programming environment for building AI agents"; graphs are YAML
+  runtime artifacts run inside an app. No compile-to-prompt.
+- **ChainForge** — "battle-testing prompts to LLMs"; combinatorial eval/comparison.
+- **pipelineLLM** — runtime execution primitives via a Flask backend.
+- **llm-canvas** — conversation *debugger*: nodes are chat messages with branching.
+- **Canvas LLM (Obsidian)** — branching LLM conversations. Its own plugin page states it
+  **"doesn't convert existing mind-maps into prompts"** — users construct the flow node
+  by node. (GPL-3.0 anyway → copyleft-encumbered for an MIT skill.)
+
+### Opposite direction (fail the map→prompt test — NOT prior art)
+Taskade ("generate AI-powered mind maps"), MyMap.AI ("turns conversations into mind
+maps"), Mapify/ChatMind/XMind AI, markmap (Markdown→mindmap), claude-canvas (text→canvas),
+NotebookLM→Canvas plugin. All generate maps *from* text — the reverse. This confirms the
+adversarial caveat: **"AI mind map" almost always means map-FROM-text.**
+
+### The Claude-Code-native niche is verified OPEN
+- **kepano/obsidian-skills → `json-canvas`** — *creates and edits* JSON Canvas files
+  (nodes, edges, groups); it **authors** the graph, it does not compile it into a prompt.
+  None of its 5 skills convert a map/Canvas/Mermaid into an LLM prompt.
+  (Correction to an earlier note: this is **not** an official Anthropic/Obsidian repo —
+  the research flagged that attribution as an overreach.)
+- **outl** — local-first Markdown outliner exposing notes to Claude/Cursor/Zed via MCP;
+  that's *LLM-reads-your-notes*, not visual-artifact→prompt.
 
 ### Differentiated niche for our skill
 Standalone · offline · zero-dep · MIT · **not Obsidian-locked, not cloud, not a
 runtime-chain builder** · output flows straight into the Claude Code prompt · saves the
-map to the repo (`.claude/`) for future work.
+map to the repo (`.claude/`) for future work. **No existing tool fills all four
+constraints at once.**
 
 ## Design recommendations (from the design-patterns research)
 
@@ -103,12 +131,19 @@ some verify votes cut short by the limit — treat as directional.)
 
 ## Caveats on the research
 
-- Both workflows' **synthesis** step failed on the session limit; several verify votes
-  errored (counted `unverified`, not refuted). The confirmed claims above are solid;
-  the `unverified` tool details (prompt-canvas MIT/vanilla, obsidian-canvas-llm GPL-3.0,
-  Canvas LLM, etc.) are **plausible but not adversarially confirmed** — re-verify before
-  relying on any specific license/offline claim.
-- Design-research angle 5 (compilation) and accessibility got the least verification.
+- **Prior art: resolved.** The 2026-08-07 resume completed clean (25/25 confirmed, 0
+  refuted, 0 unverified). The tool details that were previously unverified —
+  prompt-canvas MIT/vanilla/offline, Canvas LLM GPL-3.0 and its explicit
+  "doesn't convert mind-maps into prompts", obsidian-llm-plugin's WIP status — are now
+  **confirmed**. One earlier claim was **corrected**: kepano/obsidian-skills is not an
+  official Anthropic/Obsidian repo.
+- **Design research: still unconfirmed.** Its synthesis never ran (token limit, then
+  quota). Claims are extracted-but-unverified; they're descriptive facts about public
+  specs, so risk is low, but **check the JSON Canvas spec and any license directly**
+  before committing to them in code. Angle 5 (compilation) and accessibility got the
+  least coverage — the compile algorithm below is therefore *designed*, not sourced.
+- Re-running the design synthesis is optional; it would harden citations, not change the
+  build decision.
 
 ## Resume pointers (for a future session after token reset — 6pm America/Toronto)
 
