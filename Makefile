@@ -1,7 +1,7 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump graduate install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
+.PHONY: help validate list bump graduate test-mindmap install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -12,6 +12,9 @@ validate: ## Validate the marketplace + all plugin manifests
 
 test-coach: ## Run the prompt-coach release test harness (run after each release)
 	@python3 plugins/prompt-coach/scripts/test-harness.py
+
+test-mindmap: ## Run the mindmap-prompt compiler harness (golden fixture + graph invariants)
+	@python3 plugins/mindmap-prompt/scripts/test-harness.py
 
 docs-rules: ## Regenerate the prompt-coach data-derived doc blocks (rules, catalog summary, config reference) from code
 	@python3 plugins/prompt-coach/scripts/gen-rules-doc.py --inject

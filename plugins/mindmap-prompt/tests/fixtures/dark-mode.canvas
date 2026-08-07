@@ -1,0 +1,33 @@
+{
+  "nodes": [
+    {"id":"n_goal","type":"text","x":0,"y":0,"width":320,"height":120,"color":"4",
+     "text":"#goal Add dark mode to the dashboard\n\nDone = the toggle persists across reloads and every page passes WCAG AA contrast."},
+
+    {"id":"n_toggle","type":"text","x":0,"y":200,"width":260,"height":100,
+     "text":"#feature Theme toggle\n\nA control in the toolbar."},
+    {"id":"n_palette","type":"text","x":300,"y":200,"width":260,"height":100,
+     "text":"#feature Color palette\n\nToken-based, light and dark."},
+
+    {"id":"n_persist","type":"text","x":0,"y":400,"width":260,"height":80,
+     "text":"#idea Persist the choice in localStorage"},
+    {"id":"n_contrast","type":"text","x":300,"y":400,"width":260,"height":80,
+     "text":"#idea Meet WCAG AA contrast"},
+
+    {"id":"n_guard","type":"text","x":700,"y":0,"width":260,"height":80,"color":"1",
+     "text":"#constraint Do not change the public API"},
+    {"id":"n_guard2","type":"text","x":700,"y":120,"width":260,"height":100,"color":"1",
+     "text":"#constraint Leave the print stylesheet alone\n\nIt is generated."},
+
+    {"id":"n_loose","type":"text","x":700,"y":800,"width":260,"height":80,
+     "text":"#idea Maybe follow the OS preference"},
+
+    {"id":"n_group","type":"group","x":-40,"y":-40,"width":700,"height":600,"label":"scope"}
+  ],
+  "edges": [
+    {"id":"e1","fromNode":"n_goal","toNode":"n_toggle"},
+    {"id":"e2","fromNode":"n_goal","toNode":"n_palette"},
+    {"id":"e3","fromNode":"n_toggle","toNode":"n_persist"},
+    {"id":"e4","fromNode":"n_palette","toNode":"n_contrast"},
+    {"id":"e5","fromNode":"n_persist","toNode":"n_palette","label":"depends on"}
+  ]
+}

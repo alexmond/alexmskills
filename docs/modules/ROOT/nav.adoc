@@ -10,6 +10,7 @@
 ** xref:brainstorm-panel.adoc[Brainstorm Panel]
 ** xref:learn-on-failure.adoc[Learn on Failure]
 ** xref:roles.adoc[Role Registry]
+** xref:prompt-coach.adoc[Prompt Coach]
 * Workflow skills
 ** xref:implement-issue.adoc[Implement Issue]
 ** xref:maven-quality.adoc[Maven Quality Gate]
@@ -19,5 +20,4 @@
 ** xref:review-agents.adoc[Review Agents]
 ** xref:research-sweep.adoc[Research Sweep]
 * Beta plugins
-** xref:prompt-coach.adoc[Prompt Coach]
 ** xref:tune-repo.adoc[Tune Repo]

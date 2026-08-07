@@ -199,16 +199,28 @@ plugins/mindmap-prompt/
 - **State lives in the consuming repo**: `.claude/mindmap/*.canvas` (per the marketplace
   gotcha — an installed plugin's own dir is read-only cache).
 
-## 7. Open questions (for Alex)
+## 7. Decisions (settled 2026-08-07)
 
-1. **Name** — `mindmap-prompt`, `map-to-prompt`, or `idea-map`? (Convention: descriptive
-   kebab-case, verb-first for actions, ≤3 words.)
-2. **Compile destination** — clipboard only, write to a file, or feed straight into the
-   session as the next prompt? (Leaning: all three, clipboard default.)
-3. **Kind encoding** — the `#goal` text-tag above (Obsidian-safe) vs. a non-standard
-   `"kind"` key on the node (cleaner, but breaks strict-spec round-trips). Leaning text-tag.
-4. **Scope of v1** — is the Mermaid topology block and the `question`/`output` kinds v1, or
-   does v1 ship just goal/feature/idea/constraint?
+1. **Name — `mindmap-prompt`.** Commands: `/mindmap-prompt:{open,compile,list}`.
+2. **v1 scope — lean.** Four kinds: `goal / feature / idea / constraint`. **No** Mermaid
+   block; `context` / `question` / `output` deferred until real use argues for them.
+3. **Kind encoding — Markdown text tag** (`#goal …`), not a non-standard JSON key.
+   Obsidian round-trips cleanly and diffs stay readable.
+4. **Compile destination — all three**, clipboard default (file via `-o`, or straight into
+   the session).
+5. **One module, not two.** `compile.py` + `validate.py` collapsed into `scripts/mindmap.py`
+   (`validate` / `compile` subcommands) — they share the graph index, and two files would
+   have been ceremony.
+
+### Correction to §5, made while building
+
+The DFS in §5 was **wrong** and the golden fixture caught it. With a plain DFS, whichever
+branch reaches a node first owns it — so a node wired *directly* to the goal could be
+"stolen" by a long branch and buried three levels deep. The compiler builds a **BFS
+spanning tree** instead: every node is owned by its *shortest-path* parent (ties broken by
+reading order), then that tree renders depth-first. Direct children of the goal are always
+top-level. Non-tree edges (cross-links, back-edges, second parents) render as
+`→ see "..."` references. `t_bfs_ownership` in the harness is the regression guard.
 
 ## 8. Build order (once the above is settled)
 
