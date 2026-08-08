@@ -9,6 +9,44 @@ unreleased/rolling (no global version).
 
 ## 2026-08-08
 
+### Added
+
+- **skill-linter 0.1.0** — new plugin. Checks `SKILL.md` files against published
+  skill-authoring guidance: frontmatter validity, whether the description actually
+  says *when* to trigger, body size, progressive disclosure, broken and
+  force-loading references. Zero dependencies, including a hand-rolled frontmatter
+  parser — a gate that only works when a library happens to be installed is not a
+  gate. Three severity levels split by how much damage the defect does; `--strict`
+  and a non-zero exit make it a CI gate.
+
+  **Every rule is cited.** Rules are drawn from `skill-creator`, `skill-development`
+  and `writing-skills`, with provenance per rule in `references/rule-sources.md` —
+  including the two places those sources *contradict* each other. Both are resolved
+  in favour of a narrower rule than either states: e.g. skill-creator says the
+  description should say what the skill does, writing-skills says never summarise
+  the workflow, and their examples show the real rule is "state the purpose, never
+  recite the steps" — so only step *sequences* are flagged. The file also records
+  the guidance deliberately **not** enforced (imperative voice, keyword coverage,
+  trigger accuracy) and why, so the omissions do not get rediscovered and re-argued.
+
+  **Self-learning.** A miss (a defect it failed to catch) or a false positive (a
+  finding that was not real) both write to the *consuming* repo's
+  `.claude/skill-linter/` — `learned-rules.json` for executable rules that apply on
+  the next run, `log.md` for the dated evidence. A rule that proves itself across
+  repos graduates into the shipped checker and leaves the JSON: shipped rules are
+  code so they are reviewable and tested, learned rules are data so a lesson can be
+  captured immediately.
+
+  Two false positives from its own first run are already fixed and pinned: content
+  rules now skip fenced code (`screenshot-tour`'s Markdown template names files it
+  tells you to *create*), and person checks skip quoted spans (a description
+  *should* quote "lint my skills"). The harness spends about half its 17 checks
+  asserting things do **not** fire, and ends by requiring the linter's own SKILL.md
+  to pass clean.
+
+  New `make test-linter` and `make lint-skills`. First run over this marketplace:
+  24 skills, 0 errors, 18 warnings, 11 info.
+
 ### Fixed
 
 - **mindmap-prompt 0.2.1** — *✦ wasn't using the repo it was running in.* Reported

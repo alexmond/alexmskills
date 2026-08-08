@@ -1,0 +1,4 @@
+{
+  "_comment": "Rules the linter was taught after it missed something. Applied automatically on the next run; see the skill's Learning loop. Each needs `why` and `source` so it can be re-litigated later. A rule that proves itself across repos graduates into check() in lint_skills.py and is deleted from here.",
+  "rules": []
+}

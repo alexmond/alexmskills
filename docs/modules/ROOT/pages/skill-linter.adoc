@@ -1,0 +1,86 @@
+= Skill Linter
+:navtitle: skill-linter
+:description: Audit SKILL.md files against published skill-authoring guidance — frontmatter, triggering, size, progressive disclosure, broken references. Self-learning.
+
+A skill is only ever loaded on the strength of its description, and only ever *found* if its frontmatter is intact. Those are cheap to check and expensive to get wrong. `skill-linter` checks them, so the costly part of skill development — testing whether the thing actually works — is never spent on a typo.
+
+== Install
+
+[source,text]
+----
+/plugin install skill-linter@alexmskills
+----
+
+== Run it
+
+[source,bash]
+----
+python3 <plugin>/scripts/lint_skills.py plugins        # a tree
+python3 <plugin>/scripts/lint_skills.py path/to/skill  # one skill
+python3 <plugin>/scripts/lint_skills.py . --strict     # gate: any finding fails
+python3 <plugin>/scripts/lint_skills.py . --json       # for tooling
+----
+
+Exit 0 clean, 1 on any error, and with `--strict`, 1 on anything at all — so it drops into CI or a pre-commit hook unchanged. Zero dependencies: stdlib Python, including a hand-rolled frontmatter parser, because a gate that only works when a library happens to be installed is not a gate.
+
+== What it checks
+
+Three levels, split by how much damage the defect does.
+
+[cols="1,4",options="header"]
+|===
+| Level | Means
+
+| *error*
+| The skill is broken *as a skill* — it cannot be loaded or addressed. Invalid frontmatter, a missing `name` or `description`, a name that disagrees with its directory.
+
+| *warn*
+| It will load but underperform. No triggering conditions in the description, a `When to use` section stranded in the body, a description that recites the workflow, a body past ~500 lines, a broken or force-loading link.
+
+| *info*
+| Worth a look, not worth blocking. No quoted user phrases, second-person voice, a pile of all-caps directives, a long reference with no table of contents.
+|===
+
+The rule that matters most is `description-no-trigger`. The description is the only thing read when deciding whether to load a skill, so one that never says when it applies is a skill that quietly never fires.
+
+== Every rule is cited
+
+Each rule traces to published guidance — Anthropic's `skill-creator`, `skill-development`, or `writing-skills` — recorded per-rule in the skill's `references/rule-sources.md`, along with the two places those sources *contradict* each other and how each conflict is resolved.
+
+Both conflicts are settled in favour of a narrower rule than either source states. For example, `skill-creator` says the description should say what the skill does; `writing-skills` says it must never summarise the workflow. Their examples show the real rule is narrower than either: state the purpose, never recite the steps. So the linter flags step *sequences* only.
+
+That file also lists the guidance deliberately *not* enforced, and why. Recording the omissions matters as much as the rules — otherwise each one gets rediscovered and re-argued.
+
+== Two guards against noise
+
+Both exist because the first run produced false positives:
+
+* *Fenced code is not prose.* Skills demonstrate bad patterns on purpose, and embed templates whose filenames do not exist yet. Content rules read the body with fences blanked out.
+* *Quoted phrases are the user's voice.* A description *should* quote what people type, and people say "lint my skills". Person checks skip quoted spans.
+
+The harness spends about half its cases asserting things do *not* fire, because a linter's credibility is destroyed by noise long before it is destroyed by a missed defect.
+
+== Self-learning
+
+Two events change the rules, and both are evidence the current ones were wrong:
+
+* *A miss* — a defect surfaces that a lint should have caught. Record the rule that would have caught it.
+* *A false positive* — a finding is dismissed. More urgent, because a noisy linter gets ignored wholesale. Narrow the rule or disable it.
+
+Both are written to the *consuming* repo, never the plugin directory (an installed plugin is a read-only cache):
+
+----
+.claude/skill-linter/
+├── learned-rules.json   # new rules, applied automatically on the next run
+└── log.md               # dated misses, false positives, and what changed
+----
+
+A learned rule is data the checker executes — `scope`, `pattern`, `severity`, `message` — so a lesson takes effect immediately without touching code. Set `absent: true` to fire when a pattern is *missing*.
+
+*Graduation:* a learned rule that has fired correctly across several repos and never been dismissed moves into the shipped checker, gains a harness case, and leaves the JSON. Shipped rules are code so they are reviewable in a diff and covered by tests; learned rules are data so a lesson can be captured the moment it is learned. Keeping that boundary is what stops the JSON from silently becoming the real linter.
+
+== What it does not do
+
+It does not tell you whether a skill *works*. A clean lint means nothing mechanical is wrong — not that the skill fires, and not that it is any good.
+
+Trigger accuracy is the thing that actually matters, and only `skill-creator`'s optimiser measures it, by running queries against the real model. No static check substitutes for that. This tool verifies a description *has* triggers; it can never verify they *work*.
