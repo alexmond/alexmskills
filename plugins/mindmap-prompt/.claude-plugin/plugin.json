@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "mindmap-prompt",
-  "description": "Drop ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. Offline and dependency-free: a self-contained page for capture, a deterministic compiler for the map -> prompt step, and JSON Canvas (.canvas) as the save format so a map can be reworked later or opened in Obsidian. A \u2726 control hands any node to `claude -p` in your repo to expand it into sub-ideas or sharpen its wording, previewed before it lands.",
-  "version": "0.2.0",
+  "description": "Drop ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. Offline and dependency-free: a self-contained page for capture, a deterministic compiler for the map -> prompt step, and JSON Canvas (.canvas) as the save format so a map can be reworked later or opened in Obsidian. A ✦ control hands any node to `claude -p` in your repo to expand it into sub-ideas or sharpen its wording, previewed before it lands.",
+  "version": "0.2.1",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"

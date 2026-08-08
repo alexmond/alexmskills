@@ -9,6 +9,33 @@ unreleased/rolling (no global version).
 
 ## 2026-08-08
 
+### Fixed
+
+- **mindmap-prompt 0.2.1** — *✦ wasn't using the repo it was running in.* Reported
+  against a real project: expanding the untouched root returned "Define the concrete
+  problem the project solves" and "Choose the runtime, language, and key
+  dependencies" — advice that would fit any codebase. The subprocess had the repo's
+  `CLAUDE.md` in context the whole time (verified directly: asked cold, it names the
+  repo's plugins), so the fault was entirely in the prompt, which framed the task as
+  an abstract mind-map exercise and never asked for project-specific ideas.
+  - The prompt now states it is running **inside a repository**, that the map
+    compiles into a prompt for **this codebase**, and that an idea which would fit
+    any codebase is a failure.
+  - **`Main idea` is the canvas's seed text, not a goal.** It was being passed
+    through as if the user had written it, so the model dutifully expanded a
+    placeholder. Placeholders are now treated as blank, and a map with nothing on it
+    takes its direction from the project instead.
+  - Expanding a blank node no longer 400s — with the repo as context there is always
+    something to work from. (Rewrite still needs text.)
+
+  Same map, after: "Graduate tune-repo-beta to stable", "Precision gate for
+  prompt-coach rules (issues #31/#32)" — it knows the open issue numbers.
+
+  New `serve.py --ai-read` allows `Read`/`Glob`/`Grep`, for repos with no `CLAUDE.md`
+  to summarise them; slower, better grounded, off by default. Four Python checks pin
+  the fix, including that a map with *real* content must **not** get the empty-map
+  fallback.
+
 ### Added
 
 - **mindmap-prompt 0.2.0** — **✦ expand a node with `claude -p`.** Select any node,

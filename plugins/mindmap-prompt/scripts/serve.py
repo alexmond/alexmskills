@@ -80,17 +80,40 @@ def _extract_json(out: str) -> dict | None:
         return None
 
 
+PLACEHOLDERS = {"", "main idea", "type something", "untitled"}
+
+
+def _blank(s: str) -> bool:
+    """The canvas seeds a root reading "Main idea". Until it's typed over that
+    is not a goal, and passing it off as one is what produced generic filler."""
+    return (s or "").strip().lower() in PLACEHOLDERS
+
+
 def _ai_prompt(mode: str, text: str, instruction: str, ctx: dict, n: int) -> str:
-    """One node's worth of context. The map is the point — an idea expanded
-    without knowing the goal it hangs off is a generic idea."""
+    """One node's worth of context, anchored to the repo this is running in.
+
+    Both anchors matter. Without the map an idea has nothing to hang off;
+    without the repo you get advice that would fit any codebase, which is the
+    same as no advice. The first cut of this prompt named neither the project
+    nor the requirement to be specific, and `claude` — which had the repo's
+    CLAUDE.md in context the whole time — answered a real project with
+    "Choose the runtime, language, and key dependencies".
+    """
+    goal = "" if _blank(ctx.get("goal") or "") else (ctx.get("goal") or "")
+    node = "" if _blank(text) else text
+
     lines = [
-        "You are expanding one node of a mind map. The map compiles into a "
-        "development prompt, so ideas must be concrete and buildable, never "
-        "motivational filler.",
+        "You are expanding one node of a mind map that lives INSIDE the "
+        "repository you are running in. The map compiles into a development "
+        "prompt for THIS codebase.",
         "",
-        f"Map goal: {ctx.get('goal') or '(not set yet)'}",
+        "Ground every idea in this specific project — name its real components, "
+        "files and conventions. An idea that would fit any codebase is a "
+        "failure, and so is motivational filler. Concrete and buildable only.",
+        "",
+        f"Map goal: {goal or '(not written yet)'}",
     ]
-    path = [p for p in (ctx.get("path") or []) if p]
+    path = [p for p in (ctx.get("path") or []) if p and not _blank(p)]
     if path:
         lines.append("Path to this node: " + " > ".join(path))
     sibs = [s for s in (ctx.get("siblings") or []) if s]
@@ -99,7 +122,13 @@ def _ai_prompt(mode: str, text: str, instruction: str, ctx: dict, n: int) -> str
     kids = [k for k in (ctx.get("children") or []) if k]
     if kids:
         lines.append("This node already has: " + "; ".join(kids[:12]))
-    lines += ["", f"The node to work on: {text or '(empty)'}", ""]
+    lines += ["", f"The node to work on: {node or '(still blank)'}", ""]
+
+    if not goal and not node and not instruction:
+        # Nothing on the canvas yet, so the project is the only signal there is.
+        lines += ["The map is still empty, so take your direction entirely from "
+                  "the project: propose what is most worth working on next in "
+                  "THIS repo.", ""]
 
     if mode == "rewrite":
         lines += [
@@ -121,16 +150,22 @@ def _ai_prompt(mode: str, text: str, instruction: str, ctx: dict, n: int) -> str
     return "\n".join(lines)
 
 
-def run_claude(prompt: str, root: Path, model: str | None) -> tuple[dict | None, str]:
-    """Run `claude -p` in the repo so the project's CLAUDE.md informs the answer,
-    but with every tool denied — this expands ideas, it never touches the repo.
+def run_claude(prompt: str, root: Path, model: str | None,
+               read: bool = False) -> tuple[dict | None, str]:
+    """Run `claude -p` in the repo so the project informs the answer, with no
+    tool that can change anything — this expands ideas, it never edits.
+
+    By default no tools at all: the repo's CLAUDE.md is already in context and
+    a single turn keeps it fast. `--ai-read` adds Read/Glob/Grep for repos that
+    have no CLAUDE.md to summarise them, at the cost of several turns.
 
     Returns (parsed, error). argv is a list, so nothing here reaches a shell.
     """
     exe = shutil.which("claude")
     if not exe:
         return None, "the `claude` CLI is not on PATH"
-    cmd = [exe, "-p", prompt, "--allowed-tools", "", "--output-format", "text"]
+    tools = ["Read", "Glob", "Grep"] if read else [""]
+    cmd = [exe, "-p", prompt, "--allowed-tools", *tools, "--output-format", "text"]
     if model:
         cmd += ["--model", model]
     try:
@@ -155,6 +190,7 @@ class Handler(BaseHTTPRequestHandler):
     root: Path = Path.cwd()
     ai_model: str | None = None
     ai_disabled: bool = False
+    ai_read: bool = False
 
     # -------------------------------------------------- helpers
     def _send(self, code: int, body: bytes, ctype: str) -> None:
@@ -261,11 +297,13 @@ class Handler(BaseHTTPRequestHandler):
             instruction = str(data.get("instruction") or "").strip()
             ctx = data.get("context") if isinstance(data.get("context"), dict) else {}
             n = max(2, min(AI_MAX_IDEAS, int(data.get("n") or 4)))
-            if not text and not instruction:
-                return self._err(400, "nothing to work from — type an instruction first")
+            if mode == "rewrite" and not text and not instruction:
+                return self._err(400, "nothing to rewrite — type something first")
 
+            # An expand on a blank node is legitimate: the repo is still a
+            # signal even when the canvas is empty.
             parsed, err = run_claude(_ai_prompt(mode, text, instruction, ctx, n),
-                                     self.root, self.ai_model)
+                                     self.root, self.ai_model, self.ai_read)
             if err:
                 return self._err(502, err)
 
@@ -296,10 +334,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-open", action="store_true", help="don't launch a browser")
     ap.add_argument("--ai-model", help="model for the ✦ expander (default: your claude default)")
     ap.add_argument("--no-ai", action="store_true", help="disable the ✦ expander")
+    ap.add_argument("--ai-read", action="store_true",
+                    help="let ✦ read the repo (Read/Glob/Grep) — slower, better grounded "
+                         "in projects with no CLAUDE.md")
     args = ap.parse_args(argv)
 
     Handler.root = Path(args.cwd).resolve()
     Handler.ai_model = args.ai_model
+    Handler.ai_read = args.ai_read
     if args.no_ai:
         Handler.ai_disabled = True
     maps_dir(Handler.root)

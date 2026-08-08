@@ -76,11 +76,13 @@ Select a node and hit its `✦` (or `Ctrl/Cmd` + `.`). Describe what you want, o
 
 Three things make this safe to lean on:
 
-* *The map is the context.* The goal, the ancestor chain, the siblings and the node's existing children all travel with the request — an idea expanded without knowing the goal it hangs off is a generic idea.
+* *The repo is the context, and so is the map.* The goal, ancestor chain, siblings and existing children travel with the request, and the prompt insists on ideas grounded in *this* codebase — naming real components, not advice that would fit anywhere. On an untouched map it takes its direction from the project alone.
 * *Nothing is applied until you say so.* Results land in the panel; you press *Add to map* or *Replace the text*. Close the panel and the map is untouched.
-* *Every tool is denied.* The subprocess runs with `--allowed-tools ""`, so it reads your project and writes prose — it cannot touch a file.
+* *No tool that can change anything.* By default the subprocess runs with no tools at all; with `--ai-read`, only `Read`/`Glob`/`Grep`. It reads your project and writes prose — it can never edit a file, and `argv` is a list so nothing reaches a shell.
 
 The control disappears entirely when the `claude` CLI isn't on `PATH`, and `serve.py --no-ai` turns it off deliberately. `--ai-model <name>` picks a different model.
+
+By default the subprocess runs with no tools at all — the repo's `CLAUDE.md` is already in its context, and one turn keeps the call at a few seconds. For a project with no `CLAUDE.md`, `--ai-read` adds `Read`/`Glob`/`Grep` so it can look around instead; that grounds it better but costs several turns.
 
 == The four kinds
 

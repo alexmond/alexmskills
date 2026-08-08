@@ -88,6 +88,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-08 — **ai-grounding-is-prompt-not-context** — 0.2.1: ✦ returned any-codebase advice though CLAUDE.md was loaded all along. Fix was the prompt (name the repo, demand specifics) + treat the "Main idea" seed as blank. Why: context present != context used.
 - 2026-08-08 — **mindmap-ai-expand** — 0.2.0: node -> `claude -p` in-repo, tools denied, map sent as context, preview before apply. Tests split by cost: stubbed in test-canvas, live in test-ai. Why: an idea expanded without its goal is generic.
 - 2026-08-07 — **affordance-vs-mechanism** — 0.1.3: editing worked but looked impossible (dbl-click only, unsignposted). Added type-to-replace, click-again, per-node hint. Why: 13 UI checks tested the mechanism, never the affordance.
 - 2026-08-07 — **mindmap-prompt** — 0.1.0 new plugin: offline canvas -> organized prompt. BFS spanning tree (not DFS) linearizes the graph; cross-links compile to refs. Saves JSON Canvas in .claude/mindmap/. Why: designed DFS was wrong, the golden fixture caught it.

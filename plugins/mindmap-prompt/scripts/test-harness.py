@@ -230,7 +230,32 @@ def t_ai_prompt_carries_the_map():
     # An empty map is the common first case; it must not render "None".
     bare = srv_mod._ai_prompt("expand", "Anything", "", {}, 4)
     check("a map with no goal yet still produces a clean prompt",
-          "(not set yet)" in bare and "None" not in bare, bare)
+          "(not written yet)" in bare and "None" not in bare, bare)
+
+
+def t_ai_prompt_is_anchored_to_the_repo():
+    """The reported bug: with the seeded root untouched, `claude` answered a
+    real project with "Choose the runtime, language, and key dependencies".
+    It had the repo's CLAUDE.md in context all along — the prompt just never
+    said to use it, and passed the "Main idea" placeholder off as a real goal."""
+    p = srv_mod._ai_prompt("expand", "Toggle", "", {"goal": "Ship dark mode"}, 4)
+    check("every prompt demands ideas grounded in THIS repo",
+          "repository you are running in" in p and "any codebase" in p, p)
+
+    # "Main idea" is the canvas's seed text, not something the user wrote.
+    check("the seeded placeholder is not mistaken for a real goal",
+          all(srv_mod._blank(s) for s in ("Main idea", "  MAIN IDEA ", "", "Type something"))
+          and not srv_mod._blank("Ship dark mode"))
+
+    empty = srv_mod._ai_prompt("expand", "Main idea", "", {"goal": "Main idea"}, 5)
+    check("an untouched map falls back to the project instead of generic advice",
+          "The map is still empty" in empty and "Main idea" not in empty, empty)
+
+    # ...but a map with real content must NOT get the fallback, or the node the
+    # user actually wrote stops driving the answer.
+    real = srv_mod._ai_prompt("expand", "Theme toggle", "", {"goal": "Ship dark mode"}, 5)
+    check("a map with real content keeps driving the answer",
+          "The map is still empty" not in real and "Theme toggle" in real, real)
 
 
 CHECKS = [
@@ -247,6 +272,7 @@ CHECKS = [
     t_cli_roundtrip,
     t_ai_reply_parsing,
     t_ai_prompt_carries_the_map,
+    t_ai_prompt_is_anchored_to_the_repo,
 ]
 
 

@@ -46,15 +46,21 @@ answer. Quick actions: *Expand into ideas*, *Break into steps*, *Name constraint
 (all add children), *Sharpen wording*, *Add done-criteria* (both rewrite the node).
 Free-text works too.
 
-- **The map is the context** — the goal, ancestor chain, siblings and existing
-  children travel with the request. An idea expanded without its goal is generic.
+- **The repo is the context, and so is the map** — the goal, ancestor chain,
+  siblings and existing children travel with the request, and the prompt insists on
+  ideas grounded in *this* codebase rather than advice that fits anywhere. On an
+  untouched map it takes direction from the project alone.
 - **Nothing is applied until the user presses the apply button.** Results sit in
   the panel; closing it leaves the map untouched.
-- **Every tool is denied** (`--allowed-tools ""`), so the subprocess reads the
-  project and writes prose — it cannot touch a file.
+- **No tool that can change anything.** By default no tools at all; with
+  `--ai-read`, only `Read`/`Glob`/`Grep`. The subprocess reads the project and
+  writes prose — it can never edit a file, and `argv` is a list so nothing sees
+  a shell.
 
 The control is hidden when the `claude` CLI isn't on `PATH`. `serve.py --no-ai`
-disables it; `--ai-model <name>` picks a different model.
+disables it; `--ai-model <name>` picks a different model; `--ai-read` lets it
+`Read`/`Glob`/`Grep` the repo, which grounds it better in projects with no
+`CLAUDE.md` but costs several turns.
 
 ## The four kinds
 
