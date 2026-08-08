@@ -6,12 +6,14 @@
 <title>mindmap-prompt</title>
 <style>
 /* ---------------------------------------------------------------- theme
-   Light and dark both first-class. Kind is never conveyed by colour alone —
-   every node carries a text chip — so the map still reads without colour. */
+   Light and dark both first-class. Colour marks which BRANCH a node belongs to,
+   never what kind it is — the two kinds that change compilation (goal,
+   constraint) are marked by shape and glyph so the map reads without colour. */
 :root {
   --bg:#f6f7f9; --grid:#e3e6ea; --fg:#1c2024; --muted:#6b7280;
   --panel:#ffffff; --line:#cbd2d9; --edge:#98a2b3; --accent:#2f6fd0;
   --goal:#1f8a54; --feature:#2f6fd0; --idea:#6b7280; --constraint:#c0392b;
+  --rootline:#b9c3d4; --plusbg:#ffffff;
   --shadow:0 1px 2px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
   --node-w:260px;
 }
@@ -20,6 +22,7 @@
     --bg:#15181c; --grid:#22262c; --fg:#e6e9ee; --muted:#9aa4b2;
     --panel:#1c2026; --line:#333a44; --edge:#5b6675; --accent:#6ea8ff;
     --goal:#4ec98a; --feature:#6ea8ff; --idea:#9aa4b2; --constraint:#ff7d6b;
+    --rootline:#3d4654; --plusbg:#1c2026;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
   }
 }
@@ -59,16 +62,16 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 }
 #world { position:absolute; left:0; top:0; transform-origin:0 0; }
 #wires { position:absolute; left:0; top:0; overflow:visible; pointer-events:none; }
-/* branches are filled ribbons, not strokes — that's what lets them taper */
-#wires path { stroke:none; }
+/* branches are stroked curves; the colour + width come from the element */
+#wires path { fill:none; }
 #wires #ghost { fill:none; stroke:var(--accent); stroke-width:2; }
 #wires text { font-size:11.5px; font-weight:600; paint-order:stroke;
   stroke:var(--bg); stroke-width:4px; }
 
-/* Nodes read by DEPTH, not uniformly: the root is typographic, branches are
-   solid colour-coded pills, leaves are bare text. That hierarchy is what makes
-   a mind map legible at a glance — uniform cards read as a flowchart. `--c` is
-   the branch hue, inherited from the depth-1 ancestor. */
+/* Nodes read by DEPTH, not uniformly: the root is a bordered box (the title of
+   the map), everything under it is plain text and the connector carries the
+   branch colour. Uniform cards read as a flowchart, not a mind map. `--c` is the
+   branch hue, inherited from the depth-1 ancestor. */
 .node {
   position:absolute; width:max-content; max-width:270px; cursor:grab;
   --c:var(--idea);
@@ -76,50 +79,42 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 .node .cap { white-space:pre-wrap; overflow-wrap:anywhere; }
 /* empty-state lives in CSS, never as real text — a literal placeholder
    character ends up inside what the user types */
-.node .cap:empty::before { content:"Untitled"; color:var(--muted); font-weight:400; }
+.node .cap:empty::before { content:"Type something"; color:var(--muted); font-weight:400; }
 .node .body {
   font-size:12.5px; line-height:1.5; color:var(--muted); margin-top:5px;
   white-space:pre-wrap; overflow-wrap:anywhere; max-width:250px;
 }
-.node .eyebrow {
-  display:block; font-size:10px; letter-spacing:.14em; font-weight:700;
-  text-transform:uppercase; color:var(--c); margin-bottom:3px; user-select:none;
-}
 
-/* depth 0 — the goal. No card: it's the title of the map. */
-.node.d0 { max-width:320px; }
+/* depth 0 — the root. A bordered box: it's the title of the map. */
+.node.d0 { max-width:300px; }
 .node.d0 .cap {
-  font-size:26px; line-height:1.25; font-weight:700; letter-spacing:-.02em;
-  color:var(--fg); padding-bottom:7px; border-bottom:3px solid var(--c);
+  background:var(--panel); color:var(--fg); font-weight:700; font-size:16px;
+  text-align:center; border:1px solid var(--rootline); border-radius:5px;
+  padding:16px 22px; min-width:190px;
 }
-.node.d0 .body { font-size:13.5px; max-width:300px; }
+.node.d0 .body { text-align:center; }
 
-/* depth 1 — a branch. Solid pill in the branch hue. */
-.node.d1 .cap {
-  background:var(--c); color:#fff; font-weight:600; font-size:14.5px;
-  border-radius:999px; padding:7px 15px; box-shadow:0 1px 3px rgba(0,0,0,.16);
+/* everything else is plain text — the connector carries the branch colour */
+.node.d1 .cap, .node.deep .cap {
+  font-size:14.5px; color:var(--fg); padding:4px 2px 4px 11px;
 }
+.node.d1 .body, .node.deep .body { margin-left:11px; }
+/* nodes on the left of the root read right-to-left */
+.node.side-l .cap { text-align:right; padding:4px 11px 4px 2px; }
+.node.side-l .body { margin-left:0; margin-right:11px; text-align:right; }
 
-/* depth 2+ — a leaf. Bare text; the ribbon carries the colour, so the text
-   stays high-contrast (easier to read than tinted labels). */
-.node.deep .cap {
-  font-size:14px; color:var(--fg); padding:3px 2px 3px 10px;
-}
-.node.deep .body { margin-left:10px; }
-
-/* constraints break the depth rule on purpose — "must not" has to be
-   unmissable wherever it sits. Dashed outline + glyph, never colour alone. */
+/* constraints get the one deviation from the plain-text rule — "must not"
+   has to be unmissable wherever it sits. Glyph + dashed rule, never colour alone. */
 .node.k-constraint .cap {
-  background:transparent; color:var(--constraint); border:1.5px dashed var(--constraint);
-  border-radius:999px; padding:6px 14px; font-weight:600; font-size:14px; box-shadow:none;
+  color:var(--constraint); font-weight:600;
+  border-bottom:1.5px dashed var(--constraint); padding-bottom:2px;
 }
 .node.k-constraint .cap::before { content:"⊘ "; font-weight:700; }
 
 /* not reachable from the goal — it won't reach the prompt, so say so quietly */
 .node.orphan .cap { border-bottom:2px dotted var(--muted); }
 
-.node.sel .cap { outline:2px solid var(--accent); outline-offset:3px; border-radius:8px; }
-.node.d1.sel .cap, .node.k-constraint.sel .cap { border-radius:999px; }
+.node.sel .cap { outline:2px solid var(--accent); outline-offset:3px; border-radius:5px; }
 .node.editing { cursor:text; }
 .node.editing .txt {
   outline:none; background:var(--panel); border:1.5px solid var(--c);
@@ -129,13 +124,21 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 }
 .node.editing .txt:empty::before { content:"Type…"; color:var(--muted); }
 
-/* the connector: drag from here to another node ("patch cable") */
+/* One control per side, doing double duty so the edge isn't cluttered:
+   CLICK adds a child on that side (Lucid's ⊕), DRAG connects to an existing node. */
 .node .plug {
-  position:absolute; right:-7px; top:50%; width:14px; height:14px;
-  margin-top:-7px; border-radius:50%; background:var(--panel);
-  border:2px solid var(--c); cursor:crosshair; opacity:0; transition:opacity .12s;
+  position:absolute; top:50%; width:22px; height:22px; margin-top:-11px;
+  border-radius:50%; background:var(--plusbg); border:1.5px solid var(--rootline);
+  color:var(--muted); cursor:pointer; opacity:0;
+  transition:opacity .12s, border-color .12s, color .12s;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; line-height:1; user-select:none;
 }
+.node .plug.r { right:-11px; }
+.node .plug.l { left:-11px; }
 .node:hover .plug, .node.sel .plug, .node.editing .plug { opacity:1; }
+.node.d0 .plug { opacity:1; }   /* the root always offers both directions */
+.node .plug:hover { border-color:var(--accent); color:var(--accent); }
 .node.drop .cap { outline:2px solid var(--accent); outline-offset:3px; }
 
 /* ---------------------------------------------------------------- panels */
@@ -209,11 +212,11 @@ kbd {
 <div class="panel" id="help">
   <h2>Keys</h2>
   <div class="body">
-    <kbd>click</kbd><span>new node on empty canvas — just start typing</span>
+    <kbd>⊕</kbd><span>add an idea on that side of a node (drag it to connect two instead)</span>
     <kbd>Enter</kbd><span>commit + new sibling (<kbd>Shift</kbd>+<kbd>Enter</kbd> = new line)</span>
     <kbd>Tab</kbd><span>commit + new child</span>
     <kbd>Ctrl</kbd>+<kbd>↑↓←→</kbd><span>new connected node in that direction</span>
-    <kbd>drag ●</kbd><span>connect two nodes</span>
+    <kbd>drag ⊕</kbd><span>connect two existing nodes</span>
     <kbd>double-click</kbd><span>edit a node</span>
     <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd><span>goal · feature · idea · constraint</span>
     <kbd>Esc</kbd><span>commit / deselect</span>
@@ -238,7 +241,8 @@ kbd {
 
 const KINDS = ["goal", "feature", "idea", "constraint"];
 const KIND_COLOR = { goal: "4", feature: "5", idea: "", constraint: "1" };
-const NODE_W = 220, GAP_X = 300, GAP_Y = 120;
+const NODE_W = 200, GAP_X = 300, GAP_Y = 120;
+const SPAN = 130;   // gap between a node's edge and its child's edge
 
 // One hue per top-level branch, inherited by everything under it. This is the
 // thing that makes a map scannable: colour means "same branch", not "same type".
@@ -306,27 +310,21 @@ const bez = (p0, p1, p2, p3, t) => {
   };
 };
 
-/** A tapering ribbon instead of a uniform stroke — thick where it leaves the
- *  parent, thin where it meets the child. Built as a filled path by walking the
- *  curve, offsetting along the normal, and coming back the other side. */
-function ribbon(p1, p2, w1, w2) {
-  const mx = (p1.x + p2.x) / 2;
-  const c1 = { x: mx, y: p1.y }, c2 = { x: mx, y: p2.y };
-  const N = 26, L = [], R = [];
-  let prev = p1;
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    const pt = bez(p1, c1, c2, p2, t);
-    const dx = pt.x - prev.x, dy = pt.y - prev.y;
-    const len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len;
-    const w = (w1 + (w2 - w1) * t) / 2;
-    L.push(`${(pt.x + nx * w).toFixed(1)},${(pt.y + ny * w).toFixed(1)}`);
-    R.push(`${(pt.x - nx * w).toFixed(1)},${(pt.y - ny * w).toFixed(1)}`);
-    if (i) prev = pt;
-  }
-  return `M${L.join(" L")} L${R.reverse().join(" L")} Z`;
+const rootNode = () => [...S.nodes.values()].find((n) => n.kind === "goal");
+
+/** Which side of the root a node sits on. Branches grow outward from the root
+ *  in both directions, so a left-hand node reads right-to-left. */
+function sideOf(n) {
+  const r = rootNode();
+  if (!r || n.id === r.id) return "r";
+  return (n.x + (n.w || NODE_W) / 2) < (r.x + (r.w || NODE_W) / 2) ? "l" : "r";
 }
+
+/** Where a new child of `n` goes on the given side. */
+const childPos = (n, side) => ({
+  x: side === "r" ? n.x + (n.w || NODE_W) + SPAN : n.x - SPAN - 170,
+  y: n.y,
+});
 
 /** Depth + branch hue for every node, walked breadth-first from the goal —
  *  the same ownership rule the compiler uses, so what you see is what compiles. */
@@ -362,7 +360,9 @@ function render() {
       el = document.createElement("div");
       el.id = n.id;
       el.tabIndex = 0;
-      el.innerHTML = `<div class="txt"></div><div class="plug" title="Drag to connect"></div>`;
+      el.innerHTML = `<div class="txt"></div>`
+        + `<div class="plug l" data-side="l" title="Add an idea (drag to connect)">+</div>`
+        + `<div class="plug r" data-side="r" title="Add an idea (drag to connect)">+</div>`;
       world.appendChild(el);
     }
     const editing = el.classList.contains("editing");
@@ -370,7 +370,7 @@ function render() {
     const c = hue.get(n.id) || NEUTRAL;
     const tier = d === 0 ? "d0" : d === 1 ? "d1" : "deep";
 
-    el.className = `node k-${n.kind} ${tier}`
+    el.className = `node k-${n.kind} ${tier} side-${sideOf(n)}`
       + (S.sel === n.id ? " sel" : "")
       + (editing ? " editing" : "")
       // constraints legitimately sit outside the tree (they compile to their own
@@ -385,9 +385,7 @@ function render() {
       const nl = n.text.indexOf("\n");
       const cap = nl < 0 ? n.text : n.text.slice(0, nl);
       const body = nl < 0 ? "" : n.text.slice(nl + 1).trim();
-      txt.innerHTML =
-        (n.kind === "goal" ? `<span class="eyebrow">goal</span>` : "")
-        + `<div class="cap">${escapeHtml(cap)}</div>`
+      txt.innerHTML = `<div class="cap">${escapeHtml(cap)}</div>`
         + (body ? `<div class="body">${escapeHtml(body)}</div>` : "");
     }
     el.style.left = n.x + "px";
@@ -401,39 +399,28 @@ function render() {
   renderEdges();
 }
 
-// Ribbon thickness by depth: thick at the trunk, thin at the twigs.
-const ribbonW = (d) => (d === 0 ? [7, 3.6] : d === 1 ? [3.6, 2.4] : [2.4, 1.8]);
-
 function renderEdges() {
   gEdges.textContent = "";
   const NS = "http://www.w3.org/2000/svg";
   const { depth, hue } = S.view || layout();
-  const forks = new Set();
 
   for (const e of S.edges) {
     const a = nodeOf(e.fromNode), b = nodeOf(e.toNode);
     if (!a || !b) continue;
     const { a: p1, b: p2 } = sideAnchor(a, b);
     const d = depth.has(a.id) ? depth.get(a.id) : 2;
-    const [w1, w2] = ribbonW(d);
     const c = hue.get(b.id) || hue.get(a.id) || NEUTRAL;
+    const mx = (p1.x + p2.x) / 2;
 
     const path = document.createElementNS(NS, "path");
-    path.setAttribute("d", ribbon(p1, p2, w1, w2));
-    path.setAttribute("fill", c);
+    path.setAttribute("d", `M${p1.x},${p1.y} C${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", c);
+    path.setAttribute("stroke-width", d === 0 ? 3 : 2.4);
+    path.setAttribute("stroke-linecap", "round");
     // A cross-link isn't structure — draw it faint so the tree still reads.
     if (depth.has(b.id) && depth.get(b.id) <= d) path.setAttribute("opacity", ".38");
     gEdges.appendChild(path);
-
-    const key = `${a.id}:${p1.x.toFixed(0)},${p1.y.toFixed(0)}`;
-    if (!forks.has(key)) {
-      forks.add(key);
-      const dot = document.createElementNS(NS, "circle");
-      dot.setAttribute("cx", p1.x); dot.setAttribute("cy", p1.y);
-      dot.setAttribute("r", d === 0 ? 4.5 : 3.5);
-      dot.setAttribute("fill", hue.get(a.id) || NEUTRAL);
-      gEdges.appendChild(dot);
-    }
 
     if (e.label) {
       const mid = bez(p1, { x: (p1.x + p2.x) / 2, y: p1.y },
@@ -559,9 +546,9 @@ stage.addEventListener("pointerdown", (ev) => {
   const cur = editingId();
   if (cur && (!nodeEl || nodeEl.id !== cur)) endEdit(cur);
 
-  if (plug && nodeEl) {                                   // start a connection
+  if (plug && nodeEl) {              // ⊕ — click adds a child, drag connects
     ev.preventDefault();
-    drag = { kind: "wire", from: nodeEl.id, ...toWorld(ev.clientX, ev.clientY) };
+    drag = { kind: "wire", from: nodeEl.id, side: plug.dataset.side || "r", moved: false };
     stage.setPointerCapture(ev.pointerId);
     return;
   }
@@ -592,6 +579,7 @@ stage.addEventListener("pointermove", (ev) => {
     drag.moved = true;
     render();
   } else if (drag.kind === "wire") {
+    drag.moved = true;
     const a = nodeOf(drag.from), p = toWorld(ev.clientX, ev.clientY);
     const { a: p1 } = sideAnchor(a, { x: p.x, y: p.y, w: 0, h: 0 });
     ghost.style.display = "";
@@ -605,17 +593,25 @@ stage.addEventListener("pointermove", (ev) => {
 stage.addEventListener("pointerup", (ev) => {
   if (!drag) return;
   if (drag.kind === "pan" && !drag.moved) {
-    const p = toWorld(ev.clientX, ev.clientY);
-    const n = addNode({ x: p.x - NODE_W / 2, y: p.y - 30 });
-    render(); select(n.id, true);
+    // A stray click on the canvas just deselects — it never makes a node.
+    S.sel = null; render();
   } else if (drag.kind === "node" && drag.moved) {
     markDirty();
   } else if (drag.kind === "wire") {
-    const over = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".node");
-    if (over && over.id !== drag.from) connect(drag.from, over.id);
     ghost.style.display = "none";
     world.querySelectorAll(".node.drop").forEach((el) => el.classList.remove("drop"));
-    render();
+    const over = drag.moved
+      ? document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".node") : null;
+    if (over && over.id !== drag.from) {
+      connect(drag.from, over.id);
+      render();
+    } else if (!drag.moved) {
+      const from = nodeOf(drag.from);          // a plain click on ⊕ → new child
+      const p = childPos(from, drag.side);
+      spawnAt(drag.from, p.x, p.y);
+    } else {
+      render();
+    }
   }
   drag = null;
 });
@@ -654,13 +650,15 @@ document.addEventListener("keydown", (ev) => {
       endEdit(editing);
       const p = parentOf(editing), me = nodeOf(editing);
       // A sibling stacks under the node you just typed, not under the parent.
-      return p ? spawnAt(p, me.x, below(me)) : spawnAt(editing, rightOf(me), me.y);
+      if (p) return spawnAt(p, me.x, below(me));
+      const c = childPos(me, sideOf(me));
+      return spawnAt(editing, c.x, c.y);
     }
     if (ev.key === "Tab") {                              // commit + child
       ev.preventDefault();
       endEdit(editing);
-      const me = nodeOf(editing);
-      return spawnAt(editing, rightOf(me), me.y);
+      const me = nodeOf(editing), c = childPos(me, sideOf(me));
+      return spawnAt(editing, c.x, c.y);
     }
     return;                                              // otherwise: just typing
   }
@@ -673,7 +671,11 @@ document.addEventListener("keydown", (ev) => {
     return spawnAt(S.sel, me.x + d[0], me.y + d[1]);
   }
   if (ev.key === "Enter") { ev.preventDefault(); return beginEdit(S.sel); }
-  if (ev.key === "Tab") { ev.preventDefault(); return spawnAt(S.sel, rightOf(me), me.y); }
+  if (ev.key === "Tab") {
+    ev.preventDefault();
+    const c = childPos(me, sideOf(me));
+    return spawnAt(S.sel, c.x, c.y);
+  }
   if (ev.key === "Escape") { S.sel = null; return render(); }
   if (ev.key === "Delete" || ev.key === "Backspace") {
     ev.preventDefault(); removeNode(S.sel); return render();
@@ -814,10 +816,27 @@ applyView();
       $("#name").value = pre.replace(/\.canvas$/, "");
       fromCanvas(canvas);
       return status(`opened ${pre}`);
-    } catch { /* fall through to an empty canvas */ }
+    } catch { /* fall through to a fresh map */ }
   }
-  status("click anywhere to start — press ? for keys");
+  seedRoot();
 })();
+
+/** A blank canvas is a worse starting point than a wrong one: seed the root so
+ *  there's always something to type over and grow from. */
+function seedRoot() {
+  const r = stage.getBoundingClientRect();
+  const n = addNode({
+    x: Math.round((r.width / 2 - S.pan.x) / S.zoom) - 110,
+    y: Math.round((r.height / 2 - S.pan.y) / S.zoom) - 30,
+    kind: "goal",
+    text: "Main idea",
+  });
+  markDirty(false);
+  render();
+  select(n.id, true);
+  document.execCommand?.("selectAll", false, null);   // typing replaces it
+  status("type your goal — ⊕ or Tab to branch, ? for keys");
+}
 </script>
 </body>
 </html>

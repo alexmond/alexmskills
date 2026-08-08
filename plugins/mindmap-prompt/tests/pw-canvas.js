@@ -58,28 +58,64 @@ function check(name, ok, detail = "") {
     await page.goto(BASE, { waitUntil: "domcontentloaded" });
     check("page loads", await page.title() === "mindmap-prompt");
 
-    // --- click empty canvas -> a node appears, already in edit mode ---------
-    await page.mouse.click(420, 320);
+    // --- a fresh map opens with a seeded root, ready to type over -----------
     await page.waitForSelector(".node.editing", { timeout: 3000 });
+    check("a fresh map seeds one root node, already in edit mode",
+      (await page.locator(".node").count()) === 1 &&
+      (await page.locator(".node.k-goal").count()) === 1);
+
+    await page.keyboard.press("Control+a");        // typing replaces "Main idea"
     await page.keyboard.type("Ship dark mode");
     await page.keyboard.down("Shift"); await page.keyboard.press("Enter");
     await page.keyboard.press("Enter"); await page.keyboard.up("Shift");
     await page.keyboard.type("Done = every page passes contrast checks.");
-    check("click-to-create opens a node straight into typing",
+    await page.keyboard.press("Escape");
+
+    // --- a stray click on empty canvas must NOT make a node ----------------
+    await page.mouse.click(1100, 700);
+    await page.waitForTimeout(150);
+    check("clicking empty canvas deselects instead of creating a node",
       (await page.locator(".node").count()) === 1);
 
-    // first node on an empty canvas becomes the goal
-    check("first node is the goal", await page.locator(".node.k-goal").count() === 1);
+    // --- the ⊕ control adds a child on the side you clicked ----------------
+    await page.locator(".node.d0").hover();
+    await page.locator(".node.d0 .plug.r").click();
+    await page.waitForSelector(".node.editing");
+    await page.keyboard.type("Right branch");
+    await page.keyboard.press("Escape");
+    const rightX = await page.locator(".node").last().evaluate((e) => e.offsetLeft);
+    const rootX = await page.locator(".node.d0").evaluate((e) => e.offsetLeft);
+    check("⊕ adds a child, and the right ⊕ places it to the right",
+      (await page.locator(".node").count()) === 2 && rightX > rootX,
+      `root=${rootX} child=${rightX}`);
+
+    await page.locator(".node.d0").hover();
+    await page.locator(".node.d0 .plug.l").click();
+    await page.waitForSelector(".node.editing");
+    await page.keyboard.type("Left branch");
+    await page.keyboard.press("Escape");
+    const leftX = await page.locator(".node").last().evaluate((e) => e.offsetLeft);
+    check("the left ⊕ grows the map in the other direction",
+      (await page.locator(".node").count()) === 3 && leftX < rootX,
+      `root=${rootX} left=${leftX}`);
 
     // --- Tab commits and creates a connected child -------------------------
-    await page.keyboard.press("Escape");
-    await page.keyboard.press("Tab");
+    await page.locator(".node.d0").click();       // select the root (no Escape:
+    await page.keyboard.press("Tab");             // Escape would deselect it)
     await page.waitForSelector(".node.editing");
     await page.keyboard.type("Theme toggle");
     await page.keyboard.press("Escape");
-    check("Tab commits and spawns a connected child",
-      (await page.locator(".node").count()) === 2 &&
-      (await page.locator("#g-edges path").count()) === 1);
+    // Counting path elements isn't enough — a stale `stroke:none` once made every
+    // connector invisible while the count stayed correct. Assert they actually draw.
+    const strokes = await page.locator("#g-edges path").evaluateAll((ps) =>
+      ps.map((p) => {
+        const cs = getComputedStyle(p);
+        return { stroke: cs.stroke, width: parseFloat(cs.strokeWidth) };
+      }));
+    check("Tab commits and spawns a connected child, and connectors are visible",
+      (await page.locator(".node").count()) === 4 && strokes.length === 3 &&
+      strokes.every((s) => s.stroke !== "none" && s.width > 0),
+      JSON.stringify(strokes));
 
     // --- Enter commits and creates a sibling -------------------------------
     await page.keyboard.press("Enter");        // enter edit on selection
@@ -92,7 +128,7 @@ function check(name, ok, detail = "") {
     await page.keyboard.type("Remember per device");
     await page.keyboard.press("Escape");
     check("Enter commits and spawns a sibling under the same parent",
-      (await page.locator(".node").count()) === 4);
+      (await page.locator(".node").count()) === 6);
 
     // --- number keys set the kind -----------------------------------------
     await page.keyboard.press("4");
@@ -120,7 +156,7 @@ function check(name, ok, detail = "") {
     const canvas = JSON.parse(fs.readFileSync(saved, "utf8"));
     check("save writes JSON Canvas (nodes + edges) into the repo",
       Array.isArray(canvas.nodes) && Array.isArray(canvas.edges) &&
-      canvas.nodes.length === 4 && canvas.nodes.every((n) => n.type === "text") &&
+      canvas.nodes.length === 6 && canvas.nodes.every((n) => n.type === "text") &&
       canvas.nodes.some((n) => /^#goal /.test(n.text)),
       JSON.stringify(canvas.nodes.map((n) => n.text)));
 
@@ -134,7 +170,7 @@ function check(name, ok, detail = "") {
     await page.goto(BASE + "?map=map", { waitUntil: "domcontentloaded" });
     await page.waitForSelector(".node");
     check("a saved map reopens from its URL",
-      (await page.locator(".node").count()) === 4 &&
+      (await page.locator(".node").count()) === 6 &&
       (await page.locator(".node.k-goal").count()) === 1);
 
     fs.mkdirSync(path.join(HERE, "shots"), { recursive: true });

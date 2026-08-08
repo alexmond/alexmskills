@@ -11,6 +11,22 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **mindmap-prompt 0.1.2** — canvas re-cut to match Lucidspark's mind-map view.
+  The root is a bordered white box (the title of the map); every other node is
+  plain text with the connector carrying the branch colour; connectors are
+  stroked curves rather than tapering ribbons. Branches now grow **both ways**
+  from the root, and left-hand nodes read right-to-left. Added a **⊕ control on
+  each side of a node** — click it to add an idea on that side, drag it to
+  connect two existing nodes, so one affordance covers both. **Click-to-create on
+  empty canvas is gone** (a stray click now just deselects); instead a fresh map
+  **opens with a seeded "Main idea" root** to type over. Empty nodes show a
+  "Type something" placeholder.
+
+  Fixed a defect the tests couldn't see: a `stroke:none` rule left from the
+  0.1.1 filled-ribbon design made every connector invisible while the DOM still
+  held the right number of paths. The UI test now asserts computed stroke and
+  width, not just element count.
+
 - **mindmap-prompt 0.1.1** — canvas redesigned around mind-map visual language
   after studying MindMeister and Lucidspark. Nodes now render **by depth**: the
   goal is large type with no card, branches are solid colour-coded pills, leaves

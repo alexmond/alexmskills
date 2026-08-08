@@ -20,7 +20,7 @@ The compile step is plain Python — no LLM, no network. The same map always pro
 python3 <plugin>/scripts/serve.py --cwd .
 ----
 
-Serves `http://127.0.0.1:8770/`. Click anywhere and start typing. Or use the slash command:
+Serves `http://127.0.0.1:8770/`. A fresh map starts with one root node — type over it, then branch with `⊕`, `Tab` or `Enter`. Or use the slash command:
 
 [cols="1,3",options="header"]
 |===
@@ -44,11 +44,11 @@ Capture is keyboard-first, because stopping to hunt for a toolbar is what breaks
 |===
 | Key | Does
 
-| click empty canvas | new node, already in edit mode
+| `⊕` on a node | add an idea on that side; a fresh map opens with one root to type over
 | `Enter` | commit + new sibling (`Shift+Enter` for a new line inside a node)
 | `Tab` | commit + new child
 | `Ctrl/Cmd` + arrow | new connected node in that direction
-| drag the ● handle | connect two nodes
+| drag `⊕` to another node | connect two nodes (a cross-link)
 | `1` `2` `3` `4` | goal · feature · idea · constraint
 | double-click | edit a node
 | `Del` | delete the selected node
