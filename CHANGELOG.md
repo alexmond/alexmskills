@@ -9,6 +9,21 @@ unreleased/rolling (no global version).
 
 ## 2026-08-08
 
+### Fixed
+
+- **prompt-coach 1.0.1** — description rewritten to advertise the say-it surface it
+  already had. The body documents a dozen conversational entry points — `"coach pause
+  10"`, `"coach off <rule-id>"`, `"disable praise"`, `"coach that was wrong"`,
+  `"analyze my last 20 prompts"` — and the description mentioned none of them, so the
+  skill would not load when a user said one and Claude had to guess at config keys it
+  could have read. The `UserPromptSubmit` hook was never affected; this is only about
+  loading the SKILL.md for questions *about* the coach. Also moved to third person.
+
+  Found by the new `skill-linter` (`description-no-phrases`). Every quoted phrase is
+  verified to appear in the body — `"daily review"` was deliberately left out, since
+  it routes to the standalone `log-review` skill and listing it here would have
+  created a competing trigger. `body-too-long` (572 lines) is still open.
+
 ### Added
 
 - **skill-linter 0.1.0** — new plugin. Checks `SKILL.md` files against published

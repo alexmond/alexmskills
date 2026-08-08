@@ -1,6 +1,6 @@
 ---
 name: prompt-coach
-description: A hook-driven coach that watches your prompts to Claude Code and nudges you toward proven prompting best practices (definition-of-done, scoped references, guardrails, verification). Ships a tiered rule catalog; rules quietly graduate once you consistently apply them so the coach fades as you improve.
+description: A hook-driven coach that reads every prompt sent to Claude Code and rewrites it toward proven prompting habits — definition-of-done, scoped references, guardrails, verification. Rules graduate as they are demonstrated, so the coaching fades as the user improves. The hook runs on its own, but load this skill when the user says "coach pause 10", "coach off <rule-id>", "coach on <rule-id>", "coach reactivate no-definition-of-done here", "disable praise", "coach ack every 10", "coach that was wrong", "coach false positive", "coach missed this", "bad nudge", or "analyze my last 20 prompts" — and whenever they ask why a nudge fired, what a rule means, how mastery is earned, or how to configure, pause, silence, or tune the coach.
 ---
 
 # prompt-coach
