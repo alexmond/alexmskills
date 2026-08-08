@@ -99,6 +99,32 @@ function check(name, ok, detail = "") {
       (await page.locator(".node").count()) === 3 && leftX < rootX,
       `root=${rootX} left=${leftX}`);
 
+    // --- how do you edit an existing node? --------------------------------
+    // Every path below was reachable in code but invisible on screen, and a
+    // first-time user reported the boxes looked uneditable. The affordance is
+    // the feature; assert it, not just the mechanism underneath.
+    const left = page.locator(".node").last();      // still selected after Escape
+    check("a selected node says how to edit itself",
+      /just type|double-click/i.test(await left.locator(".tip").innerText()));
+
+    await page.keyboard.type("Typed over");
+    await page.waitForTimeout(120);
+    check("typing over a selected node replaces its text",
+      (await page.locator(".node.editing").count()) === 1 &&
+      (await left.locator(".txt").innerText()).trim() === "Typed over",
+      await left.locator(".txt").innerText());
+    check("the editing node explains how to get out again",
+      /Esc/i.test(await left.locator(".tip").innerText()));
+
+    await page.keyboard.press("Escape");
+    const lb = await left.boundingBox();
+    await page.mouse.click(lb.x + lb.width / 2, lb.y + lb.height / 2);   // select
+    await page.mouse.click(lb.x + lb.width / 2, lb.y + lb.height / 2);   // edit
+    await page.waitForTimeout(150);
+    check("clicking an already-selected node opens it for editing",
+      (await page.locator(".node.editing").count()) === 1);
+    await page.keyboard.press("Escape");
+
     // --- Tab commits and creates a connected child -------------------------
     await page.locator(".node.d0").click();       // select the root (no Escape:
     await page.keyboard.press("Tab");             // Escape would deselect it)

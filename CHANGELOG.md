@@ -9,6 +9,30 @@ unreleased/rolling (no global version).
 
 ## 2026-08-07
 
+### Fixed
+
+- **mindmap-prompt 0.1.3** — *you could edit a node, but nothing said so.* Reported
+  from a first run: "do not see how to edit text in a boxes". Editing was reachable
+  only by double-click or `Enter`, neither of them signposted, and the editing state
+  rendered as a plain pill — the root even *lost* its bold 16px type mid-edit, so a
+  live field looked like a static label. Three changes, all about the affordance
+  rather than the mechanism:
+  - **Typing over a selected node replaces its text**, the way every mind-map tool
+    works and the first thing anyone tries. `1`–`4` still set the kind.
+  - **Click a selected node again to edit it** (double-click still works) — the
+    select-then-edit rhythm shared by canvas tools.
+  - **A one-line hint sits under the selected node**, where the eye already is
+    rather than in the far corner of the toolbar: `just type, or Enter /
+    double-click to edit` when selected, `Enter sibling · Tab child · Esc done`
+    while editing. Which line shows is CSS-driven, since `beginEdit` toggles the
+    class outside `render()`.
+
+  The editing box now reads as a field (accent border, focus ring, visible caret)
+  and the root keeps its size and weight while being typed in. Also fixed the `+`
+  plug being drawn over the last character of a node's text. Four new checks in the
+  canvas harness (17 total) cover each edit path — the gap survived 13 passing
+  checks because they all tested the mechanism, never the affordance.
+
 ### Added
 
 - **mindmap-prompt 0.1.2** — canvas re-cut to match Lucidspark's mind-map view.

@@ -88,6 +88,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-07 — **affordance-vs-mechanism** — 0.1.3: editing worked but looked impossible (dbl-click only, unsignposted). Added type-to-replace, click-again, per-node hint. Why: 13 UI checks tested the mechanism, never the affordance.
 - 2026-08-07 — **mindmap-prompt** — 0.1.0 new plugin: offline canvas -> organized prompt. BFS spanning tree (not DFS) linearizes the graph; cross-links compile to refs. Saves JSON Canvas in .claude/mindmap/. Why: designed DFS was wrong, the golden fixture caught it.
 - 2026-08-07 — **mindmap-skill-design** — Prior-art confirmed 25/25 -> BUILD: only ContextMinds + obsidian-llm-plugin do map->prompt, both unadoptable. Design doc dated 2026-08-07 in docs/decisions. Why: niche verified open.
 - 2026-07-28 — **coach-graduation** — 1.0.0: graduated prompt-coach-beta -> prompt-coach (dropped -beta suffix + beta category, self-learning). Rolled in the typo-stoplist fix (mastery->faster etc + harness guard). Why: cleared its own bar across many repos. Caveat: current code not yet dogfooded, no precision gate (#31/#32).

@@ -13,7 +13,7 @@
   --bg:#f6f7f9; --grid:#e3e6ea; --fg:#1c2024; --muted:#6b7280;
   --panel:#ffffff; --line:#cbd2d9; --edge:#98a2b3; --accent:#2f6fd0;
   --goal:#1f8a54; --feature:#2f6fd0; --idea:#6b7280; --constraint:#c0392b;
-  --rootline:#b9c3d4; --plusbg:#ffffff;
+  --rootline:#b9c3d4; --plusbg:#ffffff; --ring:rgba(47,111,208,.22);
   --shadow:0 1px 2px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
   --node-w:260px;
 }
@@ -22,7 +22,7 @@
     --bg:#15181c; --grid:#22262c; --fg:#e6e9ee; --muted:#9aa4b2;
     --panel:#1c2026; --line:#333a44; --edge:#5b6675; --accent:#6ea8ff;
     --goal:#4ec98a; --feature:#6ea8ff; --idea:#9aa4b2; --constraint:#ff7d6b;
-    --rootline:#3d4654; --plusbg:#1c2026;
+    --rootline:#3d4654; --plusbg:#1c2026; --ring:rgba(110,168,255,.26);
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
   }
 }
@@ -94,13 +94,15 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 }
 .node.d0 .body { text-align:center; }
 
-/* everything else is plain text — the connector carries the branch colour */
+/* everything else is plain text — the connector carries the branch colour.
+   The trailing padding is clearance for the ⊕ plug, which sits 11px inside the
+   node's right edge and would otherwise be drawn over the last character. */
 .node.d1 .cap, .node.deep .cap {
-  font-size:14.5px; color:var(--fg); padding:4px 2px 4px 11px;
+  font-size:14.5px; color:var(--fg); padding:4px 15px 4px 11px;
 }
 .node.d1 .body, .node.deep .body { margin-left:11px; }
 /* nodes on the left of the root read right-to-left */
-.node.side-l .cap { text-align:right; padding:4px 11px 4px 2px; }
+.node.side-l .cap { text-align:right; padding:4px 11px 4px 15px; }
 .node.side-l .body { margin-left:0; margin-right:11px; text-align:right; }
 
 /* constraints get the one deviation from the plain-text rule — "must not"
@@ -117,12 +119,35 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 .node.sel .cap { outline:2px solid var(--accent); outline-offset:3px; border-radius:5px; }
 .node.editing { cursor:text; }
 .node.editing .txt {
-  outline:none; background:var(--panel); border:1.5px solid var(--c);
+  outline:none; background:var(--panel); border:1.5px solid var(--accent);
   border-radius:10px; padding:8px 12px; min-width:170px; min-height:1.6em;
-  box-shadow:var(--shadow); white-space:pre-wrap; overflow-wrap:anywhere;
+  box-shadow:var(--shadow), 0 0 0 4px var(--ring);
+  caret-color:var(--accent); white-space:pre-wrap; overflow-wrap:anywhere;
   font-size:14.5px; color:var(--fg);
 }
+/* Editing must not demote the root: losing its size and weight mid-type made
+   the box read as a label rather than the field you're typing in. */
+.node.d0.editing .txt {
+  font-size:16px; font-weight:700; text-align:center;
+  min-width:190px; padding:16px 22px;
+}
 .node.editing .txt:empty::before { content:"Type…"; color:var(--muted); }
+
+/* The answer to "how do I edit this?" has to sit next to the box, not in a
+   help panel — one muted line under whichever node is selected. */
+.node .tip {
+  position:absolute; top:100%; left:0; margin-top:7px;
+  font-size:11.5px; line-height:1.4; color:var(--muted); white-space:nowrap;
+  pointer-events:none; opacity:0;
+}
+.node.sel .tip, .node.editing .tip { opacity:1; }
+.node .tip .t-ed { display:none; }
+.node.editing .tip .t-sel { display:none; }
+.node.editing .tip .t-ed { display:inline; }
+.node.d0 .tip { left:50%; transform:translateX(-50%); }
+.node.side-l .tip { left:auto; right:0; }
+.node.d0.side-l .tip { left:50%; right:auto; }
+.node .tip kbd { font-size:10.5px; padding:0 4px; border-bottom-width:1px; }
 
 /* One control per side, doing double duty so the edge isn't cluttered:
    CLICK adds a child on that side (Lucid's ⊕), DRAG connects to an existing node. */
@@ -212,12 +237,13 @@ kbd {
 <div class="panel" id="help">
   <h2>Keys</h2>
   <div class="body">
-    <kbd>⊕</kbd><span>add an idea on that side of a node (drag it to connect two instead)</span>
+    <kbd>type</kbd><span><strong>edit a selected node</strong> — typing replaces its text</span>
+    <kbd>click ×2</kbd><span>edit a node (select it, then click again — or double-click)</span>
+    <kbd>+</kbd><span>add an idea on that side of a node (drag it to connect two instead)</span>
     <kbd>Enter</kbd><span>commit + new sibling (<kbd>Shift</kbd>+<kbd>Enter</kbd> = new line)</span>
     <kbd>Tab</kbd><span>commit + new child</span>
     <kbd>Ctrl</kbd>+<kbd>↑↓←→</kbd><span>new connected node in that direction</span>
-    <kbd>drag ⊕</kbd><span>connect two existing nodes</span>
-    <kbd>double-click</kbd><span>edit a node</span>
+    <kbd>drag +</kbd><span>connect two existing nodes</span>
     <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd><span>goal · feature · idea · constraint</span>
     <kbd>Esc</kbd><span>commit / deselect</span>
     <kbd>Del</kbd><span>delete selected node</span>
@@ -360,7 +386,7 @@ function render() {
       el = document.createElement("div");
       el.id = n.id;
       el.tabIndex = 0;
-      el.innerHTML = `<div class="txt"></div>`
+      el.innerHTML = `<div class="txt"></div><div class="tip"></div>`
         + `<div class="plug l" data-side="l" title="Add an idea (drag to connect)">+</div>`
         + `<div class="plug r" data-side="r" title="Add an idea (drag to connect)">+</div>`;
       world.appendChild(el);
@@ -388,6 +414,11 @@ function render() {
       txt.innerHTML = `<div class="cap">${escapeHtml(cap)}</div>`
         + (body ? `<div class="body">${escapeHtml(body)}</div>` : "");
     }
+    // Which line shows is left to CSS: beginEdit/endEdit toggle the class
+    // outside of render(), so anything computed here would lag a frame behind.
+    el.querySelector(".tip").innerHTML =
+      `<span class="t-sel">just type, or <kbd>Enter</kbd> / double-click to edit</span>`
+      + `<span class="t-ed"><kbd>Enter</kbd> sibling · <kbd>Tab</kbd> child · <kbd>Esc</kbd> done</span>`;
     el.style.left = n.x + "px";
     el.style.top = n.y + "px";
     n.h = el.offsetHeight;
@@ -553,11 +584,12 @@ stage.addEventListener("pointerdown", (ev) => {
     return;
   }
   if (nodeEl) {                                           // move a node
+    const wasSel = S.sel === nodeEl.id;
     select(nodeEl.id);
     if (nodeEl.classList.contains("editing")) return;
     ev.preventDefault();
     const n = nodeOf(nodeEl.id), p = toWorld(ev.clientX, ev.clientY);
-    drag = { kind: "node", id: nodeEl.id, ox: p.x - n.x, oy: p.y - n.y, moved: false };
+    drag = { kind: "node", id: nodeEl.id, ox: p.x - n.x, oy: p.y - n.y, moved: false, wasSel };
     stage.setPointerCapture(ev.pointerId);
     return;
   }
@@ -595,8 +627,11 @@ stage.addEventListener("pointerup", (ev) => {
   if (drag.kind === "pan" && !drag.moved) {
     // A stray click on the canvas just deselects — it never makes a node.
     S.sel = null; render();
-  } else if (drag.kind === "node" && drag.moved) {
-    markDirty();
+  } else if (drag.kind === "node") {
+    // Click a node that was already selected → edit it. Same one-click-select,
+    // click-again-to-edit rhythm as every other canvas tool.
+    if (drag.moved) markDirty();
+    else if (drag.wasSel) beginEdit(drag.id);
   } else if (drag.kind === "wire") {
     ghost.style.display = "none";
     world.querySelectorAll(".node.drop").forEach((el) => el.classList.remove("drop"));
@@ -681,7 +716,17 @@ document.addEventListener("keydown", (ev) => {
     ev.preventDefault(); removeNode(S.sel); return render();
   }
   const k = KINDS[Number(ev.key) - 1];
-  if (k) { nodeOf(S.sel).kind = k; markDirty(); render(); }
+  if (k) { nodeOf(S.sel).kind = k; markDirty(); render(); return; }
+
+  // Typing over a selected node replaces its text. Every mind-map tool works
+  // this way, and it's the answer people reach for first when a box won't take
+  // input — leaving it to double-click alone made editing look impossible.
+  if (ev.key.length === 1 && !meta && !ev.altKey) {
+    ev.preventDefault();
+    me.text = "";
+    beginEdit(S.sel);
+    document.execCommand("insertText", false, ev.key);
+  }
 });
 
 /* --------------------------------------------------------------- canvas io */
@@ -835,7 +880,7 @@ function seedRoot() {
   render();
   select(n.id, true);
   document.execCommand?.("selectAll", false, null);   // typing replaces it
-  status("type your goal — ⊕ or Tab to branch, ? for keys");
+  status("type your goal — Tab or + to branch, ? for keys");
 }
 </script>
 </body>

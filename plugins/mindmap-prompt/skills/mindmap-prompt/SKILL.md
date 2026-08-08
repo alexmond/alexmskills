@@ -18,15 +18,19 @@ produces the same prompt.
 python3 <plugin>/scripts/serve.py --cwd .
 ```
 
-Opens `http://127.0.0.1:8770/`. A fresh map starts with one root node — type over it, then branch with `⊕`, `Tab` or `Enter`.
+Opens `http://127.0.0.1:8770/`. A fresh map starts with one root node, already
+focused — type over it, then branch with `Tab`, `Enter` or the `+` handle. To edit any
+node later, select it and just start typing.
 
 | Key | Does |
 |---|---|
-| `⊕` on a node | add an idea on that side (a fresh map starts with one root to type over) |
+| **just type** | **edit the selected node** — typing replaces its text |
+| click, click again | edit a node (or double-click) |
+| `+` on a node | add an idea on that side (a fresh map starts with one root to type over) |
 | `Enter` | commit + new sibling (`Shift+Enter` = new line inside a node) |
 | `Tab` | commit + new child |
 | `Ctrl/Cmd`+arrow | new connected node in that direction |
-| drag `⊕` to another node | connect two nodes (a cross-link) |
+| drag `+` to another node | connect two nodes (a cross-link) |
 | `1` `2` `3` `4` | goal · feature · idea · constraint |
 | `Ctrl/Cmd+S` | save the map |
 | `Ctrl/Cmd+Enter` | validate + compile |
