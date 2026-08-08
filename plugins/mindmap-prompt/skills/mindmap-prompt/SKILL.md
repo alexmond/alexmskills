@@ -31,11 +31,30 @@ node later, select it and just start typing.
 | `Tab` | commit + new child |
 | `Ctrl/Cmd`+arrow | new connected node in that direction |
 | drag `+` to another node | connect two nodes (a cross-link) |
+| `✦` on a node, or `Ctrl/Cmd+.` | expand it with `claude -p` (see below) |
 | `1` `2` `3` `4` | goal · feature · idea · constraint |
 | `Ctrl/Cmd+S` | save the map |
 | `Ctrl/Cmd+Enter` | validate + compile |
 
 Maps are saved to `.claude/mindmap/<name>.canvas` in the current repo.
+
+## ✦ Expanding an idea
+
+Select a node, press `✦` (or `Ctrl/Cmd+.`), and the node is handed to `claude -p`
+running **in this repo** — so the project's `CLAUDE.md` and vocabulary shape the
+answer. Quick actions: *Expand into ideas*, *Break into steps*, *Name constraints*
+(all add children), *Sharpen wording*, *Add done-criteria* (both rewrite the node).
+Free-text works too.
+
+- **The map is the context** — the goal, ancestor chain, siblings and existing
+  children travel with the request. An idea expanded without its goal is generic.
+- **Nothing is applied until the user presses the apply button.** Results sit in
+  the panel; closing it leaves the map untouched.
+- **Every tool is denied** (`--allowed-tools ""`), so the subprocess reads the
+  project and writes prose — it cannot touch a file.
+
+The control is hidden when the `claude` CLI isn't on `PATH`. `serve.py --no-ai`
+disables it; `--ai-model <name>` picks a different model.
 
 ## The four kinds
 
@@ -107,8 +126,11 @@ because that's content the user wrote that won't reach the prompt.
 
 ## Notes
 
-- **Nothing leaves the machine.** The page makes no external requests; the server
-  binds `127.0.0.1` only.
+- **Capture and compile are offline.** The page makes no external requests and the
+  server binds `127.0.0.1` only. The one exception is the `✦` expander: it shells
+  out to `claude -p`, which reaches Anthropic like any other Claude Code turn and
+  sends the node plus its surrounding map. Nothing is sent unless you press it, and
+  `serve.py --no-ai` removes the control entirely.
 - **State lives in the consuming repo** (`.claude/mindmap/`), never in the plugin
   directory — an installed plugin is a read-only cache.
 - **`.canvas` is JSON Canvas 1.0** — plain JSON, diffs cleanly in git, and opens in

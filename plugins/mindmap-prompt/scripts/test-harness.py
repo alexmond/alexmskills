@@ -22,6 +22,11 @@ mm_mod = importlib.util.module_from_spec(_spec)
 sys.modules["_mm"] = mm_mod
 _spec.loader.exec_module(mm_mod)
 
+_sspec = importlib.util.spec_from_file_location("_srv", HERE / "serve.py")
+srv_mod = importlib.util.module_from_spec(_sspec)
+sys.modules["_srv"] = srv_mod
+_sspec.loader.exec_module(srv_mod)
+
 _failures: list[str] = []
 
 
@@ -191,6 +196,43 @@ def t_cli_roundtrip():
               f"compile={rc_c} validate={rc_v} bad={rc_bad}")
 
 
+def t_ai_reply_parsing():
+    """`claude -p` is asked for JSON and mostly obliges — but it also fences it,
+    prefaces it, or adds a sign-off. Every one of those has to still parse."""
+    x = srv_mod._extract_json
+    cases = [
+        ('{"ideas": ["a", "b"]}', ["a", "b"]),
+        ('```json\n{"ideas": ["a", "b"]}\n```', ["a", "b"]),
+        ('Here you go:\n{"ideas": ["a", "b"]}\nHope that helps!', ["a", "b"]),
+        ('{"ideas": ["a", "b"]}\n\nLet me know if you want more.', ["a", "b"]),
+    ]
+    ok = all((x(raw) or {}).get("ideas") == want for raw, want in cases)
+    check("AI replies parse through fences, preambles and sign-offs", ok,
+          str([(r[:24], x(r)) for r, _ in cases]) if not ok else "")
+    # Garbage must be None, never a half-built dict the caller would trust.
+    check("unparseable AI replies are rejected, not guessed at",
+          x("I can't help with that.") is None and x("") is None and x("[1,2]") is None)
+
+
+def t_ai_prompt_carries_the_map():
+    """An idea expanded without its goal is a generic idea. The prompt has to
+    carry the map, and it must not leak the JSON contract for the wrong mode."""
+    ctx = {"goal": "Ship dark mode", "path": ["Ship dark mode", "Theme toggle"],
+           "siblings": ["Colour palette"], "children": ["Persist choice"]}
+    p = srv_mod._ai_prompt("expand", "Toggle control", "", ctx, 4)
+    check("the expand prompt carries goal, ancestry, siblings and children",
+          all(s in p for s in ("Ship dark mode", "Ship dark mode > Theme toggle",
+                               "Colour palette", "Persist choice", '{"ideas"')),
+          p)
+    r = srv_mod._ai_prompt("rewrite", "Toggle control", "", ctx, 4)
+    check("rewrite asks for one text field, never an idea list",
+          '{"text"' in r and '{"ideas"' not in r, r)
+    # An empty map is the common first case; it must not render "None".
+    bare = srv_mod._ai_prompt("expand", "Anything", "", {}, 4)
+    check("a map with no goal yet still produces a clean prompt",
+          "(not set yet)" in bare and "None" not in bare, bare)
+
+
 CHECKS = [
     t_golden_fixture,
     t_bfs_ownership,
@@ -203,6 +245,8 @@ CHECKS = [
     t_orphans_kept_on_request,
     t_ignores_non_text_nodes,
     t_cli_roundtrip,
+    t_ai_reply_parsing,
+    t_ai_prompt_carries_the_map,
 ]
 
 

@@ -7,6 +7,39 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-08
+
+### Added
+
+- **mindmap-prompt 0.2.0** — **✦ expand a node with `claude -p`.** Select any node,
+  press `✦` (or `Ctrl/Cmd`+`.`), and describe what you want — or take a quick action:
+  *Expand into ideas*, *Break into steps*, *Name constraints* (each adds children),
+  *Sharpen wording*, *Add done-criteria* (each rewrites the node). Three decisions
+  shape it:
+  - **The map is the context.** The goal, the ancestor chain, the siblings and the
+    node's existing children all travel with the request. An idea expanded without
+    knowing the goal it hangs off is a generic idea.
+  - **Nothing is applied until you say so.** Results land in the panel; you press
+    *Add to map* or *Replace the text*. Closing the panel leaves the map untouched.
+  - **Every tool is denied** (`--allowed-tools ""`). The subprocess runs in your repo
+    so `CLAUDE.md` shapes the answer, but it reads the project and writes prose — it
+    cannot touch a file. `argv` is a list, so nothing reaches a shell.
+
+  New `GET /api/caps` and `POST /api/ai` on the local server; `serve.py` gains
+  `--no-ai` and `--ai-model`. The ✦ control is **hidden outright** when the `claude`
+  CLI isn't on `PATH` — a button that can only fail is worse than no button. Applied
+  ideas fan out centred on their parent and the view pans to bring them on screen.
+
+  Tests are split by cost: `make test-canvas` stubs `/api/ai` and covers the wiring
+  (panel placement, context payload, preview-before-apply, error surfacing) for free;
+  the new `make test-ai` runs the same flow against the live CLI and skips cleanly
+  when `claude` or Playwright is absent. Five Python checks cover reply parsing —
+  fenced, prefaced and signed-off JSON all have to survive.
+
+  **Privacy note:** capture and compile remain fully offline, but ✦ reaches Anthropic
+  like any other Claude Code turn. Docs updated to say so rather than keep claiming
+  nothing leaves the machine.
+
 ## 2026-08-07
 
 ### Fixed

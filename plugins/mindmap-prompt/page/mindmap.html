@@ -13,7 +13,7 @@
   --bg:#f6f7f9; --grid:#e3e6ea; --fg:#1c2024; --muted:#6b7280;
   --panel:#ffffff; --line:#cbd2d9; --edge:#98a2b3; --accent:#2f6fd0;
   --goal:#1f8a54; --feature:#2f6fd0; --idea:#6b7280; --constraint:#c0392b;
-  --rootline:#b9c3d4; --plusbg:#ffffff; --ring:rgba(47,111,208,.22);
+  --rootline:#b9c3d4; --plusbg:#ffffff; --ring:rgba(47,111,208,.22); --spark:#7c4dcc;
   --shadow:0 1px 2px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
   --node-w:260px;
 }
@@ -22,7 +22,7 @@
     --bg:#15181c; --grid:#22262c; --fg:#e6e9ee; --muted:#9aa4b2;
     --panel:#1c2026; --line:#333a44; --edge:#5b6675; --accent:#6ea8ff;
     --goal:#4ec98a; --feature:#6ea8ff; --idea:#9aa4b2; --constraint:#ff7d6b;
-    --rootline:#3d4654; --plusbg:#1c2026; --ring:rgba(110,168,255,.26);
+    --rootline:#3d4654; --plusbg:#1c2026; --ring:rgba(110,168,255,.26); --spark:#b294f5;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
   }
 }
@@ -166,6 +166,24 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
 .node .plug:hover { border-color:var(--accent); color:var(--accent); }
 .node.drop .cap { outline:2px solid var(--accent); outline-offset:3px; }
 
+/* ✦ — hand this node to `claude -p`. Sits above the node so it never fights
+   the ⊕ plugs for the left/right edges. Hidden outright when the server says
+   the CLI isn't there: a button that can only fail is worse than no button. */
+.node .spark {
+  position:absolute; top:-13px; right:-6px; width:24px; height:24px;
+  border-radius:50%; background:var(--panel); border:1.5px solid var(--rootline);
+  color:var(--spark); cursor:pointer; opacity:0; z-index:2;
+  transition:opacity .12s, border-color .12s, transform .12s;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; line-height:1; user-select:none;
+}
+.node.side-l .spark { right:auto; left:-6px; }
+.node:hover .spark, .node.sel .spark { opacity:1; }
+.node .spark:hover { border-color:var(--spark); transform:scale(1.12); }
+body.no-ai .spark { display:none; }
+.node.thinking .cap { animation:pulse 1.1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.45; } }
+
 /* ---------------------------------------------------------------- panels */
 .panel {
   position:fixed; right:16px; top:68px; width:min(460px, 44vw); max-height:calc(100vh - 96px);
@@ -173,6 +191,37 @@ button.primary { background:var(--accent); border-color:var(--accent); color:#ff
   box-shadow:var(--shadow); z-index:25; display:none; flex-direction:column;
 }
 .panel.open { display:flex; }
+
+/* The ✦ panel follows the node instead of docking right: you're reasoning about
+   one idea, and the answer should land next to it. */
+#ai {
+  position:fixed; width:340px; right:auto; top:auto; z-index:40;
+  border-color:var(--spark);
+}
+#ai h2 { color:var(--spark); display:flex; align-items:center; gap:7px; }
+#ai .body { padding:10px; display:block; }
+#ai textarea {
+  width:100%; min-height:52px; resize:vertical; font:inherit; font-size:13.5px;
+  color:var(--fg); background:var(--bg); border:1px solid var(--line);
+  border-radius:8px; padding:8px 10px;
+}
+#ai textarea:focus-visible { outline:2px solid var(--spark); outline-offset:1px; }
+#ai .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+#ai .acts button {
+  font-size:12px; padding:4px 9px; border-radius:999px; color:var(--muted);
+}
+#ai .acts button:hover { border-color:var(--spark); color:var(--spark); }
+#ai .out {
+  margin-top:10px; padding-top:10px; border-top:1px solid var(--line);
+  font-size:13.5px; display:none;
+}
+#ai .out.show { display:block; }
+#ai .out ul { margin:0; padding-left:18px; }
+#ai .out li { padding:2px 0; }
+#ai .out .new { font-weight:600; }
+#ai .note { font-size:11.5px; color:var(--muted); margin-top:8px; }
+#ai .note code { white-space:nowrap; font-size:11px; }
+#ai .foot { padding:9px 10px; }
 .panel h2 { font-size:14px; margin:0; padding:12px 14px; border-bottom:1px solid var(--line); }
 .panel .body { padding:12px 14px; overflow:auto; }
 .panel .foot { padding:10px 14px; border-top:1px solid var(--line); display:flex; gap:8px; }
@@ -234,6 +283,29 @@ kbd {
   </div>
 </div>
 
+<div class="panel" id="ai">
+  <h2>✦ <span id="ai-node">Expand this idea</span></h2>
+  <div class="body">
+    <textarea id="ai-ask" rows="2" placeholder="Describe what you want…"
+              aria-label="Describe what you want"></textarea>
+    <div class="acts">
+      <button data-ai="expand" data-ask="">Expand into ideas</button>
+      <button data-ai="expand" data-ask="Break this into the concrete steps it takes to build.">Break into steps</button>
+      <button data-ai="expand" data-ask="Name what must NOT change or break here.">Name constraints</button>
+      <button data-ai="rewrite" data-ask="">Sharpen wording</button>
+      <button data-ai="rewrite" data-ask="Restate this and add a measurable definition of done.">Add done-criteria</button>
+    </div>
+    <div class="out" id="ai-out"></div>
+    <div class="note" id="ai-note">Runs <code>claude -p</code> in this repo with every tool denied — it reads, it never writes.</div>
+  </div>
+  <div class="foot">
+    <button id="ai-go" class="primary">Ask ✦</button>
+    <button id="ai-apply" style="display:none">Add to map</button>
+    <span class="grow"></span>
+    <button data-close="ai">Close</button>
+  </div>
+</div>
+
 <div class="panel" id="help">
   <h2>Keys</h2>
   <div class="body">
@@ -244,6 +316,7 @@ kbd {
     <kbd>Tab</kbd><span>commit + new child</span>
     <kbd>Ctrl</kbd>+<kbd>↑↓←→</kbd><span>new connected node in that direction</span>
     <kbd>drag +</kbd><span>connect two existing nodes</span>
+    <kbd>✦</kbd><span>expand the node with <code>claude -p</code> (<kbd>Ctrl</kbd>+<kbd>.</kbd>)</span>
     <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd><span>goal · feature · idea · constraint</span>
     <kbd>Esc</kbd><span>commit / deselect</span>
     <kbd>Del</kbd><span>delete selected node</span>
@@ -314,6 +387,25 @@ const toWorld = (cx, cy) => {
 
 function applyView() {
   world.style.transform = `translate(${S.pan.x}px, ${S.pan.y}px) scale(${S.zoom})`;
+}
+
+/** Pan the least amount that brings these nodes fully on screen. Ideas that
+ *  land outside the viewport may as well not have been added. */
+function ensureVisible(nodes, margin = 44) {
+  nodes = nodes.filter(Boolean);
+  if (!nodes.length) return;
+  const r = stage.getBoundingClientRect();
+  const x0 = Math.min(...nodes.map((n) => n.x));
+  const x1 = Math.max(...nodes.map((n) => n.x + (n.w || NODE_W)));
+  const y0 = Math.min(...nodes.map((n) => n.y));
+  const y1 = Math.max(...nodes.map((n) => n.y + (n.h || 60)));
+  const l = x0 * S.zoom + S.pan.x, rt = x1 * S.zoom + S.pan.x;
+  const t = y0 * S.zoom + S.pan.y, b = y1 * S.zoom + S.pan.y;
+  if (rt > r.width - margin) S.pan.x -= rt - (r.width - margin);
+  if (l < margin) S.pan.x += margin - l;          // left edge wins on a tall fan
+  if (b > r.height - margin) S.pan.y -= b - (r.height - margin);
+  if (t < margin) S.pan.y += margin - t;
+  applyView();
 }
 
 /** Branches leave and enter from the sides, so the map fans horizontally the
@@ -387,6 +479,7 @@ function render() {
       el.id = n.id;
       el.tabIndex = 0;
       el.innerHTML = `<div class="txt"></div><div class="tip"></div>`
+        + `<div class="spark" title="Expand this idea with claude -p">✦</div>`
         + `<div class="plug l" data-side="l" title="Add an idea (drag to connect)">+</div>`
         + `<div class="plug r" data-side="r" title="Add an idea (drag to connect)">+</div>`;
       world.appendChild(el);
@@ -577,6 +670,12 @@ stage.addEventListener("pointerdown", (ev) => {
   const cur = editingId();
   if (cur && (!nodeEl || nodeEl.id !== cur)) endEdit(cur);
 
+  if (ev.target.closest(".spark") && nodeEl) {   // ✦ — never starts a drag
+    ev.preventDefault();
+    select(nodeEl.id);
+    return openAI(nodeEl.id);
+  }
+
   if (plug && nodeEl) {              // ⊕ — click adds a child, drag connects
     ev.preventDefault();
     drag = { kind: "wire", from: nodeEl.id, side: plug.dataset.side || "r", moved: false };
@@ -676,6 +775,11 @@ document.addEventListener("keydown", (ev) => {
 
   if (meta && ev.key.toLowerCase() === "s") { ev.preventDefault(); return save(); }
   if (meta && ev.key === "Enter") { ev.preventDefault(); return compile(); }
+  if (meta && ev.key === ".") {
+    ev.preventDefault();
+    if (editing) endEdit(editing);
+    return (S.sel || editing) && openAI(S.sel || editing);
+  }
   if (inField) return;
 
   if (editing) {
@@ -727,6 +831,151 @@ document.addEventListener("keydown", (ev) => {
     beginEdit(S.sel);
     document.execCommand("insertText", false, ev.key);
   }
+});
+
+/* ------------------------------------------------------------------- ✦ ai
+   One node in, ideas out. The map is the context: a node expanded without
+   knowing the goal it hangs off produces generic filler, so the ancestor chain,
+   the siblings and the existing children all go along with it.
+
+   Nothing is applied until you press the apply button — `claude` writes to the
+   panel, you decide whether it reaches the map. */
+const AI = { node: null, mode: "expand", result: null };
+
+/** Goal + ancestor chain + neighbours, walked back up the spanning tree. */
+function aiContext(id) {
+  const path = [];
+  for (let cur = parentOf(id); cur; cur = parentOf(cur)) {
+    path.unshift((nodeOf(cur) || {}).text || "");
+    if (path.length > 6) break;                       // a deep map, not a novel
+  }
+  const p = parentOf(id);
+  const root = rootNode();
+  return {
+    goal: root ? root.text : "",
+    path,
+    siblings: p ? childEdges(p).filter((e) => e.toNode !== id)
+      .map((e) => nodeOf(e.toNode).text) : [],
+    children: childEdges(id).map((e) => nodeOf(e.toNode).text),
+  };
+}
+
+function openAI(id) {
+  if (document.body.classList.contains("no-ai")) return;
+  AI.node = id; AI.result = null;
+  const n = nodeOf(id);
+  $("#ai-node").textContent = n.text ? `Expand "${n.text.split("\n")[0]}"` : "Expand this idea";
+  $("#ai-out").className = "out";
+  $("#ai-out").textContent = "";
+  $("#ai-apply").style.display = "none";
+  $("#ai").classList.add("open");
+  placeAI(id);
+  $("#ai-ask").focus();
+}
+
+/** Park the panel BESIDE the node, never over it — you're reading the two
+ *  together, and a panel that hides the idea it's expanding is useless. */
+function placeAI(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const r = el.getBoundingClientRect(), p = $("#ai");
+  const w = 340, h = p.offsetHeight || 300, GAP = 16;
+  const right = r.right + GAP, left = r.left - w - GAP;
+  p.style.left = (right + w + 10 <= innerWidth ? right
+                  : left >= 10 ? left
+                  : Math.max(10, Math.min(innerWidth - w - 10, r.left))) + "px";
+  p.style.top = Math.max(62, Math.min(innerHeight - h - 10,
+                                      r.top + r.height / 2 - h / 2)) + "px";
+}
+
+async function askAI(mode, ask) {
+  if (!AI.node) return;
+  const n = nodeOf(AI.node);
+  if (!n) return;
+  const instruction = (ask !== undefined ? ask : $("#ai-ask").value).trim();
+  AI.mode = mode;
+  const el = document.getElementById(AI.node);
+  el && el.classList.add("thinking");
+  $("#ai-go").disabled = true;
+  $("#ai-out").className = "out show";
+  $("#ai-out").textContent = "thinking…";
+  status("asking claude…");
+  try {
+    const r = await api("/api/ai", {
+      mode, text: n.text, instruction, n: 5, context: aiContext(AI.node),
+    });
+    AI.result = r;
+    showAI(r);
+    status("");
+  } catch (err) {
+    AI.result = null;
+    $("#ai-out").textContent = "✗ " + err.message;
+    $("#ai-apply").style.display = "none";
+    status("");
+  } finally {
+    el && el.classList.remove("thinking");
+    $("#ai-go").disabled = false;
+  }
+}
+
+function showAI(r) {
+  const out = $("#ai-out");
+  if (r.mode === "rewrite") {
+    out.innerHTML = `<div class="new">${escapeHtml(r.text)}</div>`;
+    $("#ai-apply").textContent = "Replace the text";
+  } else {
+    out.innerHTML = "<ul>" + r.ideas.map((i) => `<li>${escapeHtml(i)}</li>`).join("") + "</ul>";
+    $("#ai-apply").textContent = `Add ${r.ideas.length} to map`;
+  }
+  $("#ai-apply").style.display = "";
+  placeAI(AI.node);
+}
+
+function applyAI() {
+  const r = AI.result, id = AI.node;
+  if (!r || !id || !nodeOf(id)) return;
+  if (r.mode === "rewrite") {
+    nodeOf(id).text = r.text;
+    markDirty(); render();
+    status("rewrote the node");
+  } else {
+    const parent = nodeOf(id), side = sideOf(parent);
+    const had = childEdges(id).map((e) => nodeOf(e.toNode));
+    let { x, y } = childPos(parent, side);
+    // Stack under whatever this node already has, so nothing lands on top of it.
+    if (had.length) y = Math.max(...had.map((k) => below(k)));
+
+    const made = [];
+    for (const idea of r.ideas) {
+      const n = addNode({ x: Math.round(x), y: Math.round(y), kind: "idea", text: idea });
+      connect(id, n.id);
+      render();                       // measure it, so the next one clears it
+      made.push(n);
+      y = n.y + (n.h || 60) + 26;
+    }
+    // Centre the new fan on its parent. Children hanging strictly downward read
+    // as a list; a mind map balances them around the branch they leave from.
+    if (!had.length && made.length) {
+      const top = made[0].y, bot = made[made.length - 1].y + (made[made.length - 1].h || 60);
+      const dy = Math.round(parent.y + (parent.h || 60) / 2 - (top + bot) / 2);
+      made.forEach((n) => { n.y += dy; });
+    }
+    markDirty(); render();
+    ensureVisible([parent, ...made]);
+    status(`added ${r.ideas.length} ideas`);
+  }
+  AI.result = null;
+  $("#ai").classList.remove("open");
+}
+
+$("#ai-go").onclick = () => askAI(AI.mode === "rewrite" ? "rewrite" : "expand");
+$("#ai-apply").onclick = applyAI;
+$("#ai-ask").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); askAI("expand"); }
+  ev.stopPropagation();                       // canvas shortcuts stay off this box
+});
+document.querySelectorAll("#ai .acts button").forEach((b) => {
+  b.onclick = () => askAI(b.dataset.ai, b.dataset.ask);
 });
 
 /* --------------------------------------------------------------- canvas io */
@@ -853,6 +1102,18 @@ document.querySelectorAll("[data-close]").forEach((b) => {
 addEventListener("beforeunload", (e) => { if (S.dirty) { e.preventDefault(); e.returnValue = ""; } });
 
 applyView();
+(async function caps() {
+  // Ask once whether `claude` is reachable. If it isn't, the ✦ control never
+  // renders rather than appearing and then failing on click.
+  try {
+    const c = await api("/api/caps");
+    if (!c.ai) {
+      document.body.classList.add("no-ai");
+      $("#ai-note").textContent = "✦ unavailable — " + (c.reason || "no claude CLI");
+    }
+  } catch { document.body.classList.add("no-ai"); }
+})();
+
 (async function boot() {
   const pre = new URLSearchParams(location.search).get("map");
   if (pre) {

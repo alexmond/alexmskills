@@ -18,6 +18,8 @@ import argparse
 import importlib.util
 import json
 import re
+import shutil
+import subprocess
 import sys
 import threading
 import webbrowser
@@ -30,6 +32,9 @@ HERE = Path(__file__).resolve().parent
 PAGE = HERE.parent / "page" / "mindmap.html"
 MAX_BODY = 4 * 1024 * 1024          # a mind map is text; 4 MB is already absurd
 SAFE_NAME = re.compile(r"^[\w][\w.-]{0,63}$")
+
+AI_TIMEOUT = 180                    # a cold `claude -p` is ~8s; be generous, then give up
+AI_MAX_IDEAS = 8
 
 _spec = importlib.util.spec_from_file_location("_mm", HERE / "mindmap.py")
 mindmap = importlib.util.module_from_spec(_spec)
@@ -54,9 +59,102 @@ def _safe(name: str) -> str:
     return name
 
 
+def _extract_json(out: str) -> dict | None:
+    """`claude -p` returns prose, and asking for JSON gets you JSON *plus*
+    whatever it felt like saying around it. Take the outermost object."""
+    out = out.strip()
+    if out.startswith("```"):
+        out = re.sub(r"^```[a-z]*\n?|```$", "", out, flags=re.MULTILINE).strip()
+    try:
+        obj = json.loads(out)
+        return obj if isinstance(obj, dict) else None
+    except json.JSONDecodeError:
+        pass
+    i, j = out.find("{"), out.rfind("}")
+    if i < 0 or j <= i:
+        return None
+    try:
+        obj = json.loads(out[i: j + 1])
+        return obj if isinstance(obj, dict) else None
+    except json.JSONDecodeError:
+        return None
+
+
+def _ai_prompt(mode: str, text: str, instruction: str, ctx: dict, n: int) -> str:
+    """One node's worth of context. The map is the point — an idea expanded
+    without knowing the goal it hangs off is a generic idea."""
+    lines = [
+        "You are expanding one node of a mind map. The map compiles into a "
+        "development prompt, so ideas must be concrete and buildable, never "
+        "motivational filler.",
+        "",
+        f"Map goal: {ctx.get('goal') or '(not set yet)'}",
+    ]
+    path = [p for p in (ctx.get("path") or []) if p]
+    if path:
+        lines.append("Path to this node: " + " > ".join(path))
+    sibs = [s for s in (ctx.get("siblings") or []) if s]
+    if sibs:
+        lines.append("Ideas already on the map here: " + "; ".join(sibs[:12]))
+    kids = [k for k in (ctx.get("children") or []) if k]
+    if kids:
+        lines.append("This node already has: " + "; ".join(kids[:12]))
+    lines += ["", f"The node to work on: {text or '(empty)'}", ""]
+
+    if mode == "rewrite":
+        lines += [
+            instruction or "Rewrite this node to be sharper and more specific.",
+            "",
+            "Keep it to one line under 12 words unless the node already has "
+            "several lines. Do not add a heading, quotes or trailing period.",
+            'Respond with ONLY this JSON and nothing else: {"text": "..."}',
+        ]
+    else:
+        lines += [
+            instruction or "Break this node into its concrete sub-ideas.",
+            "",
+            f"Give between 2 and {n} ideas. Each is a NEW child node: a short "
+            "noun phrase under 10 words, specific enough to act on, and not a "
+            "restatement of anything already listed above.",
+            'Respond with ONLY this JSON and nothing else: {"ideas": ["...", "..."]}',
+        ]
+    return "\n".join(lines)
+
+
+def run_claude(prompt: str, root: Path, model: str | None) -> tuple[dict | None, str]:
+    """Run `claude -p` in the repo so the project's CLAUDE.md informs the answer,
+    but with every tool denied — this expands ideas, it never touches the repo.
+
+    Returns (parsed, error). argv is a list, so nothing here reaches a shell.
+    """
+    exe = shutil.which("claude")
+    if not exe:
+        return None, "the `claude` CLI is not on PATH"
+    cmd = [exe, "-p", prompt, "--allowed-tools", "", "--output-format", "text"]
+    if model:
+        cmd += ["--model", model]
+    try:
+        proc = subprocess.run(
+            cmd, cwd=str(root), capture_output=True, text=True, timeout=AI_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return None, f"claude took longer than {AI_TIMEOUT}s"
+    except OSError as exc:
+        return None, f"could not run claude: {exc}"
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "").strip().splitlines()
+        return None, "claude exited %d: %s" % (proc.returncode, detail[-1] if detail else "no output")
+    parsed = _extract_json(proc.stdout)
+    if parsed is None:
+        return None, "could not read JSON out of the model's reply"
+    return parsed, ""
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     root: Path = Path.cwd()
+    ai_model: str | None = None
+    ai_disabled: bool = False
 
     # -------------------------------------------------- helpers
     def _send(self, code: int, body: bytes, ctype: str) -> None:
@@ -90,6 +188,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
             except OSError as exc:
                 return self._err(500, f"cannot read the page: {exc}")
+
+        if u.path == "/api/caps":
+            # The page hides the ✦ control when this says no, rather than
+            # offering a button that can only ever fail.
+            ok = not self.ai_disabled and shutil.which("claude") is not None
+            return self._json({
+                "ai": ok,
+                "reason": "" if ok else
+                          "disabled with --no-ai" if self.ai_disabled else
+                          "the `claude` CLI is not on PATH",
+            })
 
         if u.path == "/api/maps":
             names = sorted(p.name for p in maps_dir(self.root).glob("*.canvas"))
@@ -142,6 +251,40 @@ class Handler(BaseHTTPRequestHandler):
                 )
             return self._json(out)
 
+        if u.path == "/api/ai":
+            if self.ai_disabled:
+                return self._err(503, "the ✦ expander is disabled (--no-ai)")
+            mode = data.get("mode") or "expand"
+            if mode not in ("expand", "rewrite"):
+                return self._err(400, "mode must be 'expand' or 'rewrite'")
+            text = str(data.get("text") or "").strip()
+            instruction = str(data.get("instruction") or "").strip()
+            ctx = data.get("context") if isinstance(data.get("context"), dict) else {}
+            n = max(2, min(AI_MAX_IDEAS, int(data.get("n") or 4)))
+            if not text and not instruction:
+                return self._err(400, "nothing to work from — type an instruction first")
+
+            parsed, err = run_claude(_ai_prompt(mode, text, instruction, ctx, n),
+                                     self.root, self.ai_model)
+            if err:
+                return self._err(502, err)
+
+            if mode == "rewrite":
+                new = str(parsed.get("text") or "").strip()
+                if not new:
+                    return self._err(502, "the model returned no text")
+                return self._json({"mode": mode, "text": new})
+
+            ideas, seen = [], {text.lower()}
+            for raw in parsed.get("ideas") or []:
+                idea = str(raw or "").strip().lstrip("-•* ").strip()
+                if idea and idea.lower() not in seen:
+                    seen.add(idea.lower())
+                    ideas.append(idea)
+            if not ideas:
+                return self._err(502, "the model returned no ideas")
+            return self._json({"mode": mode, "ideas": ideas[:n]})
+
         return self._err(404, "not found")
 
 
@@ -151,9 +294,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cwd", default=".", help="repo whose .claude/mindmap/ holds the maps")
     ap.add_argument("--map", help="open this map on start")
     ap.add_argument("--no-open", action="store_true", help="don't launch a browser")
+    ap.add_argument("--ai-model", help="model for the ✦ expander (default: your claude default)")
+    ap.add_argument("--no-ai", action="store_true", help="disable the ✦ expander")
     args = ap.parse_args(argv)
 
     Handler.root = Path(args.cwd).resolve()
+    Handler.ai_model = args.ai_model
+    if args.no_ai:
+        Handler.ai_disabled = True
     maps_dir(Handler.root)
 
     try:

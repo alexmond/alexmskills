@@ -125,6 +125,7 @@ function check(name, ok, detail = "") {
       (await page.locator(".node.editing").count()) === 1);
     await page.keyboard.press("Escape");
 
+
     // --- Tab commits and creates a connected child -------------------------
     await page.locator(".node.d0").click();       // select the root (no Escape:
     await page.keyboard.press("Tab");             // Escape would deselect it)
@@ -202,7 +203,67 @@ function check(name, ok, detail = "") {
     fs.mkdirSync(path.join(HERE, "shots"), { recursive: true });
     await page.screenshot({ path: path.join(HERE, "shots", "canvas.png") });
 
-    check("no page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
+    // --- the ✦ expander ----------------------------------------------------
+    // /api/ai is stubbed: a real `claude -p` costs tokens and ~10s, and what
+    // needs guarding here is the wiring, not the model. `make test-ai` runs the
+    // same flow against the live CLI.
+    let asked = null;
+    await page.route("**/api/ai", async (route) => {
+      asked = JSON.parse(route.request().postData() || "{}");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ mode: asked.mode, ideas: ["Stub one", "Stub two"], text: "Stub rewrite" }),
+      });
+    });
+
+    await page.locator(".node.d1").first().click();      // reopening cleared the selection
+    check("✦ is offered on a node when the claude CLI is present",
+      await page.locator(".node.sel .spark").isVisible());
+    await page.locator(".node.sel .spark").click();
+    await page.waitForSelector("#ai.open", { timeout: 2000 });
+
+    const panelBox = await page.locator("#ai").boundingBox();
+    const nodeBox = await page.locator(".node.sel").boundingBox();
+    check("the ✦ panel sits beside its node, never on top of it",
+      panelBox.x >= nodeBox.x + nodeBox.width || panelBox.x + panelBox.width <= nodeBox.x,
+      `node=${Math.round(nodeBox.x)}..${Math.round(nodeBox.x + nodeBox.width)} panel=${Math.round(panelBox.x)}`);
+
+    const beforeAI = await page.locator(".node").count();
+    await page.locator("#ai .acts button", { hasText: "Break into steps" }).click();
+    await page.waitForSelector("#ai-out li", { timeout: 5000 });
+    check("the map's goal and ancestry are sent as context, not just the node",
+      asked && asked.context && asked.context.goal.startsWith("Ship dark mode") &&
+      Array.isArray(asked.context.path) && asked.context.path.length > 0,
+      JSON.stringify(asked && asked.context));
+    check("ideas are previewed, and nothing reaches the map until you apply",
+      (await page.locator("#ai-out li").count()) === 2 &&
+      (await page.locator(".node").count()) === beforeAI);
+
+    await page.locator("#ai-apply").click();
+    await page.waitForTimeout(250);
+    check("applying adds one connected node per idea",
+      (await page.locator(".node").count()) === beforeAI + 2 &&
+      (await page.locator(".node.orphan").count()) === 0);
+
+    // an error from the CLI has to surface, not vanish into a spinner
+    await page.unroute("**/api/ai");
+    await page.route("**/api/ai", (route) =>
+      route.fulfill({ status: 502, contentType: "text/plain", body: "claude exited 1: nope" }));
+    await page.locator(".node").last().click();
+    await page.locator(".node.sel .spark").click();
+    await page.waitForSelector("#ai.open");
+    await page.locator("#ai .acts button", { hasText: "Expand into ideas" }).click();
+    await page.waitForFunction(() => /✗/.test(document.querySelector("#ai-out").textContent),
+      null, { timeout: 5000 });
+    check("a failed call shows the reason instead of hanging",
+      /nope/.test(await page.locator("#ai-out").innerText()) &&
+      !(await page.locator("#ai-apply").isVisible()));
+    await page.unroute("**/api/ai");
+    await page.locator("[data-close=ai]").click();
+
+    const real = errors.filter((e) => !/502/.test(e));   // the ✦ failure case is deliberate
+    check("no page errors", real.length === 0, real.slice(0, 3).join(" | "));
   } finally {
     await browser.close();
     stop();

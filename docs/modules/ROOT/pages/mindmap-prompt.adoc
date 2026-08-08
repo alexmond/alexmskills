@@ -51,12 +51,36 @@ Capture is keyboard-first, because stopping to hunt for a toolbar is what breaks
 | `Tab` | commit + new child
 | `Ctrl/Cmd` + arrow | new connected node in that direction
 | drag `+` to another node | connect two nodes (a cross-link)
+| `✦` on a node / `Ctrl/Cmd` + `.` | expand it with `claude -p`
 | `1` `2` `3` `4` | goal · feature · idea · constraint
 | `Del` | delete the selected node
 | `Ctrl/Cmd+S` | save
 | `Ctrl/Cmd+Enter` | validate + compile
 | wheel / drag empty | zoom / pan
 |===
+
+== ✦ Expand an idea with Claude
+
+Select a node and hit its `✦` (or `Ctrl/Cmd` + `.`). Describe what you want, or take one of the quick actions, and the node is handed to `claude -p` running *in this repo* — so your `CLAUDE.md` and the project's own vocabulary shape the answer.
+
+[cols="1,3",options="header"]
+|===
+| Action | Gives you
+
+| *Expand into ideas* | 2–5 new child nodes under the selected one
+| *Break into steps* | the concrete steps the node takes to build
+| *Name constraints* | what must not change or break here
+| *Sharpen wording* | one rewritten line, replacing the node's text
+| *Add done-criteria* | the node restated with a measurable definition of done
+|===
+
+Three things make this safe to lean on:
+
+* *The map is the context.* The goal, the ancestor chain, the siblings and the node's existing children all travel with the request — an idea expanded without knowing the goal it hangs off is a generic idea.
+* *Nothing is applied until you say so.* Results land in the panel; you press *Add to map* or *Replace the text*. Close the panel and the map is untouched.
+* *Every tool is denied.* The subprocess runs with `--allowed-tools ""`, so it reads your project and writes prose — it cannot touch a file.
+
+The control disappears entirely when the `claude` CLI isn't on `PATH`, and `serve.py --no-ai` turns it off deliberately. `--ai-model <name>` picks a different model.
 
 == The four kinds
 
@@ -104,7 +128,8 @@ python3 <plugin>/scripts/mindmap.py compile  .claude/mindmap/feature.canvas -o p
 == Storage & privacy
 
 * Maps live in `.claude/mindmap/*.canvas` in the *consuming* repo — plain JSON, diffs cleanly, opens in Obsidian.
-* The page makes no external requests; the server binds `127.0.0.1` only.
+* The page itself makes no external requests and the server binds `127.0.0.1` only. Capture and compile are fully offline.
+* *The one exception is `✦`*, which shells out to `claude -p` — that call reaches Anthropic like any other Claude Code turn, and it sends the node plus its surrounding map. Nothing is sent unless you press it; `--no-ai` removes the control entirely.
 * Zero dependencies: hand-rolled SVG and DOM, a stdlib Python server.
 
 == Deliberately not
