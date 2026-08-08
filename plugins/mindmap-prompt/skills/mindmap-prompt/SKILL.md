@@ -1,6 +1,6 @@
 ---
 name: mindmap-prompt
-description: Think on a canvas, then compile the map into an organized prompt. Drop idea nodes, connect them, and turn the whole map into structured Markdown you can send to Claude — or save it as a JSON Canvas file and pick it up later. Use when the user says "mind map", "map this out", "brain dump", "let me sketch this first", "turn my notes into a prompt", or when a request is big and tangled enough that thinking visually beats writing one long paragraph.
+description: Think on a canvas, then compile the map into an organized prompt. Idea nodes connect freely and a deterministic compiler turns the whole map into structured Markdown; ✦ expands any node with `claude -p` running in the repo, so ideas stay grounded in the project. Maps save as JSON Canvas, so they are git-diffable and reworkable later. Use when the user says "mind map", "map this out", "brain dump", "let me sketch this first", "turn my notes into a prompt", "expand this idea", "flesh this out", or when a request is big and tangled enough that thinking visually beats writing one long paragraph.
 ---
 
 # mindmap-prompt

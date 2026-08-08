@@ -11,6 +11,17 @@ unreleased/rolling (no global version).
 
 ### Fixed
 
+- **mindmap-prompt 0.2.2** — the skill description still described 0.1.0. It never
+  mentioned the `✦` expander added in 0.2.0, so *"expand this idea"* or *"flesh this
+  out"* would not reach the skill — the feature existed but was undiscoverable from a
+  prompt. Added those triggers, plus the `✦` and JSON Canvas capabilities, and moved
+  the wording to third person (`description-second-person`).
+
+  Worth noting how this was found: the linter only flagged the pronoun. A description
+  that has drifted behind its own feature set is a staleness problem, not a form
+  problem, and no static check catches it — reading the description next to the
+  changelog does.
+
 - **prompt-coach 1.0.1** — description rewritten to advertise the say-it surface it
   already had. The body documents a dozen conversational entry points — `"coach pause
   10"`, `"coach off <rule-id>"`, `"disable praise"`, `"coach that was wrong"`,
