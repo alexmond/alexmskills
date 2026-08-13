@@ -1,6 +1,6 @@
 ---
 name: skill-linter
-description: Audit SKILL.md files against published skill-authoring guidance — frontmatter validity, whether the description actually says when to trigger, body size, progressive disclosure, and broken references. Use when the user says "lint my skills", "check my SKILL.md", "review this skill", "do my skills conform", "audit the marketplace", or is about to publish, rename, or graduate a skill. Use proactively right after writing or editing any SKILL.md, and whenever a skill turns out not to trigger when it should have. Learns: a defect it failed to catch becomes a new rule.
+description: Audit SKILL.md files against published skill-authoring guidance — frontmatter validity, whether the description actually says when to trigger, body size, progressive disclosure, and broken references. Use when the user says "lint my skills", "check my SKILL.md", "review this skill", "do my skills conform", "audit the marketplace", or is about to publish, rename, or graduate a skill. Use proactively right after writing or editing any SKILL.md, and whenever a skill turns out not to trigger when it should have. Self-learning — a defect it failed to catch becomes a new rule.
 ---
 
 # skill-linter

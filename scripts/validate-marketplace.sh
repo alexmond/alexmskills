@@ -108,6 +108,20 @@ validate_docs() {
     grep -q "xref:$page.adoc" "$index" || err "$name: $page.adoc is not linked from index.adoc"
   done < <(jq -r '.plugins[].name' "$mp")
 
+  # The README is the front door for anyone arriving from GitHub rather than the
+  # docs site. It drifted independently of index.adoc — screenshot-sweep shipped
+  # at 1.0.0 and was absent from both — so it gets the same check.
+  local readme="$root/README.md"
+  if [ -f "$readme" ]; then
+    while read -r name; do
+      case "$name" in *-beta) continue ;; esac   # beta plugins have their own section
+      grep -q "\[\`$name\`\](plugins/$name)" "$readme" \
+        || err "$name: no row in the README catalog table"
+      grep -q "/plugin install $name@alexmskills" "$readme" \
+        || err "$name: not in the README install list"
+    done < <(jq -r '.plugins[].name' "$mp")
+  fi
+
   # the other direction: a page nothing links to is a page nobody reads
   for f in "$pages"/*.adoc; do
     page="$(basename "$f" .adoc)"

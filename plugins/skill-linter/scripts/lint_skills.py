@@ -91,25 +91,47 @@ def parse_frontmatter(text: str) -> tuple[dict, str, int, str]:
     if end is None:
         return {}, text, 1, "frontmatter is never closed (missing the second ---)"
 
+    # A description routinely wraps over several lines, so all three scalar
+    # shapes have to work: plain (`key: text` continued by indented lines),
+    # folded (`>`), and literal (`|`). PLAIN is where the danger is — see below.
+    PLAIN, FOLDED, LITERAL = "plain", "folded", "literal"
+    # Real YAML rejects a bare `word: ` inside a plain scalar with "mapping
+    # values are not allowed here", and Claude Code then loads the skill with
+    # EMPTY metadata — it silently never triggers. This linter's own description
+    # shipped with "Learns: a defect it failed to catch becomes a new rule." and
+    # was called clean, because a lenient parser launders broken frontmatter.
+    NESTED_MAP = re.compile(r"^\s*([A-Za-z][\w -]{0,40}):(\s|$)")
+
     fm: dict[str, str] = {}
-    key, buf, folded = None, [], False
+    key, buf, mode = None, [], PLAIN
+
+    def flush() -> None:
+        if key is None:
+            return
+        joined = "\n".join(buf) if mode is LITERAL else " ".join(b for b in buf if b)
+        fm[key] = _scalar(joined.strip()) if mode is PLAIN else joined.strip()
+
     for raw in lines[1:end]:
         m = re.match(r"^([A-Za-z_][\w-]*):\s*(.*)$", raw)
         if m and not raw.startswith((" ", "\t")):
-            if key:
-                fm[key] = (" " if folded else "\n").join(buf).strip()
+            flush()
             key, rest = m.group(1), m.group(2).strip()
             if rest in (">", "|", ">-", "|-", ">+", "|+"):
-                buf, folded = [], rest[0] == ">"
+                buf, mode = [], (FOLDED if rest[0] == ">" else LITERAL)
             else:
-                fm[key], key, buf = _scalar(rest), None, []
+                buf, mode = [rest], PLAIN
         elif key is not None:
+            if mode is PLAIN and (hit := NESTED_MAP.match(raw)):
+                return {}, "\n".join(lines[end + 1:]), end + 2, (
+                    f"`{hit.group(1)}:` on a continuation line of `{key}` — YAML reads "
+                    f"that as a nested mapping and rejects the whole block, so the "
+                    f"skill loads with no name or description at all and can never "
+                    f"trigger. Quote the value, use a `>` block, or reword it")
             buf.append(raw.strip())
         elif raw.strip():
             return {}, "\n".join(lines[end + 1:]), end + 2, \
                 f"cannot parse frontmatter line: {raw.strip()[:60]!r}"
-    if key:
-        fm[key] = (" " if folded else "\n").join(buf).strip()
+    flush()
     return fm, "\n".join(lines[end + 1:]), end + 2, ""
 
 

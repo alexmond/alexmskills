@@ -9,6 +9,31 @@ unreleased/rolling (no global version).
 
 ## 2026-08-13
 
+### Fixed
+
+- **skill-linter 0.1.1** — *the linter could never trigger, and the linter said it
+  was fine.* Its own description ended `…Learns: a defect it failed to catch becomes
+  a new rule.` — a bare `word: ` on a continuation line, which YAML reads as a nested
+  mapping and rejects outright. Claude Code loads such a skill with **empty
+  metadata**, so `skill-linter` had been inert since it shipped. Found by
+  `claude plugin tag --dry-run` during a pre-release sweep, not by the linter.
+
+  The root cause was worse than the symptom: the hand-rolled frontmatter parser never
+  supported multi-line *plain* scalars at all — only `>` and `|` blocks — so it
+  silently accepted what YAML rejects. `parse_frontmatter` now models three explicit
+  scalar modes, and a `word:` continuation inside a plain scalar is a hard
+  `frontmatter-invalid` naming the consequence.
+
+  All 25 skills were checked to agree with `yaml.safe_load` on valid/invalid, and that
+  agreement is now a harness check, so the parser cannot drift lenient again. The
+  generalised lesson is in the skill's log: **a lenient parser standing in for a
+  strict one launders broken input as clean, which is worse than not checking.**
+
+- **README** — `screenshot-sweep` was missing from the catalog table and the install
+  list. The docs-coverage gate added earlier covered `index.adoc` and the nav but not
+  the README, which is the front door for anyone arriving from GitHub. The gate now
+  checks it too, verified to fail before the fix.
+
 ### Changed
 
 - **docs** — split the 347-line `role-system` page into three, by what a reader came

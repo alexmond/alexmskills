@@ -82,6 +82,57 @@ def t_frontmatter_failures():
               f"{r1} {r2}")
 
 
+def t_colon_in_unquoted_value_is_an_error():
+    """The miss that shipped. This linter's own description ended with
+    "Learns: a defect it failed to catch becomes a new rule." — a bare `word: `
+    inside an unquoted scalar, which real YAML rejects outright. The skill
+    loaded with no metadata and could never have triggered, and the linter
+    called it clean, because this parser is lenient where YAML is not."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        bad = skill(tmp, "leaky", 'name: leaky\n' + GOOD +
+                    "\n  Learns: a defect it failed to catch becomes a new rule.", BODY)
+        got = rules_for(bad)
+        check("a bare `word: ` in an unquoted value is reported as invalid frontmatter",
+              got == {"frontmatter-invalid"}, f"got {sorted(got)}")
+
+    # ...but a colon that YAML tolerates must not be flagged, or every
+    # description mentioning a URL or a ratio becomes a false positive.
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        ok = skill(tmp, "fine", 'name: fine\n' + GOOD +
+                   "\n  See https://example.com/docs for the 3:1 ratio.", BODY)
+        check("a tolerated colon (URL, ratio) is not flagged",
+              "frontmatter-invalid" not in rules_for(ok), str(sorted(rules_for(ok))))
+
+
+def t_matches_real_yaml():
+    """The parser is hand-rolled so the linter runs without pyyaml. That is only
+    safe if it agrees with real YAML on what is valid — otherwise it launders
+    broken frontmatter as clean, which is worse than not checking."""
+    try:
+        import yaml
+    except ImportError:
+        check("hand-rolled parser agrees with real YAML", True, "pyyaml absent — skipped")
+        return
+    cases = [
+        ('name: a\ndescription: Use when the user says "go".', True),
+        ('name: a\ndescription: Use when asked.\n  Learns: a thing happens here.', False),
+        ('name: a\ndescription: >\n  Use when asked. Folded body: still fine.', True),
+    ]
+    mism = []
+    for block, want_ok in cases:
+        _, _, _, err = lint.parse_frontmatter(f"---\n{block}\n---\n\nbody\n")
+        try:
+            yaml.safe_load(block); yaml_ok = True
+        except Exception:
+            yaml_ok = False
+        if (not err) != yaml_ok or yaml_ok != want_ok:
+            mism.append(f"{block[:40]!r} lint_ok={not err} yaml_ok={yaml_ok}")
+    check("hand-rolled parser agrees with real YAML on valid/invalid", not mism,
+          " | ".join(mism))
+
+
 def t_name_must_match_directory():
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
@@ -221,6 +272,8 @@ def t_dogfoods_this_repo():
 CHECKS = [
     t_frontmatter_shapes,
     t_frontmatter_failures,
+    t_colon_in_unquoted_value_is_an_error,
+    t_matches_real_yaml,
     t_name_must_match_directory,
     t_description_rules,
     t_clean_skill_is_silent,

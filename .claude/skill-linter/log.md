@@ -37,3 +37,23 @@ defects in the rule itself rather than gaps in coverage.
   context in every session whether or not it can ever fire — so it deserves to
   stay visible until the trade is confirmed. Revisit if the answer is "yes, on
   purpose", and record it as a per-repo learned rule with `enabled: false`.
+
+## 2026-08-13 — pre-release sweep
+
+- 2026-08-13 — **miss** — `claude plugin tag --dry-run plugins/skill-linter` rejected
+  the linter's *own* SKILL.md: `YAML frontmatter failed to parse`. The description
+  ended `…Learns: a defect it failed to catch becomes a new rule.` — a bare `word: `
+  on a continuation line, which real YAML reads as a nested mapping and rejects
+  outright. **Claude Code loads such a skill with empty metadata, so it can never
+  trigger** — the plugin had been broken since it shipped, and `lint-skills` called it
+  clean every time. → Root cause was the hand-rolled parser: it never supported
+  multi-line *plain* scalars at all (only `>` and `|`), so it silently accepted what
+  YAML rejects. Rewrote `parse_frontmatter` around three explicit scalar modes and
+  made a `word:` continuation inside a plain scalar a hard `frontmatter-invalid`.
+  Verified all 25 skills now agree with `yaml.safe_load` on valid/invalid, and pinned
+  that agreement as a harness check so the parser can't drift lenient again.
+
+  The lesson generalises past this bug: **a lenient parser standing in for a strict
+  one launders broken input as clean, which is worse than not checking at all.** Any
+  hand-rolled substitute for a real parser needs a conformance test against the real
+  one, not just its own unit tests.
