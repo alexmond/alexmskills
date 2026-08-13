@@ -1,0 +1,138 @@
+= The Role System — Choosing & Chaining
+:navtitle: Choosing & chaining
+:toc: macro
+:toclevels: 3
+:description: Which orchestrator to reach for, how research, panel and crew chain together, a worked example through all three, and the escalation ladder when a role gets stuck.
+
+Three orchestrators sit on one shared substrate. This page is about *operating* them: which one fits the work, what flows between them when you chain them, and what happens when a role gets stuck mid-run.
+
+Start at xref:role-system.adoc[the concept] for what an evolving role is, or xref:role-system-files.adoc[the file model] for how roles are stored.
+
+toc::[]
+
+[#usage-sequence]
+== Usage sequence — which one, in what order
+
+The comparison above says how the three *differ*; this section says how to *use* them. The short
+version: **most work needs only one.** Reach for the orchestrator whose **end** matches your task —
+discover, decide, or deliver. Add a second only when the task genuinely spans two ends; run all three
+only for big, contested, greenfield work where each stage earns its cost.
+
+=== Which one do I reach for?
+
+Name the end you're after and the table picks the tool:
+
+[cols="2,2,1",options="header"]
+|===
+| You have… | You want… | Reach for
+
+| a question, or a space to map — facts not yet gathered | a verified, cited **dataset / landscape** | **research-sweep** — *discover*
+| the facts, but a contested or multi-perspective call | a **judgment** you trust — what / whether to build | **brainstorm-panel** — *decide*
+| a decided task | a **shipped, gated artifact** | **dev-crew** — *deliver*
+| one narrow question, no orchestration | a fast **single-role** answer | **roles** solo (`/roles:as <role>`)
+|===
+
+Rule of thumb: if your task has **one** end, you need **one** orchestrator. A panel to decide something
+you've already decided, or a crew to build something still contested, is wasted machinery.
+
+=== The chain, and what flows between stages
+
+When work does span ends, the three run in a fixed order — **discover → decide → deliver** — and the
+output of each stage is the *input contract* of the next. The seams are concrete files, not vibes:
+
+[cols="1,2,3",options="header"]
+|===
+| Stage | Orchestrator | Hand-off it produces → next stage's input
+
+| 1. Discover | **research-sweep** | a verified, deduped **findings file** (the option space + evidence) → the panel's raw material
+| 2. Decide | **brainstorm-panel** | a **judgment + rationale** (which option, why, unresolved tensions) → the crew's task brief
+| 3. Deliver | **dev-crew** | a **shipped, gated artifact** + run log
+|===
+
+Each arrow is an artifact you can read: the sweep's committed dataset is what the panel critiques; the
+panel's decision note is what the crew takes as its brief (dev-crew's own words: "a panel outcome can be
+handed straight to the crew as the task brief"). Nothing passes between stages as unreviewable context.
+
+=== You rarely run all three
+
+Each stage is independently useful; the chain is a *composition*, not a required pipeline. Skip any stage
+whose end you've already reached — you know the options → skip discover; the choice is obvious → skip
+decide. The common shapes:
+
+* **panel → crew** (most common) — a contested design decided, then built. *"Settle the API shape, then ship it."*
+* **research → panel** — a decision that needs facts first, with no build. *"Survey the options, then pick one."* The deliverable is the decision.
+* **research → panel → crew** (full chain) — greenfield / high-stakes / exploratory work where the options aren't known, the choice is contested, **and** the result must ship. Reserve it: each stage is a full roster of agents.
+
+=== Worked example — one thread through all three
+
+Task: *"We need a job queue for the backend."*
+
+. **Discover** (`research-sweep`) — the options aren't known. Sweep "every job-queue library for our
+  stack" → a verified `job-queues.yaml`: 18 candidates with license, throughput notes, maintenance
+  status, and source links. Committed to git before anything else.
+. **Decide** (`brainstorm-panel`) — the choice is contested (throughput vs. ops-simplicity vs.
+  lock-in). Seat a systems engineer, an SRE, a cost skeptic, and a maintainer-advocate; feed them the
+  dataset. The panel converges: *"Use X; Y is the fallback if the managed-service budget lands"* — with
+  the unresolved tension logged.
+. **Deliver** (`dev-crew`) — the decision becomes the crew's brief. architect → dev → qa → deployer ship
+  the X integration behind the repo's gates, with the throughput claim proven by evidence, not reasoning.
+
+Three stages, three files — the sweep's dataset, the panel's decision note, the crew's run log — each
+reviewable, each the next stage's input. Had the options been obvious, stage 1 drops and it's a plain
+**panel → crew**; had X been pre-chosen, stages 1–2 drop and it's a lone **crew** run.
+
+
+== Using it
+
+[cols="1,3",options="header"]
+|===
+| Want to… | Do
+
+| Run one expert pass, fast | install `roles` → `/roles:as debugger <target>` (or a wrapper skill like `/roles:debugger`)
+| Build & ship something with gates | install `dev-crew` → "run the crew on <task>"
+| Decide *what / whether*; stress-test a plan | install `brainstorm-panel` → "get a team on this"
+| All of the above, sharing one evolving talent pool | install all three — registries link to shared cores automatically
+|===
+
+
+== Crew's escalation protocol
+
+Delivery relays need a defined answer to "a role is stuck." dev-crew 1.1.0 adds one, unifying the old
+qa-loop, the `debugger`/`lead` candidate roles, and the user's "go back" steering into a single
+mechanism.
+
+=== The `BLOCKED` handoff
+
+The missing primitive: **a role that cannot meet its done-criteria writes its handoff with
+`status: BLOCKED`** plus what it tried, why it's stuck, what it needs, and a suggested escalation target.
+Deliver or declare — silent flailing (or confident-but-wrong output) is a defect. This pairs with the
+**phase-gate hook** (`scripts/check-handoffs.py`, a `PreToolUse` hook): the hook accepts a `BLOCKED`
+handoff as valid and routes it to the ladder, while still rejecting a *missing* one. Prompt discipline
+drifts; hooks don't.
+
+=== The ladder (conductor-owned, each rung once per stumble)
+
+. **Clarify & retry** — re-delegate the same role with the missing context (one retry).
+. **Re-tier** vs **3. Re-role** — *a diagnosis, not a sequence* (below).
+. (see 2)
+. **Re-plan** — when the *contract itself* is wrong, escalate **up** the relay to the architect;
+  downstream artifacts are marked stale (a role-initiated "go back").
+. **User** — the ladder is exhausted, the issue is a genuine user decision (scope/topology forks skip
+  straight here), or a cost gate fires.
+
+=== Re-tier vs re-role: read the BLOCKED report
+
+[cols="1,2,2",options="header"]
+|===
+| Diagnosis | Symptom | Action
+
+| **Capability gap** | role is right, the model is short — real progress, repeated near-misses, work exceeds the tier's depth | **Re-tier** the same role (e.g. sonnet→opus). A different role would hit the same ceiling.
+| **Ownership gap** | the model is fine, the role is wrong — doing work its charter doesn't own (dev looping on root-cause is the debugger's job; cross-subsystem → lead), or needs tools its scope denies | **Re-role** to the failure-class owner (mint probationary via the compose path if missing). A heavier model here is a more expensive flail.
+|===
+
+Continuity heuristic: approach sound but execution short → re-tier (preserves artifacts, changes one
+variable); approach itself suspect → re-role (fresh method). Unclear → re-tier first, which keeps lane
+discipline (jumping straight to `lead` imports scope creep). Every escalation is logged (`escalation:` in
+the run entry), which feeds the learning loop: repeated rung-2 hits are evidence for a permanent re-tier;
+recurring rung-3 hops to a missing owner are the trigger to mint a new role.
+

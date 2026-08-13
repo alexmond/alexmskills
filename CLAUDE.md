@@ -89,6 +89,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-13 — **role-system-docs-split** — 347 lines -> 3 pages (concept/usage/files). #usage-sequence moved, so 3 inbound plugin-page xrefs + 1 internal ref were repointed. Why: a moved anchor breaks silently — no build error, just a dead link.
 - 2026-08-13 — **prompt-coach-docs-split** — 824-line page -> 4 (overview/rules/config/learning); gen-rules-doc targets one page per block and now FAILS on a skipped block. Why: a note that scrolls past is how a page loses its generated half.
 - 2026-08-13 — **docs-coverage-gate** — index.adoc was 4 plugins stale + 4 pages orphaned; screenshot-sweep had no page. validate now checks page+nav+index per plugin, both directions. Why: a convention nothing checks rots silently.
 - 2026-08-08 — **skill-linter** — 0.1.0 new plugin: SKILL.md conformance from skill-creator + skill-development + writing-skills, every rule cited in references/rule-sources.md. Why: the 3 sources conflict twice; resolved narrower than either.

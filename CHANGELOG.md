@@ -11,6 +11,18 @@ unreleased/rolling (no global version).
 
 ### Changed
 
+- **docs** — split the 347-line `role-system` page into three, by what a reader came
+  for: `role-system` (93 lines — what an evolving role is, the problem it solves,
+  field position), `role-system-usage` (138 — which orchestrator, how they chain, a
+  worked example, and the escalation ladder when a role gets stuck), and
+  `role-system-files` (150 — everything under `.claude/roles/`, lanes, the
+  no-downgrade principle, Prompt Library anchors).
+
+  The `#usage-sequence` anchor moved with its section, and three plugin pages
+  (`dev-crew`, `brainstorm-panel`, `research-sweep`) linked straight to it — those
+  were repointed, along with the page's own internal `<<usage-sequence>>` reference.
+  Every `xref:` target in the docs tree was then checked to resolve.
+
 - **docs** — split the 824-line `prompt-coach` page into four. It was 8× the next
   page and 26× the median, and 58% of it was machine-generated reference dropped
   into the middle of a narrative: the 42-rule catalog alone ran 350 lines.

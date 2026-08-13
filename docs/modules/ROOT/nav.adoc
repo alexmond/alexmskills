@@ -2,8 +2,10 @@
 * xref:getting-started.adoc[Getting Started]
 * xref:versioning.adoc[Versioning & Maintenance]
 * xref:channels.adoc[Marketplace & Beta Plugins]
-* Architecture
-** xref:role-system.adoc[The Role System]
+* The Role System
+** xref:role-system.adoc[Overview]
+** xref:role-system-usage.adoc[Choosing & chaining]
+** xref:role-system-files.adoc[The file model]
 * Self-learning skills
 ** xref:evolving-claude-md.adoc[Evolving CLAUDE.md]
 ** xref:dev-crew.adoc[Dev Crew]
