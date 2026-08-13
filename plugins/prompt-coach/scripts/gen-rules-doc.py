@@ -12,7 +12,7 @@ the code:
                         (key / type / default / description), from CONFIG_SCHEMA
 
 Each block lives between a `// BEGIN generated-<name>` / `// END generated-<name>`
-marker pair in `docs/modules/ROOT/pages/prompt-coach.adoc`; --inject
+marker pair, each on its own page under `docs/modules/ROOT/pages/`; --inject
 replaces everything between each pair it finds (missing pairs are skipped with a
 note). Re-run after any rule / count / config-schema change.
 
@@ -30,7 +30,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]  # plugins/prompt-coach/scripts -> repo root
-ADOC = REPO / "docs/modules/ROOT/pages/prompt-coach.adoc"
+PAGES = REPO / "docs/modules/ROOT/pages"
+ADOC = PAGES / "prompt-coach.adoc"                  # the catalog summary line
+RULES_ADOC = PAGES / "prompt-coach-rules.adoc"      # the per-rule reference
+CONFIG_ADOC = PAGES / "prompt-coach-config.adoc"    # the config-key table
 BEGIN = "// BEGIN generated-rules (gen-rules-doc.py — do not edit by hand)"
 END = "// END generated-rules"
 SUM_BEGIN = "// BEGIN generated-summary (gen-rules-doc.py — do not edit by hand)"
@@ -130,7 +133,8 @@ def render_summary(data: dict) -> str:
         f"The catalog ships **{n} rules** across {len(TIER_LABEL)} tiers "
         f"({per_tier}), each with a mirroring **positive detector** ({n} total) "
         f"so mastery is *earned by demonstration*. Behavior is tuned by "
-        f"**{n_cfg} configuration keys** (see <<config-reference>>).\n\n"
+        f"**{n_cfg} configuration keys** "
+        f"(see xref:prompt-coach-config.adoc#config-reference[the full table]).\n\n"
         f"{SUM_END}\n"
     )
 
@@ -187,14 +191,36 @@ def _inject_block(text: str, begin: str, end: str, fragment: str) -> tuple[str, 
     return pre + "\n\n" + fragment.rstrip("\n") + "\n\n" + post, True
 
 
-def inject(data: dict) -> None:
-    text = ADOC.read_text()
-    text, r_ok = _inject_block(text, BEGIN, END, render(data))
-    text, s_ok = _inject_block(text, SUM_BEGIN, SUM_END, render_summary(data))
-    text, c_ok = _inject_block(text, CFG_BEGIN, CFG_END, render_config(data))
-    ADOC.write_text(text)
-    print(f"injected into {ADOC}: rules={r_ok} summary={s_ok} config={c_ok} "
+def inject(data: dict) -> bool:
+    """Each block targets its own page.
+
+    The three blocks used to land in one 824-line file, which is how the rule
+    catalog (350 generated lines) ended up buried in the middle of the overview.
+    Splitting the pages only holds if the generator writes to the split — one
+    `--inject` after a rule change would otherwise put it all back.
+    """
+    blocks = [
+        ("summary", ADOC, SUM_BEGIN, SUM_END, render_summary),
+        ("rules", RULES_ADOC, BEGIN, END, render),
+        ("config", CONFIG_ADOC, CFG_BEGIN, CFG_END, render_config),
+    ]
+    missing = [name for name, path, *_ in blocks if not path.exists()]
+    if missing:
+        print(f"error: target page missing for {', '.join(missing)}", file=sys.stderr)
+        return False
+
+    results, oks = [], []
+    for name, path, begin, end, renderer in blocks:
+        text, ok = _inject_block(path.read_text(), begin, end, renderer(data))
+        if ok:
+            path.write_text(text)
+        results.append(f"{name}={ok}→{path.name}")
+        oks.append(ok)
+    print(f"injected {' '.join(results)} "
           f"({len(data['rules'])} rules, {len(data.get('config', []))} config keys)")
+    # A skipped block used to be a printed note that scrolled past. That is how a
+    # page ends up silently missing its generated half, so it fails the run now.
+    return all(ok for ok in oks)
 
 
 def main() -> int:
@@ -205,7 +231,10 @@ def main() -> int:
     cfg = _load_config()
     data = cfg.build_dashboard(Path("/tmp"))
     if args.inject:
-        inject(data)
+        if not inject(data):
+            print("error: a generated block was not written — see the notes above",
+                  file=sys.stderr)
+            return 1
     else:
         sys.stdout.write(render(data))
         sys.stdout.write("\n")

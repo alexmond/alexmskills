@@ -217,7 +217,11 @@ def t_rules_doc_in_sync():
                 and "✗ `" in fragment and "✓ `" in fragment)
     check(f"gen-rules-doc renders all {n_rules} rules with example + Refs",
           ok_shape, f"::={fragment.count('::')} refs={fragment.count('_Refs:_')}")
-    adoc = gen.ADOC.read_text() if gen.ADOC.exists() else ""
+    # Each generated block now lands on its own page (the catalog alone was 350
+    # lines inside an 824-line overview). Check each against its own target, or
+    # a page could silently lose its generated half and still pass.
+    def _page(path):
+        return path.read_text() if path.exists() else ""
     data = cfg.build_dashboard(Path("/tmp"))
     summary = gen.render_summary(data)
     config = gen.render_config(data)
@@ -228,10 +232,15 @@ def t_rules_doc_in_sync():
     check(f"gen-rules-doc summary+config render real counts ({n_rules} rules, {n_cfg} keys)",
           bool(summ_ok and cfg_ok),
           f"summary_ok={summ_ok} config_rows_ok={cfg_ok}")
-    in_sync = (gen.BEGIN in adoc and fragment.strip() in adoc
-               and summary.strip() in adoc and config.strip() in adoc)
-    check("shipped prompt-coach.adoc is in sync (run gen-rules-doc --inject)",
-          in_sync, "docs drift — regenerate the rules/summary/config blocks")
+    targets = [
+        ("prompt-coach.adoc", gen.ADOC, summary),
+        ("prompt-coach-rules.adoc", gen.RULES_ADOC, fragment),
+        ("prompt-coach-config.adoc", gen.CONFIG_ADOC, config),
+    ]
+    drifted = [name for name, path, frag in targets if frag.strip() not in _page(path)]
+    in_sync = not drifted and gen.BEGIN in _page(gen.RULES_ADOC)
+    check("all three docs pages are in sync (run make docs-rules)", in_sync,
+          f"drifted: {', '.join(drifted) or 'BEGIN marker missing from the rules page'}")
 
 
 def t_web_dashboard_serves():

@@ -9,6 +9,31 @@ unreleased/rolling (no global version).
 
 ## 2026-08-13
 
+### Changed
+
+- **docs** — split the 824-line `prompt-coach` page into four. It was 8× the next
+  page and 26× the median, and 58% of it was machine-generated reference dropped
+  into the middle of a narrative: the 42-rule catalog alone ran 350 lines.
+
+  |===
+  | Page | Lines | Mode
+
+  | `prompt-coach` | 203 | what it is, install, quick start, how it renders
+  | `prompt-coach-rules` | 369 | the per-rule catalog (generated)
+  | `prompt-coach-config` | 180 | config keys (generated), CLI surface, dashboard, state
+  | `prompt-coach-learning` | 111 | acceptance loop, precision gating, earned + decaying mastery
+  |===
+
+  The split only holds if the generator writes to it, so `gen-rules-doc.py` now
+  targets one page per block instead of one file for all three, and a skipped
+  block **fails** the run — previously it printed a note that scrolled past, which
+  is exactly how a page loses its generated half unnoticed. The coach harness
+  check was widened to verify all three targets rather than one.
+
+  Six cross-page references were rewritten (`<<config-reference>>`,
+  `xref:#web-dashboard`, `<<earned-mastery>>` and friends), and every remaining
+  `<<anchor>>` was verified to resolve on its own page.
+
 ### Fixed
 
 - **docs** — the landing page had drifted four plugins behind the catalog. `index.adoc`

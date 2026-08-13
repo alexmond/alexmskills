@@ -11,6 +11,9 @@
 ** xref:learn-on-failure.adoc[Learn on Failure]
 ** xref:roles.adoc[Role Registry]
 ** xref:prompt-coach.adoc[Prompt Coach]
+*** xref:prompt-coach-rules.adoc[Rule catalog]
+*** xref:prompt-coach-learning.adoc[How it adapts]
+*** xref:prompt-coach-config.adoc[Configuration & dashboard]
 ** xref:screenshot-sweep.adoc[Screenshot Sweep]
 ** xref:skill-linter.adoc[Skill Linter]
 * Workflow skills
