@@ -1,0 +1,93 @@
+= Screenshot Sweep
+:navtitle: screenshot-sweep
+:description: Read the whole screenshot, not just the bug you came for. Sweeps every capture against a defect checklist that grows tighter each time something slips past it.
+
+A screenshot is a free full-page audit that most people spend on one bug.
+
+You were sent the image to look at one thing. `screenshot-sweep` looks at everything, because the extra look costs seconds and the miss costs the user a second bug report.
+
+NOTE: Not xref:screenshot-tour.adoc[screenshot-tour], which *produces* a presentation deck of a product. This one *audits* a capture you already have.
+
+== Install
+
+[source,text]
+----
+/plugin install screenshot-sweep@alexmskills
+----
+
+There is nothing to configure. The skill fires whenever a screenshot enters the conversation — a bug report, a Playwright capture, a design review, a "does this look right".
+
+== The rule
+
+*One screenshot, one sweep, then answer the question you were asked.*
+
+The order matters. Answering first means you stop looking, and the sweep never happens.
+
+Anything found that is *not* the thing asked about gets filed as an issue and added to the todo list, but *not fixed on the spot* — scope creep inside a bug fix is its own defect.
+
+Three things are deliberately never filed: suspicions that are not visible in the image ("this might be slow" is not a screenshot finding), aesthetic preferences, and anything already open.
+
+== The checklist
+
+Five categories, run against every capture. Most resolve to "fine" in a second.
+
+[cols="1,3",options="header"]
+|===
+| Category | Catches
+
+| *Legibility*
+| Low-contrast text; text on a background of the same family (dark on dark — usually a colour set for one theme and inherited into the other); prose stretched past ~90 characters a line.
+
+| *Reachability*
+| Controls pushed off the edge — the top-right corner especially, where close and overflow buttons live and a long title shoves them; content clipped at a container edge with no way to scroll to it.
+
+| *Consistency*
+| The same kind of thing styled two ways in one image, or between two screens one click apart; misaligned columns; two spellings or date formats for one idea.
+
+| *Truthfulness*
+| Numbers that disagree — a badge count against the rows actually listed; a state that contradicts itself, like a spinner over an error; placeholder or debug text that shipped.
+
+| *Use of space*
+| Large empty regions beside cramped ones; a layout that ignores the width it has; elements at minimum size inside a huge container.
+|===
+
+== Measure, don't eyeball
+
+Colour and size judgements made by eye are wrong often enough to be worthless, and a confidently wrong finding wastes more time than silence.
+
+When the app can be driven, the skill gets the number instead:
+
+* *Contrast* — computed from rendered pixels, compositing translucent layers over what is actually behind them. A tint over a panel is not the tint's own colour, and stopping at the first non-transparent ancestor gives answers that are far off.
+* *Overflow* — an element's `getBoundingClientRect()` against its container's. "Is it cut off" has an exact answer.
+* *Line length* — element width divided by approximate glyph width.
+
+When measurement is not possible, the finding is reported as visual-only and unmeasured. That is honest and still useful.
+
+TIP: *Beware the oracle.* When a measurement contradicts sound reasoning, suspect the measurement first — a sample point that landed on a glyph, encoded image bytes compared instead of decoded pixels, a loaded machine inflating every timing. Check the instrument before rewriting the code.
+
+Related: screenshots taken while the machine is busy are not evidence of slowness. Layout and colour findings survive load; timing findings do not.
+
+== How it gets better
+
+The checklist is wrong until something slips past it, so a miss is the only event that improves it.
+
+When a UI defect is reported that was *visible in a screenshot already looked at*, that is a miss, and it is recorded in the same turn:
+
+. A dated line in the *Misses* log — what was missed, and what check would have caught it.
+. If no checklist line covers it, a new one, phrased as something *observable* rather than a category. "Check that controls in the top-right corner are inside the panel" beats "check for layout bugs".
+. If a line existed but did not fire, it gets sharpened, with a note on why it failed.
+
+Entries are never deleted. Once a check is established the entry can be compressed, but the checklist item it produced stays.
+
+=== What the log has taught it so far
+
+The Misses log is the most useful part of the skill, because each entry carries the mechanism rather than just the symptom:
+
+* A stat card rendered black-on-black in dark mode at 1.34:1, reported twice before being investigated. The card was a `<button>` when clickable, and *a `<button>` does not inherit `color`* — the user-agent stylesheet gives it black, invisible on a dark panel and fine on a light one. Generalised: **any element that changes tag by state can change colour by state.**
+* A drawer's close and expand buttons sat off-screen for long object names — a flex child with `min-width: auto` refusing to shrink. Generalised: **reproduce with the longest name available, not a typical one.**
+* One table looked cut off while others did not. It was simply the widest; every table shared a fixed minimum width. Generalised: **when one instance looks broken, check whether the others differ in kind or only in degree.**
+* Prose ran to ~338 characters a line, never noticed because every screenshot had been taken at ~1400px. Generalised: **check at the widest plausible viewport, not the one you happen to be using.**
+
+== Deliberately not
+
+A linter or an accessibility scanner. Those run against the DOM and catch what is machine-checkable. This runs against an *image* that already exists in the conversation, and its value is the defects a human would see and a rule would not.

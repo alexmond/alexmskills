@@ -7,46 +7,98 @@ self-improving skills and agents. Each skill is packaged as an **independently v
 you install and update exactly what you need.
 
 The emphasis is on **self-learning** tooling — skills that get better at _your_ repository over time.
+A `CLAUDE.md` that prunes and graduates its own decisions. A delivery crew that re-tiers its roles from
+run history. A screenshot audit whose checklist tightens every time a defect slips past it.
 
-== The catalog
+[source,text]
+----
+/plugin marketplace add alexmond/alexmskills
+----
 
-[cols="1,1,3",options="header"]
+Then install what you want — xref:getting-started.adoc[Getting Started] has the full list.
+
+== Self-learning
+
+Skills that accumulate knowledge about the repo they run in. State lives in the consuming repo's
+`.claude/`, never in the plugin, so what they learn survives an update.
+
+[cols="1,3",options="header"]
 |===
-| Plugin | Category | What it does
+| Plugin | What it does
 
-| xref:evolving-claude-md.adoc[evolving-claude-md] | self-learning
+| xref:evolving-claude-md.adoc[evolving-claude-md]
 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks.
 
-| xref:dev-crew.adoc[dev-crew] | self-learning
-| A self-evolving, role-based delivery relay (architect → dev → qa → deployer), each role a subagent on its own model tier.
+| xref:prompt-coach.adoc[prompt-coach]
+| Reads every prompt you send and rewrites it toward better prompting habits — 42 rules across 6 tiers, mastery earned by demonstration, adaptive precision-gating, and a local web dashboard.
 
-| xref:brainstorm-panel.adoc[brainstorm-panel] | self-learning
-| Assembles a task-fit panel of role-specialized agents, picks a coordination style, and runs a generate-critique-refine loop.
+| xref:roles.adoc[roles]
+| The shared substrate: a per-repo registry of evolving personas (`.claude/roles/`) usable solo, or as crew roles, panel seats, and sweep coverage angles.
 
-| xref:learn-on-failure.adoc[learn-on-failure] | self-learning
+| xref:dev-crew.adoc[dev-crew]
+| Composes a task-fit roster and runs it as a gated delivery relay, each role a subagent on its own model tier.
+
+| xref:brainstorm-panel.adoc[brainstorm-panel]
+| Assembles a task-fit panel of role-specialized agents, picks a coordination style, and runs a generate-critique-refine loop with a unanimity guard.
+
+| xref:screenshot-sweep.adoc[screenshot-sweep]
+| Reads the whole screenshot, not just the bug you came for. Its defect checklist tightens each time something slips past it.
+
+| xref:skill-linter.adoc[skill-linter]
+| Audits `SKILL.md` files against published authoring guidance — every rule cited. Learns from its own misses and false positives.
+
+| xref:learn-on-failure.adoc[learn-on-failure]
 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle.
+|===
 
-| xref:implement-issue.adoc[implement-issue] | workflow
+== Workflow
+
+Guided procedures for a specific job, start to finish.
+
+[cols="1,3",options="header"]
+|===
+| Plugin | What it does
+
+| xref:mindmap-prompt.adoc[mindmap-prompt]
+| Sketch ideas on a canvas and compile the map into an organized prompt. `✦` expands any node with `claude -p` running in your repo. Saves as JSON Canvas.
+
+| xref:implement-issue.adoc[implement-issue]
 | Drives a GitHub issue from branch → implement → verify → PR with a guided workflow.
 
-| xref:maven-quality.adoc[maven-quality] | workflow
+| xref:screenshot-tour.adoc[screenshot-tour]
+| Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product.
+
+| xref:maven-quality.adoc[maven-quality]
 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects.
 
-| xref:security-audit.adoc[security-audit] | workflow
+| xref:security-audit.adoc[security-audit]
 | Scans a codebase for OWASP-style vulnerabilities and reports them with remediation.
-
-| xref:mindmap-prompt.adoc[mindmap-prompt] | workflow
-| Sketch ideas on an offline canvas and compile the map into an organized Markdown prompt; saves as JSON Canvas.
-
-| xref:review-agents.adoc[review-agents] | review
-| Read-only specialist subagents for code review, test running, and dependency/CVE auditing.
-
-| xref:prompt-coach.adoc[prompt-coach] | self-learning
-| Watches every prompt and rewrites it toward better prompting habits (collaborator mode) — 42 rules across 6 tiers, mastery earned by demonstration, typo tolerance, and evidence-based praise for good behaviors.
-
-| xref:research-sweep.adoc[research-sweep] | research
-| Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies.
 |===
+
+== Agents & research
+
+[cols="1,3",options="header"]
+|===
+| Plugin | What it does
+
+| xref:research-sweep.adoc[research-sweep]
+| Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies the findings.
+
+| xref:review-agents.adoc[review-agents]
+| Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers.
+|===
+
+Beta plugins carry a `-beta` suffix and live in the same marketplace — currently
+xref:tune-repo.adoc[tune-repo-beta]. See xref:channels.adoc[Marketplace & Beta Plugins].
+
+== Four of these are one system
+
+`roles`, `dev-crew`, `brainstorm-panel` and `research-sweep` share a substrate of evolving personas.
+One `skeptic` behaves the same whether it runs solo, sits on a panel, or verifies a research finding —
+and accumulates what it learns along the way. The three orchestrators chain: research **discovers**,
+the panel **decides**, the crew **delivers**.
+
+Full model: xref:role-system.adoc[The Role System].
 
 == Next steps
 

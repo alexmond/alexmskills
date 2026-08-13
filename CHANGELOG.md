@@ -7,6 +7,25 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-13
+
+### Fixed
+
+- **docs** — the landing page had drifted four plugins behind the catalog. `index.adoc`
+  listed 11 of 16 plugins, missing `roles`, `screenshot-tour`, `screenshot-sweep` and
+  `skill-linter`; four pages existed that nothing on the site linked to; and
+  `screenshot-sweep` had no page at all despite shipping since 1.0.0.
+
+  Rewrote `index.adoc` around the three real categories, wrote the missing
+  `screenshot-sweep` page, and added the nav entry.
+
+  The durable part is the gate: `make validate` now checks, for every plugin in
+  `marketplace.json`, that a page exists, is in `nav.adoc`, **and** is linked from
+  `index.adoc` — plus the reverse, that no page is orphaned. Each of the three failure
+  modes was verified to actually fail before the fix was committed. "Docs are part of
+  done" had been a convention since the repo started, and a convention nothing checks
+  rots silently.
+
 ## 2026-08-08
 
 ### Fixed

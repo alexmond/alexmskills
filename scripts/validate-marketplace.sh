@@ -85,6 +85,41 @@ validate_channel() {
 
 validate_channel "$root/.claude-plugin/marketplace.json"
 
+# --- docs coverage -----------------------------------------------------------
+# "Docs are part of done" is a convention, and conventions rot silently. The
+# landing page had drifted four plugins behind the catalog before anyone noticed,
+# and four pages existed that nothing linked to. Both are cheap to check.
+validate_docs() {
+  local mp="$1" pages="$root/docs/modules/ROOT/pages"
+  local index="$pages/index.adoc" nav="$root/docs/modules/ROOT/nav.adoc"
+  [ -d "$pages" ] || return 0
+
+  echo
+  echo "Docs coverage"
+  local name page
+  while read -r name; do
+    # the beta suffix is dropped in the page name (tune-repo-beta -> tune-repo)
+    page="${name%-beta}"
+    if [ ! -f "$pages/$page.adoc" ]; then
+      err "$name: no docs page at docs/modules/ROOT/pages/$page.adoc"
+      continue
+    fi
+    grep -q "xref:$page.adoc" "$nav"   || err "$name: $page.adoc is not in nav.adoc"
+    grep -q "xref:$page.adoc" "$index" || err "$name: $page.adoc is not linked from index.adoc"
+  done < <(jq -r '.plugins[].name' "$mp")
+
+  # the other direction: a page nothing links to is a page nobody reads
+  for f in "$pages"/*.adoc; do
+    page="$(basename "$f" .adoc)"
+    case "$page" in index|getting-started|versioning|channels|role-system) continue ;; esac
+    grep -q "xref:$page.adoc" "$nav" || err "$page.adoc exists but is not in nav.adoc"
+  done
+
+  [ "$fail" -eq 0 ] && note "every plugin has a page, in the nav and on the landing page"
+}
+
+validate_docs "$root/.claude-plugin/marketplace.json"
+
 echo
 if [ "$fail" -eq 0 ]; then
   echo "Marketplace valid."

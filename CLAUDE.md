@@ -37,9 +37,10 @@ Makefile                          # validate / list / bump helpers
 - **Run `make validate` before committing.** CI runs it too.
 - **Skills must be project-agnostic.** No hardcoded absolute paths, usernames, or repo names — these
   are pulled FROM other repos and generalized; keep them that way.
-- **Docs are part of "done":** a new plugin needs a `docs/modules/ROOT/pages/<n>.adoc` page + a
-  `nav.adoc` entry, and every plugin version bump gets a `CHANGELOG.md` entry (grouped by date,
-  tagged with the plugin + version).
+- **Docs are part of "done":** a new plugin needs a `docs/modules/ROOT/pages/<n>.adoc` page, a
+  `nav.adoc` entry **and a row on `index.adoc`**; every version bump gets a `CHANGELOG.md` entry
+  (grouped by date, tagged with plugin + version). `make validate` enforces all three — it was a
+  convention until the landing page drifted four plugins behind the catalog.
 - **Plugin naming:** orchestrators are `<scope>-<team-noun>`, the team-noun encoding coordination
   (`crew` = handoff/deliver, `panel` = debate/decide, `sweep` = fan-out/discover); other skills are
   descriptive kebab-case, verb-first for actions, ≤3 words, no redundant qualifiers.
@@ -88,6 +89,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-13 — **docs-coverage-gate** — index.adoc was 4 plugins stale + 4 pages orphaned; screenshot-sweep had no page. validate now checks page+nav+index per plugin, both directions. Why: a convention nothing checks rots silently.
 - 2026-08-08 — **skill-linter** — 0.1.0 new plugin: SKILL.md conformance from skill-creator + skill-development + writing-skills, every rule cited in references/rule-sources.md. Why: the 3 sources conflict twice; resolved narrower than either.
 - 2026-08-08 — **linter-credibility-is-the-constraint** — Half the harness asserts rules DON'T fire; fenced code and quoted user phrases are excluded after 2 real FPs. Why: noise kills a linter faster than a missed defect.
 - 2026-08-08 — **ai-grounding-is-prompt-not-context** — 0.2.1: ✦ returned any-codebase advice though CLAUDE.md was loaded all along. Fix was the prompt (name the repo, demand specifics) + treat the "Main idea" seed as blank. Why: context present != context used.
