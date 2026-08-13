@@ -6,10 +6,12 @@
 [source,text]
 ----
 /plugin marketplace add alexmond/alexmskills
-/plugin install prompt-coach@alexmskills
+/plugin install tune-repo-beta@alexmskills
 ----
 
 The `-beta` suffix is intentional: it makes it obvious at install time and in the enabled-plugins list that the plugin is beta quality. When a beta plugin earns its stable slot, it graduates — the directory is renamed, the `-beta` drops from the name and marketplace entry, and the version bumps to `1.0.0`.
+
+xref:prompt-coach.adoc[prompt-coach] graduated this way on 2026-07-28, from `prompt-coach-beta` to a stable `1.0.0`.
 
 == Why one catalog
 
