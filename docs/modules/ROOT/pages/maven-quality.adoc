@@ -1,7 +1,8 @@
 = Maven Quality
 :navtitle: maven-quality
+:description: Four quality skills for Maven/Java projects — formatting and Checkstyle, PMD static analysis, JaCoCo coverage, and a pre-commit gate that runs all three.
 
-Three quality skills for Maven/Java projects built around spring-javaformat, Checkstyle, PMD, and JaCoCo: enforce coding standards, run a pre-commit gate, and analyze test coverage against a threshold. The defaults target a spring-javaformat stack but every command, module path, and threshold is documented as adjustable per project.
+Four quality skills for Maven/Java projects built around spring-javaformat, Checkstyle, PMD, and JaCoCo: enforce coding standards, catch defects with static analysis, run a pre-commit gate, and analyze test coverage against a threshold. The defaults target a spring-javaformat stack but every command, module path, and threshold is documented as adjustable per project.
 
 == Install
 
@@ -19,15 +20,17 @@ Three quality skills for Maven/Java projects built around spring-javaformat, Che
 
 One slash command per skill:
 
-* `/maven-quality:codestyle` — check or fix code-style/static-analysis violations
+* `/maven-quality:codestyle` — check or fix formatting and Checkstyle violations
+* `/maven-quality:pmd payment-service` — run PMD, triage the report, suppress at the right scope
 * `/maven-quality:precommit` — run the format → validate → test gate before committing
 * `/maven-quality:jacoco payment-service` — check coverage, optionally scoped to a module or class
 
-Or ask in natural language: "format and validate this module before I commit" or "what's our test coverage on the payment service?".
+Or ask in natural language: "format and validate this module before I commit", "what's PMD complaining about?", or "what's our test coverage on the payment service?".
 
 == When to use it
 
-* Checking or fixing code-style/static-analysis violations, or asking what the project's formatting rules are
+* Checking or fixing formatting violations, or asking what the project's formatting rules are
+* Setting PMD up, triaging what it found, or deciding whether to fix or suppress a rule
 * Verifying the working tree is ready before creating a commit
 * Checking coverage, finding uncovered code, or planning tests to reach a coverage gate
 
@@ -35,7 +38,17 @@ Or ask in natural language: "format and validate this module before I commit" or
 
 === codestyle
 
-Documents the project's formatting and static-analysis conventions (tab indentation, mandatory braces, parenthesized single-param lambdas, `catch (Exception ex)`, no star imports), the common Checkstyle suppressions and PMD exclusions, naming rules, and Lombok usage. Ships a check-and-fix workflow: `./mvnw spring-javaformat:apply` to auto-fix most issues, then a violation→fix table for the rest, looping until `validate` is clean.
+Documents the project's formatting conventions (tab indentation, mandatory braces, parenthesized single-param lambdas, `catch (Exception ex)`, no star imports), the common Checkstyle suppressions, naming rules, and Lombok usage. Ships a check-and-fix workflow: `./mvnw spring-javaformat:apply` to auto-fix most issues, then a violation→fix table for the rest, looping until `validate` is clean.
+
+=== pmd
+
+PMD finds *defects and design smells*, which is a different job from formatting — so it gets its own skill rather than a paragraph inside `codestyle`.
+
+Covers the parts that are usually missing: a real `pmd-ruleset.xml` that references whole categories and excludes what doesn't fit (so a PMD upgrade brings new rules in automatically), the `maven-pmd-plugin` wiring, and *triage by priority rather than count* — one p1 outweighs fifty p4s.
+
+Parses `target/pmd.xml` directly, because the console output truncates. That report is namespaced, so a plain `findall("file")` returns nothing and a report full of violations reads as clean; the snippets match on local names instead, which also survives PMD changing the namespace between majors.
+
+Also covers `cpd-check` for duplicate code, and picking the right suppression scope — ruleset exclude vs `@SuppressWarnings("PMD.Rule")` vs `// NOPMD`, narrowest that works. Plus an adoption path for an existing codebase, since a first run on a mature project produces hundreds of findings and the usual outcome is that the gate gets switched off.
 
 === precommit
 

@@ -1,6 +1,6 @@
 ---
 name: precommit
-description: Run pre-commit quality checks for a Maven/Java project — auto-format, validate Checkstyle/PMD, and run tests before committing. Use before creating a commit, or when asked to verify the working tree is ready to commit.
+description: Run pre-commit quality checks for a Maven/Java project — auto-format, validate Checkstyle and PMD, and run the tests. Use before creating a commit, and when the user says "run the pre-commit checks", "am I ready to commit", "check this before I commit", or "is the working tree clean".
 ---
 
 ## Pre-commit Check: Format → Validate → Test

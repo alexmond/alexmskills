@@ -1,6 +1,6 @@
 ---
 name: jacoco
-description: Check JaCoCo code coverage for a Maven/Java project against a coverage gate, then drill into per-module, per-class, and per-line gaps to target tests. Use when checking coverage, finding uncovered code, or planning tests to reach a coverage threshold.
+description: Check JaCoCo code coverage for a Maven/Java project against a gate, then drill into per-module, per-class, and per-line gaps to target tests. Use when the user says "what's our test coverage", "check coverage", "which classes need tests", "are we above the coverage gate", or is planning tests to reach a threshold.
 argument-hint: "[module-or-class]"
 ---
 

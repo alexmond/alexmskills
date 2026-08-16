@@ -1,6 +1,6 @@
 ---
 name: codestyle
-description: Coding standards, formatting, and static-analysis conventions for Maven/Java projects using spring-javaformat, Checkstyle, and PMD. Use when checking or fixing code-style violations, or when asking what the project's formatting and naming rules are.
+description: Coding standards and formatting for Maven/Java projects using spring-javaformat and Checkstyle. Use when the user says "fix the code-style violations", "reformat this module", "the build is failing on Checkstyle", or asks what the project's formatting and naming rules are. For PMD static analysis specifically, see the `pmd` skill.
 ---
 
 ## Maven/Java Coding Standards

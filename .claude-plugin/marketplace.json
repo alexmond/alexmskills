@@ -86,8 +86,8 @@
       "name": "maven-quality",
       "displayName": "Maven Quality Gate",
       "source": "./plugins/maven-quality",
-      "description": "Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects (codestyle, precommit, jacoco).",
-      "version": "1.0.0",
+      "description": "Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects. codestyle (spring-javaformat + Checkstyle), pmd (ruleset, plugin wiring, report triage by priority, CPD, and suppression at the right scope), jacoco (coverage gate + gap analysis), and precommit (all of it before a commit).",
+      "version": "1.1.0",
       "category": "workflow",
       "keywords": [
         "maven",

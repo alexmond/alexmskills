@@ -89,6 +89,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-15 — **pmd-skill** — maven-quality 1.1.0: PMD split out of codestyle (style vs defects are different jobs). Ruleset+wiring grounded in real repos; triage by priority not count. Why: namespaced pmd.xml makes a naive findall report CLEAN on a failing project.
 - 2026-08-13 — **lenient-parser-launders-input** — skill-linter's own frontmatter was invalid YAML (bare `word:` continuation) so it loaded with NO metadata; its hand-rolled parser called it clean. Why: a lenient stand-in for a strict parser is worse than no check. Pinned agreement with yaml.safe_load.
 - 2026-08-13 — **role-system-docs-split** — 347 lines -> 3 pages (concept/usage/files). #usage-sequence moved, so 3 inbound plugin-page xrefs + 1 internal ref were repointed. Why: a moved anchor breaks silently — no build error, just a dead link.
 - 2026-08-13 — **prompt-coach-docs-split** — 824-line page -> 4 (overview/rules/config/learning); gen-rules-doc targets one page per block and now FAILS on a skipped block. Why: a note that scrolls past is how a page loses its generated half.

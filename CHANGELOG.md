@@ -7,6 +7,39 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-15
+
+### Added
+
+- **maven-quality 1.1.0** — new `pmd` skill. PMD was named in three places but never
+  usable: the ruleset was referenced and never shown, there was no plugin wiring, the
+  guidance listed *exclusions* with no matching inclusions, and CPD was absent
+  entirely. It also sat inside `codestyle`, which conflates two different jobs —
+  spring-javaformat and Checkstyle decide how code should look, PMD decides whether
+  it is likely wrong.
+
+  The skill ships the ruleset and the `maven-pmd-plugin` wiring (both grounded in
+  real working projects, not invented), triage **by priority rather than count**,
+  `cpd-check` for duplicate code, and suppression scope — ruleset exclude vs
+  `@SuppressWarnings("PMD.Rule")` vs `// NOPMD`, narrowest that works.
+
+  It parses `target/pmd.xml` rather than grepping the console, and documents the trap
+  that makes that necessary: **the report is namespaced, so a plain `findall("file")`
+  returns nothing and a report full of violations reads as clean.** Verified against a
+  crafted report — the naive parse reported 0 files where 3 real violations existed.
+
+  Also includes an adoption path for existing codebases, because a first run on a
+  mature project yields hundreds of findings and the usual outcome is that the gate
+  gets switched off.
+
+### Changed
+
+- **maven-quality 1.1.0** — `codestyle`, `jacoco` and `precommit` descriptions now
+  carry the phrases a user would actually type ("fix the code-style violations",
+  "what's our test coverage", "am I ready to commit"). Found by `skill-linter`; all
+  four skills in the plugin now lint clean. `codestyle` also hands PMD off to the new
+  skill instead of covering it thinly.
+
 ## 2026-08-13
 
 ### Fixed
