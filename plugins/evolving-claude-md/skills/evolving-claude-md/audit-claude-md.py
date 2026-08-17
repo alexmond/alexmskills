@@ -6,15 +6,21 @@ Wired as a SessionStart hook via .claude/settings.json. Silent only when the
 file is healthy on every dimension; emits JSON with
 `hookSpecificOutput.additionalContext` when one of the thresholds is crossed:
 
-  - whole-file size > T_FILE_WARN / T_FILE_RECOMMEND_KB
+  - whole-file size over the warn / recommend KB thresholds
     (the actual context-pressure dimension; D&L line/entry counts don't see
     bloat that lives under Conventions / Architecture / Gotchas / etc.)
-  - D&L section line count > T_LINES_WARN / T_LINES_RECOMMEND
-  - D&L entry count > T_ENTRIES_WARN / T_ENTRIES_RECOMMEND
-  - any entry body > T_MEGA_ENTRY_CHARS (split or collapse candidate)
-  - any leading-bold "topic" tag appears in 3+ entries (collapse candidate)
-  - any entry cites a backticked artifact (path / class / flag) that doesn't
-    exist in the tree (`git grep -qF` miss) → staleness candidate
+  - D&L section line count / entry count over their thresholds
+  - any entry body over the mega-entry cap (split or collapse candidate)
+  - any leading-bold "topic" tag repeated enough times (graduation candidate)
+  - any entry citing a backticked artifact (path / class / flag) that no longer
+    exists in the tree (`git grep -qF` miss) → staleness candidate
+  - COVERAGE: a build file with no matching command in CLAUDE.md, or a repo with
+    many top-level directories and no layout prose — the one check that asks
+    whether the essentials are present rather than whether there is too much
+  - companion context files (`.claude.local.md`, nested CLAUDE.md) over the size
+    threshold — they load into context exactly like the root file
+
+Every threshold is overridable per repo; see DEFAULTS / load_config below.
 
 When the `### Decisions & Learnings` heading is missing, the script does NOT
 exit silently anymore — it reports the whole-file size + total dated-bullet
@@ -38,11 +44,18 @@ import time
 from collections import Counter
 
 CLAUDE_MD = "CLAUDE.md"
+LOCAL_MD = ".claude.local.md"
 SECTION_HEADING = "### Decisions & Learnings"
 
-# Thresholds — calibrated 2026-06-26.
-# Whole-file size is the dimension that actually correlates with harness
-# context pressure; the D&L counters only see one slice of the file.
+# Thresholds — calibrated 2026-06-26 against this author's repos, which is
+# exactly why they are overridable. "Concise" is not a universal number: a
+# 40 KB CLAUDE.md is bloat in a library and reasonable in a monorepo that
+# genuinely has that much load-bearing context. Defaults are a starting point,
+# not a verdict.
+#
+# Resolution order (later wins), matching the prompt-coach convention:
+#   these defaults → ~/.claude/evolving-claude-md/config.json
+#                  → <repo>/.claude/evolving-claude-md/config.json
 T_FILE_WARN_KB = 25
 T_FILE_RECOMMEND_KB = 40
 T_LINES_WARN = 200
@@ -51,6 +64,38 @@ T_ENTRIES_WARN = 25
 T_ENTRIES_RECOMMEND = 35
 T_MEGA_ENTRY_CHARS = 800
 T_TOPIC_CLUSTER = 3
+
+CONFIG_REL = os.path.join(".claude", "evolving-claude-md", "config.json")
+DEFAULTS: dict[str, object] = {
+    "file_warn_kb": T_FILE_WARN_KB,
+    "file_recommend_kb": T_FILE_RECOMMEND_KB,
+    "lines_warn": T_LINES_WARN,
+    "lines_recommend": T_LINES_RECOMMEND,
+    "entries_warn": T_ENTRIES_WARN,
+    "entries_recommend": T_ENTRIES_RECOMMEND,
+    "mega_entry_chars": T_MEGA_ENTRY_CHARS,
+    "topic_cluster": T_TOPIC_CLUSTER,
+    "layout_min_dirs": 5,
+    "coverage": True,      # the upward check (build command, layout)
+    "nested": True,        # also size-check nested CLAUDE.md + .claude.local.md
+}
+
+
+def load_config(root: str = ".") -> dict:
+    """Defaults, then global, then repo. A malformed or unreadable config is
+    ignored rather than fatal — this runs on SessionStart, and a broken config
+    file must never be the reason a session starts badly."""
+    cfg = dict(DEFAULTS)
+    for path in (os.path.join(os.path.expanduser("~"), CONFIG_REL),
+                 os.path.join(root, CONFIG_REL)):
+        try:
+            with open(path) as fh:
+                loaded = json.load(fh)
+            if isinstance(loaded, dict):
+                cfg.update({k: v for k, v in loaded.items() if k in DEFAULTS})
+        except (OSError, ValueError):
+            continue
+    return cfg
 
 # Staleness check — what counts as an artifact token worth checking against the
 # tree. Lean conservative (high precision) so false positives don't drown the
@@ -117,7 +162,7 @@ LAYOUT_IGNORE_DIRS = {
 SKIP_RE = re.compile(r"<!--\s*audit-skip:\s*([^>]+?)\s*-->", re.I)
 
 
-def coverage_gaps(text: str, root: str = ".") -> list[str]:
+def coverage_gaps(text: str, root: str = ".", cfg: dict | None = None) -> list[str]:
     """What's missing that an agent would actually need.
 
     High precision by construction — nothing is expected unless the tree proves
@@ -125,6 +170,7 @@ def coverage_gaps(text: str, root: str = ".") -> list[str]:
     a layout section only once there are enough directories to get lost in. On a
     29-repo sample this produced zero false positives.
     """
+    cfg = cfg or DEFAULTS
     lower = text.lower()
     skipped = {
         s.strip().lower()
@@ -154,12 +200,51 @@ def coverage_gaps(text: str, root: str = ".") -> list[str]:
             ]
         except OSError:
             dirs = []
-        if len(dirs) >= LAYOUT_MIN_DIRS:
+        if len(dirs) >= int(cfg["layout_min_dirs"]):
             gaps.append(
                 f"nothing on layout — {len(dirs)} top-level directories and "
                 f"CLAUDE.md never says where anything lives"
             )
     return gaps
+
+
+NESTED_MAX_DEPTH = 3       # deep enough for packages/<x>/<y>/CLAUDE.md, shallow enough to stay fast
+NESTED_SKIP_DIRS = {
+    ".git", ".idea", ".vscode", "node_modules", "target", "build", "dist",
+    "out", "vendor", "venv", ".venv", "__pycache__", ".gradle", ".mvn",
+}
+
+
+def companion_files(root: str = ".") -> list[tuple[str, float]]:
+    """Every OTHER context file that costs tokens: `.claude.local.md` and any
+    nested CLAUDE.md.
+
+    These load into context exactly like the root file, so bloat in them is the
+    same problem measured nowhere. The root file gets the full analysis (that is
+    where the log lives); these get a size check, because a nested CLAUDE.md
+    rarely carries a Decisions & Learnings section and reporting on five files in
+    a SessionStart hook would be its own kind of noise.
+    """
+    found: list[tuple[str, float]] = []
+
+    local = os.path.join(root, LOCAL_MD)
+    if os.path.isfile(local):
+        found.append((LOCAL_MD, os.path.getsize(local) / 1024.0))
+
+    root_depth = os.path.abspath(root).rstrip(os.sep).count(os.sep)
+    for dirpath, dirnames, filenames in os.walk(root):
+        depth = os.path.abspath(dirpath).rstrip(os.sep).count(os.sep) - root_depth
+        if depth >= NESTED_MAX_DEPTH:
+            dirnames[:] = []
+            continue
+        dirnames[:] = [d for d in dirnames if d not in NESTED_SKIP_DIRS and not d.startswith(".")]
+        if dirpath == root:
+            continue                      # the root file is analysed in full elsewhere
+        if CLAUDE_MD in filenames:
+            p = os.path.join(dirpath, CLAUDE_MD)
+            rel = os.path.relpath(p, root)
+            found.append((rel, os.path.getsize(p) / 1024.0))
+    return found
 
 
 def looks_like_artifact(tok: str) -> bool:
@@ -197,9 +282,14 @@ def main() -> int:
     if not os.path.exists(CLAUDE_MD):
         return 0
 
+    cfg = load_config()
     with open(CLAUDE_MD) as f:
         text = f.read()
     file_kb = len(text.encode("utf-8")) / 1024.0
+
+    # Companion context files — same token cost, previously unmeasured.
+    companions = companion_files() if cfg["nested"] else []
+    heavy = [(n, kb) for n, kb in companions if kb > float(cfg["file_warn_kb"])]
 
     parts: list[str] = []
 
@@ -210,19 +300,24 @@ def main() -> int:
         dated_bullets = len(
             re.findall(r"^- (?:~~)?\d{4}-\d{2}-\d{2}", text, re.MULTILINE)
         )
-        gaps = coverage_gaps(text)
-        if file_kb < T_FILE_WARN_KB and dated_bullets < T_ENTRIES_WARN and not gaps:
+        gaps = coverage_gaps(text, cfg=cfg) if cfg["coverage"] else []
+        if (file_kb < float(cfg["file_warn_kb"])
+                and dated_bullets < float(cfg["entries_warn"])
+                and not gaps and not heavy):
             return 0
         parts.append(
             f"📝 CLAUDE.md audit: no `{SECTION_HEADING}` section found "
             f"({file_kb:.1f} KB, {dated_bullets} dated bullets elsewhere)."
         )
-        if file_kb > T_FILE_RECOMMEND_KB:
+        if file_kb > float(cfg["file_recommend_kb"]):
             parts.append("**Whole-file compaction RECOMMENDED.**")
-        elif file_kb > T_FILE_WARN_KB:
+        elif file_kb > float(cfg["file_warn_kb"]):
             parts.append("Consider compacting the file.")
         if gaps:
             parts.append(f"Coverage: {'; '.join(gaps)}.")
+        if heavy:
+            listed = ", ".join(f"`{n}` ({kb:.1f} KB)" for n, kb in sorted(heavy, key=lambda x: -x[1])[:4])
+            parts.append(f"Other context files over {cfg['file_warn_kb']} KB: {listed}.")
         parts.append(
             "Wire `evolving-claude-md` (add to `enabledPlugins`) so the file "
             "gets a learning loop instead of growing under one big section."
@@ -253,7 +348,7 @@ def main() -> int:
     entries = entry_pat.findall(section)
     entry_count = len(entries)
 
-    mega = [(d, b.strip()[:90]) for d, b in entries if len(b) > T_MEGA_ENTRY_CHARS]
+    mega = [(d, b.strip()[:90]) for d, b in entries if len(b) > int(cfg["mega_entry_chars"])]
 
     # Topic clustering by the first bold phrase in the body.
     topics: list[str] = []
@@ -267,7 +362,7 @@ def main() -> int:
         topics.append(t)
     topic_freq = Counter(topics)
     clusters = sorted(
-        ((t, n) for t, n in topic_freq.items() if n >= T_TOPIC_CLUSTER),
+        ((t, n) for t, n in topic_freq.items() if n >= int(cfg["topic_cluster"])),
         key=lambda x: -x[1],
     )
 
@@ -294,21 +389,21 @@ def main() -> int:
 
     level: str | None = None
     if (
-        file_kb > T_FILE_RECOMMEND_KB
-        or section_lines > T_LINES_RECOMMEND
-        or entry_count > T_ENTRIES_RECOMMEND
+        file_kb > float(cfg["file_recommend_kb"])
+        or section_lines > float(cfg["lines_recommend"])
+        or entry_count > float(cfg["entries_recommend"])
     ):
         level = "recommended"
     elif (
-        file_kb > T_FILE_WARN_KB
-        or section_lines > T_LINES_WARN
-        or entry_count > T_ENTRIES_WARN
+        file_kb > float(cfg["file_warn_kb"])
+        or section_lines > float(cfg["lines_warn"])
+        or entry_count > float(cfg["entries_warn"])
     ):
         level = "consider"
 
-    gaps = coverage_gaps(text)
+    gaps = coverage_gaps(text, cfg=cfg) if cfg["coverage"] else []
 
-    if not level and not mega and not clusters and not stale and not gaps:
+    if not level and not mega and not clusters and not stale and not gaps and not heavy:
         return 0
 
     parts.append(
@@ -323,12 +418,12 @@ def main() -> int:
     if mega:
         head = "; ".join(f'{d}: "{h}…"' for d, h in mega[:3])
         parts.append(
-            f"{len(mega)} mega-entr{'y' if len(mega) == 1 else 'ies'} (>{T_MEGA_ENTRY_CHARS} chars): {head}."
+            f"{len(mega)} mega-entr{'y' if len(mega) == 1 else 'ies'} (>{cfg['mega_entry_chars']} chars): {head}."
         )
     if clusters:
         listed = ", ".join(f'"{t}" ({n})' for t, n in clusters[:5])
         parts.append(
-            f"Topic tags with {T_TOPIC_CLUSTER}+ entries (graduation candidates → Conventions/Gotchas): {listed}."
+            f"Topic tags with {cfg['topic_cluster']}+ entries (graduation candidates → Conventions/Gotchas): {listed}."
         )
     if stale:
         listed = "; ".join(
@@ -339,6 +434,12 @@ def main() -> int:
         parts.append(
             f"⚠️ {len(stale)} entr{'y' if len(stale) == 1 else 'ies'} cite vanished artifacts "
             f"(strike/update candidates): {listed}{more}."
+        )
+
+    if heavy:
+        listed = ", ".join(f"`{n}` ({kb:.1f} KB)" for n, kb in sorted(heavy, key=lambda x: -x[1])[:4])
+        parts.append(
+            f"Other context files over {cfg['file_warn_kb']} KB — they load the same as this one: {listed}."
         )
 
     if gaps:

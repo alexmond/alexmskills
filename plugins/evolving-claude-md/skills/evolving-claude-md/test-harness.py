@@ -179,6 +179,83 @@ def t_silent_when_healthy():
               f"rc={proc.returncode} out={proc.stdout[:120]!r}")
 
 
+def t_thresholds_are_per_repo_configurable():
+    """"Concise" is not a universal number — 40 KB is bloat in a library and
+    reasonable in a monorepo. The defaults were calibrated on one person's
+    repos, so they have to be overridable or they are just that person's taste
+    imposed on everyone."""
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "cfg", FULL, ["pom.xml"])
+        base = audit.load_config(str(r))
+        check("with no config file, the defaults are used",
+              base["file_warn_kb"] == audit.T_FILE_WARN_KB and base["coverage"] is True)
+
+        cdir = r / ".claude" / "evolving-claude-md"
+        cdir.mkdir(parents=True)
+        (cdir / "config.json").write_text(json.dumps(
+            {"file_warn_kb": 100, "entries_recommend": 500, "coverage": False}))
+        got = audit.load_config(str(r))
+        check("a repo config overrides only the keys it names",
+              got["file_warn_kb"] == 100 and got["entries_recommend"] == 500
+              and got["lines_warn"] == audit.T_LINES_WARN, str(got))
+        check("unknown keys in a config are ignored, not merged in",
+              set(got) == set(audit.DEFAULTS))
+
+        (cdir / "config.json").write_text("{ this is not json")
+        check("a corrupt config falls back to defaults instead of raising",
+              audit.load_config(str(r))["file_warn_kb"] == audit.T_FILE_WARN_KB)
+
+
+def t_coverage_can_be_switched_off():
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "nocov", "# p\n\nnothing here.\n", ["pom.xml"])
+        cdir = r / ".claude" / "evolving-claude-md"; cdir.mkdir(parents=True)
+        (cdir / "config.json").write_text(json.dumps({"coverage": False}))
+        proc = subprocess.run([sys.executable, str(HERE / "audit-claude-md.py")],
+                              cwd=str(r), capture_output=True, text=True, timeout=20)
+        check("coverage:false silences the upward check entirely",
+              proc.returncode == 0 and "Coverage" not in proc.stdout and "⬆️" not in proc.stdout,
+              proc.stdout[:140])
+
+
+def t_companion_files_are_measured():
+    """.claude.local.md and nested CLAUDE.md load into context exactly like the
+    root file, so bloat in them is the same problem measured nowhere."""
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "multi", FULL, ["pom.xml"])
+        (r / "packages" / "api").mkdir(parents=True)
+        (r / "packages" / "api" / "CLAUDE.md").write_text("x" * 40_000)
+        (r / ".claude.local.md").write_text("y" * 40_000)
+        (r / "node_modules" / "pkg").mkdir(parents=True)
+        (r / "node_modules" / "pkg" / "CLAUDE.md").write_text("z" * 90_000)
+
+        names = {n for n, _ in audit.companion_files(str(r))}
+        check("finds .claude.local.md and nested CLAUDE.md",
+              audit.LOCAL_MD in names and any("api" in n for n in names), str(names))
+        check("never walks into node_modules / build output",
+              not any("node_modules" in n for n in names), str(names))
+        check("the root CLAUDE.md is not double-counted as a companion",
+              "CLAUDE.md" not in names, str(names))
+
+        proc = subprocess.run([sys.executable, str(HERE / "audit-claude-md.py")],
+                              cwd=str(r), capture_output=True, text=True, timeout=20)
+        check("an oversized companion file is reported",
+              "Other context files" in proc.stdout, proc.stdout[:200])
+
+
+def t_nested_can_be_switched_off():
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "flatonly", FULL, ["pom.xml"])
+        (r / ".claude.local.md").write_text("y" * 60_000)
+        cdir = r / ".claude" / "evolving-claude-md"; cdir.mkdir(parents=True)
+        (cdir / "config.json").write_text(json.dumps({"nested": False}))
+        proc = subprocess.run([sys.executable, str(HERE / "audit-claude-md.py")],
+                              cwd=str(r), capture_output=True, text=True, timeout=20)
+        check("nested:false stops companion reporting",
+              proc.returncode == 0 and "Other context files" not in proc.stdout,
+              proc.stdout[:140])
+
+
 CHECKS = [
     t_command_gap_is_grounded_in_the_build_file,
     t_command_gap_clears_when_mentioned,
@@ -190,6 +267,10 @@ CHECKS = [
     t_no_regression_on_real_repos,
     t_hook_emits_valid_json_and_never_blocks,
     t_silent_when_healthy,
+    t_thresholds_are_per_repo_configurable,
+    t_coverage_can_be_switched_off,
+    t_companion_files_are_measured,
+    t_nested_can_be_switched_off,
 ]
 
 

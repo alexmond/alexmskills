@@ -105,6 +105,17 @@ Run `archive-decisions.py --cutoff YYYY-MM-DD --apply` at the end of each quarte
 
 CLAUDE.md never grows monotonically — quarter ends, entries move out.
 
+## Nested CLAUDE.md
+
+A monorepo can carry `packages/api/CLAUDE.md` beside the root file, and Claude
+Code loads it when work happens in that subtree. The audit walks up to three
+levels deep (skipping `node_modules`, `target`, `build` and friends) and
+size-checks whatever it finds.
+
+Only the root file gets the full treatment — Decisions & Learnings parsing,
+staleness, coverage — because that is where the log lives and reporting on five
+files at every session start would be its own kind of noise.
+
 ## The three hooks
 
 ### SessionStart audit (`audit-claude-md.py`)
@@ -130,6 +141,66 @@ If any entry violates, denies with a `reason` explaining which line + how to fix
 ### PostCompact audit
 
 Re-runs `audit-claude-md.py` after Claude Code compacts the conversation context. Same output shape as SessionStart. Keeps the assistant aware of CLAUDE.md state across a compaction without paying to re-read the whole file.
+
+## Tuning the thresholds per repo
+
+"Concise" is not a universal number. 40 KB is bloat in a library and reasonable
+in a monorepo that genuinely has that much load-bearing context — so the shipped
+defaults are a starting point, not a verdict, and every one is overridable.
+
+Resolution order, later wins:
+
+```
+built-in defaults
+  → ~/.claude/evolving-claude-md/config.json          (all your repos)
+    → <repo>/.claude/evolving-claude-md/config.json   (this repo)
+```
+
+```json
+{
+  "file_warn_kb": 25,        "file_recommend_kb": 40,
+  "lines_warn": 200,         "lines_recommend": 300,
+  "entries_warn": 25,        "entries_recommend": 35,
+  "mega_entry_chars": 800,   "topic_cluster": 3,
+  "layout_min_dirs": 5,
+  "coverage": true,          "nested": true
+}
+```
+
+Name only the keys you want changed; the rest keep their defaults. Unknown keys
+are ignored, and a corrupt config falls back to defaults rather than failing —
+this runs on SessionStart, and a bad config file must never be the reason a
+session starts badly.
+
+Set `coverage: false` to drop the upward check, `nested: false` to stop looking
+at companion files.
+
+## Where an entry goes — CLAUDE.md vs `.claude.local.md`
+
+`CLAUDE.md` is committed and shared; `.claude.local.md` is gitignored and yours.
+Both load into context the same way, so the split is about *audience*, not size.
+
+| Goes in `CLAUDE.md` | Goes in `.claude.local.md` |
+|---|---|
+| Decisions the team is bound by | How **your** machine happens to be set up |
+| Conventions, gotchas, architecture | Absolute paths under your home directory |
+| Anything true for every clone | Personal tokens, local ports, scratch dirs |
+| Why a tradeoff was made | "the wrapper is broken on my box, I use `mvn`" |
+
+The test is one question: **would this still be true on a teammate's laptop, in
+CI, and in a fresh clone?** No means local.
+
+Two things make this easy to get wrong. A machine-specific fact often *feels*
+like a project fact when you're the only person working in the repo — and an
+absolute path with your username in it is the most common way a personal detail
+gets committed. `~/` is fine; `/home/alex/…` and `/Users/alex/…` are not.
+
+When a learning is genuinely mixed — a real project decision plus a local
+workaround — split it. The decision goes in the shared file with the reasoning,
+the workaround goes local.
+
+The audit size-checks `.claude.local.md` alongside the shared file, since it
+costs the same context whichever file it sits in.
 
 ## Coverage — the one upward check
 

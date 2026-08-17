@@ -55,6 +55,32 @@ Every entry follows `- YYYY-MM-DD — **topic-tag** — what. Why: reason. [see 
 
 A Recent (last 14 days) / Historic split keeps the actively-scanned section small. Reversals are struck through, stable patterns *graduate* into Conventions/Gotchas, and a quarterly `archive-decisions.py` run moves old entries into `docs/decisions/{YYYY-Q}.md`.
 
+== Tuning per repo
+
+"Concise" is not a universal number — 40 KB is bloat in a library and reasonable in a monorepo. Every threshold is overridable, resolved defaults → `~/.claude/evolving-claude-md/config.json` → `<repo>/.claude/evolving-claude-md/config.json`.
+
+[source,json]
+----
+{
+  "file_warn_kb": 25,      "file_recommend_kb": 40,
+  "lines_warn": 200,       "lines_recommend": 300,
+  "entries_warn": 25,      "entries_recommend": 35,
+  "mega_entry_chars": 800, "topic_cluster": 3,
+  "layout_min_dirs": 5,
+  "coverage": true,        "nested": true
+}
+----
+
+Name only what you want changed. Unknown keys are ignored and a corrupt file falls back to defaults — this runs on SessionStart, so a bad config must never be why a session starts badly.
+
+== Companion context files
+
+`.claude.local.md` and nested `CLAUDE.md` files load into context exactly like the root file, so bloat in them was previously the same problem measured nowhere. The audit now size-checks both, walking up to three levels deep and skipping `node_modules`, `target`, `build` and friends.
+
+Only the root file gets the full treatment — Decisions & Learnings parsing, staleness, coverage — because that is where the log lives, and reporting on five files at every session start would be its own kind of noise.
+
+The routing rule for *which* file a learning belongs in is one question: would this still be true on a teammate's laptop, in CI, and in a fresh clone? No means `.claude.local.md`. An absolute path containing your username is the most common way a personal detail gets committed — `~/` is fine, `/home/alex/…` is not.
+
 == Coverage — the one upward check
 
 Every other check pushes content *down*: bloat, staleness, clustering, archiving. A file can pass all of them and still be useless — well under every threshold, perfectly formatted, and never saying how to run the tests.

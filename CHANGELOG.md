@@ -11,6 +11,33 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **evolving-claude-md 1.3.0** — the three gaps the `claude-md-management`
+  comparison left open.
+
+  **Per-repo thresholds.** "Concise" is not a universal number: 40 KB is bloat in a
+  library and reasonable in a monorepo. The defaults were calibrated against one
+  person's repos, which made them that person's taste imposed on everyone. All
+  eleven are now overridable, resolved defaults → `~/.claude/evolving-claude-md/config.json`
+  → `<repo>/.claude/…`. Unknown keys are ignored and a corrupt config falls back to
+  defaults, because this runs on SessionStart and a bad config must never be why a
+  session starts badly.
+
+  **Companion context files.** `.claude.local.md` and nested `CLAUDE.md` load into
+  context exactly like the root file, so bloat in them was the same problem measured
+  nowhere. Both are now size-checked, walking three levels deep and skipping
+  `node_modules`, `target`, `build`. Only the root file gets the full treatment —
+  reporting on five files every session start would be its own kind of noise.
+
+  **A routing rule.** Which file a learning belongs in comes down to one question:
+  would this still be true on a teammate's laptop, in CI, and in a fresh clone? No
+  means `.claude.local.md`. An absolute path containing your username is the most
+  common way a personal detail gets committed — `~/` is fine, `/home/alex/…` is not.
+
+  Harness grows to 24 checks, covering config precedence, corrupt-config fallback,
+  both feature switches, and that the walk never descends into build output.
+
+### Added
+
 - **evolving-claude-md 1.2.0** — a **coverage check**: the first one in this plugin
   that pushes content *up*. Every other check pushes down (bloat, staleness,
   clustering, archiving), so a CLAUDE.md could pass all of them and still never say
