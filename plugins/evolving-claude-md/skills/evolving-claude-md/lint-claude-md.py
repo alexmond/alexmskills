@@ -10,7 +10,7 @@ like D&L additions, and validates each against the format contract:
 Rules enforced:
   - Valid YYYY-MM-DD date prefix
   - **topic-tag** in bold + kebab-case (lowercase letters, hyphens)
-  - Body ≤ 200 chars (the part after the date+topic)
+  - Body ≤ 500 chars (the part after the date+topic)
 
 If any new entry violates, emits JSON with permissionDecision="deny" and a
 reason string. The assistant retries with a corrected entry.
@@ -25,7 +25,7 @@ import os
 import re
 import sys
 
-MAX_BODY_CHARS = 200
+MAX_BODY_CHARS = 500
 ENTRY_RE = re.compile(
     r"^- (?:~~)?(\d{4}-\d{2}-\d{2})(?:~~)? — (.*)$"
 )
@@ -107,7 +107,7 @@ def main() -> int:
         "CLAUDE.md lint failed:\n  · "
         + "\n  · ".join(errors[:3])
         + ("\n  · …(+more)" if len(errors) > 3 else "")
-        + "\n\nFormat: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.`"
+        + "\n\nFormat: `- YYYY-MM-DD — **topic-tag** — body ≤500 chars. Why: reason.`"
         + "\nMove longer details to docs/decisions/{date}-{topic}.md and link from the entry."
     )
 

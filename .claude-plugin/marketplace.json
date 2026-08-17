@@ -12,8 +12,8 @@
       "name": "evolving-claude-md",
       "displayName": "Evolving CLAUDE.md",
       "source": "./plugins/evolving-claude-md",
-      "description": "Turn CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks (audit, lint, archive).",
-      "version": "1.1.1",
+      "description": "Turn CLAUDE.md into a living Decisions & Learnings log that stays bounded: a format contract enforced at write time by a PreToolUse lint, four downward pressures (strike-through, merge, graduation, quarterly archive), staleness detection against the tree, and a tree-grounded coverage check for the essentials a file can pass every size threshold and still be missing.",
+      "version": "1.2.0",
       "category": "self-learning",
       "keywords": [
         "claude-md",

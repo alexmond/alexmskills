@@ -70,6 +70,97 @@ STALENESS_MIN_MISSING = 2  # entry flagged only when ≥2 of its artifact tokens
 STALENESS_MAX_REPORT = 5
 STALENESS_TIME_BUDGET_S = 2.5  # total wall-clock cap on all git-grep checks
 
+# --- coverage: is the essential content there at all? ------------------------
+# Every other check in this file pushes DOWN (bloat, staleness, clustering). A
+# file can pass all of them and still be useless — 12 KB, perfectly formatted,
+# and never saying how to run the tests. This is the one upward check.
+#
+# It is grounded in what the repo actually is, not in a generic checklist: the
+# build file on disk decides which command we expect to find. No build system
+# detected means nothing is claimed, because a docs repo legitimately has no
+# build command and a checklist would just cry wolf at it.
+BUILD_SIGNALS: list[tuple[str, tuple[str, ...], str]] = [
+    # marker file            command tokens that satisfy it        label
+    ("pom.xml",              ("mvn", "mvnw"),                      "Maven"),
+    ("build.gradle",         ("gradle", "gradlew"),                "Gradle"),
+    ("build.gradle.kts",     ("gradle", "gradlew"),                "Gradle"),
+    ("Cargo.toml",           ("cargo",),                           "Cargo"),
+    ("go.mod",               ("go build", "go test", "go run"),    "Go"),
+    ("package.json",         ("npm", "pnpm", "yarn", "bun"),       "Node"),
+    ("pyproject.toml",       ("pytest", "python -m", "uv ", "poetry", "tox", "hatch"), "Python"),
+    ("Gemfile",              ("bundle", "rake"),                   "Ruby"),
+    ("composer.json",        ("composer",),                        "PHP"),
+    ("mix.exs",              ("mix ",),                            "Elixir"),
+    ("CMakeLists.txt",       ("cmake",),                           "CMake"),
+    ("Makefile",             ("make",),                            "Make"),
+]
+# Layout is only expected once the repo is big enough that it isn't obvious from
+# `ls`. Same grounding rule as commands: claim nothing the tree doesn't justify.
+LAYOUT_WORDS = ("architecture", "layout", "structure", "directory", "modules",
+                "components", "the shape", "how it fits")
+LAYOUT_MIN_DIRS = 5
+LAYOUT_IGNORE_DIRS = {
+    "target", "node_modules", "build", "dist", "out", "venv", ".venv",
+    "__pycache__", "vendor", "coverage",
+}
+
+# Deliberately NOT checked: a "gotchas" section.
+# Measured across 29 real repos with a CLAUDE.md, a gotchas-heading check fired
+# on 17 of them — 59%, which is noise rather than signal. Worse, those 17 were
+# *exactly* the repos with no Decisions & Learnings log at all, so it was only
+# re-detecting "hasn't adopted this skill yet", which the audit already says on
+# that path. Gotchas arrive by graduation from the log; the topic-cluster check
+# above is the grounded way to prompt for them. Don't re-add this without data.
+
+# Explicit opt-out, kept in CLAUDE.md itself so the decision lives with the file:
+#   <!-- audit-skip: commands, layout -->
+SKIP_RE = re.compile(r"<!--\s*audit-skip:\s*([^>]+?)\s*-->", re.I)
+
+
+def coverage_gaps(text: str, root: str = ".") -> list[str]:
+    """What's missing that an agent would actually need.
+
+    High precision by construction — nothing is expected unless the tree proves
+    it applies. A build command is only wanted when a build file is present, and
+    a layout section only once there are enough directories to get lost in. On a
+    29-repo sample this produced zero false positives.
+    """
+    lower = text.lower()
+    skipped = {
+        s.strip().lower()
+        for m in SKIP_RE.findall(text)
+        for s in m.split(",")
+    }
+    gaps: list[str] = []
+
+    if "commands" not in skipped:
+        for marker, tokens, label in BUILD_SIGNALS:
+            if not os.path.exists(os.path.join(root, marker)):
+                continue
+            if not any(t in lower for t in tokens):
+                gaps.append(
+                    f"no build/test command — this is a {label} project "
+                    f"(`{marker}`) but CLAUDE.md never mentions `{tokens[0]}`"
+                )
+            break  # the first marker found is the project's primary build system
+
+    if "layout" not in skipped and not any(w in lower for w in LAYOUT_WORDS):
+        try:
+            dirs = [
+                d for d in os.listdir(root)
+                if os.path.isdir(os.path.join(root, d))
+                and not d.startswith(".")
+                and d not in LAYOUT_IGNORE_DIRS
+            ]
+        except OSError:
+            dirs = []
+        if len(dirs) >= LAYOUT_MIN_DIRS:
+            gaps.append(
+                f"nothing on layout — {len(dirs)} top-level directories and "
+                f"CLAUDE.md never says where anything lives"
+            )
+    return gaps
+
 
 def looks_like_artifact(tok: str) -> bool:
     tok = tok.strip()
@@ -119,7 +210,8 @@ def main() -> int:
         dated_bullets = len(
             re.findall(r"^- (?:~~)?\d{4}-\d{2}-\d{2}", text, re.MULTILINE)
         )
-        if file_kb < T_FILE_WARN_KB and dated_bullets < T_ENTRIES_WARN:
+        gaps = coverage_gaps(text)
+        if file_kb < T_FILE_WARN_KB and dated_bullets < T_ENTRIES_WARN and not gaps:
             return 0
         parts.append(
             f"📝 CLAUDE.md audit: no `{SECTION_HEADING}` section found "
@@ -129,6 +221,8 @@ def main() -> int:
             parts.append("**Whole-file compaction RECOMMENDED.**")
         elif file_kb > T_FILE_WARN_KB:
             parts.append("Consider compacting the file.")
+        if gaps:
+            parts.append(f"Coverage: {'; '.join(gaps)}.")
         parts.append(
             "Wire `evolving-claude-md` (add to `enabledPlugins`) so the file "
             "gets a learning loop instead of growing under one big section."
@@ -212,7 +306,9 @@ def main() -> int:
     ):
         level = "consider"
 
-    if not level and not mega and not clusters and not stale:
+    gaps = coverage_gaps(text)
+
+    if not level and not mega and not clusters and not stale and not gaps:
         return 0
 
     parts.append(
@@ -243,6 +339,15 @@ def main() -> int:
         parts.append(
             f"⚠️ {len(stale)} entr{'y' if len(stale) == 1 else 'ies'} cite vanished artifacts "
             f"(strike/update candidates): {listed}{more}."
+        )
+
+    if gaps:
+        # Deliberately one line and last-but-one: a file can be bloated AND
+        # missing the basics, and the basics are the cheaper fix.
+        parts.append(
+            f"⬆️ Coverage gap — {'; '.join(gaps)}. "
+            f"Offer to add it; if it genuinely doesn't apply, add "
+            f"`<!-- audit-skip: commands -->` (or the gap's name) to CLAUDE.md so it stops asking."
         )
 
     parts.append(

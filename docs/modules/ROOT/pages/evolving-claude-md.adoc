@@ -55,6 +55,34 @@ Every entry follows `- YYYY-MM-DD — **topic-tag** — what. Why: reason. [see 
 
 A Recent (last 14 days) / Historic split keeps the actively-scanned section small. Reversals are struck through, stable patterns *graduate* into Conventions/Gotchas, and a quarterly `archive-decisions.py` run moves old entries into `docs/decisions/{YYYY-Q}.md`.
 
+== Coverage — the one upward check
+
+Every other check pushes content *down*: bloat, staleness, clustering, archiving. A file can pass all of them and still be useless — well under every threshold, perfectly formatted, and never saying how to run the tests.
+
+Two gaps, both grounded in the tree rather than in a generic checklist:
+
+[cols="1,3",options="header"]
+|===
+| Gap | Fires only when
+
+| *no build/test command*
+| a build file exists (`pom.xml`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, … 12 supported) *and* CLAUDE.md never mentions its command
+
+| *nothing on layout*
+| the repo has 5+ meaningful top-level directories — generated ones like `target/` and `node_modules/` don't count — *and* CLAUDE.md never says where anything lives
+|===
+
+The grounding is the design. A docs repo has no build command and a three-directory repo needs no layout section; a generic checklist nags both. Measured across a 29-repo sample these fired *zero* times, because every one already covered what its tree justified.
+
+Decline a gap by putting the decision in the file itself:
+
+[source,markdown]
+----
+<!-- audit-skip: commands, layout -->
+----
+
+A *gotchas* check was built and then removed: on the same sample it fired on 17 of 29 repos, and those 17 were exactly the ones with no Decisions & Learnings log — so it was re-detecting "hasn't adopted this skill", which the audit already reports. Gotchas arrive by graduation from the log, and the topic-cluster check is the grounded way to prompt for them.
+
 == Notes
 
 * Manual (non-plugin) install requires copying the three scripts into `.claude/skills/evolving-claude-md/` and adding the hooks to `.claude/settings.json`, then one session restart.

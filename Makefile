@@ -1,7 +1,7 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump graduate test-mindmap test-canvas test-ai test-linter lint-skills install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
+.PHONY: help validate list bump graduate test-mindmap test-canvas test-ai test-linter test-evolve lint-skills install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -23,6 +23,9 @@ test-canvas: ## Playwright UI test for the mindmap canvas (optional; skips if pl
 test-ai: ## Live smoke test of the mindmap ✦ expander (spends tokens; needs the claude CLI)
 	@NODE_PATH="$${NODE_PATH:-$$HOME/.local/lib/playwright/node_modules}" \
 		node plugins/mindmap-prompt/tests/pw-ai.js
+
+test-evolve: ## Run the evolving-claude-md harness (coverage checks + hook contract)
+	@python3 plugins/evolving-claude-md/skills/evolving-claude-md/test-harness.py
 
 test-linter: ## Run the skill-linter harness (rules + false-positive guards)
 	@python3 plugins/skill-linter/scripts/test-harness.py

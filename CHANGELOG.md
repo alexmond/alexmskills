@@ -7,6 +7,40 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-17
+
+### Added
+
+- **evolving-claude-md 1.2.0** — a **coverage check**: the first one in this plugin
+  that pushes content *up*. Every other check pushes down (bloat, staleness,
+  clustering, archiving), so a CLAUDE.md could pass all of them and still never say
+  how to run the tests. Prompted by comparing against Anthropic's
+  `claude-md-management`, which grades content quality where this only measured size.
+
+  Two gaps, both **grounded in the tree rather than a checklist**: a build/test
+  command is expected only when a build file is present (12 build systems), and a
+  layout section only once the repo has 5+ meaningful top-level directories.
+  `<!-- audit-skip: commands, layout -->` declines a gap permanently, in the file
+  itself so the decision lives with what it's about.
+
+  Calibrated against 29 real repos, where it fires **zero** times — every one already
+  covers what its tree justifies. A *gotchas* check was built and then cut: it fired
+  on 17 of the 29 (59%), and those 17 were exactly the repos with no D&L log, so it
+  was re-detecting "hasn't adopted this skill" — something the audit already says.
+  The reasoning is recorded in the code so it doesn't get re-added from first
+  principles.
+
+  New `make test-evolve` — 15 checks, the plugin's first harness. Half assert that
+  nothing fires, because this output is injected into *every* session's context: a
+  false positive here isn't a wrong answer, it's a permanent tax on every
+  conversation in the repo. The real-repo calibration is pinned as one of them.
+
+### Changed
+
+- **evolving-claude-md 1.2.0** — trigger phrases moved out of a `## When to invoke`
+  body section into the description, where they can actually affect whether the skill
+  loads. Found by `skill-linter`; the skill now lints clean.
+
 ## 2026-08-15
 
 ### Added

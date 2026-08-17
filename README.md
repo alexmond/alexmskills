@@ -17,7 +17,7 @@ that captures every multi-cycle debugging detour.
 
 | Plugin | Category | Version | What it does |
 |---|---|---|---|
-| [`evolving-claude-md`](plugins/evolving-claude-md) | self-learning | 1.1.1 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks. |
+| [`evolving-claude-md`](plugins/evolving-claude-md) | self-learning | 1.2.0 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks — plus a tree-grounded coverage check for the essentials (build command, layout). |
 | [`dev-crew`](plugins/dev-crew) | self-learning | 1.2.0 | A self-evolving delivery crew that composes a task-fit roster (like a panel, but to *ship* a target) and runs it as a gated relay with machine-enforced phase gates + an escalation ladder; each role a subagent on its own tier. (architect → dev → qa → deployer is one example lineup.) |
 | [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.2.1 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. |
 | [`learn-on-failure`](plugins/learn-on-failure) | self-learning | 1.0.0 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle. |
