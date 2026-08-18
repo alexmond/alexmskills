@@ -11,6 +11,19 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **screenshot-tour 1.1.0** — standardizes what two real decks diverged on
+  (closes #20). Host hygiene now covers every surface, not just shell
+  recipes: any URL rendered into pixels — Freeze'd transcripts, VHS `Type`
+  lines, address bars — goes through the same substitution (documented
+  public URL or neutral placeholder), because a hostname baked into a PNG
+  is invisible to text-based secret scanners. The plan phase pre-checks
+  each aspect for an affordance trap (a shot that renders "requires setup"
+  or a 6-row demo dataset captures the affordance, not the payoff) and says
+  so in plan.md before capture time is spent. Plus three pinned template
+  rules: one canonical attribution URL, repro command in the footer only,
+  and a "Lead with:" 3-shot hero subset per deck; recipes/ must never ship
+  empty while the repro lives in prose.
+
 - **prompt-coach 1.2.0** — downstream-quality proxy (closes #30, parts a+c).
   Acceptance measures adoption, not quality, so an accepted/edited rewrite
   now opens a friction window over the next 3 substantive prompts: retries

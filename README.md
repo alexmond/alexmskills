@@ -30,7 +30,7 @@ that captures every multi-cycle debugging detour.
 | [`maven-quality`](plugins/maven-quality) | workflow | 1.1.0 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects — `codestyle`, `pmd` (ruleset, triage by priority, CPD, suppression scope), `jacoco`, `precommit`. |
 | [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
 | [`mindmap-prompt`](plugins/mindmap-prompt) | workflow | 0.2.2 | Sketch ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. `✦` expands any node with `claude -p` running in your repo. Saves as JSON Canvas (`.canvas`) so maps are git-diffable, reworkable, and open in Obsidian. |
-| [`screenshot-tour`](plugins/screenshot-tour) | workflow | 1.0.1 | Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product (CLI/web/library/TUI) under `presentation/`. |
+| [`screenshot-tour`](plugins/screenshot-tour) | workflow | 1.1.0 | Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product (CLI/web/library/TUI) under `presentation/`. |
 | [`review-agents`](plugins/review-agents) | review | 1.1.0 | Specialist review subagents for Java/Maven projects — code review, test running, dependency/CVE auditing. No-write by construction: Write/Edit withheld. |
 | [`research-sweep`](plugins/research-sweep) | research | 1.1.4 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
 

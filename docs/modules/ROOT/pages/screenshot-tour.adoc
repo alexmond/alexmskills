@@ -68,6 +68,9 @@ If any answer is "no", iterate on the *plan* (don't re-capture; re-design).
 * *Numbered prefixes* (`01-`, `02-`, …) so file order = deck order.
 * *No dev clutter* — close DevTools, hide notification banners, clear test fixtures, mask secrets. The deck represents the product, not the dev environment.
 * *Light theme by default* (better print legibility for slides); dark variants under `presentation/dark/` if needed.
+* *Host hygiene on every surface* (1.1.0) — any URL rendered into pixels (a Freeze'd transcript, a VHS `Type` line, an address bar) goes through the same substitution as the recipes: documented public URL or a neutral placeholder, never the instance the capture ran against. A hostname baked into a PNG is invisible to text-based secret scanners.
+
+Since 1.1.0 the plan phase also *pre-checks each aspect for an affordance trap* — a shot that would render a setup prompt or a thin demo dataset is called out in `plan.md` so the user can seed the payoff before capture — and every `tour.md` marks a "Lead with:" 3-shot subset, keeps the repro command in the footer only, and carries one canonical attribution URL. All four rules exist because two real decks diverged on exactly these points.
 
 == Self-learning loop
 
