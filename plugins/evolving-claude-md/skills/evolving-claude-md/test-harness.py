@@ -149,18 +149,21 @@ def t_no_regression_on_real_repos():
     check(f"no false positives across {len(sample)} real repos", not fired,
           "; ".join(f"{k}: {v}" for k, v in list(fired.items())[:4]))
 
-    # Freshness detectors, same bar. Calibrated 2026-08 across the same sample:
-    # every version-pin hit was a genuinely contradicted build-file version
-    # (jhelm, yj-schema-validator) and the sequence detector fired nowhere.
-    # Any repo OUTSIDE the allowlist firing means an edit made the detectors
-    # chatty — unless you have hand-verified the new hit is a true positive,
-    # in which case update the CLAUDE.md in question (preferred) or this list.
-    pin_allow = {"jhelm", "yj-schema-validator"}
-    pin_fired = {p.name for p in sample
-                 if audit.freshness.stale_version_pins(
-                     (p / "CLAUDE.md").read_text(errors="replace"), str(p))}
-    check(f"version-pin detector fires only on known-stale repos across {len(sample)} real repos",
-          pin_fired <= pin_allow, f"unexpected: {sorted(pin_fired - pin_allow)}")
+    # Freshness detectors, same bar. A fixed repo allowlist proved wrong within
+    # hours of the 2026-08 calibration — venice-vr genuinely rotted (pom moved
+    # to Boot 4.1.0, CLAUDE.md still said 4.0.6) and the pinned set called that
+    # true positive a regression. The durable invariant isn't WHICH repos fire,
+    # it's that every hit is a REAL contradiction: the stated version must not
+    # be prefix-compatible with the build file's actual version.
+    bogus = {}
+    for p_ in sample:
+        for hit in audit.freshness.stale_version_pins(
+                (p_ / "CLAUDE.md").read_text(errors="replace"), str(p_)):
+            stated, actual = str(hit["stated"]), str(hit["actual"])
+            if actual == stated or actual.startswith(stated + "."):
+                bogus.setdefault(p_.name, []).append(hit)
+    check(f"every version-pin hit across {len(sample)} real repos is a genuine contradiction",
+          not bogus, str(bogus))
     seq_fired = {p.name for p in sample
                  if audit.freshness.stale_sequence_facts(
                      (p / "CLAUDE.md").read_text(errors="replace"), str(p))}
