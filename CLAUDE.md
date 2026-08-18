@@ -16,7 +16,7 @@ plugins/<name>/                   # one directory per plugin
 docs/                             # Antora component → published at alexmond.org/alexmskills
 scripts/validate-marketplace.sh   # jq-based validator (also run in CI)
 Makefile                          # validate / list / bump helpers
-.claude/                          # this repo dogfoods evolving-claude-md on its own CLAUDE.md
+.claude/                          # per-plugin state (mindmap, prompt-coach, skill-linter)
 ```
 
 ## Catalog (see README for descriptions)
@@ -61,9 +61,10 @@ Makefile                          # validate / list / bump helpers
 - **Local-directory marketplace install is unsupported by the CLI** (v2.1.173: "source type your
   Claude Code version does not support"). The marketplace still *parses/lists* locally; full install
   works once pushed to GitHub. Test a plugin locally with `claude --plugin-dir ./plugins/<n>`.
-- **`evolving-claude-md` scripts read `CLAUDE.md` from CWD.** As a plugin they wire hooks via
-  `${CLAUDE_PLUGIN_ROOT}` in `hooks/hooks.json`; a manual install points `.claude/settings.json` at
-  `.claude/skills/evolving-claude-md/`. Hooks need a session restart to register.
+- **`evolving-claude-md` scripts read `CLAUDE.md` from CWD.** Hooks wire via `${CLAUDE_PLUGIN_ROOT}`
+  in `hooks/hooks.json` and need a session restart to register. It is installed **globally** (user
+  `~/.claude/settings.json`), so this repo's hooks run the *installed* build, not `plugins/` — test
+  edits with `claude --plugin-dir ./plugins/evolving-claude-md`, and reinstall to pick them up.
 - **Antora component version is `~` (versionless)** → clean `/alexmskills/` URL with no version
   segment. The site is built/deployed by `alexmond.github.io`, not this repo.
 - **The PreToolUse lint hook enforces the D&L entry format** on any CLAUDE.md edit (date, **topic-tag**,
