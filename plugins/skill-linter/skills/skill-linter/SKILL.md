@@ -16,7 +16,14 @@ mechanical is wrong.
 
 ## What it lints
 
-`SKILL.md` files, and — since 0.2.0 — `agents/*.md`. Agents earned their slot the
+`SKILL.md` files; `agents/*.md` (0.2.0); and since 0.4.0 `commands/*.md`,
+`hooks/hooks.json`, and plugin-root structure. Skills are also **classified by
+shape** — workflow, orchestrator, learning, reference, scripted; multi-label —
+and each shape switches on its own rule pack, so a fan-out skill is asked for a
+stopping rule and an output contract, a self-improving skill is asked where its
+state lives (and warned when that state sits inside a versioned plugin), and a
+step-sequence skill is checked for contiguous numbering. A skill with no labels
+pays nothing. Agents earned their slot the
 hard way: three shipped "read-only" agents used `allowed-tools:` (the
 slash-command field, silently ignored in agents) and ran with the full tool set
 for months. `agent-wrong-tools-field` is an *error* for that reason: it is not a

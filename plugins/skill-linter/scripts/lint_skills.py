@@ -183,8 +183,12 @@ DRIVE_PATH = re.compile(r"\b[A-Za-z]:\\\w")
 PORTABLE_KEYS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
 # Fields Claude Code documents beyond the portable spec. A key in neither set is
 # almost always a typo — and a typo'd `description` means the skill never fires.
-CODE_KEYS = PORTABLE_KEYS | {"argument-hint", "when_to_use", "disable-model-invocation",
-                             "model", "context", "agent", "user-invocable", "version"}
+CODE_KEYS = PORTABLE_KEYS | {
+    # the full documented frontmatter table, code.claude.com/docs/en/skills
+    "argument-hint", "arguments", "disable-model-invocation", "user-invocable",
+    "disallowed-tools", "model", "effort", "context", "agent", "background",
+    "hooks", "paths", "shell", "when_to_use",
+}
 # GitHub Copilot's "vague quality improvements" list — noise, not instruction.
 VAGUE_EXHORT = re.compile(
     r"\b(be (more )?(accurate|careful|thorough)|don'?t (miss|make) any|do your best)\b", re.I)
@@ -246,7 +250,7 @@ def check(sk: Skill) -> list[Finding]:
         return out                     # nothing else is meaningful without it
 
     if not sk.name:
-        add("name-missing", ERROR, "frontmatter has no `name`", line=1)
+        add("name-missing", ERROR, "frontmatter has no `name`", ln=1)
     elif sk.name != sk.dir.name:
         add("name-mismatch", ERROR,
             f"frontmatter name `{sk.name}` does not match directory `{sk.dir.name}`",
@@ -472,7 +476,7 @@ def check_agent(sk: Skill) -> list[Finding]:
             "an agent with unparseable frontmatter cannot be selected at all", 1)
         return out
     if not sk.name:
-        add("name-missing", ERROR, "frontmatter has no `name`", line=1)
+        add("name-missing", ERROR, "frontmatter has no `name`", ln=1)
     elif sk.name != sk.path.stem:
         add("name-mismatch", ERROR,
             f"frontmatter name `{sk.name}` does not match file `{sk.path.stem}.md`",
@@ -500,6 +504,204 @@ def check_agent(sk: Skill) -> list[Finding]:
             add("agent-unknown-tool", WARN,
                 f"tools lists {', '.join(f'`{u}`' for u in unknown[:4])} — not a known tool name",
                 "a misspelled tool grants nothing and fails silently at delegation time")
+    return out
+
+
+# ---------------------------------------------------------------- skill types
+# Signal-based, multi-label: an orchestrator with a learnings log is both, and
+# each label switches on its own extra checks. The taxonomy grounds in
+# obra/superpowers writing-skills (Technique/Pattern/Reference) extended with
+# the shapes real marketplaces ship: workflows, orchestrators, self-learning
+# skills, scripted skills. A skill with no labels is a plain technique/pattern
+# skill and pays nothing for the machinery.
+STEP_HEADING = re.compile(r"^#{2,4}\s*(?:step|phase)\s+(\d+)", re.I | re.M)
+ORCH_SIGNALS = re.compile(
+    r"\b(subagents?|task tool|fan[- ]?outs?|dispatch(?:ing)?(?: an?)? agents?"
+    r"|parallel(?: research| review)? agents?|rosters?|panel of|coverage roles"
+    r"|relay(?:s|ed)?(?: the)? roles)\b", re.I)
+LEARN_SIGNALS = re.compile(
+    r"\b(self[- ](?:improving|learning|evolving)|learnings? log|misses log"
+    r"|learned[- ]rules|learning loop|graduat\w+ (?:to|into) (?:mastered|core|conventions)"
+    r"|append(?:ing)? (?:a |an |the )?(?:dated |new )?(?:entry|line|learning|miss)"
+    r"|add (?:it |this )?to the learnings|decisions & learnings"
+    r"|add(?:s)? a dated (?:line|entry)|checklist grows)\b", re.I)
+SELF_APPEND = re.compile(
+    r"\bappend(?:ing)?\b[^.\n]{0,80}\b(below|at the bottom|to this (?:file|skill)"
+    r"|to the (?:learnings?|misses) log)\b", re.I)
+IRREVERSIBLE_CMD = re.compile(
+    r"^\s*(?:git push|kubectl (?:apply|delete)|helm (?:install|upgrade|uninstall)"
+    r"|terraform apply|npm publish|mvn deploy|gh release)", re.I | re.M)
+GATE_WORDS = re.compile(
+    r"\b(confirm|confirmation|approval|approve|asks? the user|user[- ]gated"
+    r"|explicit(?:ly)? (?:go-ahead|consent|confirmation)|dry[- ]run first"
+    r"|stops? for|sign[- ]?off)\b", re.I)
+STOP_WORDS = re.compile(
+    r"\b(round cap|cap of|at most|limit(?:ed)? to|stopping (?:rule|condition)"
+    r"|max(?:imum)? (?:rounds?|attempts?|agents?)|budget|converge)\b", re.I)
+CONTRACT_WORDS = re.compile(
+    r"\b(output contract|report (?:format|structure|template)|schema"
+    r"|structured (?:output|findings)|return format)\b|^#{2,3}\s*(?:Output|Report)\b",
+    re.I | re.M)
+
+
+def classify(sk: Skill, prose: str) -> list[str]:
+    types: list[str] = []
+    body = sk.body
+    lines = body.splitlines() or [""]
+    if len(STEP_HEADING.findall(body)) >= 3:
+        types.append("workflow")
+    if len({m.group(1).lower() for m in ORCH_SIGNALS.finditer(prose)}) >= 2:
+        types.append("orchestrator")
+    if LEARN_SIGNALS.search(prose) or LEARN_SIGNALS.search(sk.description):
+        types.append("learning")
+    ref_lines = sum(1 for l in lines if l.lstrip().startswith(("|", "```", "    ")))
+    if len(lines) > 60 and ref_lines / len(lines) > 0.5:
+        types.append("reference")
+    sibs = [q for q in sk.dir.iterdir()
+            if q.is_file() and q.suffix in (".py", ".sh", ".js")] if sk.dir.is_dir() else []
+    if (sk.dir / "scripts").is_dir() or len(sibs) >= 2:
+        types.append("scripted")
+    return types
+
+
+def in_plugin(sk: Skill) -> bool:
+    """Installed plugins are versioned artifacts distributed via marketplaces —
+    runtime state written inside one is lost on update."""
+    for up in (sk.dir.parent, sk.dir.parent.parent, sk.dir.parent.parent.parent):
+        if (up / ".claude-plugin" / "plugin.json").is_file():
+            return True
+    return False
+
+
+def check_typed(sk: Skill, types: list[str], prose: str) -> list[Finding]:
+    out: list[Finding] = []
+    add = lambda r, lv, m, h="": out.append(Finding(sk.label, r, lv, m, h))
+
+    if "workflow" in types:
+        nums = sorted({int(n) for n in STEP_HEADING.findall(sk.body)})
+        if nums and nums != list(range(nums[0], nums[0] + len(nums))):
+            add("workflow-step-gap", WARN,
+                f"step numbering is {nums} — not contiguous",
+                "a gap usually means a step was deleted without renumbering; "
+                "the sequence reads as broken")
+        if IRREVERSIBLE_CMD.search(sk.body) and not GATE_WORDS.search(prose):
+            add("workflow-no-gate", INFO,
+                "the workflow runs irreversible commands (push/deploy/publish) "
+                "and never mentions a confirmation gate",
+                "a procedure that never says when to stop and ask will "
+                "eventually ship something unintended")
+
+    if "orchestrator" in types:
+        if not CONTRACT_WORDS.search(sk.body):
+            add("orchestrator-no-contract", INFO,
+                "fans out agents but never states an output contract",
+                "without a shared output shape each agent invents its own and "
+                "the merge becomes guesswork")
+        if not STOP_WORDS.search(prose):
+            add("orchestrator-no-stop", INFO,
+                "fans out or loops without a cap or stopping rule",
+                "an orchestrator with no stated bound runs until something "
+                "external stops it")
+
+    if "learning" in types:
+        consuming_repo_target = "claude.md" in prose.lower() or ".claude/" in prose
+        if in_plugin(sk) and SELF_APPEND.search(prose) and not consuming_repo_target:
+            add("learning-writes-to-plugin", WARN,
+                "a self-improving skill inside a plugin instructs appending to "
+                "itself or a bundled log",
+                "an installed plugin is a versioned artifact — state written "
+                "inside it is overwritten on update. Learned state belongs in "
+                "the consuming repo, e.g. .claude/<skill>/")
+        elif not SELF_APPEND.search(prose) and not re.search(
+                r"\.claude/|~/\.|memory/|log\.md|\.json\b", prose):
+            add("learning-no-location", INFO,
+                "describes a learning loop but never names where learnings live",
+                "a loop without a stated location gets a different answer every "
+                "session, and the learnings scatter")
+
+    if "reference" in types and len(sk.body.splitlines()) > 100 \
+            and not SEEN_TOC.search(sk.body):
+        add("reference-skill-no-toc", INFO,
+            "a reference-type skill over 100 lines with no table of contents",
+            "the stricter official 100-line TOC guidance targets exactly this "
+            "shape — a partial read should still reveal the scope (see "
+            "rule-sources conflict #3)")
+
+    if "scripted" in types:
+        flat = [q.name for q in sk.dir.iterdir()
+                if q.is_file() and q.suffix in (".py", ".sh", ".js")
+                and q.name not in sk.text]
+        if flat:
+            add("script-unreferenced", WARN,
+                f"{len(flat)} executable file(s) ship beside SKILL.md that it "
+                f"never mentions: {', '.join(sorted(flat)[:4])}",
+                "a bundled script must say whether Claude runs it or reads it; "
+                "one it never names is dead weight in the package")
+    return out
+
+
+# ------------------------------------------------------------- plugin surfaces
+# code.claude.com/docs/en/hooks — the complete valid event list. An unknown
+# event in hooks.json is silently dead: the hook never fires, no error shown.
+HOOK_EVENTS = {
+    "SessionStart", "Setup", "UserPromptSubmit", "UserPromptExpansion",
+    "PreToolUse", "PermissionRequest", "PermissionDenied", "PostToolUse",
+    "PostToolUseFailure", "PostToolBatch", "Notification", "MessageDisplay",
+    "SubagentStart", "SubagentStop", "TaskCreated", "TaskCompleted", "Stop",
+    "StopFailure", "TeammateIdle", "InstructionsLoaded", "ConfigChange",
+    "CwdChanged", "DirectoryAdded", "FileChanged", "WorktreeCreate",
+    "WorktreeRemove", "PreCompact", "PostCompact", "Elicitation",
+    "ElicitationResult", "SessionEnd",
+}
+PLUGIN_ROOT_VAR = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}/([^\s\"']+)")
+
+
+def check_hooks(path: Path) -> list[Finding]:
+    """hooks/hooks.json: events must be real, command targets must exist."""
+    label = f"{path.parent.parent.name}/hooks.json"
+    out: list[Finding] = []
+    add = lambda r, lv, m, h="": out.append(Finding(label, r, lv, m, h))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        add("hooks-invalid-json", ERROR, f"hooks.json does not parse: {exc}",
+            "a broken hooks file means every hook in it is silently dead")
+        return out
+    plug = path.parent.parent
+    for event, groups in (data.get("hooks") or {}).items():
+        if event not in HOOK_EVENTS:
+            add("hooks-unknown-event", ERROR,
+                f"`{event}` is not a Claude Code hook event",
+                "an unknown event name never fires and no error is shown — the "
+                "hook is silently dead (see the documented event list)")
+        for g in groups if isinstance(groups, list) else []:
+            for hk in g.get("hooks", []):
+                for m in PLUGIN_ROOT_VAR.finditer(str(hk.get("command", ""))):
+                    if not (plug / m.group(1)).exists():
+                        add("hooks-missing-target", ERROR,
+                            f"{event} hook runs `{m.group(1)}`, which does not "
+                            f"exist in the plugin",
+                            "the hook will fail on every fire")
+    return out
+
+
+def check_plugin_root(root: Path) -> list[Finding]:
+    """Plugin-level structure. The docs call one of these out verbatim as a
+    'Common mistake': components inside .claude-plugin/ are not loaded."""
+    label = f"{root.name}/(plugin)"
+    out: list[Finding] = []
+    add = lambda r, lv, m, h="": out.append(Finding(label, r, lv, m, h))
+    for comp in ("commands", "agents", "skills", "hooks"):
+        if (root / ".claude-plugin" / comp).is_dir():
+            add("plugin-component-misplaced", ERROR,
+                f"`{comp}/` sits inside .claude-plugin/ — Claude Code will not load it",
+                "only plugin.json goes in .claude-plugin/; every component "
+                "directory belongs at the plugin root")
+    if (root / "commands").is_dir():
+        add("plugin-commands-dir", INFO,
+            "ships a commands/ directory (flat skill files)",
+            "the docs' structure table: 'Skills as flat Markdown files. Use "
+            "skills/ for new plugins' — existing ones keep working")
     return out
 
 
@@ -558,6 +760,9 @@ def discover(paths: list[str]) -> tuple[list[Path], list[Path]]:
     `agents/` directory — role.md files and references are never agents."""
     skills: list[Path] = []
     agents: list[Path] = []
+    hooks: list[Path] = []
+    plugin_roots: list[Path] = []
+    commands: list[Path] = []
     for raw in paths or ["."]:
         p = Path(raw)
         if p.is_file() and p.name == "SKILL.md":
@@ -575,7 +780,16 @@ def discover(paths: list[str]) -> tuple[list[Path], list[Path]]:
                     skills.append(q)
                 elif q.parent.name == "agents":
                     agents.append(q)
-    return sorted(set(skills)), sorted(set(agents))
+                elif q.parent.name == "commands":
+                    commands.append(q)
+            for q in root.rglob("hooks/hooks.json"):
+                if not any(part in {"node_modules", ".git"} for part in q.parts):
+                    hooks.append(q)
+            for q in root.rglob(".claude-plugin/plugin.json"):
+                if not any(part in {"node_modules", ".git"} for part in q.parts):
+                    plugin_roots.append(q.parent.parent)
+    return (sorted(set(skills)), sorted(set(agents)),
+            sorted(set(commands)), sorted(set(hooks)), sorted(set(plugin_roots)))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -588,19 +802,40 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--only", help="comma-separated rule ids to report")
     args = ap.parse_args(argv)
 
-    skill_files, agent_files = discover(args.paths)
-    files = skill_files + agent_files
+    skill_files, agent_files, command_files, hook_files, plugin_roots = discover(args.paths)
+    files = skill_files + agent_files + command_files
     if not files:
         print("no SKILL.md or agents/*.md found", file=sys.stderr)
         return 2
 
     learned = load_learned(Path(args.rules))
     findings: list[Finding] = []
+    skill_types: dict[str, list[str]] = {}
     for f in skill_files:
         sk = load_skill(f)
-        findings += check(sk) + apply_learned(sk, learned)
+        prose = strip_fences(sk.body)
+        types = classify(sk, prose)
+        if types:
+            skill_types[sk.label] = types
+        findings += check(sk) + check_typed(sk, types, prose) + apply_learned(sk, learned)
     for f in agent_files:
         findings += check_agent(load_skill(f))
+    for f in command_files:
+        # Commands are skills with a flat layout (docs: "merged into skills").
+        # The name comes from the filename, so name rules don't apply.
+        sk = load_skill(f)
+        # A command's primary invocation is BY NAME (/plugin:command), so the
+        # trigger-description rules only matter when it is Claude-invoked
+        # (user-invocable: false). Name rules never apply: the filename is the name.
+        drop = {"name-missing", "name-mismatch", "name-format", "name-spec",
+                "name-generic", "trigger-info-in-body", "body-thin"}
+        if str(sk.frontmatter.get("user-invocable", "true")).lower() != "false":
+            drop |= {"description-no-trigger", "description-no-phrases", "description-vague"}
+        findings += [x for x in check(sk) if x.rule not in drop]
+    for f in hook_files:
+        findings += check_hooks(f)
+    for r in plugin_roots:
+        findings += check_plugin_root(r)
 
     # Collection budget: every installed skill's name+description shares one
     # ~15,000-char system-prompt allowance; skills past the cutoff never load.
@@ -626,6 +861,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         print(json.dumps({
             "skills": len(files), "counts": counts, "learned_rules": len(learned),
+            "types": skill_types,
             "findings": [vars(f) for f in findings],
         }, indent=2))
     else:
@@ -634,7 +870,8 @@ def main(argv: list[str] | None = None) -> int:
             by_skill.setdefault(f.skill, []).append(f)
         mark = {ERROR: "✗", WARN: "!", INFO: "·"}
         for skill in sorted(by_skill):
-            print(f"\n  {skill}")
+            tag = f"  [{', '.join(skill_types[skill])}]" if skill in skill_types else ""
+            print(f"\n  {skill}{tag}")
             for f in sorted(by_skill[skill], key=lambda x: LEVELS.index(x.level)):
                 loc = f":{f.line}" if f.line else ""
                 print(f"    {mark[f.level]} {f.rule}{loc} — {f.message}")

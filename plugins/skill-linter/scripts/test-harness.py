@@ -400,7 +400,7 @@ def t_agent_checks():
         (ad / "misnamed.md").write_text(
             "---\nname: other\ndescription: Use this agent when misnamed.\n---\n\nbody\n")
 
-        sk, ag = lint.discover([str(tmp)])
+        sk, ag, *_rest = lint.discover([str(tmp)])
         check("discover finds agents/*.md and no phantom skills",
               len(ag) == 4 and sk == [], f"skills={sk} agents={len(ag)}")
 
@@ -419,8 +419,109 @@ def t_agent_checks():
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t); rd = tmp / "skills" / "skeptic"; rd.mkdir(parents=True)
         (rd / "role.md").write_text("# skeptic\ncharter prose, no frontmatter\n")
-        sk, ag = lint.discover([str(tmp)])
+        sk, ag, *_rest = lint.discover([str(tmp)])
         check("role.md files are not treated as agents", ag == [], str(ag))
+
+
+def t_type_classification_and_packs():
+    """0.4.0 — the linter identifies specialised skill shapes and runs a rule
+    pack per shape. Plain skills get no labels and pay nothing."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        wf = skill(tmp, "wf", f"name: wf\n{GOOD}",
+                   "### Step 1: a\ntext\n### Step 2: b\ntext\n### Step 4: d\ntext\n")
+        sk = lint.load_skill(wf); prose = lint.strip_fences(sk.body)
+        types = lint.classify(sk, prose)
+        got = {f.rule for f in lint.check_typed(sk, types, prose)}
+        check("3+ Step headings classify as workflow; a numbering gap warns",
+              "workflow" in types and "workflow-step-gap" in got, f"{types} {got}")
+
+        orch = skill(tmp, "orch", f"name: orch\n{GOOD}",
+                     "Fan out subagents via the Task tool.\nDispatch agents in parallel.\n" + BODY)
+        sk = lint.load_skill(orch); prose = lint.strip_fences(sk.body)
+        types = lint.classify(sk, prose)
+        got = {f.rule for f in lint.check_typed(sk, types, prose)}
+        check("fan-out language classifies as orchestrator; missing contract "
+              "and stop rule are info notes",
+              "orchestrator" in types and {"orchestrator-no-contract",
+                                           "orchestrator-no-stop"} <= got, f"{types} {got}")
+        bounded = skill(tmp, "bounded", f"name: bounded\n{GOOD}",
+            "Fan out subagents via the Task tool with a round cap of 3.\n"
+            "## Output contract\nEach agent returns JSON.\n" + BODY)
+        sk = lint.load_skill(bounded); prose = lint.strip_fences(sk.body)
+        got = {f.rule for f in lint.check_typed(sk, lint.classify(sk, prose), prose)}
+        check("a bounded orchestrator with a contract is clean",
+              not any(r.startswith("orchestrator") for r in got), str(got))
+
+    # learning inside a plugin: self-append is a warn, consuming-repo append is not
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        (tmp / "plug" / ".claude-plugin").mkdir(parents=True)
+        (tmp / "plug" / ".claude-plugin" / "plugin.json").write_text("{}")
+        d = tmp / "plug" / "skills" / "selfish"; d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(f"---\nname: selfish\n{GOOD}\n---\n\n{BODY}\n"
+            "This skill is self-improving: append the miss to the Misses log at the bottom.\n")
+        sk = lint.load_skill(d / "SKILL.md"); prose = lint.strip_fences(sk.body)
+        got = {f.rule for f in lint.check_typed(sk, lint.classify(sk, prose), prose)}
+        check("a plugin skill appending to itself is a warning",
+              "learning-writes-to-plugin" in got, str(got))
+        d2 = tmp / "plug" / "skills" / "proper"; d2.mkdir(parents=True)
+        (d2 / "SKILL.md").write_text(f"---\nname: proper\n{GOOD}\n---\n\n{BODY}\n"
+            "Self-improving: append a dated entry to the learnings log at "
+            ".claude/proper/log.md in the consuming repo.\n")
+        sk = lint.load_skill(d2 / "SKILL.md"); prose = lint.strip_fences(sk.body)
+        got = {f.rule for f in lint.check_typed(sk, lint.classify(sk, prose), prose)}
+        check("appending into the consuming repo's .claude/ is the correct "
+              "pattern and stays silent",
+              not any(r.startswith("learning") for r in got), str(got))
+
+
+def t_hooks_and_plugin_surfaces():
+    """0.4.0 — hooks.json and plugin structure are lint targets."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        plug = tmp / "p"; (plug / "hooks").mkdir(parents=True)
+        (plug / ".claude-plugin").mkdir()
+        (plug / ".claude-plugin" / "plugin.json").write_text("{}")
+        (plug / "hooks" / "hooks.json").write_text(json.dumps({"hooks": {
+            "SessionStart": [{"hooks": [{"type": "command",
+                "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/run.py"}]}],
+            "OnFileSave": [{"hooks": [{"type": "command", "command": "true"}]}],
+        }}))
+        got = {f.rule for f in lint.check_hooks(plug / "hooks" / "hooks.json")}
+        check("an unknown hook event is an ERROR (silently dead otherwise)",
+              "hooks-unknown-event" in got, str(got))
+        check("a ${CLAUDE_PLUGIN_ROOT} target that does not exist is an ERROR",
+              "hooks-missing-target" in got, str(got))
+        (plug / "scripts").mkdir(); (plug / "scripts" / "run.py").write_text("")
+        (plug / "hooks" / "hooks.json").write_text(json.dumps({"hooks": {
+            "SessionStart": [{"hooks": [{"type": "command",
+                "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/run.py"}]}]}}))
+        check("a valid event with an existing target is clean",
+              lint.check_hooks(plug / "hooks" / "hooks.json") == [])
+
+        (plug / ".claude-plugin" / "skills").mkdir()
+        got = {f.rule for f in lint.check_plugin_root(plug)}
+        check("components inside .claude-plugin/ are the documented "
+              "common-mistake ERROR", "plugin-component-misplaced" in got, str(got))
+
+
+def t_command_files_are_name_optional_skills():
+    """Docs: commands are merged into skills; the filename is the name and the
+    primary invocation is /name — trigger-description rules don't apply."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t); (tmp / "commands").mkdir()
+        (tmp / "commands" / "stats.md").write_text(
+            "---\ndescription: Show the stats dashboard.\nallowed-tools: Bash(git *)\n---\n\nShow it.\n")
+        import contextlib, io
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = lint.main([str(tmp), "--json", "--rules", str(tmp / "none.json")])
+        out = json.loads(buf.getvalue())
+        rules = {f["rule"] for f in out["findings"]}
+        check("a command file with no name and a terse description lints clean "
+              "(allowed-tools is VALID here)",
+              rc == 0 and not rules, str(rules))
 
 
 def t_dogfoods_this_repo():
@@ -454,6 +555,9 @@ CHECKS = [
     t_resource_rules,
     t_collection_budget,
     t_agent_checks,
+    t_type_classification_and_packs,
+    t_hooks_and_plugin_surfaces,
+    t_command_files_are_name_optional_skills,
     t_dogfoods_this_repo,
 ]
 

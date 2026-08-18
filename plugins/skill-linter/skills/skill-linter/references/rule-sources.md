@@ -143,6 +143,44 @@ The broadened trigger regex (added `load when`, `use this to`, `use for`,
 old pattern rejected legitimate phrasings — an FP class in the linter's most
 important rule.
 
+### Skill-type packs and plugin surfaces (0.4.0)
+
+The linter classifies each skill by shape — signal-based and multi-label — and
+runs an extra rule pack per shape. The taxonomy grounds in obra/superpowers
+`writing-skills` ("Skill Types: Technique / Pattern / Reference", with per-type
+testing guidance), extended with the shapes real marketplaces ship: workflows,
+orchestrators, self-learning skills, scripted skills. A skill with no labels is
+a plain technique/pattern skill and gets only the base rules.
+
+| Rule id | Level | Type | Source / reasoning |
+|---|---|---|---|
+| `workflow-step-gap` | warn | workflow | Non-contiguous `Step N` numbering — a deleted step that nobody renumbered. Found live: a real local skill ran Step 2 → 3 → 6. |
+| `workflow-no-gate` | info | workflow | Irreversible commands (`git push`, `deploy`, `publish`…) with no confirmation language anywhere. Corroborates Anthropic's own product norm of gating destructive actions. |
+| `orchestrator-no-contract` | info | orchestrator | Fan-out without a stated output shape — each agent invents its own and the merge becomes guesswork. Practitioner-grounded (this marketplace's research-sweep doctrine). |
+| `orchestrator-no-stop` | info | orchestrator | Fan-out/loop with no cap or stopping rule. |
+| `learning-writes-to-plugin` | warn | learning | A self-improving skill inside a plugin appending to itself or a bundled log: installed plugins are versioned artifacts (code.claude.com/docs/en/plugins — marketplace distribution, version-gated updates), so that state is overwritten on update. Appending into the consuming repo (`.claude/<skill>/`, `CLAUDE.md`) is the correct pattern and is exempt. |
+| `learning-no-location` | info | learning | A learning loop that never names where learnings live gets a different answer every session. Self-appending skills know their location and are exempt. |
+| `reference-skill-no-toc` | info | reference | The stricter official **100-line** TOC guidance (platform-bp) applied to the shape it was written for — this contextually resolves conflict #3 instead of picking one number globally. |
+| `script-unreferenced` (flat) | warn | scripted | The 0.3.0 rule extended to executables shipped flat beside SKILL.md — closing the coverage gap logged 2026-08-18 when `evolving-claude-md`'s layout evaded the `scripts/`-only scope. |
+
+**New surfaces** (code.claude.com, fetched and quoted 2026-08-18):
+
+| Rule id | Level | Source |
+|---|---|---|
+| `hooks-unknown-event` | error | docs/en/hooks — the complete 31-event list; an unknown event never fires and shows no error |
+| `hooks-missing-target` | error | a `${CLAUDE_PLUGIN_ROOT}` command whose file doesn't exist fails on every fire |
+| `hooks-invalid-json` | error | a broken hooks.json silently kills every hook in it |
+| `plugin-component-misplaced` | error | docs/en/plugins, verbatim "Common mistake": components inside `.claude-plugin/` are not loaded |
+| `plugin-commands-dir` | info | docs/en/plugins structure table: "`commands/`: Skills as flat Markdown files. Use `skills/` for new plugins" |
+
+**Command files** (`commands/*.md`) are linted as skills — the docs state
+"Custom commands have been merged into skills" — with command semantics: the
+filename is the name (name rules don't apply), the primary invocation is
+`/name` (trigger-description rules apply only under `user-invocable: false`),
+`allowed-tools` is valid (it is the documented pre-approval field here), and a
+terse body is fine. `CODE_KEYS` was replaced by the full documented frontmatter
+table from the same page.
+
 ### Agent rules (0.2.0)
 
 | Rule id | Level | Source | The guidance |

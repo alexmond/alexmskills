@@ -11,6 +11,45 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **skill-linter 0.4.0** — **type-aware linting.** The linter now classifies each
+  skill by shape — signal-based, multi-label: `workflow`, `orchestrator`,
+  `learning`, `reference`, `scripted` — and runs an extra rule pack per shape.
+  Taxonomy grounded in obra/superpowers' Technique/Pattern/Reference types,
+  extended with the shapes real marketplaces ship. A plain skill gets no labels
+  and pays nothing.
+
+  Per-type rules: `workflow-step-gap` (found a real Step 2→3→6 in a live skill),
+  `workflow-no-gate`, `orchestrator-no-contract`, `orchestrator-no-stop`,
+  `learning-writes-to-plugin` (state appended inside a versioned plugin is lost on
+  update — appending into the consuming repo's `.claude/` is the correct pattern
+  and exempt), `learning-no-location`, `reference-skill-no-toc` (resolving
+  rule-sources conflict #3 *contextually*: the stricter official 100-line TOC
+  bound applies to the reference shape it was written for), and the 0.3.0
+  `script-unreferenced` extended to flat-shipped executables — closing the
+  coverage gap logged when `evolving-claude-md`'s layout evaded it.
+
+  **Three new surfaces**, each doc-grounded (code.claude.com fetched + quoted):
+  `hooks/hooks.json` (the 31 valid events — an unknown event is silently dead, so
+  it's an ERROR; `${CLAUDE_PLUGIN_ROOT}` targets must exist), plugin-root
+  structure (the docs' verbatim "Common mistake": components inside
+  `.claude-plugin/` are not loaded), and `commands/*.md` linted as skills per the
+  docs' "merged into skills" — with command semantics (filename is the name,
+  trigger rules only under `user-invocable: false`, `allowed-tools` valid here,
+  terse bodies fine). `CODE_KEYS` replaced with the full documented frontmatter
+  table.
+
+  Calibration surfaced three real fixes along the way: a first insertion silently
+  corrupted regexes with literal control characters (recovered from HEAD, then
+  re-applied with assertions); a latent day-one bug in `name-missing` (`line=`
+  vs `ln=` kwarg) that only executed once commands hit the path; and three
+  command-semantics FP classes (trigger rules, `description-vague`, `body-thin`
+  on name-invoked commands). Self-appending local skills (`update-docs-hub` and
+  friends) exempted from `learning-no-location` — they know exactly where their
+  log lives. Harness 47 → 55 checks; my repo 0 errors / 3 warnings (all real
+  fat-skill findings), external corpus stable.
+
+### Added
+
 - **skill-linter 0.3.0** — 14 new rules + 1 collection check from a **verified
   deep-research sweep**: 6 parallel agents across source categories (platform
   best-practices, the Agent Skills spec, code.claude.com, the engineering blog,
