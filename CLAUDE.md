@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-18 — **ticket-triage** — 10 open issues assessed vs tree: #4 closed (invariant shipped as linter rule), #8/#31 fact-corrected, #32 re-run scheduled for Aug 22 (cloud reminder). Build order: #31 -> #34 -> #33 -> #30 -> #20 -> #8 -> #14/#3. Why: backlog rots like any log.
 - 2026-08-18 — **local-skills-sweep** — 26 local skills linted, all owned findings fixed: 7 desc trims (spec cap), dual-mode learning state (screenshot-sweep+sb-k8s), collection budget 17.3k->under 15k. 3 linter FPs became refinements. Why: the budget overrun meant skills silently not triggering.
 - 2026-08-18 — **type-aware-linting** — linter 0.4.0: skills classified by shape (workflow/orchestrator/learning/reference/scripted), rule pack per shape + hooks/commands/plugin-root surfaces. Why: an orchestrator and a reference file fail differently; one rulebook flags neither.
 - 2026-08-18 — **researched-rules-not-invented** — linter 0.3.0: 87 claims -> 41 verified -> 14 rules, each cited; calibrated on 69 external skills (+20 warns, all true). 2 FP classes + 1 parser bug found by calibration, not review. Why: a rule without a source gets dismissed; one without calibration gets ignored.
