@@ -1,6 +1,6 @@
 = Skill Linter
 :navtitle: skill-linter
-:description: Audit SKILL.md files against published skill-authoring guidance — frontmatter, triggering, size, progressive disclosure, broken references. Self-learning.
+:description: Type-aware linting for skills, agents, commands, hooks and plugin structure — every rule cited to published guidance, calibrated against real corpora, self-learning.
 
 A skill is only ever loaded on the strength of its description, and only ever *found* if its frontmatter is intact. Those are cheap to check and expensive to get wrong. `skill-linter` checks them, so the costly part of skill development — testing whether the thing actually works — is never spent on a typo.
 
@@ -23,7 +23,45 @@ python3 <plugin>/scripts/lint_skills.py . --json       # for tooling
 
 Exit 0 clean, 1 on any error, and with `--strict`, 1 on anything at all — so it drops into CI or a pre-commit hook unchanged. Zero dependencies: stdlib Python, including a hand-rolled frontmatter parser, because a gate that only works when a library happens to be installed is not a gate.
 
-== What it checks
+== What it lints
+
+Four surfaces, grown one defect at a time:
+
+[cols="1,2,3",options="header"]
+|===
+| Surface | Since | Why it earned the slot
+
+| `SKILL.md` files | 0.1 | The original: frontmatter, triggering, size, references.
+
+| `agents/*.md` | 0.2.0 | Three shipped "read-only" agents used `allowed-tools:` — the slash-command field, silently ignored in agents — and ran with the full tool set. `agent-wrong-tools-field` is an *error* because that's a false safety claim, not a style nit.
+
+| `commands/*.md` | 0.4.0 | The docs merged commands into skills, so they get the skill rules with command semantics: the filename is the name, trigger rules apply only when Claude-invoked, and `allowed-tools` is *valid* here — the same string that's an error in agents.
+
+| `hooks/hooks.json` + plugin structure | 0.4.0 | An unknown hook event never fires and never errors — silently dead, so it lints as an error against the documented 31-event list. `${CLAUDE_PLUGIN_ROOT}` targets must exist; components inside `.claude-plugin/` are the docs' verbatim "Common mistake".
+|===
+
+== Type-aware since 0.4.0
+
+The linter classifies each skill by shape — signal-based, multi-label: *workflow*, *orchestrator*, *learning*, *reference*, *scripted* — and each label switches on its own rule pack. A plain skill gets no labels and pays nothing.
+
+[cols="1,3",options="header"]
+|===
+| Shape | Asked for
+
+| workflow | contiguous step numbering (only when the sequence starts at Step 1 — deep-dives into a numbered flow are fine); a confirmation gate near irreversible commands
+
+| orchestrator | an output contract and a stopping rule — a fan-out with neither merges by guesswork and stops when something external stops it
+
+| learning | where state lives — and a *warning* when a self-improving skill inside a plugin appends to itself, because an installed plugin is a versioned artifact and that state is lost on update. Appending to the consuming repo's `.claude/<skill>/` is recognised as the correct pattern.
+
+| reference | the stricter official 100-line TOC guidance, applied to exactly the shape it was written for
+
+| scripted | every shipped executable named in the SKILL.md, flat or under `scripts/`
+|===
+
+The rules themselves are researched, not invented: 0.3.0 came from a verified sweep — 87 claims across six source categories, 41 surviving adversarial verification (URL fetched, quote confirmed) — recorded in the repo's `docs/decisions/2026-08-18-skill-authoring-research.md` and cited per-rule in `references/rule-sources.md`, including where the official sources *contradict each other* and how each conflict is resolved.
+
+== What it checks per skill
 
 Three levels, split by how much damage the defect does.
 
@@ -43,11 +81,13 @@ Three levels, split by how much damage the defect does.
 
 The rule that matters most is `description-no-trigger`. The description is the only thing read when deciding whether to load a skill, so one that never says when it applies is a skill that quietly never fires.
 
+Two budget rules deserve special mention because their numbers are cited, not chosen: `body-far-too-long` errors past 1,000 lines (the one vendor-documented quality-decay point), and `collection-desc-budget` warns when all installed descriptions together pass ~15,000 chars — beyond that, skills *silently never trigger*. Running it on this machine found the local collection over budget, which is exactly the failure it exists to catch.
+
 == Every rule is cited
 
-Each rule traces to published guidance — Anthropic's `skill-creator`, `skill-development`, or `writing-skills` — recorded per-rule in the skill's `references/rule-sources.md`, along with the two places those sources *contradict* each other and how each conflict is resolved.
+Each rule traces to published guidance — Anthropic's `skill-creator`, `skill-development`, or `writing-skills` — recorded per-rule in the skill's `references/rule-sources.md`, along with the three places official sources *contradict* each other and how each conflict is resolved.
 
-Both conflicts are settled in favour of a narrower rule than either source states. For example, `skill-creator` says the description should say what the skill does; `writing-skills` says it must never summarise the workflow. Their examples show the real rule is narrower than either: state the purpose, never recite the steps. So the linter flags step *sequences* only.
+The conflicts are settled in favour of a narrower rule than either source states. For example, `skill-creator` says the description should say what the skill does; `writing-skills` says it must never summarise the workflow. Their examples show the real rule is narrower than either: state the purpose, never recite the steps. So the linter flags step *sequences* only.
 
 That file also lists the guidance deliberately *not* enforced, and why. Recording the omissions matters as much as the rules — otherwise each one gets rediscovered and re-argued.
 

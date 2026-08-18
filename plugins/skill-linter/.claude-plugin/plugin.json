@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "skill-linter",
   "description": "Audit SKILL.md files against published skill-authoring guidance — frontmatter validity, whether the description actually says when to trigger, body size, progressive disclosure, and broken references. Zero-dependency Python checker with three severity levels, usable as a CI gate. Self-learning: a defect it fails to catch becomes a new rule in the consuming repo, and a rule that proves itself graduates into the shipped checker.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"

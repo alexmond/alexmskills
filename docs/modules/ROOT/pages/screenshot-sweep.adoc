@@ -79,6 +79,8 @@ When a UI defect is reported that was *visible in a screenshot already looked at
 
 Entries are never deleted. Once a check is established the entry can be compressed, but the checklist item it produced stays.
 
+Since 1.1.0 the log is *dual-mode*: the Misses list shipped inside the plugin is the curated seed and is read-only for consumers — an installed plugin is a versioned artifact, so anything appended into it is lost on update. Running from an installed plugin, new misses go to the consuming repo's `.claude/screenshot-sweep/misses.md`, and both logs are read. Entries that prove out graduate into the shipped seed. (This defect was found by `skill-linter`'s `learning-writes-to-plugin` — on the plugin that shipped beside the rule.)
+
 === What the log has taught it so far
 
 The Misses log is the most useful part of the skill, because each entry carries the mechanism rather than just the symptom:

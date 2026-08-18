@@ -21,7 +21,7 @@ unreleased/rolling (no global version).
   list is the curated seed, and entries that prove out graduate into it.
   Description also moved to third person.
 
-- **skill-linter (in 0.4.x line)** — three refinements from sweeping all 26 local
+- **skill-linter 0.4.1** — three refinements from sweeping all 26 local
   skills: `workflow-step-gap` fires only on sequences that start at Step 1
   (deep-dive sections into selected steps of a numbered flow — adapt-workflow's
   `Step 2/3/6` — are not a broken ladder); a skill's own `agents/` instruction

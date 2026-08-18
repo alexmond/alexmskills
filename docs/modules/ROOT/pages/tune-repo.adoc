@@ -48,3 +48,7 @@ decide, never silently aligned.
   / JaCoCo / pre-commit skills this audit recommends for Java/Maven repos.
 * xref:evolving-claude-md.adoc[Evolving CLAUDE.md] — keeps `CLAUDE.md` healthy over time
   (`tune-repo` is the one-shot tune-up; that one is the ongoing maintenance loop).
+
+== Graduation bar
+
+Since 0.1.2 the beta has an explicit exit, measured rather than felt: 5+ real repos across different stacks, 3+ runs where the user applied the proposals and kept them, zero Phase-3 applications that broke a build or a hook, and three consecutive discover phases needing no manual correction — tracked in a run log inside the skill. If it stalls for a quarter with no runs, it gets retired instead: an eternal beta is a catalog lie. (`prompt-coach` graduated by clearing exactly this kind of bar.)
