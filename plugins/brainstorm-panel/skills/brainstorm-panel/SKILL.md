@@ -89,8 +89,10 @@ The panel maintains a roles registry at `.claude/roles/panel.md` — the same
 registry mechanism dev-crew uses, owned here by the panel. One row per role:
 
 - **name** · one-line **charter** · **when-to-seat** (the trigger axes that earn
-  it a seat) · **status** (probationary → stable once it has proven useful on
-  three or more seatings) · **learnings** (accumulated bullets of seat wisdom).
+  it a seat) · **model** (the tier the seat runs on — `sonnet` for parallel
+  seats, `opus` for director/synthesis; same field as crew.md, so a tier
+  decision is durable, not a per-run ask) · **status** (probationary → stable
+  once proven on three or more seatings) · **learnings** (seat wisdom).
 
 Create the file on the panel's first run in a repo. Step 2 proposes from it
 *first* — stable roles whose when-to-seat matches the work — and composes only
@@ -123,6 +125,14 @@ mappings:
   performance reviewer.
 - A wedding toast → storyteller, the couple's close friend, an editor for length,
   a "will this land in the room" audience stand-in.
+
+**Gated Fable escalation (mirrored from dev-crew — never auto-selected).**
+The panel is *generation-bound*, so Fable spend belongs on a **single deep or
+wildcard generator seat** (optionally also the skeptic), never every seat —
+Fable everywhere flattens the diversity the panel exists to create. Propose it
+at this checkpoint only, cost stated (~2× Opus); on accept, write the seat's
+`model` field so it persists. Three ways to run a seat on Fable: the row's
+`model`; `CLAUDE_CODE_SUBAGENT_MODEL`; or the whole session on Fable.
 
 For product, design, or roadmap targets, pre-propose the two seats users most
 often had to add at the gate: a **practitioner / QA-consumer** (someone who will
@@ -191,7 +201,8 @@ in a line and proceed. Once the user approves, run the loop with the final roste
 ## Step 5 — Run the brainstorming loop
 
 Run each role as a subagent via the Task tool, in parallel within a round — one
-charter per subagent so its perspective stays independent. Pass each subagent its
+charter per subagent so its perspective stays independent, each on its
+registry row's `model` tier (pass it in the Task call). Pass each subagent its
 charter, the current state of the work, and the shared log so far. One round,
 adapted to the chosen style:
 

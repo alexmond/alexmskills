@@ -20,7 +20,7 @@ that captures every multi-cycle debugging detour.
 | [`evolving-claude-md`](plugins/evolving-claude-md) | self-learning | 1.4.0 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks — plus a tree-grounded coverage check for the essentials (build command, layout). |
 | [`memory-hygiene`](plugins/memory-hygiene) | self-learning | 0.1.0 | Keeps agent-written memory (`~/.claude/projects/<slug>/memory/`) from rotting: re-verifies version pins, sequence facts, and cited paths against the tree, flags what became wrong (never deletes), and enforces the memory format contract at write time. |
 | [`dev-crew`](plugins/dev-crew) | self-learning | 1.2.0 | A self-evolving delivery crew that composes a task-fit roster (like a panel, but to *ship* a target) and runs it as a gated relay with machine-enforced phase gates + an escalation ladder; each role a subagent on its own tier. (architect → dev → qa → deployer is one example lineup.) |
-| [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.2.1 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. |
+| [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.3.0 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. |
 | [`learn-on-failure`](plugins/learn-on-failure) | self-learning | 1.0.0 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle. |
 | [`roles`](plugins/roles) | self-learning | 1.3.0 | A per-repo repository of evolving roles (.claude/roles/) usable solo via /roles:as, as dev-crew roles, brainstorm-panel seats, and research-sweep coverage roles; ships seed personas + a graduation-audit hook. |
 | [`prompt-coach`](plugins/prompt-coach) | self-learning | 1.2.0 | A `UserPromptSubmit` hook that rewrites each prompt you send toward better prompting habits (collaborator mode) — 42 rules across 6 tiers, mastery earned by demonstration, adaptive precision-gating, typo tolerance, and a zero-dependency local web dashboard. |
@@ -32,7 +32,7 @@ that captures every multi-cycle debugging detour.
 | [`mindmap-prompt`](plugins/mindmap-prompt) | workflow | 0.2.2 | Sketch ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. `✦` expands any node with `claude -p` running in your repo. Saves as JSON Canvas (`.canvas`) so maps are git-diffable, reworkable, and open in Obsidian. |
 | [`screenshot-tour`](plugins/screenshot-tour) | workflow | 1.1.0 | Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product (CLI/web/library/TUI) under `presentation/`. |
 | [`review-agents`](plugins/review-agents) | review | 1.1.0 | Specialist review subagents for Java/Maven projects — code review, test running, dependency/CVE auditing. No-write by construction: Write/Edit withheld. |
-| [`research-sweep`](plugins/research-sweep) | research | 1.1.4 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
+| [`research-sweep`](plugins/research-sweep) | research | 1.2.0 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
 
 ## The Role System
 

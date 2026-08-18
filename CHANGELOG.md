@@ -11,6 +11,20 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **brainstorm-panel 1.3.0 / research-sweep 1.2.0** — per-role model tiers +
+  gated Fable escalation (closes #8, mirroring dev-crew's policy). Registry
+  rows in `panel.md` / `research.md` gain the same `model` field as
+  `crew.md`, so a tier decision is durable instead of a per-run ask, and
+  each seat/role spawns on its row's tier. Fable is never auto-selected —
+  proposed at the roster gate only, cost stated (~2× Opus), and only at the
+  run's bottleneck: the panel is generation-bound (one deep/wildcard
+  generator seat, optionally the skeptic — Fable everywhere flattens the
+  diversity a panel exists for), the sweep is verification-bound (the
+  skeptic-verifier, optionally the synthesizer — scouts stay cheap, breadth
+  per token is their whole point). This re-arms what 1.1.2 withdrew during
+  the 2026 Fable suspension; both docs pages note the restoration and the
+  three ways to run a seat on Fable.
+
 - **screenshot-tour 1.1.0** — standardizes what two real decks diverged on
   (closes #20). Host hygiene now covers every surface, not just shell
   recipes: any URL rendered into pixels — Freeze'd transcripts, VHS `Type`

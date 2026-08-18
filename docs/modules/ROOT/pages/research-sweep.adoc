@@ -50,6 +50,10 @@ Extracts each agent's final message from its JSONL transcript with a `jq` + `awk
 
 Runs a fresh verifier agent that didn't produce the data: spot-checks a 10–20% sample against primary sources, hunts for fabricated URLs/dates/IDs, checks cross-agent seams for duplicates, and tests the volume claim and gaps. Dedup, normalization, and URL verification follow as separate passes.
 
+== What's new in 1.2.0
+
+* *Per-role model tiers + gated Fable escalation* (issue #8) — `.claude/roles/research.md` rows gain a `model` field; the sweep is verification-bound, so Fable is proposed (never auto-selected) at the roster gate for the skeptic-verifier and optionally the synthesizer, cost stated — the parallel scouts stay on cheap tiers, where breadth per token is the whole point. (Re-arms what was withdrawn during the 2026 Fable suspension.)
+
 == What's new in 1.1.3
 
 * *Per-run log* — sweeps now write an entry to `.claude/research-sweep/log.md` with run-id, roster, partition, per-role volume + thin-diagnosis, verifier findings, dedup hotspots, source-trust, steering, and graduations. Seeded from a shipped schema on first run. Closes research-sweep's biggest cross-run learning gap (the other two orchestrators already had a log).
@@ -61,7 +65,7 @@ Runs a fresh verifier agent that didn't produce the data: spot-checks a 10–20%
 
 * *Fable suggestion removed* — Anthropic suspended Claude Fable 5 / Mythos 5 on 2026-06-12 in response to
   a US government export-control directive; the opt-in Fable suggestion at the roster checkpoint has been
-  withdrawn until access is restored. Issue #8 (per-role model tiers) is parked.
+  withdrawn until access is restored. (Access was later restored; see 1.2.0 above — issue #8 shipped.)
 
 == What's new in 1.1.0
 

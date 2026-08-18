@@ -56,11 +56,15 @@ Presents an *editable lineup the user signs off on first*, then runs each role a
 
 * *Graduation now routes to the right layer.* Previously the SKILL.md said "graduate stable findings to the repo's `## Panel roles` block in CLAUDE.md" — dumping per-seat wisdom, repo facts, and cross-context lessons into one place that the crew and sweep never read. The three-layer split is now explicit: *per-seat wisdom* (how seat X behaves in panels) → the seat's row in `.claude/roles/panel.md`; *cross-context wisdom* (true wherever the role appears) → graduation candidate for the shared core `.claude/roles/<role>.md` `## Learnings (core)` (user-gated); *repo facts about seating* ("always seat X here") → the `## Panel roles` block in `CLAUDE.md` (small, terse). The destination is what makes the wisdom load-bearing on the next run. Discovered by an audit across five sibling repos finding the wrong-layer graduation backlog (e.g. `unitrack` Restraint Skeptic 5×+ + QA/SDET 4×+ never lifted; `builder` UI-five roster 6×+ never lifted).
 
+== What's new in 1.3.0
+
+* *Per-seat model tiers + gated Fable escalation* (issue #8) — registry rows in `.claude/roles/panel.md` now carry a `model` field (the same field as crew.md), so a tier decision made once is durable instead of a per-run ask. Fable is never auto-selected: the panel is generation-bound, so it is proposed at the roster checkpoint only, for a *single* deep/wildcard generator seat (optionally the skeptic) with the ~2× Opus cost stated — Fable on every seat would flatten exactly the diversity the panel exists to create. (This re-arms what 1.1.2 had withdrawn during the 2026 Fable suspension; access has since been restored.)
+
 == What's new in 1.1.2
 
 * *Fable suggestion removed* — Anthropic suspended Claude Fable 5 / Mythos 5 on 2026-06-12 in response to
   a US government export-control directive; the opt-in Fable suggestion at the roster checkpoint has been
-  withdrawn until access is restored. Issue #8 (per-role model tiers) is parked.
+  withdrawn until access is restored. (Access was later restored; see 1.3.0 above — issue #8 shipped.)
 
 == What's new in 1.1.0
 
