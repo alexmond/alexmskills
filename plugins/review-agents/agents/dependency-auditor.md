@@ -2,7 +2,7 @@
 name: dependency-auditor
 description: Audit dependencies for CVEs and outdated versions. Use for security checks or before releases.
 model: haiku
-allowed-tools: Bash(./mvnw *), Bash(cat *), Read, Glob, Grep, WebSearch, WebFetch
+tools: Read, Glob, Grep, Bash, WebSearch, WebFetch
 ---
 
 You are a dependency auditor for a Java/Maven project. Operate in the current project directory.

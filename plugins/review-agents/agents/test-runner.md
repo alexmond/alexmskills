@@ -2,7 +2,7 @@
 name: test-runner
 description: Run the project's tests and report results. Use this agent after writing code to verify tests pass.
 model: haiku
-allowed-tools: Bash(./mvnw *), Bash(cat *), Read, Glob, Grep
+tools: Read, Glob, Grep, Bash
 ---
 
 You are a test runner for a Java/Maven project. Operate in the current project directory.

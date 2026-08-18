@@ -1,10 +1,21 @@
 {
   "name": "review-agents",
-  "description": "Read-only specialist subagents for code review, test running, and dependency/CVE auditing.",
-  "version": "1.0.0",
-  "author": { "name": "Alex Mondshain", "email": "alexmond@gmail.com" },
+  "description": "Specialist review subagents for Java/Maven projects — code review, test running, and dependency/CVE auditing on lighter model tiers. No-write by construction: Write and Edit are withheld, so they read, build, and report without touching the working tree.",
+  "version": "1.1.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
   "homepage": "https://www.alexmond.org/alexmskills/",
   "repository": "https://github.com/alexmond/alexmskills",
   "license": "MIT",
-  "keywords": ["agents","code-review","testing","dependencies","cve"]
+  "keywords": [
+    "agents",
+    "code-review",
+    "testing",
+    "dependencies",
+    "cve",
+    "java",
+    "maven"
+  ]
 }
