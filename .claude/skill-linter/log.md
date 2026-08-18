@@ -95,3 +95,13 @@ defects in the rule itself rather than gaps in coverage.
   numbered flow list above — not a broken sequence. → the rule now fires only
   when the heading sequence starts at Step 1 (a sequence that claims to be
   complete). A genuinely deleted step keeps its Step 1. Harness-pinned.
+
+## 2026-08-18 — FP: broken-reference on a markdown link quoted in inline code
+
+`memory-hygiene`'s SKILL.md quoted the index-line template `` `- [Title](file.md) — hook` ``
+and `broken-reference` flagged `file.md`. The fence guard blanks fenced blocks but not
+inline code spans, so a *quoted* link template reads as a real reference. The reworded line re-fired in
+the same pass (`…` inside the span), so the rule-of-three collapsed into one session:
+0.4.2 blanks inline code spans for the link scan ONLY — a first global blanking broke
+absence-based rules (learning-no-location fired on 3 skills whose state paths live in
+backticks) and was scoped down. Harness case added; tree re-lint shows 0 regressions.

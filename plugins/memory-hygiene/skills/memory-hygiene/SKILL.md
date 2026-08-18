@@ -72,18 +72,28 @@ bare filenames live in a sister repo. Both read instantly as fine to a human.
 
 ## The write contract (PreToolUse hook)
 
-Location is the contract — the mechanism that held where prose instructions
+Enforced by `lint-memory-write.py`. Location is the contract — the mechanism that held where prose instructions
 failed. The hook denies, with the reason, any memory write that breaks it:
 
 - **Fact files** (`memory/*.md`) must open with frontmatter carrying a
   kebab-case `name:`, a one-line `description:`, and `metadata.type` in
   `user | feedback | project | reference`. Added prose must not use relative
   dates ("last week" expires silently — write `2026-08-11`).
-- **`MEMORY.md`** stays an index: `- [Title](file.md) — hook` lines,
+- **`MEMORY.md`** stays an index: one-line pointer entries (`- [Title](…) — hook`),
   headings, blanks. Frontmatter or paragraph prose there is memory content
   in the wrong territory; move it to a fact file.
 
 Writes anywhere outside a memory dir are never touched.
+
+## Verifying a change
+
+`test-harness.py` beside this file is the release gate — fixture repos +
+memory dirs, half the checks asserting non-fires, and a byte-identity pin on
+the vendored `freshness.py` against `evolving-claude-md`'s copy:
+
+```bash
+python3 <plugin>/skills/memory-hygiene/test-harness.py   # or: make test-memory
+```
 
 ## Config
 

@@ -27,7 +27,7 @@
       "name": "memory-hygiene",
       "displayName": "Memory Hygiene",
       "source": "./plugins/memory-hygiene",
-      "description": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes \u2014 supersession is strike-through plus a dated correction.",
+      "description": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes — supersession is strike-through plus a dated correction.",
       "version": "0.1.0",
       "category": "self-learning",
       "keywords": [
@@ -42,7 +42,7 @@
       "name": "dev-crew",
       "displayName": "Dev Crew",
       "source": "./plugins/dev-crew",
-      "description": "A self-evolving delivery crew: it composes a task-fit roster of role subagents (each on its own model tier) and runs them as a gated relay to deliver a target. architect \u2192 dev \u2192 qa \u2192 deployer is just one example lineup \u2014 the roster is chosen for the work.",
+      "description": "A self-evolving delivery crew: it composes a task-fit roster of role subagents (each on its own model tier) and runs them as a gated relay to deliver a target. architect → dev → qa → deployer is just one example lineup — the roster is chosen for the work.",
       "version": "1.2.0",
       "category": "self-learning",
       "keywords": [
@@ -86,7 +86,7 @@
       "name": "implement-issue",
       "displayName": "Implement Issue",
       "source": "./plugins/implement-issue",
-      "description": "Drive a GitHub issue from branch to PR with a guided plan \u2192 implement \u2192 verify \u2192 push workflow.",
+      "description": "Drive a GitHub issue from branch to PR with a guided plan → implement → verify → push workflow.",
       "version": "1.0.0",
       "category": "workflow",
       "keywords": [
@@ -131,7 +131,7 @@
       "name": "review-agents",
       "displayName": "Review Agents",
       "source": "./plugins/review-agents",
-      "description": "Specialist review subagents for Java/Maven projects \u2014 code review, test running, and dependency/CVE auditing on lighter model tiers. No-write by construction: Write and Edit are withheld, so they read, build, and report without touching the working tree.",
+      "description": "Specialist review subagents for Java/Maven projects — code review, test running, and dependency/CVE auditing on lighter model tiers. No-write by construction: Write and Edit are withheld, so they read, build, and report without touching the working tree.",
       "version": "1.1.0",
       "category": "review",
       "keywords": [
@@ -161,7 +161,7 @@
       "name": "roles",
       "displayName": "Role Registry",
       "source": "./plugins/roles",
-      "description": "A per-repo repository of evolving roles (.claude/roles/) usable solo, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles \u2014 with seed personas, init + graduation-audit hook, and the shared-core convention.",
+      "description": "A per-repo repository of evolving roles (.claude/roles/) usable solo, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles — with seed personas, init + graduation-audit hook, and the shared-core convention.",
       "version": "1.3.0",
       "category": "self-learning",
       "keywords": [
@@ -176,7 +176,7 @@
       "name": "screenshot-tour",
       "displayName": "Screenshot Tour",
       "source": "./plugins/screenshot-tour",
-      "description": "Build a presentation-ready screenshot deck of the current product \u2014 discovers the aspects worth showing, proposes an editable plan, captures each with the right tool per surface (project's existing browser driver for web, VHS for CLI, Freeze for code), and assembles a captioned, narrative-ordered deck under presentation/. Slide-deck export and README integration are opt-in follow-ups.",
+      "description": "Build a presentation-ready screenshot deck of the current product — discovers the aspects worth showing, proposes an editable plan, captures each with the right tool per surface (project's existing browser driver for web, VHS for CLI, Freeze for code), and assembles a captioned, narrative-ordered deck under presentation/. Slide-deck export and README integration are opt-in follow-ups.",
       "version": "1.0.1",
       "category": "workflow",
       "keywords": [
@@ -191,7 +191,7 @@
       "name": "prompt-coach",
       "displayName": "Prompt Coach",
       "source": "./plugins/prompt-coach",
-      "description": "Watches every prompt you send Claude Code and rewrites it toward better prompting habits (collaborator mode) \u2014 fundamentals (definition-of-done, guardrails, verification), classical techniques (few-shot, chain-of-thought, rubric, uncertainty budget), goals & loops, Claude-Code-native tool delegation (plan mode, TaskCreate, parallel agents, roles, brainstorm-panel, Workflow), and skill-awareness (rule of three). 42 rules across 6 tiers with 42 mirroring positive detectors that earn each rule to 'mastered' by demonstration, then fade to occasional refreshers. Adaptive: acceptance-tracked, precision-gated, fatigue-capped. Conversational + picker-answer short-circuit, typo-tolerant Levenshtein pre-pass for dyslexic-friendly matching, sourced catalog, and a zero-dependency local web dashboard.",
+      "description": "Watches every prompt you send Claude Code and rewrites it toward better prompting habits (collaborator mode) — fundamentals (definition-of-done, guardrails, verification), classical techniques (few-shot, chain-of-thought, rubric, uncertainty budget), goals & loops, Claude-Code-native tool delegation (plan mode, TaskCreate, parallel agents, roles, brainstorm-panel, Workflow), and skill-awareness (rule of three). 42 rules across 6 tiers with 42 mirroring positive detectors that earn each rule to 'mastered' by demonstration, then fade to occasional refreshers. Adaptive: acceptance-tracked, precision-gated, fatigue-capped. Conversational + picker-answer short-circuit, typo-tolerant Levenshtein pre-pass for dyslexic-friendly matching, sourced catalog, and a zero-dependency local web dashboard.",
       "version": "1.1.0",
       "category": "self-learning",
       "keywords": [
@@ -206,7 +206,7 @@
       "name": "mindmap-prompt",
       "displayName": "Mindmap Prompt",
       "source": "./plugins/mindmap-prompt",
-      "description": "Think on a canvas, then compile the map into an organized prompt. Drop idea nodes, connect them freely, and a deterministic compiler turns the map into structured Markdown \u2014 goal as the title, features and ideas as nested sections, constraints as their own list, cross-links as references rather than repeats. Order comes from your canvas layout, so there is no re-ordering step. Validation runs first and never silently drops a node. Maps save as JSON Canvas (.canvas) in the repo, so they are git-diffable, reworkable later, and open in Obsidian. Select a node and press \u2726 to expand it with `claude -p` running in your repo \u2014 the goal, ancestry and siblings go with it, results are previewed before they touch the map, and the subprocess runs with every tool denied. Zero dependencies otherwise, and capture + compile stay fully offline: a self-contained page plus a stdlib server on 127.0.0.1.",
+      "description": "Think on a canvas, then compile the map into an organized prompt. Drop idea nodes, connect them freely, and a deterministic compiler turns the map into structured Markdown — goal as the title, features and ideas as nested sections, constraints as their own list, cross-links as references rather than repeats. Order comes from your canvas layout, so there is no re-ordering step. Validation runs first and never silently drops a node. Maps save as JSON Canvas (.canvas) in the repo, so they are git-diffable, reworkable later, and open in Obsidian. Select a node and press ✦ to expand it with `claude -p` running in your repo — the goal, ancestry and siblings go with it, results are previewed before they touch the map, and the subprocess runs with every tool denied. Zero dependencies otherwise, and capture + compile stay fully offline: a self-contained page plus a stdlib server on 127.0.0.1.",
       "version": "0.2.2",
       "category": "workflow",
       "keywords": [
@@ -221,8 +221,8 @@
       "name": "skill-linter",
       "displayName": "Skill Linter",
       "source": "./plugins/skill-linter",
-      "description": "Audit SKILL.md files against published skill-authoring guidance \u2014 frontmatter validity, whether the description actually says when to trigger, body size, progressive disclosure, and broken references. Zero-dependency Python checker with three severity levels, usable as a CI gate. Self-learning: a defect it fails to catch becomes a new rule in the consuming repo, and a rule that proves itself graduates into the shipped checker.",
-      "version": "0.4.1",
+      "description": "Audit SKILL.md files against published skill-authoring guidance — frontmatter validity, whether the description actually says when to trigger, body size, progressive disclosure, and broken references. Zero-dependency Python checker with three severity levels, usable as a CI gate. Self-learning: a defect it fails to catch becomes a new rule in the consuming repo, and a rule that proves itself graduates into the shipped checker.",
+      "version": "0.4.2",
       "category": "self-learning",
       "keywords": [
         "skills",
@@ -236,7 +236,7 @@
       "name": "tune-repo-beta",
       "displayName": "Tune Repo (beta)",
       "source": "./plugins/tune-repo-beta",
-      "description": "Audit and tighten a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately in it: verify CLAUDE.md against reality, tighten the verify loop, add missing static guardrails, cut permission friction. Beta \u2014 the `-beta` suffix is intentional; graduates to `tune-repo` when it earns its stable slot.",
+      "description": "Audit and tighten a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately in it: verify CLAUDE.md against reality, tighten the verify loop, add missing static guardrails, cut permission friction. Beta — the `-beta` suffix is intentional; graduates to `tune-repo` when it earns its stable slot.",
       "version": "0.1.2",
       "category": "beta",
       "keywords": [

@@ -212,6 +212,19 @@ def t_real_defects_outside_fences_still_fire():
               f"got {sorted(got)}")
 
 
+def t_inline_code_link_template_not_flagged():
+    # 0.4.2: `- [Title](file.md) — hook` quoted in an inline code span is a
+    # template being shown, not a link being made (FP ×2 on memory-hygiene).
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        p = skill(tmp, "tmpl", f"name: tmpl\n{GOOD}",
+                  BODY + "\n\nIndex lines look like `- [Title](file.md) — hook`.\n"
+                         "\nBut a real [link](missing.md) still counts.\n")
+        rules = rules_for(p)
+        check("a link template quoted in inline code is not reported",
+              sum(1 for r in rules if r == "broken-reference") == 1, str(rules))
+
+
 def t_existing_reference_is_not_flagged():
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
@@ -565,6 +578,7 @@ CHECKS = [
     t_fenced_examples_are_not_findings,
     t_real_defects_outside_fences_still_fire,
     t_existing_reference_is_not_flagged,
+    t_inline_code_link_template_not_flagged,
     t_learned_rules_apply_and_survive_bad_input,
     t_learned_rules_file_is_optional_and_tolerant,
     t_cli_exit_codes,

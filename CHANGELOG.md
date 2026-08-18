@@ -9,6 +9,16 @@ unreleased/rolling (no global version).
 
 ## 2026-08-18
 
+### Fixed
+
+- **skill-linter 0.4.2** — `broken-reference` no longer fires on a markdown
+  link quoted in an inline code span (`- [Title](file.md) — hook` shown as a
+  template). Found twice in one pass linting memory-hygiene; the guard is
+  scoped to the link scan only, because a first global inline-code blanking
+  made absence-based rules (`learning-no-location`) fire on skills whose
+  state paths live in backticks. Harness case added; full-tree re-lint
+  shows zero regressions (39 clean, warnings 5→3).
+
 ### Added
 
 - **memory-hygiene 0.1.0** — new plugin (closes #33): keeps agent-written

@@ -217,6 +217,9 @@ def _kebab(s: str) -> bool:
 FENCE = re.compile(r"^([ \t]*)(`{3,}|~{3,})[^\n]*\n.*?^\1?\2[ \t]*$", re.S | re.M)
 
 
+INLINE_CODE = re.compile(r"`[^`\n]+`")
+
+
 def strip_fences(body: str) -> str:
     """Blank out fenced blocks, preserving line numbers.
 
@@ -397,7 +400,12 @@ def check(sk: Skill) -> list[Finding]:
             sk.body_line0 + prose[:dm.start()].count("\n"))
 
     # --- bundled resources -------------------------------------------------
-    for lm in MD_LINK.finditer(prose):
+    # A link inside an inline code span is a *template being shown*, not a link
+    # being made (`- [Title](file.md) — hook`). Blank spans for this scan only —
+    # absence-based rules (learning-no-location etc.) still need inline-code
+    # content. FP found twice in one pass on memory-hygiene, 2026-08-18.
+    link_prose = INLINE_CODE.sub(lambda m: " " * len(m.group(0)), prose)
+    for lm in MD_LINK.finditer(link_prose):
         target = lm.group(1).split("#")[0].strip()
         if not target or "://" in target or target.startswith(("mailto:", "<")):
             continue
