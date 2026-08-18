@@ -14,18 +14,16 @@ For when the user wants coverage that is *exhaustive*, not representative. Compo
 
 The methodology has two halves: **fan-out** (parallel coverage roles on disjoint slices) and **verification** (adversarial review of what came back). Skipping the second half produces a large but unreliable dataset.
 
-## When to invoke
+## Scope check — sweep, or a single agent?
 
-Strong triggers:
-- "as many as possible", "until you run out of tokens", "exhaustive", "comprehensive"
-- "catalog of …", "every X by …", "all known …"
-- Domain surveys / landscapes: "all open-source tools for X", "every public dataset for Y", "the full competitive landscape of Z"
+The trigger phrases live in the description; what needs judgment once loaded is
+whether the ask is big enough to justify a fan-out.
 
-Weak triggers (consider whether one agent would suffice first):
+Borderline asks (one agent may suffice — decide before composing a team):
 - "a list of …" with no quantity hint
 - "research X" — could be a single Explore agent
 
-Skip this skill if:
+Hand the task back to a single agent if:
 - The user wants 5–20 items (single Explore or general-purpose agent is enough)
 - The domain is narrow enough that one agent can cover it well
 - The data already exists in the repo and just needs querying

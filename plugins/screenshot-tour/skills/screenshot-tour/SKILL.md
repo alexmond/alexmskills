@@ -15,17 +15,14 @@ A *presentation deck* is not a screenshot — it's the **set of aspects** a stra
 
 The deliverable is the deck itself — a numbered set of images plus a one-page manifest under `presentation/`. Slide-deck export, README integration, and docs-site embedding are *optional follow-ups* (see the bottom of this file), not part of the core loop.
 
-## When to invoke
+## Boundaries
 
-Trigger phrases:
-- "build a presentation of this", "presentation deck", "demo deck", "presentation screenshots"
-- "screenshots for the slide deck", "slide-ready screenshots", "screenshots for the meeting"
-- "show what this does", "demo this product", "walk through the product"
-- "I need to present this", "pitch screenshots", "before/after captures of the feature"
+Invoke proactively when the user is preparing a demo, stakeholder meeting,
+release announcement, or pitch and there are no captures in `presentation/`.
 
-Also invoke proactively when the user is preparing for a demo, a stakeholder meeting, a release announcement, or a pitch and there are no captures in `presentation/`.
-
-Don't invoke for single ad-hoc screenshots (use a generic screenshot skill or `Bash` directly), for visual regression testing (use Chromatic / Playwright tests), or for documentation-site illustrations (that's a downstream consumer, not the goal of this skill).
+Not for: single ad-hoc screenshots (plain `Bash` or a screenshot skill), visual
+regression testing (Chromatic / Playwright tests), or documentation-site
+illustrations — that's a downstream consumer of the deck, not its goal.
 
 ## Files this skill owns
 

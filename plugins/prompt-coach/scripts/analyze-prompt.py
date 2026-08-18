@@ -4531,7 +4531,27 @@ def within_cooldown(rid: str, l: dict, cfg: dict, mastered: bool = False) -> boo
 # paying for on this turn. Data flow: the prompt already goes to Claude to be
 # answered; we just piggyback a "coach analysis" job onto the same response.
 
-_V34_INSTRUCTION_TEMPLATE = """[prompt-coach · v0.34 · collaborator mode]
+
+def _coach_version() -> str:
+    """The version the banner brands itself with, read from plugin.json so it
+    can never lag the release again — the hardcoded "v0.34" survived 15 minor
+    versions and a 1.0 graduation, in the single most-seen string this plugin
+    emits. Cached; falls back to the architecture name if the manifest moves."""
+    global _COACH_VERSION
+    try:
+        return _COACH_VERSION
+    except NameError:
+        pass
+    try:
+        import json as _json
+        from pathlib import Path as _P
+        mf = _P(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json"
+        _COACH_VERSION = "v" + _json.loads(mf.read_text())["version"]
+    except Exception:
+        _COACH_VERSION = "v0.34+"
+    return _COACH_VERSION
+
+_V34_INSTRUCTION_TEMPLATE = """[prompt-coach {coach_version} · collaborator mode]
 
 The user just submitted this prompt:
 «{prompt_text}»
@@ -4703,6 +4723,7 @@ def _v34_context_for_claude(prompt_text: str, rule_ids: list[str],
             "rewrite loses. Do NOT wait for confirmation; you are proceeding "
             "now, and the user's next turn is the accept/reject signal.")
     return _V34_INSTRUCTION_TEMPLATE.format(
+        coach_version=_coach_version(),
         prompt_text=prompt_text[:2000],
         candidate_rules_block=_v34_candidate_rules_block(rule_ids, show_urls),
         library_hint=_v34_library_hint(prompt_text, library_hints),
