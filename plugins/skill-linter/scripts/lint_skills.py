@@ -755,9 +755,21 @@ def load_skill(p: Path) -> Skill:
                  frontmatter=fm, fm_error=err, body=body, body_line0=line0, text=text)
 
 
+def _is_agent_dir(d: Path) -> bool:
+    """Only two homes make an agents/ dir hold Claude Code agent DEFINITIONS:
+    a plugin root (sibling .claude-plugin/) or a .claude/ config dir. An
+    `agents/` folder nested inside a skill is that skill's own reference
+    material — skill-creator ships grader.md/comparator.md instruction docs
+    there, deliberately frontmatter-free, and linting them as agents produced
+    three false ERRORs."""
+    parent = d.parent
+    return (parent / ".claude-plugin").is_dir() or parent.name == ".claude"
+
+
 def discover(paths: list[str]) -> tuple[list[Path], list[Path]]:
-    """Returns (skills, agents). An agent file is any .md directly inside an
-    `agents/` directory — role.md files and references are never agents."""
+    """Returns (skills, agents). An agent file is any .md directly inside a
+    plugin-level `agents/` directory — role.md files, references, and a
+    skill's own agents/ instruction docs are never agents."""
     skills: list[Path] = []
     agents: list[Path] = []
     hooks: list[Path] = []
@@ -767,7 +779,8 @@ def discover(paths: list[str]) -> tuple[list[Path], list[Path]]:
         p = Path(raw)
         if p.is_file() and p.name == "SKILL.md":
             skills.append(p)
-        elif p.is_file() and p.parent.name == "agents" and p.suffix == ".md":
+        elif (p.is_file() and p.parent.name == "agents" and p.suffix == ".md"
+              and _is_agent_dir(p.parent)):
             agents.append(p)
         else:
             root = p if p.is_dir() else p.parent
@@ -778,7 +791,7 @@ def discover(paths: list[str]) -> tuple[list[Path], list[Path]]:
                     continue
                 if q.name == "SKILL.md" and (p / "SKILL.md") not in skills:
                     skills.append(q)
-                elif q.parent.name == "agents":
+                elif q.parent.name == "agents" and _is_agent_dir(q.parent):
                     agents.append(q)
                 elif q.parent.name == "commands":
                     commands.append(q)

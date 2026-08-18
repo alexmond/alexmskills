@@ -79,3 +79,13 @@ defects in the rule itself rather than gaps in coverage.
   match. Not widened yet: flat-layout matching needs calibration against the
   69-skill corpus first (risk: flagging fixture/data .py files). Widen if a
   second flat-layout case appears, or mention harness files in their SKILL.md.
+
+- 2026-08-18 — **false-positive** — skill-creator's `agents/{grader,comparator,
+  analyzer}.md` are that skill's subagent INSTRUCTION documents (deliberately
+  frontmatter-free), not Claude Code agent definitions; linting them as agents
+  produced three false ERRORs. → agents/ now counts only at a plugin root
+  (sibling `.claude-plugin/`) or under `.claude/`. Harness-pinned.
+- 2026-08-18 — **coverage note** — `discover()` does not follow symlinks, so a
+  `~/.claude/skills/` tree of live-skill symlinks lints only its regular dirs
+  (8 of 26 here). Worked around by resolving targets before the run; following
+  symlinks in rglob needs a loop guard before it ships.

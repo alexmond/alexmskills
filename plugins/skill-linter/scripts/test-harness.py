@@ -388,6 +388,8 @@ def t_agent_checks():
     agents could write, edit, and push, and the linter had no opinion."""
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t); ad = tmp / "agents"; ad.mkdir()
+        (tmp / ".claude-plugin").mkdir()                 # agents/ counts only at a plugin root
+        (tmp / ".claude-plugin" / "plugin.json").write_text("{}")
         (ad / "auditor.md").write_text(
             "---\nname: auditor\ndescription: Audit things. Use this agent when auditing.\n"
             "allowed-tools: Read, Grep\n---\n\nbody\n")
@@ -414,6 +416,15 @@ def t_agent_checks():
               "agent-unknown-tool" in rules("typo.md"))
         check("agent name must match its filename",
               "name-mismatch" in rules("misnamed.md"))
+
+    # an agents/ dir nested inside a SKILL is reference material, not definitions
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t); sd = tmp / "skills" / "creator" / "agents"; sd.mkdir(parents=True)
+        (tmp / "skills" / "creator" / "SKILL.md").write_text(f"---\nname: creator\n{GOOD}\n---\n\n{BODY}\n")
+        (sd / "grader.md").write_text("# Grading instructions\nplain doc, no frontmatter\n")
+        _sk, ag, *_ = lint.discover([str(tmp)])
+        check("a skill's own agents/ instruction docs are not linted as agent definitions",
+              ag == [], str(ag))
 
     # role.md files must never be swept in as agents
     with tempfile.TemporaryDirectory() as t:
