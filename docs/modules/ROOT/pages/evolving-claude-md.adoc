@@ -33,7 +33,7 @@ This skill is model-invokable — most often you just ask in natural language: "
 
 The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the hooks register on enable with nothing to add to settings:
 
-* *SessionStart* — `audit-claude-md.py` checks the D&L section + whole-file size + staleness and injects a recommendation when something needs attention; silent when healthy.
+* *SessionStart* — `audit-claude-md.py` checks the D&L section + whole-file size + staleness and injects a recommendation when something needs attention; silent when healthy. Since 1.4.0 staleness covers three rot classes, grounded against the tree rather than reasoned about: a cited artifact `git grep` can no longer find, a version pin every build file now contradicts ("Spring Boot 4.0.5" vs a pom that says 4.0.7 — prefix-compatible pins and examples stay silent), and a sequence fact the tree has moved past ("latest is `V27`" once `V28` exists). The predicates live in a vendorable stdlib core, `freshness.py`, calibrated across 29 real repos to zero false positives.
 * *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
 * *PostCompact* — re-runs the audit so the assistant sees the current state without paying to re-read the whole file.
 

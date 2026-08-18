@@ -11,6 +11,21 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **evolving-claude-md 1.4.0** — staleness detection grows from one rot class to
+  three, factored into a vendorable stdlib core (`freshness.py`, pure functions
+  over `(text, repo_root)` — the base issue #33's memory-hygiene work builds on).
+  R1 vanished artifact (the existing backticked-token `git grep` check, moved);
+  R2 stale version pin — "Spring Boot 4.0.5" fires only when *every* parseable
+  spec in `pom.xml`/`package.json`/`Cargo.toml`/`go.mod`/`pyproject.toml`
+  contradicts it (prefix-compatible pins, ranges, examples, struck-through lines
+  all stay silent); R3 stale sequence fact — "latest is `V27`" fires only when
+  V27 provably resolves in-tree and a higher sibling exists. All three share the
+  audit's existing time budget and report style. Calibrated on 29 repos: 3 hits,
+  all verified true (jhelm's Boot 4.0.5→4.0.7 + k8s-client 25→26,
+  yj-schema-validator 4.0.2→4.0.7), 0 false positives after tuning out an
+  `e.g.`-illustration; sequence detector healthy-silent fleet-wide. Harness
+  25→51 checks incl. two pinned calibration regressions. Closes #34.
+
 - **prompt-coach 1.1.0** — eval harness for the rule fast-filter (issue #31).
   `scripts/eval_coach.py` scores every rule's precision/recall against a
   committed, hand-adjudicated golden set (`eval/golden.jsonl`, 28 rows seeded

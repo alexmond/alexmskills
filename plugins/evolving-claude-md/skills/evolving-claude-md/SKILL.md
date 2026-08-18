@@ -125,6 +125,7 @@ Fires once per session. Reads CLAUDE.md, identifies:
 - D&L >200 lines OR >25 entries → "consider compaction"
 - Any entry >800 chars → split or compact candidate
 - Any topic tag with 3+ entries → graduation candidate
+- **Staleness** (predicates in `freshness.py`, the shared vendorable core) — entries citing backticked artifacts `git grep` can no longer find; version pins a build file (`pom.xml`, `package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`) now contradicts; and "latest is `V27`"-style sequence facts where the tree holds a higher-numbered file. All grounded in the tree, silent when parsing is uncertain → strike/update candidates
 - **Coverage gaps** — the one check that pushes *up* (see below)
 
 Silent when healthy. When triggered, emits `hookSpecificOutput.additionalContext` so the assistant sees the recommendation and can propose action.
@@ -246,8 +247,9 @@ For a fresh project, when not installing via the marketplace plugin:
 
 1. Append the **How this file evolves** section to CLAUDE.md (a compact version of the rules above).
 2. Seed the Decisions & Learnings split: `### Decisions & Learnings (Recent — last 14 days)` + an empty `### Historic` section.
-3. Copy the three scripts into `.claude/skills/evolving-claude-md/`:
+3. Copy the four scripts into `.claude/skills/evolving-claude-md/`:
    - `audit-claude-md.py`
+   - `freshness.py` (the staleness predicates — the audit loads it from its own directory)
    - `lint-claude-md.py`
    - `archive-decisions.py`
 4. Add `.claude/settings.json` hooks pointing at them (SessionStart, PreToolUse, PostCompact) — see the plugin's `hooks/hooks.json` for the exact shape; replace `${CLAUDE_PLUGIN_ROOT}/skills/evolving-claude-md` with `.claude/skills/evolving-claude-md`.
@@ -257,12 +259,13 @@ The hooks need a single restart of the Claude Code session to register (settings
 
 ## The quality gate
 
-A fourth script ships beside the three hooks: `test-harness.py`. It is not part
+One more script ships beside the hooks: `test-harness.py`. It is not part
 of the runtime and the hooks never call it — it is the release gate, run with
 `make test-evolve` (or `python3 test-harness.py` from the skill directory)
 after any change to the audit or lint scripts. Read it as documentation of the
 checks' intended behaviour; run it before shipping a change to them. It covers
-the coverage checks, the per-repo config resolution, companion-file discovery,
+the coverage checks, the freshness detectors (fire and non-fire cases each),
+the per-repo config resolution, companion-file discovery,
 and the hook's exit-0/valid-JSON contract — with a pinned zero-false-positive
 calibration across real repos.
 

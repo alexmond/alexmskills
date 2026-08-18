@@ -1,7 +1,7 @@
 {
   "name": "evolving-claude-md",
   "description": "Turn CLAUDE.md into a living Decisions & Learnings log that stays bounded: a format contract enforced at write time by a PreToolUse lint, four downward pressures (strike-through, merge, graduation, quarterly archive), staleness detection against the tree, and a tree-grounded coverage check for the essentials a file can pass every size threshold and still be missing.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"

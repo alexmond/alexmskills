@@ -12,8 +12,11 @@ file is healthy on every dimension; emits JSON with
   - D&L section line count / entry count over their thresholds
   - any entry body over the mega-entry cap (split or collapse candidate)
   - any leading-bold "topic" tag repeated enough times (graduation candidate)
-  - any entry citing a backticked artifact (path / class / flag) that no longer
-    exists in the tree (`git grep -qF` miss) → staleness candidate
+  - STALENESS (predicates shared via freshness.py): any entry citing a
+    backticked artifact (path / class / flag) that no longer exists in the
+    tree (`git grep -qF` miss); any version pin a build file now contradicts
+    (pom.xml / package.json / Cargo.toml / go.mod / pyproject.toml); any
+    "latest is `V27`"-style sequence fact the tree has moved past
   - COVERAGE: a build file with no matching command in CLAUDE.md, or a repo with
     many top-level directories and no layout prose — the one check that asks
     whether the essentials are present rather than whether there is too much
@@ -35,13 +38,23 @@ either way so a noisy session is never blocked.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
-import subprocess
 import sys
 import time
 from collections import Counter
+
+# Freshness predicates live in the shared, vendorable core beside this file
+# (freshness.py) — loaded via importlib so it works both as a plugin (read-only
+# cache dir) and as a manual .claude/skills install, regardless of CWD.
+_F_SPEC = importlib.util.spec_from_file_location(
+    "_freshness",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "freshness.py"),
+)
+freshness = importlib.util.module_from_spec(_F_SPEC)
+_F_SPEC.loader.exec_module(freshness)
 
 CLAUDE_MD = "CLAUDE.md"
 LOCAL_MD = ".claude.local.md"
@@ -97,20 +110,12 @@ def load_config(root: str = ".") -> dict:
             continue
     return cfg
 
-# Staleness check — what counts as an artifact token worth checking against the
-# tree. Lean conservative (high precision) so false positives don't drown the
-# signal. Skip URLs, prose-y words, plain numbers, language keywords, and
-# anything < 4 chars.
-ARTIFACT_RE = re.compile(r"`([^`\n]{1,80})`")
-ARTIFACT_LOOKS_REAL = re.compile(
-    r"^(?:"
-    r"[A-Za-z_][\w./\-]*\.(?:java|kt|py|ts|tsx|js|jsx|go|rs|rb|sh|sql|yml|yaml|json|toml|xml|md|adoc|html|css|scss)$"  # filenames
-    r"|[A-Za-z_][\w./\-]*/[\w./\-]+"  # paths with a slash
-    r"|[A-Z][A-Za-z0-9]*\.[A-Za-z][\w]*"  # ClassName.method or ClassName.FIELD
-    r"|--[a-z][a-z0-9-]+"  # --cli-flags
-    r"|<[a-z][a-z0-9-]+>"  # <xml-tags>
-    r")$"
-)
+# Staleness — the predicates themselves (what counts as an artifact token,
+# version-pin and sequence-fact detection) live in freshness.py; this file
+# only shapes the report. Aliases kept for compatibility with older callers.
+ARTIFACT_RE = freshness.ARTIFACT_RE
+ARTIFACT_LOOKS_REAL = freshness.ARTIFACT_LOOKS_REAL
+looks_like_artifact = freshness.looks_like_artifact
 STALENESS_MIN_MISSING = 2  # entry flagged only when ≥2 of its artifact tokens are missing
 STALENESS_MAX_REPORT = 5
 STALENESS_TIME_BUDGET_S = 2.5  # total wall-clock cap on all git-grep checks
@@ -247,35 +252,9 @@ def companion_files(root: str = ".") -> list[tuple[str, float]]:
     return found
 
 
-def looks_like_artifact(tok: str) -> bool:
-    tok = tok.strip()
-    if len(tok) < 4 or len(tok) > 80:
-        return False
-    if tok.startswith(("http://", "https://", "git@", "//")):
-        return False
-    return bool(ARTIFACT_LOOKS_REAL.match(tok))
-
-
 def git_grep_misses(tokens: list[str]) -> list[str]:
-    """Return the subset of tokens that don't appear anywhere in the tracked
-    tree. Cheap: one `git grep -qF` per token; bails out (returns []) if not
-    in a git repo or git is missing."""
-    misses: list[str] = []
-    for tok in tokens:
-        try:
-            r = subprocess.run(
-                ["git", "grep", "-qF", "--", tok],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=2,
-            )
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            return []
-        if r.returncode == 1:  # not found
-            misses.append(tok)
-        elif r.returncode not in (0, 1):  # not a git repo or other error
-            return []
-    return misses
+    """Compatibility wrapper — the implementation moved to freshness.py."""
+    return freshness.missing_artifacts(tokens, ".")
 
 
 def main() -> int:
@@ -366,26 +345,31 @@ def main() -> int:
         key=lambda x: -x[1],
     )
 
-    # Staleness check: per entry, pull backticked artifact-looking tokens and
-    # ask git whether they still exist anywhere in the tree. Budget-capped so
-    # the hook stays under its 5s timeout even on big files.
+    # Staleness checks (predicates in freshness.py): per entry, backticked
+    # artifact tokens checked against the tree; plus whole-file version-pin
+    # and sequence-fact detectors. One shared wall-clock budget across all of
+    # them so the hook stays under its 5s timeout even on big files.
     stale: list[tuple[str, str, list[str]]] = []
     deadline = time.monotonic() + STALENESS_TIME_BUDGET_S
     # Newest entries first — they're the most actionable.
     for date, body in reversed(entries):
         if time.monotonic() > deadline:
             break
-        toks = [t for t in ARTIFACT_RE.findall(body) if looks_like_artifact(t)]
-        toks = list(dict.fromkeys(toks))  # dedup, preserve order
+        toks = freshness.artifact_tokens(body)
         if not toks:
             continue
-        miss = git_grep_misses(toks)
+        miss = freshness.missing_artifacts(toks, ".", deadline=deadline)
         if len(miss) >= STALENESS_MIN_MISSING:
             m = re.match(r"\*\*([^*]+?)\*\*", body)
             hint = m.group(1).strip() if m else body.strip()[:60]
             stale.append((date, hint, miss))
         if len(stale) >= STALENESS_MAX_REPORT * 3:
             break
+
+    # Version pins the build file now contradicts, and "latest is `V27`"-style
+    # sequence facts the tree has moved past. Both stay silent when uncertain.
+    stale_pins = freshness.stale_version_pins(text, ".", deadline=deadline)
+    stale_seqs = freshness.stale_sequence_facts(text, ".", deadline=deadline)
 
     level: str | None = None
     if (
@@ -403,7 +387,8 @@ def main() -> int:
 
     gaps = coverage_gaps(text, cfg=cfg) if cfg["coverage"] else []
 
-    if not level and not mega and not clusters and not stale and not gaps and not heavy:
+    if (not level and not mega and not clusters and not stale
+            and not stale_pins and not stale_seqs and not gaps and not heavy):
         return 0
 
     parts.append(
@@ -433,6 +418,28 @@ def main() -> int:
         more = f" (+{len(stale) - STALENESS_MAX_REPORT} more)" if len(stale) > STALENESS_MAX_REPORT else ""
         parts.append(
             f"⚠️ {len(stale)} entr{'y' if len(stale) == 1 else 'ies'} cite vanished artifacts "
+            f"(strike/update candidates): {listed}{more}."
+        )
+    if stale_pins:
+        listed = "; ".join(
+            f"says `{p['name']} {p['stated']}` but `{p['source']}` has {p['actual']}"
+            for p in stale_pins[:STALENESS_MAX_REPORT]
+        )
+        more = (f" (+{len(stale_pins) - STALENESS_MAX_REPORT} more)"
+                if len(stale_pins) > STALENESS_MAX_REPORT else "")
+        parts.append(
+            f"⚠️ {len(stale_pins)} stale version pin{'' if len(stale_pins) == 1 else 's'} "
+            f"(strike/update candidates): {listed}{more}."
+        )
+    if stale_seqs:
+        listed = "; ".join(
+            f"says {s['keyword']} is `{s['token']}` but `{s['newest']}` exists"
+            for s in stale_seqs[:STALENESS_MAX_REPORT]
+        )
+        more = (f" (+{len(stale_seqs) - STALENESS_MAX_REPORT} more)"
+                if len(stale_seqs) > STALENESS_MAX_REPORT else "")
+        parts.append(
+            f"⚠️ {len(stale_seqs)} stale sequence fact{'' if len(stale_seqs) == 1 else 's'} "
             f"(strike/update candidates): {listed}{more}."
         )
 
