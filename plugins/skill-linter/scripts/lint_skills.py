@@ -579,7 +579,11 @@ def check_typed(sk: Skill, types: list[str], prose: str) -> list[Finding]:
 
     if "workflow" in types:
         nums = sorted({int(n) for n in STEP_HEADING.findall(sk.body)})
-        if nums and nums != list(range(nums[0], nums[0] + len(nums))):
+        # Only a sequence that STARTS at 1 claims to be complete. Sections like
+        # "Step 2 / Step 3 / Step 6" under a full numbered flow list are
+        # deep-dives into selected steps, not a broken ladder — adapt-workflow
+        # does exactly this and was the rule's first false positive.
+        if nums and nums[0] == 1 and nums != list(range(1, len(nums) + 1)):
             add("workflow-step-gap", WARN,
                 f"step numbering is {nums} — not contiguous",
                 "a gap usually means a step was deleted without renumbering; "
@@ -604,16 +608,19 @@ def check_typed(sk: Skill, types: list[str], prose: str) -> list[Finding]:
                 "external stops it")
 
     if "learning" in types:
-        consuming_repo_target = "claude.md" in prose.lower() or ".claude/" in prose
-        if in_plugin(sk) and SELF_APPEND.search(prose) and not consuming_repo_target:
+        # Location can legitimately live in the description ("append new gotchas
+        # to the Learnings log each run") — classification reads it, so this must.
+        text = prose + "\n" + sk.description
+        consuming_repo_target = "claude.md" in text.lower() or ".claude/" in text
+        if in_plugin(sk) and SELF_APPEND.search(text) and not consuming_repo_target:
             add("learning-writes-to-plugin", WARN,
                 "a self-improving skill inside a plugin instructs appending to "
                 "itself or a bundled log",
                 "an installed plugin is a versioned artifact — state written "
                 "inside it is overwritten on update. Learned state belongs in "
                 "the consuming repo, e.g. .claude/<skill>/")
-        elif not SELF_APPEND.search(prose) and not re.search(
-                r"\.claude/|~/\.|memory/|log\.md|\.json\b", prose):
+        elif not SELF_APPEND.search(text) and not re.search(
+                r"\.claude/|~/\.|memory/|log\.md|\.json\b", text):
             add("learning-no-location", INFO,
                 "describes a learning loop but never names where learnings live",
                 "a loop without a stated location gets a different answer every "

@@ -9,6 +9,28 @@ unreleased/rolling (no global version).
 
 ## 2026-08-18
 
+### Fixed
+
+- **screenshot-sweep 1.1.0** — the Misses log gains a home that survives updates.
+  The skill instructed appending misses to itself, which works in this repo (the
+  symlinked dev setup) but silently fails or is lost for anyone running it as an
+  installed plugin — a versioned, read-only artifact. Flagged by skill-linter
+  0.4.0's `learning-writes-to-plugin`, on the plugin that shipped alongside the
+  rule. Now dual-mode: installed consumers append to their repo's
+  `.claude/screenshot-sweep/misses.md` and read both logs; the shipped Misses
+  list is the curated seed, and entries that prove out graduate into it.
+  Description also moved to third person.
+
+- **skill-linter (in 0.4.x line)** — three refinements from sweeping all 26 local
+  skills: `workflow-step-gap` fires only on sequences that start at Step 1
+  (deep-dive sections into selected steps of a numbered flow — adapt-workflow's
+  `Step 2/3/6` — are not a broken ladder); a skill's own `agents/` instruction
+  docs are no longer linted as agent definitions (skill-creator's grader/
+  comparator/analyzer produced three false ERRORs); and a learning skill's state
+  location may be stated in its description, consistent with classification.
+  The symlink-discovery gap is logged: a `~/.claude/skills` tree of live-skill
+  symlinks lints only its regular dirs until targets are resolved.
+
 ### Added
 
 - **skill-linter 0.4.0** — **type-aware linting.** The linter now classifies each

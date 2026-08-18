@@ -3,9 +3,10 @@ name: screenshot-sweep
 description: >-
   Use whenever a screenshot is captured or supplied — a bug report, a Playwright
   capture, a design review, a "does this look right". Read the WHOLE image, not
-  just the thing you came for: sweep it against the defect checklist below, file
-  what you find, and add it to the todo list. When a defect is later reported
-  that this sweep should have caught, append the miss to the Misses log and add
+  just the thing it was sent for: sweep it against the defect checklist below, file
+  the findings, and add them to the todo list. When a defect is later reported
+  that this sweep should have caught, append the miss to the Misses log (in the
+  consuming repo's .claude/screenshot-sweep/ when installed as a plugin) and add
   the check that would have caught it, so the checklist grows tighter over time.
 ---
 
@@ -132,6 +133,14 @@ already looked at**, that is a miss. Do this, in the same turn:
 Do not delete Misses entries. When one has held for a while and its check is
 established, it can be compressed to a single line, but the checklist item it
 produced stays.
+
+## Where misses go
+
+The shipped Misses log below is the curated seed — it travels with the plugin
+and is read-only for consumers. When this skill runs from an *installed* plugin,
+append new misses to the consuming repo's `.claude/screenshot-sweep/misses.md`
+(create it on first miss) and read both logs. Running from this repo, append
+below as always; entries that prove out graduate into the shipped list.
 
 ## Misses
 

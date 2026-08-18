@@ -446,6 +446,13 @@ def t_type_classification_and_packs():
         got = {f.rule for f in lint.check_typed(sk, types, prose)}
         check("3+ Step headings classify as workflow; a numbering gap warns",
               "workflow" in types and "workflow-step-gap" in got, f"{types} {got}")
+        deep = skill(tmp, "deep", f"name: deep\n{GOOD}",
+                     "## The flow\n1. a\n2. b\n3. c\n\n### Step 2 — detail\nx\n"
+                     "### Step 3 — detail\nx\n### Step 6 — wait this is fine\nx\n")
+        sk = lint.load_skill(deep); prose = lint.strip_fences(sk.body)
+        got = {f.rule for f in lint.check_typed(sk, lint.classify(sk, prose), prose)}
+        check("deep-dive sections into selected steps (no Step 1) do not warn",
+              "workflow-step-gap" not in got, str(got))
 
         orch = skill(tmp, "orch", f"name: orch\n{GOOD}",
                      "Fan out subagents via the Task tool.\nDispatch agents in parallel.\n" + BODY)

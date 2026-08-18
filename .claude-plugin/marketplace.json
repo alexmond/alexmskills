@@ -238,7 +238,7 @@
       "displayName": "Screenshot Sweep",
       "source": "./plugins/screenshot-sweep",
       "description": "Read the whole screenshot, not just the bug you came for. Sweeps every capture against a checklist of UI defects, files what it finds, and grows the checklist each time a defect is reported that it should have caught.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "self-learning",
       "keywords": [
         "screenshot",

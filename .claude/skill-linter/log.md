@@ -89,3 +89,9 @@ defects in the rule itself rather than gaps in coverage.
   `~/.claude/skills/` tree of live-skill symlinks lints only its regular dirs
   (8 of 26 here). Worked around by resolving targets before the run; following
   symlinks in rglob needs a loop guard before it ships.
+
+- 2026-08-18 — **false-positive** — `workflow-step-gap` fired on adapt-workflow's
+  `Step 2 / 3 / 6` sections, which are deep-dives into selected steps of a full
+  numbered flow list above — not a broken sequence. → the rule now fires only
+  when the heading sequence starts at Step 1 (a sequence that claims to be
+  complete). A genuinely deleted step keeps its Step 1. Harness-pinned.
