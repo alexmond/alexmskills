@@ -71,3 +71,11 @@ defects in the rule itself rather than gaps in coverage.
   (WARN — a misspelled tool grants nothing, silently). The trigger regex also
   learned the word "agent" ("Use this agent when…"), which its skill-only
   wording rejected — that FP would have burned trust on the first agent run.
+
+- 2026-08-18 — **coverage note** — `script-unreferenced` only inspects a
+  `scripts/` subdirectory. `evolving-claude-md` ships its .py files FLAT beside
+  SKILL.md, so its unmentioned `test-harness.py` evades the rule — the exact
+  claim (run-vs-read intent per bundled script) applies, the layout doesn't
+  match. Not widened yet: flat-layout matching needs calibration against the
+  69-skill corpus first (risk: flagging fixture/data .py files). Widen if a
+  second flat-layout case appears, or mention harness files in their SKILL.md.

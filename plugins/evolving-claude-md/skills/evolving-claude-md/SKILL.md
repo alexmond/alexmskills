@@ -255,6 +255,17 @@ For a fresh project, when not installing via the marketplace plugin:
 
 The hooks need a single restart of the Claude Code session to register (settings reload). Installing as a plugin skips steps 3–4 entirely.
 
+## The quality gate
+
+A fourth script ships beside the three hooks: `test-harness.py`. It is not part
+of the runtime and the hooks never call it — it is the release gate, run with
+`make test-evolve` (or `python3 test-harness.py` from the skill directory)
+after any change to the audit or lint scripts. Read it as documentation of the
+checks' intended behaviour; run it before shipping a change to them. It covers
+the coverage checks, the per-repo config resolution, companion-file discovery,
+and the hook's exit-0/valid-JSON contract — with a pinned zero-false-positive
+calibration across real repos.
+
 ## Common failure modes
 
 - **The log accumulates without pruning.** The audit hook screams at you; act on it.
