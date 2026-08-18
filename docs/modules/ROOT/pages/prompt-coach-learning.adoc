@@ -109,3 +109,14 @@ The analyzer flags the *prior* substantive prompt's analysis (not the current co
 
 *Privacy guarantees:* the report includes a structural signature (word count, question-shape, has-file-ref, etc.), the first 5 words of the prompt only, and your annotation. Full prompt content stays local in `log.md`.
 
+
+== Eval harness (v1.1.0)
+
+The regex fast-filter is measurable, so since 1.1.0 it is measured. `make eval-coach` scores every rule's precision and recall against a committed golden set (`eval/golden.jsonl`) of hand-adjudicated prompts — each row states which rules *should* be candidates for that text in isolation, and `[]` marks a clean prompt.
+
+Two boundaries keep the numbers honest:
+
+* Only the fast-filter is scored. The Claude-side context veto is a different layer; rows may note `fp_in_context`, but that never moves a score.
+* Only human-confirmed rows count. `--import-logs` harvests draft rows from repo coach logs (era-tagged, since the analyzer changed at 1.0), but the hook's own fires are never their own ground truth — drafts sit unscored until someone confirms them.
+
+`eval_coach.py --gate` fails any rule below 0.80 precision or 0.60 recall once it has at least 5 labeled samples; under-sampled rules are reported but never gated. The seed baseline already earned its keep: it confirmed the cross-repo log-review findings numerically (pile-on rules like `no-verify-loop` and `implicit-goal` at 0.00 precision) and surfaced recall misses no complaint had reported.

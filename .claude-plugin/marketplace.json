@@ -177,7 +177,7 @@
       "displayName": "Prompt Coach",
       "source": "./plugins/prompt-coach",
       "description": "Watches every prompt you send Claude Code and rewrites it toward better prompting habits (collaborator mode) — fundamentals (definition-of-done, guardrails, verification), classical techniques (few-shot, chain-of-thought, rubric, uncertainty budget), goals & loops, Claude-Code-native tool delegation (plan mode, TaskCreate, parallel agents, roles, brainstorm-panel, Workflow), and skill-awareness (rule of three). 42 rules across 6 tiers with 42 mirroring positive detectors that earn each rule to 'mastered' by demonstration, then fade to occasional refreshers. Adaptive: acceptance-tracked, precision-gated, fatigue-capped. Conversational + picker-answer short-circuit, typo-tolerant Levenshtein pre-pass for dyslexic-friendly matching, sourced catalog, and a zero-dependency local web dashboard.",
-      "version": "1.0.2",
+      "version": "1.1.0",
       "category": "self-learning",
       "keywords": [
         "prompt-engineering",

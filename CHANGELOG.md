@@ -9,6 +9,24 @@ unreleased/rolling (no global version).
 
 ## 2026-08-18
 
+### Added
+
+- **prompt-coach 1.1.0** — eval harness for the rule fast-filter (issue #31).
+  `scripts/eval_coach.py` scores every rule's precision/recall against a
+  committed, hand-adjudicated golden set (`eval/golden.jsonl`, 28 rows seeded
+  from real session prompts + clear synthetic cases), with `--gate` failing any
+  rule below 0.80 precision / 0.60 recall once it has ≥5 labeled samples.
+  `--import-logs` harvests draft rows from every repo's coach log, era-tagged
+  (`1.0.x` vs `v0.10`) and never scored until a human confirms them — the hook's
+  own fires can't be their own ground truth. Baseline run confirms the
+  cross-repo log-review findings numerically: `no-verify-loop` and
+  `implicit-goal` at 0.00 precision (pure pile-on fires), `no-definition-of-done`
+  0.12, `vague-reference` 0.20 precision / 0.33 recall — plus fresh recall
+  misses (comma-joined `compound-tasks`, `unbounded-iteration` on "until it
+  feels right"). Deliberately two-layer: this measures the regex candidate
+  filter only; the Claude-side context veto is annotated but never scored.
+  New `make eval-coach` target; 5 new harness checks (ALL GREEN).
+
 ### Fixed
 
 - **screenshot-sweep 1.1.0** — the Misses log gains a home that survives updates.

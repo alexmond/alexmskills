@@ -848,6 +848,38 @@ def t_grandfather_migration():
           f"status={rs.get('status')} basis={rs.get('mastery_basis')}")
 
 
+def t_eval_harness():
+    """v1.1.0 — eval_coach.py loads, scores the committed golden set, and
+    separates the two label classes correctly."""
+    import importlib.util
+    here = Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("_pc_eval", here / "eval_coach.py")
+    ev = importlib.util.module_from_spec(spec)
+    sys.modules["_pc_eval"] = ev
+    spec.loader.exec_module(ev)
+
+    rows = ev.load_rows(ev.GOLDEN)
+    confirmed = [r for r in rows if r.get("confirmed")]
+    check("t_eval_golden_seeded", len(confirmed) >= 20,
+          f"only {len(confirmed)} confirmed rows")
+    check("t_eval_rows_have_era", all("era" in r for r in confirmed),
+          "row missing era tag")
+
+    rep = ev.evaluate(confirmed)
+    check("t_eval_scores_produced", len(rep["rules"]) >= 10,
+          f"only {len(rep['rules'])} rules touched")
+    # A known-perfect row must score TP, a known-clean row must not invent FNs.
+    one = ev.evaluate([{"prompt": "try again", "expect": ["retry-without-diagnosis"]}])
+    check("t_eval_tp_counted", one["rules"]["retry-without-diagnosis"]["tp"] == 1,
+          str(one["rules"]))
+    clean = ev.evaluate([{"prompt": "Summarize CHANGELOG.md as a markdown table with columns date, plugin, version.", "expect": []}])
+    check("t_eval_clean_row_clean", not clean["rules"], str(clean["rules"]))
+    # The gate must ignore under-sampled rules.
+    tiny = {"rules": {"x": {"tp": 0, "fp": 2, "fn": 0, "n": 2,
+                            "precision": 0.0, "recall": None}}, "mismatches": [], "rows": 2}
+    check("t_eval_gate_ignores_small_n", ev.gate(tiny) == [], str(ev.gate(tiny)))
+
+
 def t_marketplace_valid():
     r = subprocess.run(["make", "-C", str(REPO_ROOT), "validate"],
                        capture_output=True, text=True)
@@ -891,6 +923,7 @@ CHECKS = [
     t_precision_gate,
     t_decaying_mastery,
     t_grandfather_migration,
+    t_eval_harness,
     t_marketplace_valid,
 ]
 
