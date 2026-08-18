@@ -110,6 +110,15 @@ DEFAULT_CONFIG = {
     "min_outcomes_for_gating": 4,     # need this many outcomes before gating
     "record_silence_as_accept": True, # honest mode: moving on w/o objecting = accept
     "explore_period": 10,             # re-admit a dormant rule every N prompts
+    # v1.2.0 (#30 a+c) — downstream-quality proxy. Acceptance measures
+    # adoption, not quality (GitHub Copilot metrics docs), so an accepted or
+    # edited rewrite opens a short friction window over the next K substantive
+    # prompts: retries, re-coaching on the same rule, and "coach that was
+    # wrong" flags count as friction; an immediate re-statement of the
+    # ORIGINAL prompt is a hollow accept. Suggestive, not conclusive — no
+    # counterfactual exists locally (the A/B arm is deferred to the MCP).
+    "friction_window_prompts": 3,     # window length; 0 disables the proxy
+    "hollow_overlap": 0.6,            # token-jaccard vs the original prompt
     "nudge_window": 20,               # rolling window (prompts) for the cap
     "max_nudges_per_window": 6,       # max visible rewrites per window (0=off)
     # v0.41.0 (Proposal 3) — decaying mastery. A mastered rule carries a
@@ -366,6 +375,28 @@ CONFIG_SCHEMA = {
                        "before the precision gate applies to it (v0.41+).",
         "example": 4,
         "since": "0.41.0",
+    },
+    "friction_window_prompts": {
+        "category": "rule-activation",
+        "type": "int",
+        "description": "Downstream-quality proxy (#30a): after an accepted or "
+                       "edited rewrite, watch this many substantive prompts for "
+                       "corrective signals (retries, re-coaching on the same rule, "
+                       "coach complaints). Folds into the per-rule ledger shown by "
+                       "`config acceptance`. 0 disables the proxy. Suggestive, not "
+                       "conclusive — there is no counterfactual locally (v1.2.0).",
+        "example": 3,
+        "since": "1.2.0",
+    },
+    "hollow_overlap": {
+        "category": "rule-activation",
+        "type": "float",
+        "description": "Hollow-accept detector (#30c): if within two prompts of "
+                       "accepting a rewrite you re-state the ORIGINAL ask with at "
+                       "least this token-jaccard overlap, the acceptance is counted "
+                       "hollow — adopted, then undone (v1.2.0).",
+        "example": 0.6,
+        "since": "1.2.0",
     },
     "record_silence_as_accept": {
         "category": "rule-activation",
@@ -5058,7 +5089,8 @@ def _blind_reject_gap(cwd) -> bool:
 
 
 def _record_acceptance(g: dict, l: dict, prompt_raw: str, cwd=None,
-                       silence_accept: bool = False) -> str | None:
+                       silence_accept: bool = False,
+                       cfg: dict | None = None) -> str | None:
     """If a collaborator rewrite was offered last prompt and THIS prompt is a
     clear yes/no/edit reply, record the outcome. Returns the recorded bucket
     or None. Idempotent per reply — clears last_prompt_fired_rules.
@@ -5103,7 +5135,81 @@ def _record_acceptance(g: dict, l: dict, prompt_raw: str, cwd=None,
         rs["implicit_accepts"] = int(rs.get("implicit_accepts", 0)) + 1
     l["last_prompt_fired_rules"] = []        # consumed
     l["last_collab_rendered"] = False        # consumed
+    if bucket in ("accepted", "edited"):
+        # v1.2.0 (#30a) — an adopted rewrite opens a friction window: the next
+        # K substantive prompts are watched for corrective signals. Window
+        # state is local (per repo), folded into the global per-rule ledger on
+        # close so `config acceptance` can pair adoption with downstream cost.
+        k = int((cfg or {}).get("friction_window_prompts", 3))
+        if k > 0:
+            # Silence-as-accept means windows can restart before running their
+            # K prompts (every substantive prompt after a rendered rewrite is
+            # itself an implicit accept). Fold the outgoing window first — a
+            # partial window still carries its events; dropping it would bias
+            # the proxy toward zero friction exactly when coaching is dense.
+            prev = l.get("friction_watch")
+            if isinstance(prev, dict) and prev.get("rule"):
+                _friction_fold(g, prev)
+            l["friction_watch"] = {
+                "rule": primary,
+                "remaining": k,
+                "orig": l.get("last_orig_preview", ""),
+                "events": [],
+                "prompts_seen": 0,
+            }
     return bucket
+
+
+def _friction_tokens(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(w) >= 3}
+
+
+def _friction_fold(g: dict, watch: dict, hollow: bool = False) -> None:
+    """Close a friction window into the global per-rule ledger."""
+    rs = g.setdefault("rules", {}).setdefault(watch.get("rule", "?"), {})
+    fr = rs.setdefault("friction", {"windows": 0, "events": 0, "hollow": 0})
+    fr["windows"] = int(fr.get("windows", 0)) + 1
+    fr["events"] = int(fr.get("events", 0)) + len(watch.get("events", []))
+    if hollow:
+        fr["hollow"] = int(fr.get("hollow", 0)) + 1
+
+
+def _friction_tick(g: dict, l: dict, cfg: dict, prompt_raw: str,
+                   fired: list[str], flagged: bool = False) -> None:
+    """v1.2.0 (#30 a+c) — advance the open friction window one substantive
+    prompt. Counts corrective signals after an adopted rewrite: a retry
+    (`retry-without-diagnosis` fired), re-coaching on the SAME rule, or a
+    "coach that was wrong" complaint (`flagged`). A prompt in the first two
+    turns that re-states the ORIGINAL pre-rewrite ask (token-jaccard over the
+    hollow_overlap threshold) is a HOLLOW accept — adopted, then undone —
+    and closes the window immediately. All of it is a suggestive proxy:
+    single-user, no counterfactual; the honest A/B arm is deferred (#30b)."""
+    watch = l.get("friction_watch")
+    if not isinstance(watch, dict) or not watch.get("rule"):
+        return
+    watch["prompts_seen"] = int(watch.get("prompts_seen", 0)) + 1
+    events = watch.setdefault("events", [])
+    if flagged:
+        events.append("flagged")
+    if "retry-without-diagnosis" in fired:
+        events.append("retry")
+    if watch["rule"] in fired:
+        events.append("recoach")
+    if watch["prompts_seen"] <= 2:
+        orig = _friction_tokens(watch.get("orig", ""))
+        now = _friction_tokens(prompt_raw)
+        if len(orig) >= 4 and len(now) >= 4:
+            j = len(orig & now) / len(orig | now)
+            if j >= float(cfg.get("hollow_overlap", 0.6)):
+                _friction_fold(g, watch, hollow=True)
+                l["friction_watch"] = None
+                return
+    watch["remaining"] = int(watch.get("remaining", 1)) - 1
+    if watch["remaining"] <= 0:
+        _friction_fold(g, watch)
+        l["friction_watch"] = None
+    else:
+        l["friction_watch"] = watch
 
 
 def _rule_precision(rs: dict, min_outcomes: int = 4) -> float | None:
@@ -5281,8 +5387,16 @@ def main() -> int:
     # v0.13.0 — bug-report phrase: user flagged the PREVIOUS prompt's
     # analysis for review. Append the last non-conversational log entry
     # (which is the analysis being complained about) to candidates.jsonl.
-    if is_bug_report_phrase(prompt_raw):
+    _complaint_turn = is_bug_report_phrase(prompt_raw)
+    if _complaint_turn:
         _flag_previous_for_review(local_dir, prompt_raw)
+        # v1.2.0 (#30a) — a complaint inside an open friction window is the
+        # strongest friction signal; record it even though this turn is
+        # conversational and never reaches the tick below.
+        w = l.get("friction_watch")
+        if isinstance(w, dict) and w.get("rule"):
+            w.setdefault("events", []).append("flagged")
+            l["friction_watch"] = w
 
     # v0.41.0 — acceptance loop (Proposal 1). If a collaborator rewrite was
     # offered last prompt and THIS prompt is a clear yes/no/edit reply,
@@ -5291,7 +5405,8 @@ def main() -> int:
     _silence_accept = (bool(cfg.get("record_silence_as_accept", True))
                        and not bool(cfg.get("collaborator_gate", False)))
     _acceptance_verdict = _record_acceptance(g, l, prompt_raw, cwd,
-                                             silence_accept=_silence_accept)
+                                             silence_accept=_silence_accept,
+                                             cfg=cfg)
 
     # Conversational short-circuit — "sure", "publish", "1 and 2", "go for
     # it" etc. are fragments answering an implicit question, not full
@@ -5648,10 +5763,16 @@ def main() -> int:
     # Remember which rules fired THIS prompt so next prompt's "first-after-fire"
     # praise can trigger.
     l["last_prompt_fired_rules"] = list(fired)
+    # v1.2.0 (#30 a+c) — advance any open post-acceptance friction window.
+    _friction_tick(g, l, cfg, prompt_raw, list(fired))
     # v0.49.0 — track whether a real collaborator rewrite was RENDERED this turn
     # (not a refresher / ack / capped fire), so next turn's silence-as-accept
     # only credits prompts the user actually saw a rewrite for.
     l["last_collab_rendered"] = str(outcome or "").startswith("collaborator")
+    if l["last_collab_rendered"]:
+        # v1.2.0 — the pre-rewrite original, kept so a hollow accept (user
+        # takes the rewrite, then re-states their original ask) is detectable.
+        l["last_orig_preview"] = prompt_raw[:400]
 
     # v0.28.0 — proactive tips. Two firing modes:
     #   Mode B (graduation-unlock): rule masters → fire paired tip on same

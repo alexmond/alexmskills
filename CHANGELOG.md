@@ -9,6 +9,23 @@ unreleased/rolling (no global version).
 
 ## 2026-08-18
 
+### Added
+
+- **prompt-coach 1.2.0** — downstream-quality proxy (closes #30, parts a+c).
+  Acceptance measures adoption, not quality, so an accepted/edited rewrite
+  now opens a friction window over the next 3 substantive prompts: retries
+  (`retry-without-diagnosis`), re-coaching on the same rule, and "coach that
+  was wrong" complaints count as friction; re-stating the original ask within
+  two prompts of accepting is a **hollow accept** (adopted, then undone).
+  Folded per rule into the ledger and shown by `config acceptance` as a
+  friction column, explicitly labelled suggestive — no counterfactual exists
+  locally (the held-out A/B arm, #30b, stays deferred to the MCP milestone).
+  Design nuance found by the harness: silence-as-accept restarts windows
+  before they run their course, so a superseded window folds partial rather
+  than dropping — dropping would bias the proxy toward zero friction exactly
+  when coaching is dense. Two new config keys (`friction_window_prompts`,
+  `hollow_overlap`), docs regenerated, harness 45→50 checks ALL GREEN.
+
 ### Fixed
 
 - **skill-linter 0.4.2** — `broken-reference` no longer fires on a markdown

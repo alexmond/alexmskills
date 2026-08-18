@@ -680,8 +680,12 @@ def cmd_acceptance(cwd: Path, as_json: bool = False) -> int:
         r, b = int(oc.get("rejected", 0)), int(oc.get("blind_reject", 0))
         if a + e + r + b == 0:
             continue
+        fr = rs.get("friction") or {}
         rows.append({"id": rid, "accepted": a, "edited": e, "rejected": r,
-                     "blind_reject": b, "rate": _rate(a, e, r)})
+                     "blind_reject": b, "rate": _rate(a, e, r),
+                     "friction": {"windows": int(fr.get("windows", 0)),
+                                  "events": int(fr.get("events", 0)),
+                                  "hollow": int(fr.get("hollow", 0))}})
     rows.sort(key=lambda x: -(x["accepted"] + x["edited"]
                               + x["rejected"] + x["blind_reject"]))
 
@@ -709,14 +713,22 @@ def cmd_acceptance(cwd: Path, as_json: bool = False) -> int:
     print()
     if rows:
         print("── per rule (by volume) ──────────────────────────────────")
-        print(f"  {'rule':32s} {'✓':>3} {'✎':>3} {'✗':>3} {'blind':>5}  rate")
+        print(f"  {'rule':32s} {'✓':>3} {'✎':>3} {'✗':>3} {'blind':>5}  rate  friction")
         for row in rows:
             rstr = f"{row['rate'] * 100:.0f}%" if row["rate"] is not None else "—"
             sample = row["accepted"] + row["edited"] + row["rejected"]
             flag = ("  ⚠ dormant-risk" if row["rate"] is not None
                     and row["rate"] < 0.15 and sample >= 4 else "")
+            fr = row.get("friction") or {}
+            w, ev, ho = fr.get("windows", 0), fr.get("events", 0), fr.get("hollow", 0)
+            fstr = "—" if not w else (f"{ev}/{w}w" + (f" · {ho} hollow" if ho else ""))
             print(f"  {row['id']:32s} {row['accepted']:>3} {row['edited']:>3} "
-                  f"{row['rejected']:>3} {row['blind_reject']:>5}  {rstr}{flag}")
+                  f"{row['rejected']:>3} {row['blind_reject']:>5}  {rstr:>4}  {fstr}{flag}")
+        if any((r.get("friction") or {}).get("windows") for r in rows):
+            print()
+            print("  friction = corrective signals in the 3 prompts after an adopted")
+            print("  rewrite (retries, re-coaching, complaints); hollow = accepted then")
+            print("  original re-stated. SUGGESTIVE proxy only — no counterfactual (#30).")
     return 0
 
 

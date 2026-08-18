@@ -142,7 +142,7 @@ For cross-repo analytics of coach activity, say *"log review"* or *"daily review
 
 // BEGIN generated-summary (gen-rules-doc.py — do not edit by hand)
 
-The catalog ships **42 rules** across 6 tiers (L1 6 · L2 4 · L3 11 · L4 5 · L5 11 · L6 5), each with a mirroring **positive detector** (42 total) so mastery is *earned by demonstration*. Behavior is tuned by **35 configuration keys** (see xref:prompt-coach-config.adoc#config-reference[the full table]).
+The catalog ships **42 rules** across 6 tiers (L1 6 · L2 4 · L3 11 · L4 5 · L5 11 · L6 5), each with a mirroring **positive detector** (42 total) so mastery is *earned by demonstration*. Behavior is tuned by **37 configuration keys** (see xref:prompt-coach-config.adoc#config-reference[the full table]).
 
 // END generated-summary
 

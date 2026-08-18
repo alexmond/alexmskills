@@ -721,6 +721,49 @@ def t_acceptance_loop():
           f"tally={tally} vague-ref={vr}")
 
 
+def t_friction_proxy():
+    """v1.2.0 (#30 a+c) — an adopted rewrite opens a friction window; retries
+    and re-coaching accrue; a re-stated original is a hollow accept."""
+    h, c = _fresh()
+    sp = h / ".claude/prompt-coach/state.json"
+    lp = c / ".claude/prompt-coach/state.json"
+    # (a) accept opens a window; re-coaching on the same rule = friction event
+    _hook(c, h, "fix it fast")                       # vague-reference fires
+    _hook(c, h, "yes")                               # accepted → window opens
+    l = json.loads(lp.read_text())
+    w = l.get("friction_watch") or {}
+    check("30a: accepted rewrite opens a friction window",
+          w.get("rule") == "vague-reference" and w.get("remaining", 0) > 0,
+          str(w))
+    _hook(c, h, "now sort out the thing over there quickly")  # vague again → recoach
+    _hook(c, h, "rename parse_x to parse_y in tools/x.py, done when tests pass")
+    _hook(c, h, "add a docstring to tools/x.py explaining the y format")
+    g = json.loads(sp.read_text())
+    fr = g.get("rules", {}).get("vague-reference", {}).get("friction", {})
+    check("30a: window closes into the ledger with the recoach event",
+          fr.get("windows", 0) >= 1 and fr.get("events", 0) >= 1, str(fr))
+    l = json.loads(lp.read_text())
+    w2 = l.get("friction_watch") or {}
+    check("30a: original window superseded or consumed (never lingers)",
+          w2.get("rule") != "vague-reference", str(w2))
+    # (c) hollow accept: accept, then re-state the original ask
+    _hook(c, h, "please improve the widget rendering thing somehow ok")
+    _hook(c, h, "yes")
+    _hook(c, h, "please improve the widget rendering thing somehow now ok")
+    g = json.loads(sp.read_text())
+    hollow = sum(int((rs.get("friction") or {}).get("hollow", 0))
+                 for rs in g.get("rules", {}).values())
+    check("30c: re-stating the original after accepting = hollow accept",
+          hollow >= 1, json.dumps({k: v.get("friction") for k, v in
+                                   g.get("rules", {}).items() if v.get("friction")}))
+    # acceptance verb surfaces friction
+    r = _cfg(c, h, "--json", "acceptance")
+    data = json.loads(r.stdout)
+    check("30: config acceptance exposes per-rule friction",
+          any("friction" in row for row in data.get("rules", [])),
+          r.stdout[:200])
+
+
 def t_fatigue_cap():
     """v0.41 P2 — visible rewrites are capped within a rolling window."""
     h, c = _fresh()
@@ -919,6 +962,7 @@ CHECKS = [
     t_attribution_primary_only,
     t_blind_reject,
     t_acceptance_verb,
+    t_friction_proxy,
     t_fatigue_cap,
     t_precision_gate,
     t_decaying_mastery,
