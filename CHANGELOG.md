@@ -11,6 +11,17 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **make harvest** — the missing graduation rung (closes #3): a read-only
+  scan of every consuming repo's `.claude/roles/*.md` learnings (crew/panel/
+  research registries + core role files, three marker styles), clustered by
+  role + token overlap, flagging any learning that surfaces in ≥2 repos as a
+  seed-graduation candidate; `DRAFT=file.md` writes a PR-ready draft naming
+  the target seed file per candidate. Harvest, don't sync — the PR stays the
+  human curation gate, `(seed)` bullets are excluded so the shipped seed
+  can't self-match. Current fleet truth: 27 bullets in 1 repo, 0 cross-repo
+  candidates — correctly silent until a second repo accumulates registry
+  wisdom. Self-test in CI.
+
 - **brainstorm-panel 1.3.0 / research-sweep 1.2.0** — per-role model tiers +
   gated Fable escalation (closes #8, mirroring dev-crew's policy). Registry
   rows in `panel.md` / `research.md` gain the same `model` field as

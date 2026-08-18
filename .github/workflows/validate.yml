@@ -34,6 +34,9 @@ jobs:
       - name: memory-hygiene harness
         run: python3 plugins/memory-hygiene/skills/memory-hygiene/test-harness.py
 
+      - name: harvest selftest
+        run: python3 scripts/harvest-learnings.py --selftest
+
       - name: mindmap-prompt compiler harness
         run: python3 plugins/mindmap-prompt/scripts/test-harness.py
 

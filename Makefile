@@ -16,6 +16,9 @@ test-coach: ## Run the prompt-coach release test harness (run after each release
 eval-coach: ## Score prompt-coach's rule fast-filter against the labeled golden set (add --gate in CI when corpus matures)
 	@python3 plugins/prompt-coach/scripts/eval_coach.py
 
+harvest: ## Scan consuming repos' .claude/roles learnings for cross-repo seed-graduation candidates (#3); add DRAFT=file.md to write a PR-ready draft
+	@python3 scripts/harvest-learnings.py $(if $(DRAFT),--draft $(DRAFT),)
+
 test-memory: ## Run the memory-hygiene harness (audit + lint hook + vendored-core drift)
 	@python3 plugins/memory-hygiene/skills/memory-hygiene/test-harness.py
 
