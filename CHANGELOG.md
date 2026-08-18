@@ -11,6 +11,22 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **systemic-fix-beta 0.1.0** — new plugin (closes #14): self-calibrating
+  discipline for bug fixes. A bug is one instance of a class: check scope
+  (grep for the pattern elsewhere, in a repo-calibrated search order), name
+  the class of mistake, propose prevention drawn from the repo's ACTUAL
+  lint/pre-commit/test tooling — and report before patching, with three
+  user choices (local fix / fix-all-instances / structural change),
+  defaulting to local-fix-only so the discipline never degenerates into
+  refactor sprawl. First run in a repo writes a ~30s read-only calibration
+  profile to `.claude/systemic-fix/profile.md` (module map, bug-label
+  taxonomy, discipline-hook inventory); `/systemic-fix recalibrate` redoes
+  it on demand — never mid-fix. Solo-first: reads dev-crew's PROFILE.md as
+  optional context, depends on nothing. Beta, with a measured graduation
+  bar (10+ bugs across 3+ repos, 3+ kept scope-expansions, zero unresolved
+  false-systemics). Built by a worktree agent from the 2026-06-14 design
+  doc; own-lint clean on first pass.
+
 - **make harvest** — the missing graduation rung (closes #3): a read-only
   scan of every consuming repo's `.claude/roles/*.md` learnings (crew/panel/
   research registries + core role files, three marker styles), clustered by

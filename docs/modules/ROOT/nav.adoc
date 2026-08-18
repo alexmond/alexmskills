@@ -30,3 +30,4 @@
 ** xref:research-sweep.adoc[Research Sweep]
 * Beta plugins
 ** xref:tune-repo.adoc[Tune Repo]
+** xref:systemic-fix.adoc[Systemic Fix]

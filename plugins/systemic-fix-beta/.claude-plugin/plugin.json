@@ -1,0 +1,20 @@
+{
+  "name": "systemic-fix-beta",
+  "description": "Self-calibrating discipline for bug fixes: treat the local fault as one instance of a class — check scope for the same pattern elsewhere, name the class of mistake, propose prevention drawn from the repo's own lint/pre-commit/test tooling — and report before patching, defaulting to a local fix. First run calibrates a per-repo profile (module map, bug-label taxonomy, discipline-hook inventory). Beta — the `-beta` suffix is intentional; graduates to `systemic-fix` when it earns its stable slot.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "bugfix",
+    "systemic",
+    "scope",
+    "prevention",
+    "discipline",
+    "beta"
+  ]
+}

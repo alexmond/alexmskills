@@ -23,7 +23,7 @@ Makefile                          # validate / list / bump helpers
 
 `evolving-claude-md`, `memory-hygiene`, `dev-crew`, `brainstorm-panel`, `learn-on-failure`, `roles`, `prompt-coach`
 (self-learning) · `implement-issue`, `maven-quality`, `security-audit`, `screenshot-tour` (workflow) ·
-`review-agents` (review) · `research-sweep` (research) · `skill-linter` (self-learning). Beta (`-beta` suffix): `tune-repo-beta`.
+`review-agents` (review) · `research-sweep` (research) · `skill-linter` (self-learning). Beta (`-beta` suffix): `tune-repo-beta`, `systemic-fix-beta`.
 
 ## Conventions
 
@@ -104,6 +104,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 - 2026-08-13 — **docs-coverage-gate** — index.adoc was 4 plugins stale + 4 pages orphaned; screenshot-sweep had no page. validate now checks page+nav+index per plugin, both directions. Why: a convention nothing checks rots silently.
 - 2026-08-08 — **skill-linter** — 0.1.0 new plugin: SKILL.md conformance from skill-creator + skill-development + writing-skills, every rule cited in references/rule-sources.md. Why: the 3 sources conflict twice; resolved narrower than either.
 - 2026-08-08 — **linter-credibility-is-the-constraint** — Half the harness asserts rules DON'T fire; fenced code and quoted user phrases are excluded after 2 real FPs. Why: noise kills a linter faster than a missed defect.
+- 2026-08-18 — **systemic-fix-beta** — 0.1.0 new plugin (#14, agent-built from the 2026-06-14 design doc): bug = instance of a class; scope/class/prevention report BEFORE patching, default local-fix-only; per-repo calibration profile. Why: unguarded, the discipline degenerates into refactor sprawl.
 - 2026-08-18 — **harvest-rung** — make harvest (#3): scans repos' .claude/roles learnings, clusters by role+overlap, drafts seed graduations at >=2-repo recurrence; PR stays the curation gate. Fleet truth: 27 bullets / 1 repo / 0 candidates. Why: harvest, don't sync.
 - 2026-08-18 — **fable-tiers-armed** — panel 1.3.0 + sweep 1.2.0 (#8): registry rows gain model field; gated Fable at the bottleneck seat only (panel: one generator; sweep: verifier). Re-arms the 2026-06 suspension-withdrawn policy. Why: tier decisions should be durable, and Fable everywhere flattens diversity.
 - 2026-08-18 — **tour-standardization** — screenshot-tour 1.1.0 (#20): host hygiene on every rendered surface (pixels beat text scanners), affordance-trap pre-check in plan.md, canonical attribution + footer-only repro + lead-with-3 subset. Why: two real decks diverged on exactly these.

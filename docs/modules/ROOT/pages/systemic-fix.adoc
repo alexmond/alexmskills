@@ -1,0 +1,97 @@
+= Systemic Fix
+:navtitle: systemic-fix
+:page-status: beta
+
+`systemic-fix` is a self-calibrating *discipline* skill for bug fixes. When a bug is found, the
+default agent behaviour is to patch the line and stop — which leaves the same anti-pattern
+ticking in sibling files and never names the *class* of mistake that a helper, type, lint rule,
+or test could make unreproducible. This skill treats the local fault as **one instance**, runs
+three checks (scope, class, prevention), and **reports before patching** — defaulting to the
+small fix, so the discipline never degenerates into refactor sprawl on every typo.
+
+[NOTE]
+====
+`systemic-fix-beta` ships with a `-beta` suffix in the stable marketplace. Expect changes;
+it graduates to `systemic-fix` when it clears the graduation bar below. It is the bug-fix
+counterpart to xref:tune-repo.adoc[Tune Repo] (one-shot repo calibration) and
+xref:evolving-claude-md.adoc[Evolving CLAUDE.md] (ongoing maintenance).
+====
+
+== Install
+
+[source,text]
+----
+/plugin install systemic-fix-beta@alexmskills
+----
+
+== When it fires
+
+* Any correctness bug Claude finds during ordinary work (wrong behaviour, crash, race, leak,
+  unhandled error, regression) — style nits and doc typos are gated out.
+* User phrases: "is this systemic?", "look wider", "find related bugs", "fix the class, not
+  the instance".
+* Explicitly via `/systemic-fix`; `/systemic-fix recalibrate` redoes the calibration scan.
+
+== The three checks
+
+. *Scope* — grep for the same pattern elsewhere, in the repo-calibrated search order
+  (default `same module → sibling modules → project-wide`). The same anti-pattern in another
+  file is almost always the same bug.
+. *Class* — name the kind of mistake (off-by-one, missing null check, unhandled error, wrong
+  API, race, leaked resource, …), preferring a label from the repo's own tracker taxonomy.
+. *Prevention* — a structural option drawn from the repo's *actual* discipline-hook
+  inventory ("add a Checkstyle rule under `config/checkstyle/`", "add an ArchUnit test under
+  `…/architecture/`"), never the abstract "consider a structural change".
+
+== The report and the three choices
+
+Findings are reported *before* any patch, in a shape generated from the calibration profile:
+other instances listed per module in scan order with `file:line`, prevention options naming
+the real hook files. The user picks one of three:
+
+. *local fix only* — the default; recommended unless the evidence is strong
+. *fix-all-instances* — the extra sites found by the scope check
+. *structural change* — the prevention option, plus fix-all
+
+Scope is never expanded silently. A clean scope check still earns a one-line report so the
+user knows the discipline ran.
+
+== First run — the calibration profile
+
+On first use in a repo the skill runs a ~30s *read-only* scan and writes
+`.claude/systemic-fix/profile.md` in the consuming repo (never inside the plugin — an
+installed plugin is a read-only cache):
+
+* *Module map* — the unit of "grep here first"
+* *Bug-label taxonomy* — tracker labels in use, the test framework, and which lint findings
+  CI already auto-catches (those don't qualify)
+* *Discipline-hook inventory* — pre-commit checks, custom lint rulesets, ArchUnit-style
+  fitness functions: the prevention menu
+
+Two choices are then made once per repo, with defaults derived from the scan: the *grep scope
+order* and the *gating labels* (e.g. trigger on `bug` + `regression`, skip `style` + `docs`).
+If dev-crew's `.claude/dev-crew/PROFILE.md` exists it is read as optional extra context —
+never a dependency.
+
+== Learning loop
+
+Every run — and especially the two failure modes — appends to
+`.claude/systemic-fix/log.md`: a *miss* (a sibling instance surfaced later that the scope
+order skipped) or a *false-systemic* (a fix-all/structural proposal rejected or reverted).
+Three entries pointing the same way adjust the profile itself — the calibration tightens
+from its own mistakes.
+
+== Companions
+
+* xref:tune-repo.adoc[Tune Repo] — may add the systemic-fix invocation phrase to a repo's
+  `CLAUDE.md` as a tightening recommendation.
+* xref:dev-crew.adoc[Dev Crew] — the `lead` role may delegate its scope+class investigation
+  here. Opt-in and fully external; solo install never depends on dev-crew artifacts.
+
+== Graduation bar
+
+Measured, not felt: 10+ real bugs across 3+ repos; 3+ runs where the user picked fix-all or
+structural and *kept* the result (a reverted expansion counts against); zero unresolved
+false-systemic log entries; and a first-run calibration needing no manual correction on 3
+consecutive fresh repos — tracked in a dated run log inside the skill. If it stalls for a
+quarter with no runs, it gets retired instead: an eternal beta is a catalog lie.

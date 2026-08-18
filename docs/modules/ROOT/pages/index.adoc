@@ -92,7 +92,8 @@ Guided procedures for a specific job, start to finish.
 |===
 
 Beta plugins carry a `-beta` suffix and live in the same marketplace — currently
-xref:tune-repo.adoc[tune-repo-beta]. See xref:channels.adoc[Marketplace & Beta Plugins].
+xref:tune-repo.adoc[tune-repo-beta] and xref:systemic-fix.adoc[systemic-fix-beta].
+See xref:channels.adoc[Marketplace & Beta Plugins].
 
 == Four of these are one system
 

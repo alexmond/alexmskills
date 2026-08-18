@@ -113,6 +113,7 @@ extra marketplace to opt into — you install them the same way as any other plu
 
 ```
 /plugin install tune-repo-beta@alexmskills
+/plugin install systemic-fix-beta@alexmskills
 ```
 
 The suffix is intentional: it makes it obvious at install time and in the enabled-plugins list
