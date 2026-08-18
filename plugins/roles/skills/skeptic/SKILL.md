@@ -1,6 +1,6 @@
 ---
 name: skeptic
-description: Pressure-test a plan, finding, or design — steelman it, attack correctness/necessity/cost, and deliver a REFUTED / HOLDS / HOLDS-WITH-CUTS verdict — applying the repo's evolving `skeptic` role (.claude/roles/skeptic.md). Invoke explicitly.
+description: Pressure-test a plan, finding, or design — steelman it, attack correctness/necessity/cost, and deliver a REFUTED / HOLDS / HOLDS-WITH-CUTS verdict — applying the repo's evolving `skeptic` role (.claude/roles/skeptic.md). Use when the user says "/roles:as skeptic", "pressure-test this", "poke holes in this plan", or "is this actually sound".
 argument-hint: "[plan / finding / design to pressure-test]"
 disable-model-invocation: true
 ---

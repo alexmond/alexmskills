@@ -1,6 +1,6 @@
 ---
 name: builder
-description: Scaffold a complete, production-ready application from scratch — architecture first, then a minimal but scalable MVP — applying the repo's evolving `builder` role (.claude/roles/builder.md). Invoke explicitly.
+description: Scaffold a complete, production-ready application — sound architecture and a minimal but scalable MVP — applying the repo's evolving `builder` role (.claude/roles/builder.md). Use when the user says "/roles:as builder", "build X from scratch", "scaffold a new service", or "stand up a new app".
 argument-hint: "[what to build]"
 disable-model-invocation: true
 ---

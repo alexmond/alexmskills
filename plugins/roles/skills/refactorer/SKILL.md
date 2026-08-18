@@ -1,6 +1,6 @@
 ---
 name: refactorer
-description: Restructure code into clean architecture — separate concerns, raise modularity, reduce coupling, behavior unchanged — applying the repo's evolving `refactorer` role (.claude/roles/refactorer.md). Invoke explicitly.
+description: Restructure code into clean architecture — separate concerns, raise modularity, reduce coupling, behavior unchanged — applying the repo's evolving `refactorer` role (.claude/roles/refactorer.md). Use when the user says "/roles:as refactorer", "refactor X", "untangle this module", or "clean this up without changing behavior".
 argument-hint: "[module / path to restructure]"
 disable-model-invocation: true
 ---

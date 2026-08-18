@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Design a scalable system — architecture, data flow, APIs, schema, caching — then implement its minimal production version, applying the repo's evolving `architect` role (.claude/roles/architect.md). Invoke explicitly.
+description: Design a scalable system — architecture, data flow, APIs, schema, caching — and implement its minimal production version, applying the repo's evolving `architect` role (.claude/roles/architect.md). Use when the user says "/roles:as architect", "design the architecture for X", "how should this system be structured", or "act as the architect".
 argument-hint: "[system / feature to design]"
 disable-model-invocation: true
 ---

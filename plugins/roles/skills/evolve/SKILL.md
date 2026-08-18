@@ -1,6 +1,6 @@
 ---
 name: evolve
-description: Audit + refine the role files in `.claude/roles/` so role personas keep improving after the first graduation. Surfaces consolidation candidates (≥3 Learnings entries on one topic → propose merge), staleness candidates (Learnings citing files/symbols that no longer exist), Body drift (cumulative learnings contradict the Charter/Body), and solo→core graduation candidates. All proposals are user-gated — the skill never silently rewrites a role file. Use when the user says "evolve roles", "audit roles", "consolidate role learnings", "refresh roles", "what should we graduate", or "roles are getting stale". Runs proactively too — periodically when many sessions across a repo have appended to role files. Complements (doesn't replace) the SessionStart `roles-init-audit.py` hook, which is reactive and lightweight; this skill is on-demand and deeper.
+description: Audit + refine the role files in `.claude/roles/` so role personas keep improving after the first graduation. Surfaces consolidation candidates (3+ Learnings entries on one topic become a merge proposal), staleness candidates (Learnings citing files/symbols that no longer exist), Body drift (cumulative learnings contradict the Charter/Body), and solo-to-core graduation candidates. All proposals are user-gated — the skill never silently rewrites a role file. Use when the user says "evolve roles", "audit roles", "consolidate role learnings", "refresh roles", "what should we graduate", or "roles are getting stale". Runs proactively too — periodically when many sessions across a repo have appended to role files. Complements (doesn't replace) the SessionStart `roles-init-audit.py` hook, which is reactive and lightweight; this skill is on-demand and deeper.
 ---
 
 # Evolve Roles
@@ -11,17 +11,15 @@ Graduation gets a learning *into* the role file. **Evolution** is the loop that 
 
 This skill runs that loop. **Never silently rewrites a role file.** Every proposal is shown to the user with the evidence; the user accepts, edits, or rejects each one.
 
-## When to invoke
+## Proactive runs and non-goals
 
-Trigger phrases:
-- "evolve roles", "audit roles", "audit the role files", "refresh roles"
-- "consolidate role learnings", "the `skeptic` role is getting noisy", "compact the role files"
-- "what should we graduate", "what learnings should lift to core"
-- "are any role learnings stale", "does the charter still match"
+Beyond the say-it phrases (in the description), run this when the SessionStart
+`roles-init-audit.py` hook surfaces high solo-learning counts (>15 per role) or
+cross-orchestrator usage signals — those are reactive nudges; this is the deeper
+pass that acts on them.
 
-Also invoke proactively when the SessionStart `roles-init-audit.py` hook surfaces high solo-learning counts (>15 per role) or cross-orchestrator usage signals — those are reactive nudges; this is the deeper pass that *acts* on them.
-
-Don't invoke for one-off "add this learning to the role" edits (the orchestrator that produced the lesson appends directly to the registry row or Learnings section — no audit needed for a single new entry).
+Not for one-off "add this learning to the role" edits: the orchestrator that
+produced the lesson appends directly, and a single new entry needs no audit.
 
 ## The four audit dimensions
 

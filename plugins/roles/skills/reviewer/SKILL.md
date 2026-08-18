@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Map an unfamiliar or large codebase and refactor it safely — behavior unchanged, quality raised — applying the repo's evolving `reviewer` role (.claude/roles/reviewer.md). Invoke explicitly.
+description: Map an unfamiliar or large codebase and improve it safely — behavior unchanged, quality raised — applying the repo's evolving `reviewer` role (.claude/roles/reviewer.md). Use when the user says "/roles:as reviewer", "review this codebase", "walk me through this repo", or "assess the quality of X".
 argument-hint: "[path or area to study]"
 disable-model-invocation: true
 ---

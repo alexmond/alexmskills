@@ -1,6 +1,6 @@
 ---
 name: optimizer
-description: Find bottlenecks and unnecessary work, then improve speed, memory, and scalability with measured, behavior-preserving changes, applying the repo's evolving `optimizer` role (.claude/roles/optimizer.md). Invoke explicitly.
+description: Find bottlenecks and unnecessary work, and improve speed, memory, and scalability with measured, behavior-preserving changes, applying the repo's evolving `optimizer` role (.claude/roles/optimizer.md). Use when the user says "/roles:as optimizer", "optimize X", "why is this slow", or "reduce the memory/cost of Y".
 argument-hint: "[code / path / hot path]"
 disable-model-invocation: true
 ---

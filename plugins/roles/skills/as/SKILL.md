@@ -1,6 +1,6 @@
 ---
 name: as
-description: Run any registered role from the repo's evolving role repository (.claude/roles/) against a target — the generic solo dispatcher for roles that have no dedicated wrapper skill. Invoke explicitly.
+description: Run any registered role from the repo's evolving role repository (.claude/roles/) against a target — the generic solo dispatcher for roles without a wrapper skill. Use when the user says "/roles:as <role>", "run the <role> role on X", "act as the <role>", or names a registry role that has no skill of its own.
 argument-hint: "[role] [target]"
 disable-model-invocation: true
 ---

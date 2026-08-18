@@ -1,6 +1,6 @@
 ---
 name: debugger
-description: Investigate a bug step by step, find the true root cause, and ship a robust production-ready fix, applying the repo's evolving `debugger` role (.claude/roles/debugger.md). Invoke explicitly.
+description: Investigate a bug to its true root cause and ship a robust production-ready fix, applying the repo's evolving `debugger` role (.claude/roles/debugger.md). Use when the user says "/roles:as debugger", "act as the debugger", "find the root cause of X", or hands over a stubborn failure that has resisted a quick fix.
 argument-hint: "[error / failing behavior]"
 disable-model-invocation: true
 ---

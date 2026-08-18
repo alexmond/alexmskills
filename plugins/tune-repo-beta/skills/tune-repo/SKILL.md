@@ -122,3 +122,23 @@ follow-ups worth a ticket.
   recommends for Java/Maven repos.
 - `evolving-claude-md` — keeps CLAUDE.md healthy over time (this skill is the one-shot tune-up;
   that one is the ongoing maintenance loop).
+
+## Graduation bar (beta exit)
+
+This plugin graduates to `tune-repo` when it has earned it, in the same way
+`prompt-coach` did — measured, not felt:
+
+- run end-to-end on **5+ real repos** (different stacks, not five Maven clones)
+- at least **3 runs** where the user applied the proposals and kept them —
+  a reverted proposal is a false positive and counts against
+- **zero** Phase-3 applications that broke a build or a hook
+- the discover phase needs **no manual correction** on 3 consecutive runs
+
+Track runs as dated entries here. When the bar is met: `make graduate
+PLUGIN=tune-repo-beta` + `make bump PLUGIN=tune-repo VERSION=1.0.0`. If it
+stalls for a quarter with no runs, retire it instead — an eternal beta is a
+catalog lie.
+
+### Run log
+
+(none yet — the bar starts counting now)
