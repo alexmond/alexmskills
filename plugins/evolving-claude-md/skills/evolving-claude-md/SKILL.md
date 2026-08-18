@@ -276,3 +276,16 @@ calibration across real repos.
 - **Topic tag inconsistency.** Lint enforces presence; the audit surfaces clustering. Pick existing tags before inventing new ones.
 - **Graduating too eagerly.** A pattern with 3 entries spread across one week isn't stable — wait 14 days minimum.
 - **Skipping the archive.** Quarterly archive is operational; nothing automates it. Calendar reminder.
+
+## Boundary — this skill vs `memory-hygiene`
+
+This skill governs `CLAUDE.md` and its companions: repo-scoped, committed,
+human-authored with the agent proposing. The *other* half of the loaded
+context — the agent-written memory under `~/.claude/projects/<slug>/memory/`
+— belongs to the sibling `memory-hygiene` plugin. Different artifact,
+different failure mode: bloat here makes instructions get ignored, rot there
+makes the agent confidently recall something false. So this skill prunes
+down; that one re-verifies and invalidates. They share one `freshness.py`
+core (vendored in both) so "is this fact still true on disk?" has exactly
+one implementation. "Make CLAUDE.md evolve" is this skill; "my memory has
+gone stale" is that one.

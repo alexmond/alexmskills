@@ -31,6 +31,9 @@ jobs:
       - name: evolving-claude-md harness
         run: python3 plugins/evolving-claude-md/skills/evolving-claude-md/test-harness.py
 
+      - name: memory-hygiene harness
+        run: python3 plugins/memory-hygiene/skills/memory-hygiene/test-harness.py
+
       - name: mindmap-prompt compiler harness
         run: python3 plugins/mindmap-prompt/scripts/test-harness.py
 

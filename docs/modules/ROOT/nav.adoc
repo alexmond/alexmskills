@@ -8,6 +8,7 @@
 ** xref:role-system-files.adoc[The file model]
 * Self-learning skills
 ** xref:evolving-claude-md.adoc[Evolving CLAUDE.md]
+** xref:memory-hygiene.adoc[Memory Hygiene]
 ** xref:dev-crew.adoc[Dev Crew]
 ** xref:brainstorm-panel.adoc[Brainstorm Panel]
 ** xref:learn-on-failure.adoc[Learn on Failure]

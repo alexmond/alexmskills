@@ -11,6 +11,24 @@ unreleased/rolling (no global version).
 
 ### Added
 
+- **memory-hygiene 0.1.0** — new plugin (closes #33): keeps agent-written
+  memory (`~/.claude/projects/<slug>/memory/`) from rotting. Eviction-by-
+  wrongness, the thing no agent-memory system ships: a SessionStart sweep
+  re-verifies pinned facts against the tree — vanished artifacts, stale
+  version pins, passed sequence facts (vendored `freshness.py`, byte-pinned
+  to evolving-claude-md's copy by the harness) — plus MEMORY.md index drift
+  both directions. Memory-specific filters keep pointers out of the flags:
+  `--flags`, placeholders, `...`-abbreviated paths, and paths rooted outside
+  the tree are another repo's business. A PreToolUse lint enforces the write
+  contract by location: fact files need typed frontmatter and absolute dates;
+  MEMORY.md stays a one-line-pointer index. Flags, never deletes —
+  supersession is strike-through + dated correction. Calibrated on 15 real
+  corpora (184 files → 15 findings, majority verified rot, incl. a jhelm pin
+  two minors behind and three "epic complete" notes citing renamed symbols);
+  calibration also hardened the shared core (`4.1.x` release-line guard, in
+  both vendored copies). 27-check harness (one FP found and fixed by its own
+  non-fire case), `make test-memory`, CI step, docs page.
+
 - **evolving-claude-md 1.4.0** — staleness detection grows from one rot class to
   three, factored into a vendorable stdlib core (`freshness.py`, pure functions
   over `(text, repo_root)` — the base issue #33's memory-hygiene work builds on).

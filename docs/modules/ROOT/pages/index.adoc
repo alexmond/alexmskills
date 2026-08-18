@@ -29,6 +29,9 @@ Skills that accumulate knowledge about the repo they run in. State lives in the 
 | xref:evolving-claude-md.adoc[evolving-claude-md]
 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks.
 
+| xref:memory-hygiene.adoc[memory-hygiene]
+| Keeps agent-written memory files from rotting — re-verifies version pins, sequence facts, and cited paths against the tree; flags what became wrong, never deletes.
+
 | xref:prompt-coach.adoc[prompt-coach]
 | Reads every prompt you send and rewrites it toward better prompting habits — 42 rules across 6 tiers, mastery earned by demonstration, adaptive precision-gating, and a local web dashboard.
 

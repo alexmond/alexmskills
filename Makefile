@@ -16,6 +16,9 @@ test-coach: ## Run the prompt-coach release test harness (run after each release
 eval-coach: ## Score prompt-coach's rule fast-filter against the labeled golden set (add --gate in CI when corpus matures)
 	@python3 plugins/prompt-coach/scripts/eval_coach.py
 
+test-memory: ## Run the memory-hygiene harness (audit + lint hook + vendored-core drift)
+	@python3 plugins/memory-hygiene/skills/memory-hygiene/test-harness.py
+
 test-mindmap: ## Run the mindmap-prompt compiler harness (golden fixture + graph invariants)
 	@python3 plugins/mindmap-prompt/scripts/test-harness.py
 
