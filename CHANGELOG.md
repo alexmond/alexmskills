@@ -7,6 +7,52 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-18
+
+### Fixed
+
+- **review-agents 1.1.0** — *the tool restriction was silently ignored.* All three
+  agents used `allowed-tools:` — the slash-command field, which agent frontmatter
+  does not recognise — so agents documented as "read-only" ran with the **full tool
+  set** (Write, Edit, `git push`) since 1.0.0. Now `tools:` with Write/Edit
+  withheld, command discipline stated in the body, and the description rewritten to
+  the enforceable truth ("no-write by construction") and to declare the Java/Maven
+  focus it always had. Found by a deep review; the linter had no opinion because it
+  never looked at agents — see skill-linter 0.2.0.
+
+- **prompt-coach 1.0.2** — the collaborator banner hardcoded `v0.34` and had
+  survived 15 minor versions and a 1.0 graduation, in the single most-seen string
+  the plugin emits. Now read from `plugin.json` at runtime.
+
+- **research-sweep 1.1.4 · screenshot-tour 1.0.1 · roles 1.3.0** — `## When to
+  invoke` body sections (unreadable at load-decision time) reshaped into post-load
+  scoping guidance; the 8 role personas' descriptions now carry the say-it phrases
+  ("pressure-test this", "find the root cause of X", "/roles:as …") that "Invoke
+  explicitly." never gave the matcher; two step-sequence descriptions reworded.
+  Marketplace lint: 14 warnings → 1 (the deliberate prompt-coach body-too-long).
+
+### Added
+
+- **skill-linter 0.2.0** — **agents/*.md are lint targets.** New `check_agent()`:
+  frontmatter validity, name↔filename, trigger-bearing description, and two rules —
+  `agent-wrong-tools-field` (ERROR: `allowed-tools:` in an agent is silently
+  ignored, so any restriction built on it is a false safety claim) and
+  `agent-unknown-tool` (WARN: a misspelled tool grants nothing, silently). The
+  trigger regex learned the word "agent"; `role.md` files are never swept in. Six
+  new harness checks (26 total). This is the learning loop working as designed:
+  the review-agents miss became a shipped rule the same day, logged with evidence
+  in `.claude/skill-linter/log.md`.
+
+- **CI** — the four stdlib harnesses (skill-linter, evolving-claude-md,
+  mindmap-prompt compiler, prompt-coach) plus a full marketplace lint now run on
+  every push and PR. ~100 checks previously ran only when someone remembered to
+  run make locally; the Playwright/claude-CLI suites stay local by design.
+
+- **tune-repo-beta 0.1.2** — a graduation bar, at last: 5+ real repos, 3+ kept
+  applications, zero broken builds, 3 clean discover phases — with a run log and a
+  retirement clause ("an eternal beta is a catalog lie"). prompt-coach had criteria
+  and used them to graduate; this beta had none and could neither pass nor fail.
+
 ## 2026-08-17
 
 ### Added

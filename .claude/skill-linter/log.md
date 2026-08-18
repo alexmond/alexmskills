@@ -57,3 +57,17 @@ defects in the rule itself rather than gaps in coverage.
   one launders broken input as clean, which is worse than not checking at all.** Any
   hand-rolled substitute for a real parser needs a conformance test against the real
   one, not just its own unit tests.
+
+## 2026-08-18 — deep review of the marketplace
+
+- 2026-08-18 — **miss** — `review-agents` shipped three agents using
+  `allowed-tools:` — the slash-command field, silently ignored in agent
+  frontmatter — so agents documented as "read-only" ran with the full tool set
+  (Write, Edit, `git push`) since 1.0.0. Found by a manual deep review, not by
+  the linter, because the linter did not look at `agents/*.md` at all.
+  → 0.2.0: agents are first-class lint targets. `check_agent()` validates
+  frontmatter, name↔filename, trigger-bearing description, and two new rules:
+  `agent-wrong-tools-field` (ERROR — the exact miss) and `agent-unknown-tool`
+  (WARN — a misspelled tool grants nothing, silently). The trigger regex also
+  learned the word "agent" ("Use this agent when…"), which its skill-only
+  wording rejected — that FP would have burned trust on the first agent run.

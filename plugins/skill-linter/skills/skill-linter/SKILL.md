@@ -14,6 +14,14 @@ Being honest about that boundary matters, because the failure mode here is a
 green lint being mistaken for a working skill. It is not. It means nothing
 mechanical is wrong.
 
+## What it lints
+
+`SKILL.md` files, and — since 0.2.0 — `agents/*.md`. Agents earned their slot the
+hard way: three shipped "read-only" agents used `allowed-tools:` (the
+slash-command field, silently ignored in agents) and ran with the full tool set
+for months. `agent-wrong-tools-field` is an *error* for that reason: it is not a
+style problem, it is a false safety claim.
+
 ## Run it
 
 ```bash

@@ -90,6 +90,14 @@ small and the published disagreement is real.
 | `broken-reference` | warn | skill-development | "Referenced files actually exist"; "Mistake 4: Missing Resource References" |
 | `reference-no-toc` | info | skill-creator | "For large reference files (>300 lines), include a table of contents" |
 
+### Agent rules (0.2.0)
+
+| Rule id | Level | Source | The guidance |
+|---|---|---|---|
+| `agent-wrong-tools-field` | error | Claude Code subagent docs; miss on 2026-08-18 | Agent definitions restrict tools via `tools:`; `allowed-tools:` is the slash-command field and is silently ignored — the agent then runs with the full tool set. Graduated straight to shipped because the damage class is a false safety claim. |
+| `agent-unknown-tool` | warn | same | A misspelled tool name grants nothing and fails silently at delegation time. |
+| agent `name-mismatch` / `description-no-trigger` | error / warn | same reasoning as the skill rules | Delegation addresses agents by name and selects them by description. |
+
 ## Guidance deliberately not enforced
 
 Some published guidance is real but not mechanically checkable, or is checkable

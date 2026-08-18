@@ -64,6 +64,8 @@ class Skill:
 
     @property
     def label(self) -> str:
+        if self.dir.name == "agents":                      # plugins/X/agents/foo.md
+            return f"{self.dir.parent.name}/agents/{self.path.stem}"
         return f"{self.dir.parent.parent.name}/{self.dir.name}" \
             if self.dir.parent.name == "skills" else self.dir.name
 
@@ -138,7 +140,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str, int, str]:
 # --------------------------------------------------------------- rule helpers
 
 TRIGGER = re.compile(
-    r"\b(use (this |it |the )?(skill )?(when|whenever|before|after|for)"
+    r"\b(use (this |it |the )?(skill |agent )?(when|whenever|before|after|for)"
     r"|invoke (this |it |automatically |explicitly |proactively )*(when|whenever)"
     r"|should be used when|trigger(s|ed)? (on|when|even)"
     r"|when the user (says|asks|mentions|wants|requests)"
@@ -312,6 +314,59 @@ def check(sk: Skill) -> list[Finding]:
     return out
 
 
+# --------------------------------------------------------------- agent files
+
+# Agent definitions (agents/*.md) share the frontmatter mechanics of skills but
+# not the schema. The check that pays for this whole section: `allowed-tools:`
+# is the SLASH-COMMAND field. In an agent it is silently ignored and the agent
+# runs with the full tool set — which is how a plugin shipped three "read-only"
+# agents that could write, edit, and push. Found 2026-08-18 in review-agents.
+AGENT_TOOL_NAMES = {
+    "Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebFetch", "WebSearch",
+    "Task", "NotebookEdit", "TodoWrite", "AskUserQuestion", "Skill",
+}
+
+
+def check_agent(sk: Skill) -> list[Finding]:
+    out: list[Finding] = []
+    add = lambda r, lv, m, h="", ln=0: out.append(Finding(sk.label, r, lv, m, h, ln))
+
+    if sk.fm_error:
+        add("frontmatter-invalid", ERROR, sk.fm_error,
+            "an agent with unparseable frontmatter cannot be selected at all", 1)
+        return out
+    if not sk.name:
+        add("name-missing", ERROR, "frontmatter has no `name`", line=1)
+    elif sk.name != sk.path.stem:
+        add("name-mismatch", ERROR,
+            f"frontmatter name `{sk.name}` does not match file `{sk.path.stem}.md`",
+            "delegation addresses the agent by name; a mismatch makes it unreachable", 1)
+    if not sk.description:
+        add("description-missing", ERROR, "frontmatter has no `description`",
+            "the description is what decides whether this agent is delegated to", 1)
+    elif not TRIGGER.search(sk.description):
+        add("description-no-trigger", WARN,
+            "description never says WHEN to use the agent",
+            'the conductor picks agents by description — say "Use this agent when …"')
+
+    if "allowed-tools" in sk.frontmatter:
+        add("agent-wrong-tools-field", ERROR,
+            "`allowed-tools:` is the slash-command field — agents use `tools:`",
+            "an unrecognized field is silently ignored, so the agent runs with the "
+            "FULL tool set; any read-only or scoped claim built on it is false", 1)
+
+    tools_raw = str(sk.frontmatter.get("tools", ""))
+    if tools_raw:
+        unknown = [t.strip() for t in tools_raw.split(",")
+                   if t.strip() and t.strip().split("(")[0] not in AGENT_TOOL_NAMES
+                   and not t.strip().startswith("mcp__")]
+        if unknown:
+            add("agent-unknown-tool", WARN,
+                f"tools lists {', '.join(f'`{u}`' for u in unknown[:4])} — not a known tool name",
+                "a misspelled tool grants nothing and fails silently at delegation time")
+    return out
+
+
 # --------------------------------------------------------------- learned rules
 
 def load_learned(path: Path) -> list[dict]:
@@ -362,18 +417,29 @@ def load_skill(p: Path) -> Skill:
                  frontmatter=fm, fm_error=err, body=body, body_line0=line0, text=text)
 
 
-def discover(paths: list[str]) -> list[Path]:
-    found: list[Path] = []
+def discover(paths: list[str]) -> tuple[list[Path], list[Path]]:
+    """Returns (skills, agents). An agent file is any .md directly inside an
+    `agents/` directory — role.md files and references are never agents."""
+    skills: list[Path] = []
+    agents: list[Path] = []
     for raw in paths or ["."]:
         p = Path(raw)
         if p.is_file() and p.name == "SKILL.md":
-            found.append(p)
-        elif (p / "SKILL.md").is_file():
-            found.append(p / "SKILL.md")
-        elif p.is_dir():
-            found += [q for q in p.rglob("SKILL.md")
-                      if not any(part in {"node_modules", ".git"} for part in q.parts)]
-    return sorted(set(found))
+            skills.append(p)
+        elif p.is_file() and p.parent.name == "agents" and p.suffix == ".md":
+            agents.append(p)
+        else:
+            root = p if p.is_dir() else p.parent
+            if (p / "SKILL.md").is_file():
+                skills.append(p / "SKILL.md")
+            for q in root.rglob("*.md"):
+                if any(part in {"node_modules", ".git"} for part in q.parts):
+                    continue
+                if q.name == "SKILL.md" and (p / "SKILL.md") not in skills:
+                    skills.append(q)
+                elif q.parent.name == "agents":
+                    agents.append(q)
+    return sorted(set(skills)), sorted(set(agents))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -386,16 +452,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--only", help="comma-separated rule ids to report")
     args = ap.parse_args(argv)
 
-    files = discover(args.paths)
+    skill_files, agent_files = discover(args.paths)
+    files = skill_files + agent_files
     if not files:
-        print("no SKILL.md found", file=sys.stderr)
+        print("no SKILL.md or agents/*.md found", file=sys.stderr)
         return 2
 
     learned = load_learned(Path(args.rules))
     findings: list[Finding] = []
-    for f in files:
+    for f in skill_files:
         sk = load_skill(f)
         findings += check(sk) + apply_learned(sk, learned)
+    for f in agent_files:
+        findings += check_agent(load_skill(f))
 
     if args.only:
         keep = {s.strip() for s in args.only.split(",")}
@@ -422,7 +491,7 @@ def main(argv: list[str] | None = None) -> int:
                     for i, ln in enumerate(_wrap(f.hint, 84)):
                         print(f"        {'→ ' if i == 0 else '  '}{ln}")
         clean = len(files) - len(by_skill)
-        print(f"\n  {len(files)} skills · {clean} clean · "
+        print(f"\n  {len(skill_files)} skills + {len(agent_files)} agents · {clean} clean · "
               f"{counts[ERROR]} errors · {counts[WARN]} warnings · {counts[INFO]} info"
               + (f" · {len(learned)} learned rules" if learned else ""))
 

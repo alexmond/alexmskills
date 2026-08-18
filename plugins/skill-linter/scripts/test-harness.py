@@ -258,6 +258,48 @@ def t_cli_exit_codes():
               f"got {(clean, strict_clean, warn, strict_warn, err)}")
 
 
+def t_agent_checks():
+    """0.2.0 — agents/*.md are linted too. The rule that pays for it:
+    `allowed-tools:` is the slash-command field; in an agent it is silently
+    ignored and the agent runs with EVERY tool. Three shipped "read-only"
+    agents could write, edit, and push, and the linter had no opinion."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t); ad = tmp / "agents"; ad.mkdir()
+        (ad / "auditor.md").write_text(
+            "---\nname: auditor\ndescription: Audit things. Use this agent when auditing.\n"
+            "allowed-tools: Read, Grep\n---\n\nbody\n")
+        (ad / "runner.md").write_text(
+            "---\nname: runner\ndescription: Use this agent when tests need running.\n"
+            "tools: Read, Grep, Glob, Bash\n---\n\nbody\n")
+        (ad / "typo.md").write_text(
+            "---\nname: typo\ndescription: Use this agent when typos strike.\n"
+            "tools: Read, Grpe\n---\n\nbody\n")
+        (ad / "misnamed.md").write_text(
+            "---\nname: other\ndescription: Use this agent when misnamed.\n---\n\nbody\n")
+
+        sk, ag = lint.discover([str(tmp)])
+        check("discover finds agents/*.md and no phantom skills",
+              len(ag) == 4 and sk == [], f"skills={sk} agents={len(ag)}")
+
+        def rules(name):
+            return {f.rule for f in lint.check_agent(lint.load_skill(ad / name))}
+        check("allowed-tools in an agent is an ERROR, not a style note",
+              "agent-wrong-tools-field" in rules("auditor.md"))
+        check("a correct agent (tools:, trigger, matching name) is clean",
+              rules("runner.md") == set(), str(rules("runner.md")))
+        check("a misspelled tool name is flagged",
+              "agent-unknown-tool" in rules("typo.md"))
+        check("agent name must match its filename",
+              "name-mismatch" in rules("misnamed.md"))
+
+    # role.md files must never be swept in as agents
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t); rd = tmp / "skills" / "skeptic"; rd.mkdir(parents=True)
+        (rd / "role.md").write_text("# skeptic\ncharter prose, no frontmatter\n")
+        sk, ag = lint.discover([str(tmp)])
+        check("role.md files are not treated as agents", ag == [], str(ag))
+
+
 def t_dogfoods_this_repo():
     """The linter's own skill has to pass the linter. If the author cannot meet the
     bar, the bar is wrong — this is the check that keeps it honest."""
@@ -283,6 +325,7 @@ CHECKS = [
     t_learned_rules_apply_and_survive_bad_input,
     t_learned_rules_file_is_optional_and_tolerant,
     t_cli_exit_codes,
+    t_agent_checks,
     t_dogfoods_this_repo,
 ]
 

@@ -1,7 +1,7 @@
 ---
 name: dc-scout
 description: >-
-  Use this agent on dev-crew init (first run in a repo, or on "re-profile") to
+  Use this agent when dev-crew initializes in a repo (first run in a repo, or on "re-profile") to
   scan the project and produce its profile: languages, build tool, frameworks,
   test and static-analysis stack, CI, deploy targets, and conventions. Read-only
   and cheap. Writes `<repo>/.claude/dev-crew/PROFILE.md`, which drives roster, role-prompt, and model-tier
