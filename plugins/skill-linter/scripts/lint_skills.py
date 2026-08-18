@@ -113,6 +113,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str, int, str]:
         joined = "\n".join(buf) if mode is LITERAL else " ".join(b for b in buf if b)
         fm[key] = _scalar(joined.strip()) if mode is PLAIN else joined.strip()
 
+    NESTED = "nested"          # `metadata:` with no value + indented children — valid YAML
     for raw in lines[1:end]:
         m = re.match(r"^([A-Za-z_][\w-]*):\s*(.*)$", raw)
         if m and not raw.startswith((" ", "\t")):
@@ -120,9 +121,17 @@ def parse_frontmatter(text: str) -> tuple[dict, str, int, str]:
             key, rest = m.group(1), m.group(2).strip()
             if rest in (">", "|", ">-", "|-", ">+", "|+"):
                 buf, mode = [], (FOLDED if rest[0] == ">" else LITERAL)
+            elif rest == "":
+                # An empty value followed by indented `sub: val` lines is a real
+                # nested mapping (antfu's skills: `metadata:` / `  author: …`).
+                # The guard below is only for text scalars that grow a colon —
+                # firing here called three perfectly valid skills broken.
+                buf, mode = [], NESTED
             else:
                 buf, mode = [rest], PLAIN
         elif key is not None:
+            if mode is NESTED:
+                continue               # children of a nested map: not our schema, skip
             if mode is PLAIN and (hit := NESTED_MAP.match(raw)):
                 return {}, "\n".join(lines[end + 1:]), end + 2, (
                     f"`{hit.group(1)}:` on a continuation line of `{key}` — YAML reads "
@@ -144,6 +153,7 @@ TRIGGER = re.compile(
     r"|invoke (this |it |automatically |explicitly |proactively )*(when|whenever)"
     r"|should be used when|trigger(s|ed)? (on|when|even)"
     r"|when the user (says|asks|mentions|wants|requests)"
+    r"|load (this )?(skill )?when|use (this|it) to\b|use for\b"
     r"|use proactively)", re.I)
 
 QUOTED = re.compile(r'"[^"\n]{3,}"|“[^”\n]{3,}”|`[^`\n]{3,}`')
@@ -159,6 +169,29 @@ FORCE_LOAD = re.compile(r"(?<![\w`/])@[\w./-]*(skills?|SKILL\.md)[\w./-]*", re.I
 BODY_TRIGGER_HEADING = re.compile(
     r"^#{2,4}\s*(when to (use|invoke|trigger)|use (this|it) when|triggers?)\b", re.I | re.M)
 MD_LINK = re.compile(r"\[[^\]]*\]\(([^)#][^)]*)\)")
+# agentskills.io spec: 1-64 chars, no leading/trailing/consecutive hyphens.
+NAME_SPEC = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+# platform best-practices "Avoid" list, verbatim: helper/utils/tools/documents/data/files
+GENERIC_NAMES = {"helper", "utils", "tools", "documents", "data", "files"}
+# Real markup only: a closing tag, a self-closing tag, or a tag with attributes.
+# Bare `<role>` / `<app>` placeholders are CLI-doc idiom, not XML — the first cut
+# flagged five descriptions for writing "/roles:as <role>".
+XML_TAG = re.compile(r"</[A-Za-z][\w-]*>|<[A-Za-z][\w-]*\s+[\w-]+=|<[A-Za-z][\w-]*\s*/>")
+DRIVE_PATH = re.compile(r"\b[A-Za-z]:\\\w")
+# Agent Skills spec's six portable frontmatter fields; anything else hard-fails
+# claude.ai upload (code.claude.com). Claude Code itself accepts extras.
+PORTABLE_KEYS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
+# Fields Claude Code documents beyond the portable spec. A key in neither set is
+# almost always a typo — and a typo'd `description` means the skill never fires.
+CODE_KEYS = PORTABLE_KEYS | {"argument-hint", "when_to_use", "disable-model-invocation",
+                             "model", "context", "agent", "user-invocable", "version"}
+# GitHub Copilot's "vague quality improvements" list — noise, not instruction.
+VAGUE_EXHORT = re.compile(
+    r"\b(be (more )?(accurate|careful|thorough)|don'?t (miss|make) any|do your best)\b", re.I)
+DESC_MAX = 1024          # Agent Skills spec + platform best-practices hard cap
+LISTING_MAX = 1536       # Claude Code truncates description+when_to_use here
+BODY_HARD_LINES = 1000   # Copilot's documented ceiling; corroborates the 500 guideline
+BODY_TOKEN_BUDGET = 5000 # progressive-disclosure Level-2 budget (both official sources)
 SEEN_TOC = re.compile(r"^#{1,3}\s*(table of contents|contents|toc)\b", re.I | re.M)
 
 
@@ -293,6 +326,72 @@ def check(sk: Skill) -> list[Finding]:
             "the skill knows it needs them — name the skill instead",
             sk.body_line0 + prose[:fm.start()].count("\n"))
 
+    # --- spec limits (platform best-practices + agentskills.io) ------------
+    if sk.name and (len(sk.name) > 64 or not NAME_SPEC.match(sk.name)):
+        add("name-spec", WARN,
+            f"`{sk.name}` violates the Agent Skills spec (1-64 chars, lowercase "
+            f"alphanumerics and single hyphens)",
+            "the spec makes this a hard requirement; claude.ai upload rejects it")
+    if sk.name in GENERIC_NAMES:
+        add("name-generic", WARN, f"`{sk.name}` is on the official avoid-list",
+            "helper/utils/tools/documents/data/files say nothing about when to "
+            "trigger — the docs list them verbatim as names to avoid")
+
+    if len(d) > DESC_MAX:
+        add("description-too-long", WARN,
+            f"description is {len(d)} chars (spec cap {DESC_MAX})",
+            "claude.ai enforces the cap as a hard error; Claude Code truncates "
+            "the listing instead, so the tail quietly stops matching")
+    when_to_use = str(sk.frontmatter.get("when_to_use", ""))
+    if len(d) + len(when_to_use) > LISTING_MAX:
+        add("description-truncated", WARN,
+            f"description + when_to_use is {len(d) + len(when_to_use)} chars — Claude Code "
+            f"cuts the skill listing at {LISTING_MAX}",
+            "everything past the cutoff is invisible to the trigger decision; put "
+            "the key use case first and trim")
+    if XML_TAG.search(d):
+        add("description-xml-tags", WARN, "description contains an XML/HTML tag",
+            "the docs forbid XML tags in name and description outright")
+
+    comp = sk.frontmatter.get("compatibility")
+    if comp is not None and len(str(comp)) > 500:
+        add("compatibility-too-long", WARN,
+            f"compatibility is {len(str(comp))} chars (cap 500)")
+
+    unknown = sorted(set(sk.frontmatter) - CODE_KEYS)
+    if unknown:
+        add("frontmatter-unknown-key", WARN,
+            f"frontmatter key(s) no runtime documents: {', '.join(f'`{k}`' for k in unknown[:5])}",
+            "neither the Agent Skills spec nor Claude Code knows these — usually a "
+            "typo, and a typo'd field is silently dropped. (Spec-portability note: "
+            "claude.ai upload hard-fails on ANY key outside the spec's six, "
+            "including Claude Code's own extensions)")
+
+    # --- body budgets (docs 500 lines / <5k tokens; Copilot documents ~1k decay) --
+    if nlines > BODY_HARD_LINES:
+        add("body-far-too-long", ERROR,
+            f"body is {nlines} lines — past every vendor's documented ceiling",
+            "Anthropic and Cursor guide 500; Copilot documents quality decay past "
+            "~1,000. This needs progressive disclosure, not trimming")
+    est_tokens = len(body) // 4
+    if est_tokens > BODY_TOKEN_BUDGET:
+        add("body-token-budget", WARN,
+            f"body is ~{est_tokens} tokens (chars/4) — the progressive-disclosure "
+            f"budget for a loaded skill is <{BODY_TOKEN_BUDGET}",
+            "the whole body enters context on every trigger; move detail into "
+            "references/ that load only when needed")
+
+    if (m0 := VAGUE_EXHORT.search(prose)):
+        add("vague-exhortation", INFO,
+            f"body contains {m0.group(0)!r} — exhortation, not instruction",
+            "vague quality demands add noise without changing behaviour; state a "
+            "measurable constraint instead",
+            sk.body_line0 + prose[:m0.start()].count("\n"))
+    if (dm := DRIVE_PATH.search(prose)):
+        add("windows-path", INFO, f"body contains a drive-letter path ({dm.group(0)!r}…)",
+            "skill paths must use forward slashes — backslash paths break on Unix",
+            sk.body_line0 + prose[:dm.start()].count("\n"))
+
     # --- bundled resources -------------------------------------------------
     for lm in MD_LINK.finditer(prose):
         target = lm.group(1).split("#")[0].strip()
@@ -304,6 +403,43 @@ def check(sk: Skill) -> list[Finding]:
             add("broken-reference", WARN, f"links to `{target}`, which does not exist",
                 "a reference the model cannot open is worse than no reference",
                 sk.body_line0 + prose[:lm.start()].count("\n"))
+
+    # One level deep: a reference file that links onward to a local .md not
+    # itself linked from SKILL.md creates a chain Claude reads only partially.
+    root_links = {Path(lm.group(1).split("#")[0].strip()).name
+                  for lm in MD_LINK.finditer(prose)}
+    chained: list[str] = []
+    for ref in sorted(sk.dir.rglob("*.md")):
+        if ref == sk.path or "node_modules" in ref.parts:
+            continue
+        rtext = strip_fences(ref.read_text(encoding="utf-8", errors="replace"))
+        for lm in MD_LINK.finditer(rtext):
+            tgt = lm.group(1).split("#")[0].strip()
+            if not tgt or "://" in tgt or not tgt.endswith(".md"):
+                continue
+            if Path(tgt).name not in root_links and Path(tgt).name != sk.path.name:
+                chained.append(str(ref.relative_to(sk.dir)))
+                break
+    if chained:
+        # One finding per SKILL, not per file: cloudflare's doc-tree skill has
+        # ~100 interlinked references, and 174 rows for one design decision is
+        # a flood that buries every other signal in the run.
+        add("reference-chain", WARN,
+            f"{len(chained)} reference file(s) link onward to local .md files that "
+            f"SKILL.md never links directly (e.g. {', '.join(chained[:3])})",
+            "references should stay one level deep — nested chains get "
+            "partially read and the tail is silently lost")
+
+    scripts_dir = sk.dir / "scripts"
+    if scripts_dir.is_dir():
+        unref = [sc.name for sc in sorted(scripts_dir.iterdir())
+                 if sc.is_file() and sc.name not in sk.text]
+        if unref:
+            add("script-unreferenced", WARN,
+                f"{len(unref)} script(s) ship with the skill but SKILL.md never mentions "
+                f"them: {', '.join(unref[:4])}{'…' if len(unref) > 4 else ''}",
+                "a bundled script must say whether Claude runs it or reads it; one "
+                "it never names is dead weight in the package")
 
     for ref in sorted(sk.dir.glob("references/*.md")):
         rl = len(ref.read_text(encoding="utf-8", errors="replace").splitlines())
@@ -465,6 +601,21 @@ def main(argv: list[str] | None = None) -> int:
         findings += check(sk) + apply_learned(sk, learned)
     for f in agent_files:
         findings += check_agent(load_skill(f))
+
+    # Collection budget: every installed skill's name+description shares one
+    # ~15,000-char system-prompt allowance; skills past the cutoff never load.
+    if len(skill_files) > 1:
+        total = 0
+        for f in skill_files:
+            sk = load_skill(f)
+            total += len(sk.name) + len(sk.description)
+        if total > 15000:
+            findings.append(Finding(
+                "(collection)", "collection-desc-budget", WARN,
+                f"name+description across {len(skill_files)} skills totals {total} chars — "
+                f"the shared listing budget is ~15,000",
+                "skills past the cutoff silently never trigger; trim the longest "
+                "descriptions first"))
 
     if args.only:
         keep = {s.strip() for s in args.only.split(",")}

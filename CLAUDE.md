@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-18 — **researched-rules-not-invented** — linter 0.3.0: 87 claims -> 41 verified -> 14 rules, each cited; calibrated on 69 external skills (+20 warns, all true). 2 FP classes + 1 parser bug found by calibration, not review. Why: a rule without a source gets dismissed; one without calibration gets ignored.
 - 2026-08-18 — **deep-review-sweep** — allowed-tools in agents is silently ignored (review-agents ran full-toolset since 1.0.0); linter 0.2.0 now lints agents; 4 harnesses into CI; 14 lint warns -> 1. Why: the linter's blind spot was exactly where the worst defect lived.
 - 2026-08-17 — **thresholds-are-taste-until-configurable** — evolve 1.3.0: 11 thresholds now per-repo (defaults->global->repo), companion files (.claude.local.md + nested) size-checked, routing rule added. Why: defaults calibrated on one corpus are one person's taste imposed on everyone.
 - 2026-08-17 — **coverage-is-the-upward-check** — evolve 1.2.0: audit only pushed content DOWN, so a file could pass every threshold and never name the build command. Gaps grounded in the tree, 0 fires on 29 repos. Cut the gotchas check at 59% fire rate. Why: measured, not reasoned.

@@ -106,6 +106,19 @@ def t_colon_in_unquoted_value_is_an_error():
               "frontmatter-invalid" not in rules_for(ok), str(sorted(rules_for(ok))))
 
 
+def t_nested_mapping_with_empty_value_is_valid():
+    """FP found calibrating against 69 external skills: antfu's vite/vitest/vue
+    use `metadata:` (empty value) + indented children — legal YAML the parser
+    called broken, which branded three working skills as unloadable."""
+    with tempfile.TemporaryDirectory() as t:
+        p = skill(Path(t), "meta", "name: meta\n" + GOOD +
+                  "\nmetadata:\n  author: someone\n  version: 1.0.0", BODY)
+        sk = lint.load_skill(p)
+        check("an empty-value key with an indented sub-mapping parses clean",
+              not sk.fm_error and sk.name == "meta" and "lint my skills" in sk.description,
+              sk.fm_error or "ok")
+
+
 def t_matches_real_yaml():
     """The parser is hand-rolled so the linter runs without pyyaml. That is only
     safe if it agrees with real YAML on what is valid — otherwise it launders
@@ -258,6 +271,116 @@ def t_cli_exit_codes():
               f"got {(clean, strict_clean, warn, strict_warn, err)}")
 
 
+def t_spec_limit_rules():
+    """0.3.0 — hard numbers from the Agent Skills spec + platform best-practices.
+    Every threshold here is a cited number, not taste."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        r = rules_for(skill(tmp, "a" * 70, f"name: {'a'*70}\n{GOOD}", BODY))
+        check("a 70-char name violates the spec (1-64)", "name-spec" in r, str(r))
+        r = rules_for(skill(tmp, "tools", f"name: tools\n{GOOD}", BODY))
+        check("`tools` is on the official avoid-list", "name-generic" in r, str(r))
+
+        big = 'description: Use when the user says "go". ' + "x" * 1100
+        r = rules_for(skill(tmp, "longdesc", f"name: longdesc\n{big}", BODY))
+        check("a >1024-char description trips the spec cap",
+              "description-too-long" in r, str(r))
+
+        wtu = f"name: trunc\n{GOOD}\nwhen_to_use: {'y' * 1500}"
+        r = rules_for(skill(tmp, "trunc", wtu, BODY))
+        check("description + when_to_use past 1,536 warns about listing truncation",
+              "description-truncated" in r, str(r))
+
+        markup = 'description: Use when the user says "go". Wraps output in <result attr="x"> tags.'
+        r = rules_for(skill(tmp, "xml", f"name: xml\n{markup}", BODY))
+        check("real markup in a description is flagged", "description-xml-tags" in r, str(r))
+        ph = 'description: Use when the user says "/roles:as <role>" or "run <module> checks".'
+        r = rules_for(skill(tmp, "ph", f"name: ph\n{ph}", BODY))
+        check("bare <placeholder> tokens are NOT flagged as XML",
+              "description-xml-tags" not in r, str(r))
+
+        r = rules_for(skill(tmp, "compat", f"name: compat\n{GOOD}\ncompatibility: {'c'*600}", BODY))
+        check("compatibility past 500 chars is flagged", "compatibility-too-long" in r)
+
+        r = rules_for(skill(tmp, "typo", f"name: typo\n{GOOD}\ndescriptoin: oops", BODY))
+        check("a key no runtime documents (typo) is a warning",
+              "frontmatter-unknown-key" in r, str(r))
+        r = rules_for(skill(tmp, "hint", f"name: hint\n{GOOD}\nargument-hint: \"[x]\"", BODY))
+        check("Claude Code's documented extra fields are NOT flagged",
+              "frontmatter-unknown-key" not in r, str(r))
+
+        r = rules_for(skill(tmp, "loadwhen",
+                            'name: loadwhen\ndescription: Load this skill when creating "charts".', BODY))
+        check("'Load this skill when …' counts as a trigger clause (broadened regex)",
+              "description-no-trigger" not in r, str(r))
+
+
+def t_body_budget_rules():
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        huge = "line of text\n" * 1100
+        r = rules_for(skill(tmp, "huge", f"name: huge\n{GOOD}", huge))
+        check("a 1,100-line body is an ERROR (past every vendor ceiling)",
+              "body-far-too-long" in r, str(r))
+        fat = ("word " * 60 + "\n") * 90          # ~27k chars, ~90 lines
+        r = rules_for(skill(tmp, "fat", f"name: fat\n{GOOD}", fat))
+        check("a ~7k-token body trips the 5k progressive-disclosure budget "
+              "even under the line limit", "body-token-budget" in r and "body-too-long" not in r, str(r))
+        r = rules_for(skill(tmp, "vague", f"name: vague\n{GOOD}",
+                            BODY + "\nBe more accurate and don't miss any issues.\n"))
+        check("vague exhortations are an info note", "vague-exhortation" in r, str(r))
+        r = rules_for(skill(tmp, "win", f"name: win\n{GOOD}",
+                            BODY + "\nOpen C:\\Users\\me\\file.txt to start.\n"))
+        check("a drive-letter path is flagged", "windows-path" in r, str(r))
+        r = rules_for(skill(tmp, "rx", f"name: rx\n{GOOD}",
+                            BODY + "\nMatch version with \\d+\\.\\d+ as needed.\n"))
+        check("regex escapes are NOT mistaken for Windows paths",
+              "windows-path" not in r, str(r))
+
+
+def t_resource_rules():
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        d = tmp / "chain"; (d / "references").mkdir(parents=True)
+        (d / "SKILL.md").write_text(f"---\nname: chain\n{GOOD}\n---\n\n{BODY}\n"
+                                    "See [a](references/a.md).\n")
+        (d / "references" / "a.md").write_text("# a\n\nMore in [b](references/b.md).\n")
+        (d / "references" / "b.md").write_text("# b\n")
+        r = rules_for(d / "SKILL.md")
+        check("a reference linking onward to an un-rooted .md is a chain warning",
+              "reference-chain" in r, str(r))
+        (d / "SKILL.md").write_text((d / "SKILL.md").read_text()
+                                    .replace("See [a](references/a.md).",
+                                             "See [a](references/a.md) and [b](references/b.md)."))
+        check("linking every reference from SKILL.md clears it",
+              "reference-chain" not in rules_for(d / "SKILL.md"))
+
+        d2 = tmp / "scripted"; (d2 / "scripts").mkdir(parents=True)
+        (d2 / "SKILL.md").write_text(f"---\nname: scripted\n{GOOD}\n---\n\n{BODY}\n")
+        (d2 / "scripts" / "run.py").write_text("print()\n")
+        check("a shipped script SKILL.md never names is flagged",
+              "script-unreferenced" in rules_for(d2 / "SKILL.md"))
+        (d2 / "SKILL.md").write_text((d2 / "SKILL.md").read_text() + "\nRun `scripts/run.py` first.\n")
+        check("naming the script clears it",
+              "script-unreferenced" not in rules_for(d2 / "SKILL.md"))
+
+
+def t_collection_budget():
+    """blog.fsck.com: all skill descriptions share one ~15,000-char listing
+    budget; past it, skills silently never trigger."""
+    import contextlib, io
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        long_desc = 'description: Use when the user says "go". ' + "z" * 900
+        for i in range(18):
+            skill(tmp, f"s{i}", f"name: s{i}\n{long_desc}", BODY)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            lint.main([str(tmp), "--json", "--rules", str(tmp / "none.json")])
+        check("a collection past the 15k description budget gets one warning",
+              "collection-desc-budget" in buf.getvalue(), buf.getvalue()[:150])
+
+
 def t_agent_checks():
     """0.2.0 — agents/*.md are linted too. The rule that pays for it:
     `allowed-tools:` is the slash-command field; in an agent it is silently
@@ -315,6 +438,7 @@ CHECKS = [
     t_frontmatter_shapes,
     t_frontmatter_failures,
     t_colon_in_unquoted_value_is_an_error,
+    t_nested_mapping_with_empty_value_is_valid,
     t_matches_real_yaml,
     t_name_must_match_directory,
     t_description_rules,
@@ -325,6 +449,10 @@ CHECKS = [
     t_learned_rules_apply_and_survive_bad_input,
     t_learned_rules_file_is_optional_and_tolerant,
     t_cli_exit_codes,
+    t_spec_limit_rules,
+    t_body_budget_rules,
+    t_resource_rules,
+    t_collection_budget,
     t_agent_checks,
     t_dogfoods_this_repo,
 ]

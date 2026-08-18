@@ -9,6 +9,42 @@ unreleased/rolling (no global version).
 
 ## 2026-08-18
 
+### Added
+
+- **skill-linter 0.3.0** — 14 new rules + 1 collection check from a **verified
+  deep-research sweep**: 6 parallel agents across source categories (platform
+  best-practices, the Agent Skills spec, code.claude.com, the engineering blog,
+  superpowers, practitioner posts, cross-vendor docs), 87 claims gathered, 41
+  surviving adversarial verification — every kept claim's URL fetched and quote
+  confirmed. Full record in `docs/decisions/2026-08-18-skill-authoring-research.md`;
+  per-rule citations in `references/rule-sources.md`.
+
+  The numbers are now cited, not invented: name grammar 1-64 (`name-spec`), the
+  official generic-name avoid-list (`name-generic`), description ≤1,024
+  (`description-too-long`) and the Claude Code 1,536-char listing truncation
+  (`description-truncated`), real-markup-only XML check, `compatibility` ≤500,
+  unknown-frontmatter-key typo catcher, body >1,000 lines as an **error** (the
+  one vendor-documented decay point), ~5k-token progressive-disclosure budget,
+  vague-exhortation and windows-path info notes, one-level `reference-chain`,
+  `script-unreferenced`, and the collection-wide ~15,000-char description budget
+  (blog.fsck.com) — which promptly found this machine's own installed set at
+  18,660 chars, over budget.
+
+  **Calibrated before shipped** against 69 external skills (superpowers,
+  cloudflare, local): +20 warnings, each hand-verified true — among them three
+  of this machine's own local skills over the 1,024 spec cap. Two FP classes
+  were caught and fixed during calibration: `<role>`-style CLI placeholders read
+  as XML tags, and Claude Code's documented `argument-hint` read as non-portable
+  (14 false hits on this repo alone before the redesign to a typo catcher). Two
+  flood classes aggregated to one finding per skill after cloudflare's doc-tree
+  produced 174 rows for one design decision. One new documented **conflict
+  between official sources** (reference TOC at 100 vs 300 lines) resolved to the
+  looser bound; reserved-word and gerund-naming guidance deliberately not
+  enforced, with reasons recorded. Also fixed a real parser bug calibration
+  surfaced: `metadata:` with an empty value plus an indented block is valid YAML
+  the parser previously rejected, branding three working third-party skills
+  unloadable. Harness: 26 → 47 checks.
+
 ### Fixed
 
 - **review-agents 1.1.0** — *the tool restriction was silently ignored.* All three
