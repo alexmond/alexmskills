@@ -13,6 +13,8 @@ a CLAUDE.md that prunes and graduates its own decisions, a delivery crew that re
 run history, a brainstorm panel that learns which experts your work needs, and a learn-on-failure hook
 that captures every multi-cycle debugging detour.
 
+📖 **Documentation:** <https://www.alexmond.org/alexmskills/>
+
 ## Catalog
 
 | Plugin | Category | Version | What it does |
