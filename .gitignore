@@ -27,3 +27,8 @@ __pycache__/
 # for `make dev-link`. Not source; per-process ephemera.
 plugins/*/.in_use/
 beta/plugins/*/.in_use/
+
+# prompt-coach eval drafts: auto-harvested prompt previews from ALL local
+# repos (incl. private ones) — never publishable. golden.jsonl (curated,
+# leak-checked) is the only committed eval data.
+plugins/prompt-coach/eval/draft.jsonl

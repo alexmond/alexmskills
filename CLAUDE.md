@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-26 — **coach-reverify** — #32 closed: 1.0.x-era re-run (940 prompts/30 repos): refresher noise gone by design (v0.38), grandfathered 0-demo masteries persist (no-answer-shape fired 50x while "mastered"); 1169 drafts to #31, draft.jsonl git-ignored (private-repo prompts). Why: mastery is dashboard-only now, but only reset makes it honest.
 - 2026-08-18 — **ticket-triage** — 10 open issues assessed vs tree: #4 closed (invariant shipped as linter rule), #8/#31 fact-corrected, #32 re-run scheduled for Aug 22 (cloud reminder). Build order: #31 -> #34 -> #33 -> #30 -> #20 -> #8 -> #14/#3. Why: backlog rots like any log.
 - 2026-08-18 — **local-skills-sweep** — 26 local skills linted, all owned findings fixed: 7 desc trims (spec cap), dual-mode learning state (screenshot-sweep+sb-k8s), collection budget 17.3k->under 15k. 3 linter FPs became refinements. Why: the budget overrun meant skills silently not triggering.
 - 2026-08-18 — **type-aware-linting** — linter 0.4.0: skills classified by shape (workflow/orchestrator/learning/reference/scripted), rule pack per shape + hooks/commands/plugin-root surfaces. Why: an orchestrator and a reference file fail differently; one rulebook flags neither.
