@@ -1,0 +1,377 @@
+# Demo / demo-recording / promotion practices across third-party Claude Code skill repos
+# Seeded by 3 parallel research agents (container-scout, demo-tooling-scout, promotion-scout) on 2026-08-27.
+# Schema: id, practice, repo_or_source, url, evidence, prevalence, applicability.
+
+
+# === agent ac9f8c126a958443b ===
+findings:
+  - id: marketplace-add-plus-scoped-install-container
+    practice: Install UX is a two-line snippet — `/plugin marketplace add <owner/repo>` followed by `/plugin install <plugin>@<marketplace-name>` — shown verbatim in a "Try in Claude Code" section.
+    repo_or_source: anthropics/skills
+    url: https://github.com/anthropics/skills
+    evidence: README section "Try in Claude Code, Claude.ai, and the API" with exact commands `/plugin marketplace add anthropics/skills` then `/plugin install document-skills@anthropic-agent-skills` and `/plugin install example-skills@anthropic-agent-skills`.
+    prevalence: widespread
+    applicability: alexmskills' README should lead with the same two-line copy-paste block per plugin, using its marketplace name suffix.
+  - id: spec-and-template-dirs
+    practice: The collection ships a formal spec directory and a skill template directory alongside the skills, and the README points to them as first-class entries.
+    repo_or_source: anthropics/skills
+    url: https://github.com/anthropics/skills
+    evidence: README "Skill Sets" pointers — `./skills` (examples by category), `./spec` (the Agent Skills specification), `./template` (skill template) — plus a minimal YAML frontmatter template in a "Creating a basic skill" section.
+    prevalence: several
+    applicability: alexmskills could add a template plugin dir so contributors and readers see the expected shape without reading the linter.
+  - id: skills-sh-directory-badge
+    practice: The repo carries a skills.sh badge linking to its page on the external Agent Skills directory, turning the README into a funnel to a ranked discovery site.
+    repo_or_source: anthropics/skills
+    url: https://github.com/anthropics/skills
+    evidence: Badge markup `[![skills.sh](image-url)](https://skills.sh/anthropics/skills)` near the top of the README.
+    prevalence: several
+    applicability: alexmskills could list on skills.sh and add the badge for third-party install-count visibility.
+  - id: categorized-bold-bullet-catalog
+    practice: Skills are cataloged as category-grouped bullet lists — bold skill name, dash, one-line description, optional parenthetical about bundled references — with no tables or images.
+    repo_or_source: obra/superpowers
+    url: https://github.com/obra/superpowers
+    evidence: README "What's Inside" section with Testing/Debugging/Collaboration/Meta groups; entry format like "**test-driven-development** - RED-GREEN-REFACTOR cycle (includes testing anti-patterns reference)".
+    prevalence: widespread
+    applicability: Cheap to maintain; alexmskills already has a catalog table, but the parenthetical "includes X reference" detail is worth stealing for depth signaling.
+  - id: multi-harness-install-matrix
+    practice: Install instructions are given per agent platform (Claude Code, Cursor, Devin, GitHub Copilot CLI), each with its own exact one-liner, widening the audience beyond Claude Code.
+    repo_or_source: obra/superpowers
+    url: https://github.com/obra/superpowers
+    evidence: README install commands per platform — `/plugin install superpowers@claude-plugins-official`, Cursor `/add-plugin superpowers`, Devin `devin plugins install obra/superpowers`, Copilot `copilot plugin install superpowers@superpowers-marketplace`.
+    prevalence: several
+    applicability: alexmskills is Claude-Code-only today; a per-harness section is a growth lever if the skills stay agent-agnostic.
+  - id: external-web-catalog-site
+    practice: The README delegates browsing to an interactive external web catalog (aitmpl.com) and a separate docs site, keeping the README itself to a component-type overview table plus npx install one-liners.
+    repo_or_source: davila7/claude-code-templates
+    url: https://github.com/davila7/claude-code-templates
+    evidence: "Browse & Install Components and Templates" linking aitmpl.com ("explore and install 100+ agents, commands, settings, hooks, and MCPs"), docs.aitmpl.com as docs hub, and installer lines like `npx claude-code-templates@latest --skill web-data/search,web-data/scrape,web-data/data-feeds`.
+    prevalence: several
+    applicability: alexmskills already has an Antora site at alexmond.org/alexmskills — it could grow a browsable per-plugin catalog page the README links to as the primary browse surface.
+  - id: quantitative-headline-counts
+    practice: The README headline is a count summary ("93 plugins, 202 agents, 181 skills, 105 commands") with the full catalogs moved out of the README into docs/*.md files.
+    repo_or_source: wshobson/agents
+    url: https://github.com/wshobson/agents
+    evidence: "What's inside" breakdown table plus pointers to `docs/plugins.md` (all 93 plugins), `docs/agents.md` (202 agents by category), `docs/agent-skills.md` (181 skills); install via `/plugin marketplace add wshobson/agents` then `/plugin install python-development`.
+    prevalence: several
+    applicability: At ~17 plugins alexmskills doesn't need catalog offloading, but a counts headline ("17 plugins, N skills, N agents") is a cheap credibility signal.
+  - id: harness-support-badges
+    practice: A badge row advertises which agent harnesses the marketplace supports, each badge linking to a capability-matrix doc.
+    repo_or_source: wshobson/agents
+    url: https://github.com/wshobson/agents
+    evidence: Five status badges "Claude Code · Codex CLI · Cursor · OpenCode · Antigravity CLI · Copilot", each linking to `docs/harnesses.md`.
+    prevalence: one-off
+    applicability: Not applicable until alexmskills targets more than Claude Code; then a support-matrix badge row is the established pattern.
+  - id: verification-badges-and-value-table
+    practice: A curated list marks every skill with a verification status and leads with a "Featured Skills" table whose columns are Skill / Why You Need It / Category / Verified — selling value, not just naming.
+    repo_or_source: karanb192/awesome-claude-skills
+    url: https://github.com/karanb192/awesome-claude-skills
+    evidence: Per-skill fields (Source repo link, "Verified: ✅", description, use case, star rating) across 12 emoji-labeled category sections, plus the featured table with a "Why You Need It" column and a "Quick Start" 30-second setup section.
+    prevalence: several
+    applicability: alexmskills' README rows could add a one-phrase "why you need it" column — its current descriptions say what, not why.
+  - id: category-dirs-mapped-to-plugins
+    practice: Each numbered category directory is mapped 1:1 to an installable plugin name in the README header ("Plugin: `voltagent-core-dev`"), so browsing a category tells you exactly what to install.
+    repo_or_source: VoltAgent/awesome-claude-code-subagents
+    url: https://github.com/VoltAgent/awesome-claude-code-subagents
+    evidence: Ten sections like "01. Core Development" each carrying a `**Plugin:**` identifier and linked agent bullets; four install methods including `claude plugin marketplace add VoltAgent/awesome-claude-code-subagents` and a curl-able `install-agents.sh` interactive installer; count badge "158-blue" and Discord badge.
+    prevalence: several
+    applicability: alexmskills could group its catalog rows by the same team-noun taxonomy (crew/panel/sweep) with install names inline per group.
+  - id: generated-readme-from-csv
+    practice: The awesome list's README is generated by script from a CSV resource table plus templates, and every entry carries four auto-rendered GitHub-metric badges (created, last commit, license, stars).
+    repo_or_source: hesreallyhim/awesome-claude-code
+    url: https://github.com/hesreallyhim/awesome-claude-code
+    evidence: Repo files `THE_RESOURCES_TABLE_NEW.csv`, `generate_readme.py`, `templates/`; entry format "[Bloom](...) by [Li-Evan](...) - description" followed by flat-square shields badges; top-of-README SVG ticker plus a dual-theme "recently added" SVG.
+    prevalence: one-off
+    applicability: alexmskills already generates validation from marketplace.json; generating the README catalog table from it would kill the drift the docs-coverage gate was built to catch.
+  - id: freshness-badges-per-entry
+    practice: Listing sites and awesome lists surface last-commit / stars / license badges per entry so readers can judge maintenance health at a glance.
+    repo_or_source: hesreallyhim/awesome-claude-code
+    url: https://github.com/hesreallyhim/awesome-claude-code
+    evidence: Four consistent GitHub metrics badges (created date, last commit, license, stars) beneath each entry, styled flat-square with labelColor=2b2b2b.
+    prevalence: several
+    applicability: For a single-owner marketplace this is less useful per-plugin, but per-plugin version badges tied to plugin.json would carry the same freshness signal.
+  - id: infra-only-readme-antipattern
+    practice: A marketplace README that documents only the marketplace mechanics (docs/ guides on hooks, slash commands, plugin development) with no catalog, no visuals, and no per-plugin showcase — a working install path but nothing that sells the plugins.
+    repo_or_source: hyperskill/claude-code-marketplace
+    url: https://github.com/hyperskill/claude-code-marketplace
+    evidence: Install lines `/plugin marketplace add hyperskill/claude-code-marketplace` and `/plugin install plugin-development@hyperskill-marketplace`; only one plugin described, in one functional sentence; no catalog table, badges, screenshots, or featured section.
+    prevalence: several
+    applicability: Negative example — alexmskills should keep its catalog and value framing ahead of infrastructure prose.
+  - id: mega-list-with-attribution
+    practice: A 1000+-entry cross-domain skills list organized into 11 domain categories, with each entry linked, one-sentence described, and creator-attributed, plus social badges (Discord, LinkedIn, Twitter) in the header.
+    repo_or_source: ComposioHQ/awesome-claude-skills
+    url: https://github.com/ComposioHQ/awesome-claude-skills
+    evidence: Sections like "Document Processing", "Development & Code Tools", "Business & Marketing"; entries as name-link + one-liner + attribution; header badges Awesome.re / PRs Welcome / Apache 2.0; install example `claude --plugin-dir ./connect-apps-plugin` and `/connect-apps:setup`.
+    prevalence: widespread
+    applicability: Getting alexmskills listed (with attribution) in these mega-lists is a distribution channel; the per-entry attribution norm matches its existing provenance note.
+  - id: install-count-leaderboard-site
+    practice: An external directory ranks skills by install counts with time-window filters (All Time, Trending 24h, Hot, 8-week activity), promoting a single cross-agent install command.
+    repo_or_source: skills.sh (Vercel Agent Skills Directory)
+    url: https://skills.sh/
+    evidence: Leaderboard with an "8W Activity" install-count column (e.g. vercel-labs/skills "find-skills" at 3.1M installs), filters "All Time" / "Trending (24h)" / "Hot", an `npx skills add <owner/repo>` "Try it now" command, topic browsing, and per-skill security-audit info; supports 20+ agents including Claude Code.
+    prevalence: one-off
+    applicability: Listing alexmskills there adds an install-metrics presence no GitHub README can provide.
+  - id: example-prompts-per-plugin
+    practice: Each plugin section pairs its skill/command list with concrete example user prompts ("What are the riskiest assumptions for our AI writing assistant idea?") plus an all-plugins overview graphic and an example-prompts illustration.
+    repo_or_source: phuryn/pm-skills
+    url: https://github.com/phuryn/pm-skills
+    evidence: Nine plugin sections each with skill one-liners (e.g. "`create-prd` — Comprehensive 8-section PRD template"), inline example prompts, two images (plugin overview graphic, `/write-prd` and `/ship-check` prompt demos), badges (stars, MIT, PRs welcome, test workflow), and install paths for Claude Cowork GUI, `claude plugin marketplace add phuryn/pm-skills`, and Codex CLI.
+    prevalence: several
+    applicability: The strongest fit for alexmskills — a "try this prompt" line per plugin costs one sentence and demos the trigger phrasing its skills depend on.
+  - id: multi-surface-discovery-paths
+    practice: The README names five explicit discovery routes ("Ways in") — by category (an auto-regenerated emoji matrix with plugin counts), by plugin, by skill search, by job-to-be-done bundles, by certification tier — each linking into a live catalog site, with count badges and an auto-updated npm-downloads top-10 table.
+    repo_or_source: jeremylongshore/tons-of-skills-marketplace
+    url: https://github.com/jeremylongshore/tons-of-skills-marketplace
+    evidence: "Ways in" section linking tonsofskills.com/explore, /skills, /cowork; category matrix "regenerated from `marketplace.extended.json`" (e.g. "🤖 AI & Machine Learning — 36 plugins"); six header badges including plugin count 442 and skills count 3,067; "Live npm Downloads" table updated daily by GitHub Actions; installs via `/plugin marketplace add jeremylongshore/claude-code-plugins` or `pnpm add -g @intentsolutionsio/ccpi` + `ccpi install devops-automation-pack`.
+    prevalence: one-off
+    applicability: Oversized for 17 plugins, but the pattern of regenerating README catalog sections from marketplace.json in CI maps directly onto alexmskills' existing make validate machinery.
+
+# === agent aec5335d143205f9b ===
+findings:
+  - id: vhs-tape-view-source
+    practice: Ship the VHS .tape script alongside the GIF and caption the README GIF with a "view source" link to the .tape file, making the demo reproducible and diffable.
+    repo_or_source: charmbracelet/vhs
+    url: https://github.com/charmbracelet/vhs
+    evidence: README hero GIF (hosted at stuff.charm.sh/vhs/examples/neofetch_3.gif) captioned "The above example was generated with VHS (view source)" linking to examples/neofetch/neofetch.tape in-repo.
+    prevalence: widespread
+    applicability: alexmskills could keep a demo/<plugin>.tape per plugin and link it under each README GIF, so demos regenerate when a skill's UX changes.
+  - id: vhs-publish-hosting
+    practice: Host demo GIFs off-repo via `vhs publish`, which uploads a rendered tape to vhs.charm.sh and returns a stable share URL.
+    repo_or_source: charmbracelet/vhs
+    url: https://github.com/charmbracelet/vhs
+    evidence: README "Publish Tapes" section — "use the publish sub-command to host it on vhs.charm.sh".
+    prevalence: several
+    applicability: Zero-repo-weight hosting, but the URL is third-party controlled; committing the GIF is safer for a marketplace meant to outlive any host.
+  - id: gum-per-command-gifs
+    practice: Embed one small vhs.charm.sh-hosted GIF per subcommand/feature in the README, rather than a single monolithic demo.
+    repo_or_source: charmbracelet/gum
+    url: https://github.com/charmbracelet/gum
+    evidence: README embeds ~10 GIFs (input, write, filter, choose, confirm, file, pager, spin, log) all at URLs like https://vhs.charm.sh/vhs-1qY57RrQlXCuydsEgDp68G.gif.
+    prevalence: several
+    applicability: Maps directly onto a marketplace — one short GIF per plugin row beats one long tour nobody watches to the end.
+  - id: vhs-action-ci-regen
+    practice: Regenerate demo GIFs in CI so recordings never drift from the shipped behavior, using the official VHS GitHub Action.
+    repo_or_source: charmbracelet/vhs-action
+    url: https://github.com/charmbracelet/vhs
+    evidence: VHS README — "You can hook up VHS to your CI pipeline to keep your GIFs up-to-date with the official VHS GitHub Action (charmbracelet/vhs-action)".
+    prevalence: several
+    applicability: Fits alexmskills' existing make validate / CI culture — a stale demo becomes a CI diff instead of silent rot.
+  - id: fzf-separate-asset-repo
+    practice: Keep README media in a dedicated separate assets repo so the main repo's clone size stays small, referenced via raw.githubusercontent.com.
+    repo_or_source: junegunn/fzf
+    url: https://github.com/junegunn/fzf
+    evidence: All README images load from raw.githubusercontent.com/junegunn/i/master/ (fzf-color.png, fzf-preview.png, style-preset shots) — a repo named "i" that exists only to hold images; the only motion demo is a linked YouTube screencast (youtube.com/watch?v=qgG5Jhi_Els), not an embed.
+    prevalence: several
+    applicability: An alexmskills-assets repo would keep the marketplace repo lean while letting every plugin README embed media.
+  - id: atuin-root-demo-gif
+    practice: Commit a single demo.gif at the repo root and place it at the top of the README as the primary pitch.
+    repo_or_source: atuinsh/atuin
+    url: https://github.com/atuinsh/atuin
+    evidence: README markdown `[![animated](/atuinsh/atuin/raw/main/demo.gif)](...)` — demo.gif committed at repo root, served via raw.githubusercontent.com/atuinsh/atuin/main/demo.gif, captioned "exit code, duration, time and command shown".
+    prevalence: widespread
+    applicability: The lowest-friction baseline — a root demo.gif is the single highest-leverage addition alexmskills' README currently lacks.
+  - id: claude-code-root-demo-gif
+    practice: Anthropic's own Claude Code repo uses the same pattern — a committed root demo.gif as the first visual element of the README.
+    repo_or_source: anthropics/claude-code
+    url: https://github.com/anthropics/claude-code
+    evidence: README embeds `[![](/anthropics/claude-code/raw/main/demo.gif)](...)` immediately after the intro paragraph, before "Get started".
+    prevalence: several
+    applicability: Confirms the terminal-GIF-in-README idiom is the house style of the exact ecosystem alexmskills lives in.
+  - id: anthropic-skills-no-media
+    practice: The canonical skills repo demos nothing visually — its README is text/code-example only, with a skills.sh badge as the sole image.
+    repo_or_source: anthropics/skills
+    url: https://github.com/anthropics/skills
+    evidence: Only embedded image is the badge https://skills.sh/b/anthropics/skills; skills are demonstrated via YAML frontmatter snippets and a template/ dir, no GIF/video anywhere.
+    prevalence: several
+    applicability: The ecosystem's reference repo leaves show-don't-tell on the table — a recorded demo is a differentiation opportunity, not table stakes, for a skills marketplace.
+  - id: superpowers-text-only
+    practice: The most prominent third-party Claude Code skills plugin also ships zero recordings — pure narrative README.
+    repo_or_source: obra/superpowers
+    url: https://github.com/obra/superpowers
+    evidence: README contains no GIF, video, screenshot, or asciinema embed; self-demonstration is entirely workflow prose and a category-headed skill list.
+    prevalence: several
+    applicability: Same gap as anthropics/skills — among Claude skill repos, recordings are rare, so even one good GIF per plugin would stand out.
+  - id: tape-in-claude-skill-repos
+    practice: A small but real cohort of Claude-adjacent repos already commits VHS .tape sources, typically under demo/ or docs/tapes/ next to the rendered asset.
+    repo_or_source: GitHub code search (gh search code --extension tape "claude")
+    url: https://github.com/search?q=claude+extension%3Atape&type=code
+    evidence: Hits include davila7/claude-code-templates (cli-tool/components/skills/ai-research/loki-mode/demo/vhs-tape.tape), jnMetaCode/superpowers-zh (docs/assets/demo.tape), timvw/wt (docs/demo/claude-tmux.tape), Daily-Nerd/daimon (docs/demo/claude-p.tape), paultyng/testagent (demo/claude.tape).
+    prevalence: several
+    applicability: Precedent exists for tape files driving demos of Claude workflows specifically — including scripting the `claude` CLI itself inside a tape.
+  - id: skill-bundled-demo-dir
+    practice: Bundle a demo/ directory inside the skill itself containing the tape, the rendered GIF, and the record/run scripts that produced it.
+    repo_or_source: davila7/claude-code-templates
+    url: https://github.com/davila7/claude-code-templates/tree/main/cli-tool/components/skills/ai-research/loki-mode/demo
+    evidence: Directory holds vhs-tape.tape, loki-demo.gif, record-demo.sh, record-full-demo.sh, run-demo.sh, a README, and a recordings/ subdir — the whole demo pipeline ships with the skill.
+    prevalence: one-off
+    applicability: Maps cleanly to alexmskills' plugins/<name>/ layout — a per-plugin demo/ dir keeps tape + GIF versioned with the plugin they demo.
+  - id: tape-convention-cli-wide
+    practice: Across the wider CLI ecosystem the dominant naming convention is a demo.tape at repo root (or docs/tapes/, vhs/) rendering to the README GIF.
+    repo_or_source: GitHub code search (gh search code --extension tape)
+    url: https://github.com/search?q=extension%3Atape+Output&type=code
+    evidence: 30 sampled repos with .tape files — grex, dblab, pug, netscanner, brutespray, sptlrx, wiretap, cassowary and others — the majority named demo.tape at root, the rest under demo/, docs/, or vhs/ subdirs.
+    prevalence: widespread
+    applicability: Following the demo.tape convention makes alexmskills' demo sources instantly recognizable to CLI-tool contributors.
+  - id: asciinema-svg-link-demo
+    practice: For script-less contexts like GitHub READMEs, asciinema's official pattern is an SVG preview image that links out to the interactive player.
+    repo_or_source: asciinema docs
+    url: https://docs.asciinema.org/manual/server/embedding/
+    evidence: Docs recommend exactly `[![asciicast](https://asciinema.org/a/<id>.svg)](https://asciinema.org/a/<id>)` for GitHub, noting the preview "is an SVG file, which ensures it looks great in all contexts"; inline script/iframe embeds are for pages that allow JS.
+    prevalence: widespread
+    applicability: Good for long demos (interactive, seekable, copy-paste-able text) but click-through beats autoplay only when the recording is worth a full watch; GIFs win for at-a-glance.
+  - id: agg-cast-to-gif
+    practice: Convert asciinema .cast recordings into optimized autoplay GIFs with agg, committing both the cast source and the rendered GIF.
+    repo_or_source: asciinema/agg
+    url: https://github.com/asciinema/agg
+    evidence: agg (Rust, gifski-based, "optimized, high quality GIF output with accurate frame timing"; supports idle-time limiting, speed, themes) keeps demo.cast and demo.gif side by side at its own repo root and embeds the GIF in its README.
+    prevalence: several
+    applicability: The asciinema-native alternative to VHS when a demo is recorded live rather than scripted — record once, keep the .cast as source of truth.
+  - id: svg-term-animated-svg
+    practice: Render asciicasts as animated SVG (CSS animation, no GIF) so the README demo stays razor-sharp at any zoom.
+    repo_or_source: marionebl/svg-term-cli
+    url: https://github.com/marionebl/svg-term-cli
+    evidence: README's parrot demo generated via `svg-term --cast 113643 --out examples/parrot.svg --window --no-cursor --from=4500`; gallery names marionebl/commitlint and share-cli as adopters.
+    prevalence: one-off
+    applicability: Elegant but the tool shows little recent development; VHS/agg are the safer 2026 choices for alexmskills.
+  - id: terminalizer-demo
+    practice: Terminalizer records sessions to GIF (committed under img/ in its own repo) or shares them as an interactive web player via its `share` command on terminalizer.com.
+    repo_or_source: faressoft/terminalizer
+    url: https://github.com/faressoft/terminalizer
+    evidence: README embeds img/demo.gif from the repo itself; `share` generates a terminalizer.com player link, `generate` builds a self-contained web player.
+    prevalence: several
+    applicability: Interactive recording (typos and all); VHS's scripted-tape determinism suits alexmskills' CI-regeneration culture better.
+  - id: github-media-size-limits
+    practice: GitHub markdown attachments are capped at 10MB for images/GIFs, 25MB for other files, and 10MB (free plan) / 100MB (paid plan) for uploaded MP4/MOV videos.
+    repo_or_source: docs.github.com
+    url: https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files
+    evidence: Docs state "10MB for images and gifs", "25MB for all other files", "10MB for videos... on a free GitHub plan", "100MB for videos... on a paid GitHub plan"; supported media includes PNG, GIF, JPEG, SVG, MP4, MOV, WebM, uploaded to an anonymized GitHub-hosted URL.
+    prevalence: widespread
+    applicability: Hard budget for alexmskills demos — VHS tapes should target well under 10MB per GIF (practically under ~5MB for load speed).
+  - id: gif-vs-mp4-portability
+    practice: GIFs autoplay and loop inline on GitHub with no player chrome, while drag-and-drop MP4 embeds render as a video player only on github.com and break on npm pages, offline viewers, and many IDE markdown previews.
+    repo_or_source: repoclip.io (2026 guide, via web search)
+    url: https://repoclip.io/blog/embed-video-github-readme
+    evidence: Search-quoted guidance — GitHub renders animated GIFs inline with no plugins; embedded MP4 is "smaller file size, better quality, but only renders properly on GitHub.com itself. Does not display in npm package pages, offline Markdown viewers, or many IDE Markdown previews."
+    prevalence: widespread
+    applicability: Since a marketplace README is read inside editors and mirrors, GIF (not MP4) is the portable default for alexmskills demos.
+
+# === agent a5223359e1fe400ef ===
+findings:
+  - id: awesome-list-star-threshold-promo
+    practice: Curated awesome lists gate inclusion on prior traction — travisvn/awesome-claude-skills rejects skills under 10 GitHub stars, single-file skills, SaaS-teaser skills, and explicitly closes AI-assisted PRs without review.
+    repo_or_source: travisvn/awesome-claude-skills
+    url: https://github.com/travisvn/awesome-claude-skills/blob/main/CONTRIBUTING.md
+    evidence: CONTRIBUTING.md — 10-star minimum, entry format "- **[Name](link)** - Brief description", one skill per PR, rejection categories (trivial, single SKILL.md file, SaaS-dependent, promotional teasers, AI-generated PRs)
+    prevalence: several
+    applicability: alexmskills already exceeds the entry bar structurally; earn ~10 stars on the repo first, then submit one flagship plugin per PR in the exact one-line format.
+  - id: awesome-claude-code-issue-form-promo
+    practice: The largest Claude Code awesome list (53.1k stars) accepts submissions ONLY via a web-UI issue form (no PRs), requires 14+ days of ongoing development OR 100+ stars, and grants approved entries a README badge linking back to the list.
+    repo_or_source: hesreallyhim/awesome-claude-code
+    url: https://github.com/hesreallyhim/awesome-claude-code/blob/main/CONTRIBUTING.md
+    evidence: CONTRIBUTING.md — "ALL RECOMMENDATIONS MUST BE MADE USING THE WEB UI ISSUE FORM TEMPLATE", one resource per submission, badge for approved entries, maintainer discourages using submission as a marketing strategy; repo has Agent skills / Slash commands / Plugins categories and a THE_RESOURCES_TABLE_NEW.csv backing the README
+    prevalence: one-off
+    applicability: alexmskills is 2+ months old with active development, so it qualifies on the age+activity criterion — submit via the issue form (not a PR) and add the badge to the README once accepted.
+  - id: official-plugin-directory-submission
+    practice: Anthropic runs an official plugin directory repo (34.6k stars) with an /external_plugins section for third-party plugins, admitted via a submission form and reviewed against quality and security standards; installs happen with "/plugin install name@claude-plugins-official".
+    repo_or_source: anthropics/claude-plugins-official
+    url: https://github.com/anthropics/claude-plugins-official
+    evidence: README — "plugin directory submission form" at clau.de/plugin-directory-submission, plugins/ vs external_plugins/ split, marketplace entry JSON schema with immutable name field, git-subdir source pinned to a commit sha
+    prevalence: one-off
+    applicability: The single highest-leverage channel — submit alexmskills' strongest 1-2 plugins (not the whole catalog) through the form; the git-subdir+sha source format matches the existing plugins/<name>/ layout.
+  - id: official-inclusion-as-vetting-signal
+    practice: Community members treat landing in the official Anthropic marketplace as THE trust signal — a Reddit post celebrating the Superpowers plugin's inclusion (via a PR to claude-plugins-official) drew 238 upvotes and 57 comments, with the OP saying they ignore the daily flood of Reddit/X skill announcements and wait for Anthropic vetting.
+    repo_or_source: r/ClaudeCode (u/Hozukr)
+    url: https://www.reddit.com/r/ClaudeCode/comments/1qgkupf/superpowers_is_now_on_the_official_claude/
+    evidence: Post body (fetched via headless browser) — links anthropics/claude-plugins-official PR #148; score 238, 57 comments, 2026-01-18; "There is far too much noise/AI slop around... the plugin will eventually find its way to their marketplace (after being vetted by their team)"
+    prevalence: several
+    applicability: Confirms announcement-channel noise is discounted by the audience; official-directory inclusion beats ten launch posts, so prioritize that submission.
+  - id: reddit-launch-problem-story-format
+    practice: Successful Reddit plugin launch posts follow a problem-story format — hook title, "the actual problem I was trying to solve", "What I built", "How it actually works" bullets — the claude-mem context-memory plugin launch got 233 upvotes and 130 comments this way, and the plugin later reached 92k GitHub stars.
+    repo_or_source: r/ClaudeCode (u/thedotmack)
+    url: https://www.reddit.com/r/ClaudeCode/comments/1odoo3k/i_built_a_context_management_plugin_and_it/
+    evidence: Post body (fetched via headless browser) — score 233, 130 comments, 2025-10-23; sections Problem/What I built/How it works with mechanism bullets (hooks, background worker, auto-injected summaries); thedotmack/claude-mem shows 92.2k stars atop the claude-skills GitHub topic
+    prevalence: several
+    applicability: Template for a progress-channel or prompt-coach launch post — lead with the pain (re-explaining context / opaque long-running jobs), then mechanism bullets, personal voice, no marketing tone.
+  - id: reddit-metrics-retro-format
+    practice: The highest-scoring skill post found (1,782 upvotes, 220 comments) is a metrics-led retrospective, not a launch — "/graphify, 26 days, 450k+ downloads, ~40k stars. Here's what I didn't expect." — describing the skill in one paragraph, sharing surprising usage, and ending with two questions to the community.
+    repo_or_source: r/ClaudeAI (u/captainkink07)
+    url: https://www.reddit.com/r/ClaudeAI/comments/1t18eeh/i_built_graphify_26_days_450k_downloads_40k_stars/
+    evidence: Post body (fetched via headless browser) — score 1782, 220 comments, 2026-05-01; format is numbers-in-title + unexpected-uses narrative + "1. How are you actually using it? 2. What's missing or broken?"
+    prevalence: several
+    applicability: A second-touch pattern for alexmskills — after any traction, a "what I didn't expect" retro with real numbers outperforms a plain announcement; ending with questions drives the comment count.
+  - id: show-hn-claude-skill-corpus
+    practice: "Show HN: Claude Code skill that..." is an established launch pattern — 30+ such posts since Oct 2025 — but most land 2-7 points with 0 comments; the one breakout (337 points, 205 comments) was a skill with a spectacular concrete demo ("skills that build complete Godot games").
+    repo_or_source: Hacker News (Algolia API)
+    url: https://hn.algolia.com/api/v1/search?query=%22Show%20HN%22%20claude%20skills&tags=story
+    evidence: Algolia results — htdt/godogen 337pts/205c (2026-03-16); long tail of Show HN Claude skill posts at 1-7 points (tax filing 7pts, Crabby 6pts, Grug 6pts, instruments-analyzer 5pts, upstack 4pts, etc.)
+    prevalence: widespread
+    applicability: A bare "Show HN: my skills marketplace" will sink; only worth doing with a visceral demo artifact (e.g. a progress-channel live dashboard GIF or a before/after coach transcript), else skip HN.
+  - id: show-hn-directory-launch
+    practice: Even aggregator sites launch on HN — "Show HN: Launching Claude Skills Directory" (claude-skills.directory) posted 2025-10-20, five days after Skills shipped, though it got only 2 points.
+    repo_or_source: Hacker News / claude-skills.directory
+    url: https://news.ycombinator.com/item?id=45647524
+    evidence: Algolia hit — title, date 2025-10-20, 2 points 0 comments, URL claude-skills.directory
+    prevalence: several
+    applicability: Evidence that speed-to-launch alone didn't earn attention; reinforces that alexmskills should compete on curation quality, not on being another directory.
+  - id: anthropics-skills-repo-canon
+    practice: Anthropic's anthropics/skills repo (172k stars) is the canonical skills home — skill examples, the Agent Skills spec, a skill template, and a "Partner Skills" README section showcasing outside-company skills (currently Notion).
+    repo_or_source: anthropics/skills
+    url: https://github.com/anthropics/skills
+    evidence: README — skills/ + spec/ + template/ layout, Partner Skills section linking Notion Skills for Claude, install-via-marketplace instructions; no CONTRIBUTING.md visible despite 854 PRs
+    prevalence: one-off
+    applicability: The partner section is enterprise-tier, not a realistic slot; the value is conforming to the spec/ and template/ so alexmskills skills parse cleanly in every aggregator that crawls to that standard.
+  - id: github-topic-claude-skills-promo
+    practice: The claude-skills GitHub topic carries 7,562 repos and is a primary discovery surface — top repos (claude-mem 92.2k, wshobson/agents 39.2k, VoltAgent/awesome-agent-skills 32.9k) all tag themselves with it.
+    repo_or_source: github.com/topics/claude-skills
+    url: https://github.com/topics/claude-skills
+    evidence: Topic page — 7,562 public repositories; star-ranked listing led by thedotmack/claude-mem, Egonex-AI/Understand-Anything, wshobson/agents
+    prevalence: widespread
+    applicability: Zero-cost, immediate — add claude-skills (and claude-code, claude-code-plugins, claude-ai) to alexmskills' repo topics; several directory sites crawl by these topics, so tags feed the aggregators too.
+  - id: github-topic-claude-code-plugins
+    practice: A narrower claude-code-plugins topic (505 repos) is where plugin *marketplaces* specifically tag themselves — the top entry is wshobson/agents, a "multi-harness agentic plugin marketplace" at 39.2k stars.
+    repo_or_source: github.com/topics/claude-code-plugins
+    url: https://github.com/topics/claude-code-plugins
+    evidence: Topic page — 505 public repositories; wshobson/agents 39.2k, phuryn/pm-skills 25.7k, alirezarezvani/claude-skills 25.1k
+    prevalence: widespread
+    applicability: Directly alexmskills-shaped peers live here; tagging puts the repo on the same shelf, and the top repos double as models for marketplace README positioning.
+  - id: skillsmp-auto-aggregation
+    practice: SkillsMP (skillsmp.com) claims 2,000,000+ open-source Agent Skills aggregated automatically from public GitHub repos across 12 domains — listing is by crawl, not submission.
+    repo_or_source: skillsmp.com
+    url: https://skillsmp.com/
+    evidence: Homepage — "2,000,000+ open-source skills", "aggregate skills from GitHub repositories", 12 domains / 50+ categories / 9 languages; no submit mechanism found on page
+    prevalence: several
+    applicability: Nothing to submit — being public on GitHub with valid SKILL.md frontmatter and topic tags is what gets alexmskills indexed; the leverage is machine-readable metadata quality.
+  - id: claudemarketplaces-ranked-directory
+    practice: claudemarketplaces.com is a curated/ranked directory (claims 380k monthly visitors, 23,600+ skills, 2,700+ marketplaces) ranking listings by install count, GitHub stars, and registry metadata, with policy checks for spam — and sells sold-out advertising slots to Claude Code builders.
+    repo_or_source: claudemarketplaces.com
+    url: https://claudemarketplaces.com/
+    evidence: Homepage — scale claims, "Ranked by install count, GitHub stars, registry metadata, and usage, with policy checks", "Sold out — book a call to claim a future slot" ad offer
+    prevalence: several
+    applicability: Rank there is a function of stars and metadata rather than outreach; confirms the awesome-list star flywheel matters, and paid slots exist if a push is ever wanted.
+  - id: cross-tool-awesome-agent-skills
+    practice: VoltAgent/awesome-agent-skills (32.9k stars, 1,397+ skills) curates skills across Claude Code, Codex, Cursor, Copilot etc., organized by source org, accepting community submissions via CONTRIBUTING.md with an explicit "real engineering teams, not mass AI-generated stuff" bar.
+    repo_or_source: VoltAgent/awesome-agent-skills
+    url: https://github.com/VoltAgent/awesome-agent-skills
+    evidence: README — multi-tool scope list, entry format "org/skill - one-sentence description" (e.g. "anthropics/docx - Create, edit, and analyze Word documents"), quality framing against mass-generated skills
+    prevalence: several
+    applicability: A second awesome-list target with a different (cross-tool) audience; alexmskills' project-agnostic skills qualify, and being listed under an org groups the whole catalog rather than one skill.
+  - id: devto-plugin-launch-post
+    practice: dev.to hosts first-person plugin launch write-ups — "Building My First Claude Code Plugin" (Forgetful memory plugin, Dec 2025) uses narrative sections (motivation, features, lessons learned, 3-step install, repo links) but drew zero visible comments.
+    repo_or_source: dev.to (Scott Raisbeck)
+    url: https://dev.to/scott_raisbeck_24ea5fbc1e/building-my-first-claude-code-plugin-26ka
+    evidence: Full post — six slash commands + three auto-activating skills described, marketplace install command sequence, "Top comments (0)"
+    prevalence: several
+    applicability: dev.to posts earn SEO long-tail more than launch-day reception; worth one canonical "how alexmskills works" article, not per-plugin announcements.
+  - id: docs-decentralized-distribution
+    practice: Official Claude Code docs define distribution as fully decentralized — host marketplace.json on any git host, users add via "/plugin marketplace add owner/repo", teams pin via extraKnownMarketplaces in settings — with no promotion/discovery guidance and a list of reserved marketplace names.
+    repo_or_source: code.claude.com docs
+    url: https://code.claude.com/docs/en/plugin-marketplaces
+    evidence: Plugin marketplaces page — marketplace.json schema, GitHub-recommended hosting, extraKnownMarketplaces settings block, reserved names (claude-code-marketplace, claude-plugins-official, anthropic-plugins...), "claude plugin validate ." pre-share check; no directory-submission section
+    prevalence: widespread
+    applicability: Confirms the README one-liner "/plugin marketplace add alexmond/alexmskills" IS the entire official distribution story — every discovery channel beyond that is community-run, so the channels above are the whole game.
+  - id: behisecc-directory-site
+    practice: awesomeclaude.ai fronts BehiSecc's curated list as a visual directory of 204 skills across 13 categories, with entries added by PR to the underlying GitHub repo and each listing showing name, description, GitHub link, and repo size.
+    repo_or_source: awesomeclaude.ai / BehiSecc/awesome-claude-skills
+    url: https://awesomeclaude.ai/awesome-claude-skills
+    evidence: Directory page — "curated by @BehiSecc", fork-and-PR contribution path, per-skill listing fields, links out to related marketplaces (agentskill.sh, Skillselion)
+    prevalence: several
+    applicability: A third, lower-bar awesome-list/directory pair reachable by ordinary PR — good early target while the repo's star count is still below the bigger lists' thresholds.
