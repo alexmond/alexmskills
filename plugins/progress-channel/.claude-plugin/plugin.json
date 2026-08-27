@@ -1,0 +1,20 @@
+{
+  "name": "progress-channel",
+  "description": "One visible channel for every long-running process — local sweeps, backgrounded commands, and work handed to external systems. A per-machine SQLite store with a context-manager API, a live watch view, learned per-job ETAs and pre-start forecasts, and stall/orphan detection derived from each job's own history instead of a fixed timeout.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "progress",
+    "jobs",
+    "eta",
+    "monitoring",
+    "long-running",
+    "sqlite"
+  ]
+}

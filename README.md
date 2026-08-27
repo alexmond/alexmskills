@@ -33,6 +33,7 @@ that captures every multi-cycle debugging detour.
 | [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
 | [`mindmap-prompt`](plugins/mindmap-prompt) | workflow | 0.2.2 | Sketch ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. `✦` expands any node with `claude -p` running in your repo. Saves as JSON Canvas (`.canvas`) so maps are git-diffable, reworkable, and open in Obsidian. |
 | [`screenshot-tour`](plugins/screenshot-tour) | workflow | 1.1.0 | Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product (CLI/web/library/TUI) under `presentation/`. |
+| [`progress-channel`](plugins/progress-channel) | workflow | 0.1.0 | One visible channel for every long-running process — local sweeps, backgrounded commands, and mirrored external work — in a per-machine SQLite store with learned ETAs, pre-start forecasts, and stall/orphan detection from each job's own history. |
 | [`review-agents`](plugins/review-agents) | review | 1.1.0 | Specialist review subagents for Java/Maven projects — code review, test running, dependency/CVE auditing. No-write by construction: Write/Edit withheld. |
 | [`research-sweep`](plugins/research-sweep) | research | 1.2.0 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
 
@@ -81,6 +82,7 @@ Then install what you want — copy-paste any of these:
 /plugin install security-audit@alexmskills
 /plugin install mindmap-prompt@alexmskills
 /plugin install screenshot-tour@alexmskills
+/plugin install progress-channel@alexmskills
 /plugin install review-agents@alexmskills
 /plugin install research-sweep@alexmskills
 ```

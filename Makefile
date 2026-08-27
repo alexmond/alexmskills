@@ -1,7 +1,7 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump graduate test-mindmap test-canvas test-ai test-linter test-evolve lint-skills install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
+.PHONY: help validate list bump graduate test-mindmap test-canvas test-ai test-linter test-evolve test-progress lint-skills install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -21,6 +21,9 @@ harvest: ## Scan consuming repos' .claude/roles learnings for cross-repo seed-gr
 
 test-memory: ## Run the memory-hygiene harness (audit + lint hook + vendored-core drift)
 	@python3 plugins/memory-hygiene/skills/memory-hygiene/test-harness.py
+
+test-progress: ## Run the progress-channel harness (lifecycle, learning, liveness — throwaway store)
+	@python3 plugins/progress-channel/scripts/test-harness.py
 
 test-mindmap: ## Run the mindmap-prompt compiler harness (golden fixture + graph invariants)
 	@python3 plugins/mindmap-prompt/scripts/test-harness.py

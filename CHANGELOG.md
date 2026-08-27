@@ -7,6 +7,11 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-26
+
+### Added
+- **progress-channel 0.1.0** — new plugin (#36 v1 cut): one visible channel for every long-running process. Per-machine SQLite store (WAL, dedicated file), context-manager `Job` API with throttled flushes and categorical counters, `list`/`watch` views, `run` command wrapper, `mirror` watcher for external work (running row doubles as the lease), pre-start duration forecasts, shape-keyed (name + kind + total-magnitude) capped history, ETA that cuts over from history to the current run's own rate, and viewer-derived liveness (orphaned by dead pid, stalled by the job's own learned p95 gap). 23-check harness in CI.
+
 ## 2026-08-18
 
 ### Added

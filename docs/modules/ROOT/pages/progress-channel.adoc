@@ -1,0 +1,70 @@
+= Progress Channel
+:navtitle: progress-channel
+:description: One visible channel for every long-running process — learned ETAs, pre-start forecasts, and stall/orphan detection from each job's own history.
+
+Work that takes minutes is usually reported by whatever the agent happens to print — a carriage-returned counter in one terminal. That fails three ways: the only way to learn the state is to re-ask (pure overhead), the counter can lie (a stale fragment reads as a stall; submission-order iteration pins it at 0), and work handed to another system — a CI run, a media-server queue, a long download — has no representation at all.
+
+This plugin makes a shared progress channel the default for all three: every long-running operation becomes a row in one per-machine SQLite store, and the answer to "are we there yet" is a view of that store, never a re-poll.
+
+== Install
+
+[source,text]
+----
+/plugin install progress-channel@alexmskills
+----
+
+No hooks, nothing to configure. The store is created on first use at `~/.claude/progress/jobs.db` (WAL, dedicated file — deliberately not shared with any application's own database, because a long write transaction in a shared file deadlocks). Finished rows auto-prune after 7 days.
+
+== The discipline
+
+* *Register anything expected to exceed ~10s* — a sweep, a backgrounded command, a call that hands work elsewhere and returns early. `forecast <name>` answers "how long has this taken before" *prior* to starting.
+* *Never answer a progress question by re-polling and narrating.* Run `list` once, or point at `watch`.
+* *External work gets a `mirror` watcher* — one small process polling the foreign system into the same table, exiting when the work goes idle. One list, whatever the source.
+
+== Library and CLI
+
+[source,python]
+----
+with Job('video integrity', total=10453) as j:
+    for item in items:
+        j.step(detail=item, ok=1)     # categorical counters: ok / truncated / ...
+----
+
+The job is a context manager — an exception records `failed`; only a SIGKILL-class death leaves a `running` row, and the viewer catches those by pid liveness. Writes are throttled (every 50 steps or 1s, plus on exit), so a 10k-item loop is a handful of transactions.
+
+[source,bash]
+----
+progress.py list [--all]                 # one-shot view
+progress.py watch                        # live TUI
+progress.py forecast <name>              # pre-start estimate from history
+progress.py run --name build -- make all # wrap any command as a job
+progress.py mirror --name 'immich metadata' --source immich-jobs \
+    --poll-cmd '<status cmd>' --interval 30
+----
+
+`mirror`'s running row doubles as a lease: a second watcher for the same `--source` refuses to start while the first is alive.
+
+== What makes it more than a table
+
+Duration history is keyed by job *shape* — name + kind + order-of-magnitude of `total` — capped at the last 20 runs per shape, so a sweep over videos and one over thumbnails under the same name never blend into a meaningless median.
+
+[cols="1,3",options="header"]
+|===
+| Signal | How it is derived
+
+| ETA
+| Before ~10% progress: median per-item rate of past same-shape runs. Past it, the current run's own observed rate takes over. A first run shows *no estimate* rather than extrapolating.
+
+| Pre-start forecast
+| `forecast <name>` prints the p25–p75 duration band of past successful runs — answerable before starting, which changes whether the job gets started at all.
+
+| stalled ⏸
+| Silent longer than 3× the job's *own* learned p95 inter-step gap (floor 30s). A job whose gaps are always long is not stalled — the threshold is learned per job, and a job with no history is never called stalled.
+
+| orphaned ☠
+| The row says `running` but its pid is dead on this host. The next run of the same name also adjudicates its dead predecessors.
+|===
+
+== Verify
+
+`python3 <plugin>/scripts/test-harness.py` — 23 checks against a throwaway store (lifecycle, crash semantics, throttling, shape-keyed history, ETA cutover, liveness classification, lease refusal, concurrent writers). Runs in CI.
