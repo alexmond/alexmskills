@@ -173,8 +173,53 @@ def forecast_text(rows: list[dict], name: str) -> str:
     if not secs:
         return f"{name}: no history — first run has no estimate."
     lo, hi = _percentile(secs, 0.25), _percentile(secs, 0.75)
-    return (f"{name}: {_fmt_dur(lo)}–{_fmt_dur(hi)} over the last "
+    text = (f"{name}: {_fmt_dur(lo)}–{_fmt_dur(hi)} over the last "
             f"{len(secs)} successful run(s) (median {_fmt_dur(statistics.median(secs))}).")
+    label, pct = trend(rows, name)
+    if label != "stable":
+        text += f" Trend: {label} {pct:+.0f}%."
+    return text
+
+
+def trend(rows: list[dict], name: str) -> tuple[str, float]:
+    """Change-over-runs signal: recent runs vs the older baseline of the
+    same shape. 'slowing +40%' is a lesson a bare counter can never give."""
+    mine = [r for r in rows if r.get("name") == name
+            and r.get("status") == "done" and r.get("seconds")]
+    if len(mine) < 4:
+        return "stable", 0.0
+    shape = _shape(mine[-1])
+    secs = [r["seconds"] for r in mine if _shape(r) == shape]
+    if len(secs) < 4:
+        return "stable", 0.0
+    recent = statistics.median(secs[-2:])
+    base = statistics.median(secs[:-2])
+    if base <= 0:
+        return "stable", 0.0
+    pct = (recent / base - 1.0) * 100
+    if pct >= 25:
+        return "slowing", pct
+    if pct <= -20:
+        return "improving", pct
+    return "stable", pct
+
+
+def history_summary(rows: list[dict]) -> list[dict]:
+    """Per-name digest for the page: recent durations + trend."""
+    by_name: dict[str, list[dict]] = {}
+    for r in rows:
+        if r.get("status") == "done" and r.get("seconds"):
+            by_name.setdefault(r["name"], []).append(r)
+    out = []
+    for name, runs in by_name.items():
+        secs = [r["seconds"] for r in runs][-HISTORY_KEEP:]
+        label, pct = trend(rows, name)
+        out.append({"name": name, "runs": len(runs), "seconds": secs,
+                    "median": statistics.median(secs),
+                    "trend": label, "trend_pct": round(pct, 1),
+                    "last_finished": runs[-1].get("finished_at")})
+    out.sort(key=lambda d: d["last_finished"] or "", reverse=True)
+    return out
 
 
 # ── daemon ─────────────────────────────────────────────────────────────────
@@ -197,11 +242,13 @@ class Tracker:
             job.update(rec)
             job["updated_at"] = _now()
             job.setdefault("started_at", job["updated_at"])
+            job.pop("_stall_notified", None)  # activity resets the stall episode
             if job.get("status", "running") != "running":
                 self.jobs.pop(uid, None)
                 job.setdefault("finished_at", job["updated_at"])
                 self.finished.append(job)
                 self._record_history(job)
+                self._notify(job, job["status"])
             else:
                 self.jobs[uid] = job
 
@@ -230,11 +277,43 @@ class Tracker:
                     self.jobs.pop(uid)
                     self.finished.append(job)
                     self._record_history(job)
+                    self._notify(job, "orphaned")
+                elif (not job.get("_stall_notified")
+                        and self.classify(job) == "stalled"):
+                    job["_stall_notified"] = True  # once per stall episode
+                    self._notify(job, "stalled")
             cutoff = datetime.now(timezone.utc) - timedelta(hours=FINISHED_KEEP_HOURS)
             self.finished = [
                 j for j in self.finished
                 if (_parse_ts(j.get("finished_at")) or datetime.now(timezone.utc)) > cutoff
             ][-60:]
+
+    def _notify(self, job: dict, event: str) -> None:
+        """User hook: an executable at ~/.claude/progress/notify is the whole
+        configuration. It runs detached with the event in env vars, so it can
+        be notify-send, gmail-send, or anything else — the daemon never
+        waits on it and never fails because of it."""
+        hook = home() / "notify"
+        if not (hook.is_file() and os.access(hook, os.X_OK)):
+            return
+        env = os.environ.copy()
+        env.update({
+            "PROGRESS_EVENT": event,
+            "PROGRESS_NAME": str(job.get("name") or ""),
+            "PROGRESS_STATUS": str(job.get("status") or ""),
+            "PROGRESS_DONE": str(job.get("done") or 0),
+            "PROGRESS_TOTAL": str(job.get("total") or ""),
+            "PROGRESS_SECONDS": str(job.get("seconds") or ""),
+            "PROGRESS_ERROR": str(job.get("error") or ""),
+            "PROGRESS_PROJECT": str(job.get("project") or ""),
+        })
+        try:
+            subprocess.Popen([str(hook)], env=env, stdin=subprocess.DEVNULL,
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+        except OSError:
+            pass
 
     # -- view-side derivation ---------------------------------------------
     def classify(self, job: dict) -> str:
@@ -300,10 +379,17 @@ PAGE = """<!doctype html><meta charset="utf-8"><title>progress</title>
 <h1>progress <small id="ts"></small></h1>
 <table><thead><tr><th>job</th><th>state</th><th>progress</th><th>eta</th>
 <th>counters</th><th>detail</th></tr></thead><tbody id="rows"></tbody></table>
+<h1 style="margin-top:2em">history <small>last runs per job · trend</small></h1>
+<table><thead><tr><th>job</th><th>runs</th><th>durations</th><th>median</th>
+<th>trend</th></tr></thead><tbody id="hist"></tbody></table>
 <script>
+function esc(s){const d=document.createElement("span");d.textContent=s==null?"":String(s);return d.innerHTML}
 function dur(s){if(s==null)return"";s=Math.round(s);
  if(s<60)return s+"s";if(s<3600)return Math.floor(s/60)+"m"+String(s%60).padStart(2,"0")+"s";
  return Math.floor(s/3600)+"h"+String(Math.floor(s%3600/60)).padStart(2,"0")+"m"}
+function spark(secs){const m=Math.max(...secs);
+ return secs.map(s=>`<span style="display:inline-block;width:6px;margin-right:1px;`+
+  `background:#8ac;height:${Math.max(2,Math.round(14*s/m))}px" title="${dur(s)}"></span>`).join("")}
 async function tick(){try{
  const r=await fetch("/jobs");const d=await r.json();
  document.getElementById("ts").textContent=d.now;
@@ -311,9 +397,16 @@ async function tick(){try{
   const pct=j.total?Math.min(100,100*j.done/j.total):null;
   const bar=pct==null?j.done:`<div class="bar"><div style="width:${pct}%"></div></div>${j.done}/${j.total}`;
   const c=j.counters?Object.entries(j.counters).map(([k,v])=>k+"="+v).join(" "):"";
-  return `<tr class="${j.state}"><td>${j.name}</td><td>${j.state}</td>`+
-   `<td>${bar}</td><td>${dur(j.eta_seconds)}</td><td>${c}</td>`+
-   `<td>${j.detail||j.error||""}</td></tr>`}).join("");
+  const det=esc(j.detail||j.error||"")+(j.tail?` <details><summary>output</summary><pre>${esc(j.tail)}</pre></details>`:"");
+  return `<tr class="${j.state}"><td>${esc(j.name)}</td><td>${j.state}</td>`+
+   `<td>${bar}</td><td>${dur(j.eta_seconds)}</td><td>${esc(c)}</td>`+
+   `<td>${det}</td></tr>`}).join("");
+ const h=await (await fetch("/history")).json();
+ document.getElementById("hist").innerHTML=h.names.map(n=>{
+  const t=n.trend=="stable"?"":`<span class="${n.trend=='slowing'?'failed':'running'}">`+
+   `${n.trend} ${n.trend_pct>0?"+":""}${n.trend_pct}%</span>`;
+  return `<tr><td>${esc(n.name)}</td><td>${n.runs}</td><td>${spark(n.seconds)}</td>`+
+   `<td>${dur(n.median)}</td><td>${t}</td></tr>`}).join("");
 }catch(e){}}
 tick();setInterval(tick,2000);
 </script>"""
@@ -357,6 +450,8 @@ def run_daemon(bind_port: int | None = None,
             elif path.path == "/forecast":
                 name = urllib.parse.parse_qs(path.query).get("name", [""])[0]
                 self._json({"text": forecast_text(tracker.history, name)})
+            elif path.path == "/history":
+                self._json({"names": history_summary(tracker.history)})
             else:
                 self._json({"error": "not found"}, 404)
 
@@ -441,6 +536,7 @@ class Job:
         self.project = project or os.path.basename(os.getcwd())
         self.uid = uuid.uuid4().hex
         self.done = 0
+        self.tail: str | None = None    # last output lines, shown on the page
         self.counters: dict[str, int] = {}
         self._connected = False
         self._steps_since_flush = 0
@@ -455,7 +551,7 @@ class Job:
             "uid": self.uid, "name": self.name, "kind": self.kind,
             "source": self.source, "project": self.project,
             "total": self.total, "done": self.done, "status": status,
-            "detail": self.detail,
+            "detail": self.detail, "tail": self.tail,
             "counters": self.counters or None,
             "pid": os.getpid(), "host": os.uname().nodename,
         }
@@ -577,9 +673,20 @@ def cmd_run(argv: list[str]) -> int:
     ap.add_argument("--total", type=int)
     ap.add_argument("cmd", nargs="+")
     a = ap.parse_args(argv)
+    from collections import deque
+    tail: deque[str] = deque(maxlen=30)
     with Job(a.name, total=a.total, kind=a.kind,
              detail=" ".join(a.cmd)[:120]) as j:
-        rc = subprocess.call(a.cmd)
+        # Tee the command's output: the terminal sees everything live, the
+        # channel keeps the last lines so a failed row on the page shows WHY.
+        proc = subprocess.Popen(a.cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True,
+                                errors="replace")
+        for line in proc.stdout:
+            sys.stdout.write(line)
+            tail.append(line.rstrip("\n"))
+        rc = proc.wait()
+        j.tail = "\n".join(tail)[-2000:]
         if rc != 0:
             raise RuntimeError(f"exit code {rc}")
         if a.total:

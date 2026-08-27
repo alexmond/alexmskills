@@ -107,6 +107,36 @@ Liveness anchors to the **calling script's pid** (`--pid` overrides), so a
 script that dies without `finish` is swept as orphaned like any other
 producer.
 
+## Notifications
+
+An executable at `~/.claude/progress/notify` is the entire configuration:
+the daemon runs it detached on every `done` / `failed` / `orphaned` /
+`stalled` transition (stalls fire once per episode; activity resets it),
+with the event in env vars — `PROGRESS_EVENT`, `PROGRESS_NAME`,
+`PROGRESS_STATUS`, `PROGRESS_ERROR`, `PROGRESS_SECONDS`, `PROGRESS_PROJECT`.
+Point it at `notify-send`, an email sender, anything. The daemon never
+waits on it and never fails because of it. No hook file, no notifications.
+
+## MCP (sessions read the channel as tools)
+
+`scripts/progress_mcp.py` is a stdio MCP server — a thin face on the same
+daemon API: `progress_list`, `progress_forecast`, `progress_start`,
+`progress_step`, `progress_finish`. Register it per project:
+
+```json
+{"mcpServers": {"progress": {"command": "python3",
+    "args": ["<plugin>/scripts/progress_mcp.py"]}}}
+```
+
+## Advisory auto-registration (hook)
+
+The plugin ships a `PreToolUse` hook on Bash that nudges — never rewrites —
+when a command deserves tracking: either the channel's own history says
+this command shape has a median over ~10s (the learned answer to "should
+this be tracked"), or it matches a short list of famously long-running
+commands / is being backgrounded. The suggestion names the exact `run`
+wrapper to use; trivially short commands stay silent.
+
 ## What the view tells you (and why to trust it)
 
 The viewer never takes `running` at face value — that is how counters lie:
@@ -124,10 +154,16 @@ The viewer never takes `running` at face value — that is how counters lie:
   estimate rather than extrapolating.
 
 History keeps the last 20 runs per shape — an ETA input, not an archive.
+The page's history section adds per-job duration sparklines and a **trend**
+tag ("slowing +40%") when recent same-shape runs drift from the older
+baseline; `forecast` prints the same trend. `run` also tees the wrapped
+command's last output lines into the row, so a failed job shows *why* on
+the page.
 
 ## Verify it's working
 
-`python3 <plugin>/scripts/test-harness.py` (34 checks: real daemon on an
+`python3 <plugin>/scripts/test-harness.py` (44 checks: real daemon on an
 ephemeral port, SIGKILL orphan sweep, restart re-registration, degraded
-mode, shell start/step/finish) — or register a trivial job and open the
-page: the row appears at registration, not completion.
+mode, shell start/step/finish, notify hook, trend, MCP handshake, advisory
+hook) — or register a trivial job and open the page: the row appears at
+registration, not completion.

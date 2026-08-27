@@ -309,6 +309,94 @@ p = subprocess.run([sys.executable, P, "step", "0" * 32], env=env,
 check("shell: unknown token is a clear error", p.returncode != 0
       and "unknown token" in p.stderr)
 
+# 25 · notify hook fires on finish -------------------------------------------
+notify_out = TMP / "notify-out"
+hook = TMP / "notify"
+hook.write_text("#!/bin/sh\necho \"$PROGRESS_EVENT $PROGRESS_NAME"
+                " $PROGRESS_ERROR\" >> " + str(notify_out) + "\n")
+hook.chmod(0o755)
+try:
+    with progress.Job("t-notify") as j:
+        raise ValueError("kaboom")
+except ValueError:
+    pass
+check("notify: hook ran with event env",
+      wait_for(lambda: notify_out.exists()
+               and "failed t-notify ValueError: kaboom" in notify_out.read_text()),
+      notify_out.read_text() if notify_out.exists() else "no file")
+
+# 26 · trend detection --------------------------------------------------------
+rows = [{"name": "t-trend", "kind": "local", "total_bucket": 2,
+         "seconds": s, "status": "done", "finished_at": f"2026-01-0{i+1}T00:00:00Z"}
+        for i, s in enumerate([100, 100, 100, 150, 160])]
+label, pct = progress.trend(rows, "t-trend")
+check("trend: slowing detected", label == "slowing" and pct > 25,
+      f"{label} {pct}")
+check("trend: stable on flat history",
+      progress.trend(rows[:4][:3] + rows[:1], "t-trend")[0] == "stable")
+
+# 27 · /history endpoint ------------------------------------------------------
+h = progress._get_json("/history")
+names = {n["name"] for n in h["names"]}
+check("history endpoint: per-name digest with medians",
+      "t-hist" in names and all("median" in n for n in h["names"]))
+
+# 28 · run: output tail captured on failure ----------------------------------
+rc = subprocess.run([sys.executable, P, "run", "--name", "t-tail", "--",
+                     "sh", "-c", "echo out-line; echo err-line >&2; exit 3"],
+                    env=env, capture_output=True, text=True).returncode
+r = jobs("t-tail")[0]
+check("run: failed row carries output tail", rc != 0
+      and "out-line" in (r.get("tail") or "")
+      and "err-line" in (r.get("tail") or ""), f"tail={r.get('tail')!r}")
+
+# 29-30 · MCP shim ------------------------------------------------------------
+mcp = subprocess.Popen([sys.executable, str(HERE / "progress_mcp.py")],
+                       env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                       text=True)
+def rpc(obj):
+    mcp.stdin.write(json.dumps(obj) + "\n")
+    mcp.stdin.flush()
+    return json.loads(mcp.stdout.readline())
+init = rpc({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+tools = rpc({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+names = {t["name"] for t in tools["result"]["tools"]}
+check("mcp: initialize + full tool set",
+      init["result"]["serverInfo"]["name"] == "progress-channel"
+      and names == {"progress_list", "progress_forecast", "progress_start",
+                    "progress_step", "progress_finish"})
+listed = rpc({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+              "params": {"name": "progress_list", "arguments": {}}})
+fc = rpc({"jsonrpc": "2.0", "id": 4, "method": "tools/call",
+          "params": {"name": "progress_forecast",
+                     "arguments": {"name": "t-hist"}}})
+check("mcp: list + forecast answer through the daemon",
+      "t-tail" in listed["result"]["content"][0]["text"]  # post-restart job
+      and "run(s)" in fc["result"]["content"][0]["text"])
+mcp.stdin.close()
+mcp.wait()
+
+# 31-33 · advisory hook -------------------------------------------------------
+HOOK = str(HERE.parent / "hooks" / "suggest-progress.py")
+def hook_out(tool_input):
+    p = subprocess.run([sys.executable, HOOK], env=env,
+                       input=json.dumps({"tool_name": "Bash",
+                                         "tool_input": tool_input}),
+                       capture_output=True, text=True)
+    return p.stdout.strip()
+out = hook_out({"command": "mvn -q verify"})
+check("hook: long-runner gets a suggestion",
+      "progress-channel" in out and "additionalContext" in out)
+check("hook: short safe command stays silent",
+      hook_out({"command": "git status"}) == "")
+# learned: seed history for a shape the static list would never match
+progress.append_history({"name": "perl slowthing.pl", "kind": "background",
+                         "total_bucket": 0, "seconds": 120.0, "status": "done",
+                         "finished_at": "2026-01-01T00:00:00Z"})
+out = hook_out({"command": "perl slowthing.pl --all"})
+check("hook: learned history triggers the suggestion",
+      "tracked history" in out, out[:120])
+
 # cleanup --------------------------------------------------------------------
 health = progress._get_json("/health")
 if health:

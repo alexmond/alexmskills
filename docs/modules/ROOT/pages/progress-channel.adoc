@@ -89,6 +89,13 @@ Duration history is keyed by job *shape* — name + kind + order-of-magnitude of
 | The producer's pid is dead — killed too hard for the context manager to report. The daemon's sweep adjudicates these actively instead of trusting `running` forever.
 |===
 
+== Notifications, MCP, and the advisory hook (0.2.0)
+
+* *Notifications* — an executable at `~/.claude/progress/notify` is the entire configuration: the daemon runs it detached on every `done`/`failed`/`orphaned`/`stalled` transition (stalls once per episode) with `PROGRESS_EVENT`, `PROGRESS_NAME`, `PROGRESS_ERROR` etc. in the environment. Point it at `notify-send`, an email sender, anything.
+* *MCP* — `scripts/progress_mcp.py` is a stdio MCP server exposing `progress_list` / `progress_forecast` / `progress_start` / `progress_step` / `progress_finish` — a thin face on the daemon's HTTP API, so agent sessions read the channel as native tools.
+* *Advisory hook* — a shipped `PreToolUse` hook nudges (never rewrites) when a Bash command deserves tracking: the channel's own history says this command shape runs long (the learned threshold), or it matches a static long-runner list / is backgrounded.
+* *Trend + sparklines* — the page's history section shows per-job duration sparklines and a trend tag ("slowing +40%") when recent same-shape runs drift from the older baseline; `forecast` prints the same. `run` tees the command's last output lines into the row, so a failed job shows *why*.
+
 == Verify
 
-`python3 <plugin>/scripts/test-harness.py` — 34 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers, the shell start/step/finish trio). Runs in CI.
+`python3 <plugin>/scripts/test-harness.py` — 44 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers, the shell start/step/finish trio, notify hook, trend detection, MCP handshake, advisory hook). Runs in CI.
