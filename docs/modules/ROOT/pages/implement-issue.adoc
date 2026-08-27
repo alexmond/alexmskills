@@ -40,3 +40,4 @@ A fixed six-step workflow:
 
 * Tool access is scoped to `Bash(gh *)` and `Bash(git *)`.
 * Git safety rails: never force-push or delete branches without explicit confirmation, and never push directly to `main` — only the feature branch.
+* One issue at a time by design. To drain a whole backlog in parallel — ranked, worktree-isolated, merged as each agent finishes — reach for xref:ticket-triage.adoc[ticket-triage].

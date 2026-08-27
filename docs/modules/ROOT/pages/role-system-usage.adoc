@@ -30,6 +30,7 @@ Name the end you're after and the table picks the tool:
 | the facts, but a contested or multi-perspective call | a **judgment** you trust — what / whether to build | **brainstorm-panel** — *decide*
 | a decided task | a **shipped, gated artifact** | **dev-crew** — *deliver*
 | one narrow question, no orchestration | a fast **single-role** answer | **roles** solo (`/roles:as <role>`)
+| a backlog of independent tickets | the queue **drained in parallel**, each ticket handled by the right role | xref:ticket-triage.adoc[**ticket-triage**] (workflow, not an orchestrator) — dispatches one substrate role per ticket in its own worktree
 |===
 
 Rule of thumb: if your task has **one** end, you need **one** orchestrator. A panel to decide something

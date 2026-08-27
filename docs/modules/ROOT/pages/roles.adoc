@@ -5,6 +5,8 @@ The `roles` plugin adds the *shared core layer* and *solo invocation* to the rol
 
 See xref:role-system.adoc[the architecture page] for the full model — how the core, consumer registries, and learning graduation fit together.
 
+The xref:ticket-triage.adoc[ticket-triage] plugin rides the solo path at scale: each ticket it dispatches is briefed to load `.claude/roles/<role>.md`, honor its Learnings, and commit its solo learning line in the PR — with one writer per role file per round so parallel agents never collide on the registry.
+
 == Install
 
 [source,text]
