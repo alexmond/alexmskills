@@ -1,0 +1,83 @@
+= Ticket Triage
+:navtitle: ticket-triage
+:description: Backlog-drain loop — rank the open tickets, dispatch the startable ones in parallel with worktree isolation and honest width, verify, merge, and re-triage on every completion.
+
+The recurring instruction is some form of _"review tickets, prioritise, start in parallel."_ This plugin is the scheduler for that loop: it ranks the backlog, dispatches isolated agents at an honest parallel width, verifies and merges each result, and re-triages every time an agent finishes — so the backlog drains without being re-asked.
+
+It schedules *across* tickets; what runs *within* a ticket is whatever the ticket needs — a single role-briefed agent for most, a xref:dev-crew.adoc[dev-crew] relay for multi-phase deliveries.
+
+The rules were earned in production on a real multi-agent backlog (they arrived here generalized from a repo-local skill with an eight-day learnings log), and the skill keeps earning them: misjudged priorities, dependencies, and widths append to a per-repo learnings file.
+
+== Install
+
+[source,text]
+----
+/plugin install ticket-triage@alexmskills
+----
+
+== The loop
+
+On every agent completion:
+
+1. *Finish the finished one first* — verify its load-bearing claims, merge if green, delete branch + worktree, close the issue. Merging is what moves main and frees the files the next agent may need.
+2. *Re-snapshot* (`scripts/backlog-snapshot.sh` — read-only: issues, PRs, worktrees, recent default-branch CI, plus an optional repo extension).
+3. *Re-rank the whole open set* — a new finding ranks on its merits the moment it lands.
+4. *Pick the top startable ticket*, checking the skip list (blocked, file-collision with a running agent, needs the user, parked, suspect instrument, empty queue).
+5. *Dispatch* with a full brief in its own git worktree — or *skip*, with one line saying why.
+6. *Wait for the next completion.* No polling, no busywork.
+
+The loop stops — once, with the unblock list — when everything left is parked, blocked, or the user's call. It never widens scope to keep busy, never starts something irreversible unprompted, and never exceeds the honest width.
+
+== What makes the parallelism honest
+
+[cols="1,3",options="header"]
+|===
+| Rule | Why it exists
+
+| Width = what is independent, not what is open
+| Nine open tickets can be an honest width of two: tickets blocked on one definitional ticket, started together, produce N incompatible answers — the exact failure the foundation ticket exists to prevent.
+
+| Worktree per agent, always
+| Two agents in one checkout are one `git add -A` away from committing or destroying each other's half-finished work. A worktree costs ~200–500 ms and removes the class.
+
+| Partition by file before dispatch
+| Each agent is told which files the others own. Ownership partitions _edits_ — it never stops an agent committing something new it built.
+
+| Merge before dispatching the next
+| Dispatching before merging is how two agents end up rebasing onto each other.
+
+| One role file, one writer per round
+| Role learnings are repo state and travel in the PR; two agents appending to the same role file collide on merge.
+|===
+
+== Trust, but verify
+
+Agent reports are evidence, not gospel: load-bearing claims are verified before merging (run the fixed artifact, re-run the claimed control against the pre-fix state, read the security diff). When two agents disagree, the code is the tiebreaker — never the average. And after merging, the check is *main's* run, not just the PR's: a branch green before the merge is not evidence about the commit the merge created.
+
+== Ranking
+
+Confidently-wrong answers and data loss outrank everything; instrument defects outrank features (a broken tool corrupts every judgement made through it, including the ranking); then blocking foundations, visible correctness, polish. Priority labels are an input, not the answer — and a label is raised, with an auditable comment, when the triager knows something the filer could not.
+
+== Composition
+
+* *xref:dev-crew.adoc[dev-crew]* executes a relay-worthy ticket through its gated phases inside that ticket's worktree — the crew's run state is untracked and CWD-relative, so parallel relays isolate for free. Triage owns the merge queue.
+* *xref:roles.adoc[roles]* supplies the persona substrate: the executor role is chosen from what the ticket _is_ (a cause-unknown failure → `debugger`; a design choice → `architect`), never from its area label.
+* Cross-repo/session work hands off through the issue tracker itself; the reply is a completion event in this loop.
+
+All optional — the skill degrades to generic agents and a single repo.
+
+== Per-repo state
+
+[cols="1,2",options="header"]
+|===
+| File | Holds
+
+| `.claude/ticket-triage/profile.md`
+| Where the backlog lives, the real verification command, protected instances/ports, merge policy, standing constraints. Written on first run.
+
+| `.claude/ticket-triage/learnings.md`
+| Dated `what happened → what changed` lines from misjudged runs. Read at the start of every run; recurring lessons are upstream candidates.
+
+| `.claude/ticket-triage/snapshot-extra.sh`
+| Optional repo extension to the snapshot script (running instances, roadmap markers).
+|===

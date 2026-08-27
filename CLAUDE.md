@@ -22,7 +22,7 @@ Makefile                          # validate / list / bump helpers
 ## Catalog (see README for descriptions)
 
 `evolving-claude-md`, `memory-hygiene`, `dev-crew`, `brainstorm-panel`, `learn-on-failure`, `roles`, `prompt-coach`
-(self-learning) · `implement-issue`, `maven-quality`, `security-audit`, `screenshot-tour`, `progress-channel` (workflow) ·
+(self-learning) · `implement-issue`, `maven-quality`, `security-audit`, `screenshot-tour`, `progress-channel`, `ticket-triage` (workflow) ·
 `review-agents` (review) · `research-sweep` (research) · `skill-linter` (self-learning). Beta (`-beta` suffix): `tune-repo-beta`, `systemic-fix-beta`.
 
 ## Conventions
@@ -90,6 +90,8 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-27 — **ticket-triage** — 0.1.0 new plugin (#38 cut 1): kweblens' repo-local triage skill generalized — backlog-drain loop, honest width (independent != open), worktree per agent, one-writer-per-role-file, merge-then-dispatch, verify-before-merge. Repo facts -> profile.md; lessons -> learnings.md. Why: the parallel-execution rules were already earned in production; extraction beats invention.
+- 2026-08-27 — **crew-parallel-composition** — dev-crew 1.3.0: parallelism documented as composition (triage schedules across tickets, one relay per worktree; tech-lead fans out within one), NOT parallel-relay machinery in one conductor. Run state untracked + CWD-relative = free isolation. Why: review found run-id hooks/merge queues superseded by the worktree boundary.
 - 2026-08-26 — **progress-v2** — 0.2.0 same day: notify hook (executable IS the config), MCP shim on the daemon API, advisory PreToolUse nudge (history-learned >10s threshold), trend + sparklines, run output tail. Why: hooks can't rewrite commands, so auto-registration ships as a nudge, not silent wrapping.
 - 2026-08-26 — **progress-channel** — 0.1.0 new plugin (#36 v1 cut): the page server IS the tracker — in-memory stdlib daemon, auto-spawned, port = lease; only history.jsonl persists; active pid-sweep orphans, learned-gap stalls, ETA history->current cutover; warn-once degrade. Why: SQLite dropped same-day — the page needs a server anyway, and a single writer needs no store locking.
 - 2026-08-26 — **coach-reverify** — #32 closed: 1.0.x-era re-run (940 prompts/30 repos): refresher noise gone by design (v0.38), grandfathered 0-demo masteries persist (no-answer-shape fired 50x while "mastered"); 1169 drafts to #31, draft.jsonl git-ignored (private-repo prompts). Why: mastery is dashboard-only now, but only reset makes it honest.

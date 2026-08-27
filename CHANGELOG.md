@@ -7,6 +7,14 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-27
+
+### Added
+- **ticket-triage 0.1.0** — new plugin (#38 cut 1): the backlog-drain scheduler, generalized from a battle-tested repo-local skill (kweblens, learnings 2026-08-12 → 2026-08-20). Rank the open tickets (confidently-wrong answers > instrument defects > blocking foundations > visible correctness > polish; labels are inputs, not answers), compute the **honest parallel width** (what is independent, not what is open — file-partitioned, dependency-free), dispatch each startable ticket as a role-briefed agent in its **own git worktree**, verify load-bearing claims before merging (run the artifact, re-run the control, code is the tiebreaker between disagreeing agents), check main's run after merging, and **re-triage on every completion** until the queue is empty or everything left needs the user. One-writer-per-role-file discipline; ownership partitions edits, never blocks committing new work. Portable `backlog-snapshot.sh` (issues/PRs/worktrees/default-branch CI) with a per-repo `snapshot-extra.sh` extension; repo facts in `.claude/ticket-triage/profile.md`, run lessons in `.claude/ticket-triage/learnings.md`. Composes with dev-crew (relay per ticket) and roles (executor personas); degrades to generic agents without either.
+
+### Changed
+- **dev-crew 1.3.0** — new **"Parallel work — compose, don't multiplex"** section (#38 cut 2): parallelism lives across tickets (one relay per ticket per worktree, scheduled by ticket-triage — run state is untracked and CWD-relative, so concurrent relays isolate with zero run-id plumbing; merges are the scheduler's serialization point) and within a ticket (the `tech-lead` fan-out), never as parallel-relay machinery inside one conductor; interleaved pipelining is the documented fallback. The `tech-lead` forward-reference in Steering now points at the candidate role + New-role protocol instead of dangling.
+
 ## 2026-08-26
 
 ### Added

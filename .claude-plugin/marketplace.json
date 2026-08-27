@@ -43,7 +43,7 @@
       "displayName": "Dev Crew",
       "source": "./plugins/dev-crew",
       "description": "A self-evolving delivery crew: it composes a task-fit roster of role subagents (each on its own model tier) and runs them as a gated relay to deliver a target. architect → dev → qa → deployer is just one example lineup — the roster is chosen for the work.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "category": "self-learning",
       "keywords": [
         "agents",
@@ -200,6 +200,22 @@
         "eta",
         "monitoring",
         "daemon"
+      ]
+    },
+    {
+      "name": "ticket-triage",
+      "displayName": "Ticket Triage",
+      "source": "./plugins/ticket-triage",
+      "description": "Backlog-drain loop: rank the open tickets, dispatch the genuinely startable ones in parallel (worktree-isolated, role-briefed, honest width), verify and merge each result, and re-triage on every completion until the queue is empty or everything left needs the user.",
+      "version": "0.1.0",
+      "category": "workflow",
+      "keywords": [
+        "triage",
+        "backlog",
+        "tickets",
+        "parallel",
+        "worktree",
+        "orchestration"
       ]
     },
     {

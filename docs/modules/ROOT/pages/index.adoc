@@ -74,6 +74,9 @@ Guided procedures for a specific job, start to finish.
 | xref:progress-channel.adoc[progress-channel]
 | One visible channel for every long-running process — learned per-job ETAs, pre-start forecasts, and stall/orphan detection derived from each job's own history.
 
+| xref:ticket-triage.adoc[ticket-triage]
+| Backlog-drain loop: rank the open tickets, dispatch the startable ones in parallel (worktree-isolated, role-briefed, honest width), verify, merge, and re-triage on every completion.
+
 | xref:maven-quality.adoc[maven-quality]
 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects.
 
