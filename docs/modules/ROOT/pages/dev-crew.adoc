@@ -55,6 +55,10 @@ Intake (profile + category) → an *editable roster checkpoint* that always stop
 
 Mines `log.md` to graduate stable lineups into a repo `## Dev crew` block, re-tier models (promote/demote/escalate with logged rationale), graduate recurring user steers, and mint new roles for unowned failure classes.
 
+== What's new in 1.3.0
+
+* *Parallel work — compose, don't multiplex.* The relay stays sequential (its phases are a dependency chain), but parallelism now has a documented home at two other levels: *across tickets*, one relay per ticket in its own git worktree, scheduled by the xref:ticket-triage.adoc[ticket-triage] plugin — the crew's run state is untracked and CWD-relative, so concurrent relays isolate for free and merges back to main are the scheduler's serialization point; *within a ticket*, the `tech-lead` candidate role fans out parallel `dev` subagents over independent work items and integration-reviews the merge before qa. One conductor interleaving pipelined relays is the documented fallback, not the design.
+
 == What's new in 1.2.0
 
 * *Graduation now routes to the right layer.* The self-learning loop previously routed most graduations into the repo's `## Dev crew` CLAUDE.md block, conflating per-role wisdom with repo-facts-about-seating. The three-layer split is now explicit: *per-role wisdom* (how role X behaves in crew runs — pairing notes, failure modes, model-fit signals) → the role's row in `.claude/roles/crew.md`; *cross-context wisdom* (true in panels / sweeps too) → graduation candidate for the shared core `.claude/roles/<role>.md` `## Learnings (core)` (user-gated); *repo facts about seating* (default lineup per category, repo-wired commands, model-tier defaults) → the `## Dev crew` block in `CLAUDE.md` (small, terse, pre-fills the roster checkpoint). The destination is what makes the wisdom load-bearing on the next run.

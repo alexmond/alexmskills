@@ -217,7 +217,8 @@ No teardown, no restart — the relay resumes from the affected phase.
 **Granularity.** Interrupt points are phase boundaries, not mid-role: a subagent
 runs to completion within one invocation. For finer control, scope phases
 smaller (one work-item per `dev` pass) — which also pairs with the `tech-lead`
-fan-out.
+fan-out (a candidate role in `roles.md` — mint it via the New-role protocol
+when single-threaded `dev` is the bottleneck).
 
 **Your steering is signal.** Every injected decision is logged (`steering:` in
 the run entry). Repeated injections of the same kind graduate into the repo's
@@ -298,6 +299,34 @@ by the panel / sweep that also seat that role; cross-context wisdom kept in
 the crew registry never reaches the orchestrators that don't seat that role
 first. **The destination is what makes the wisdom load-bearing on the next
 run.**
+
+## Parallel work — compose, don't multiplex
+
+The relay is sequential because its phases are a dependency chain — you can't
+verify what isn't built. Parallelism lives at two other levels, and neither
+needs parallel-relay machinery inside one conductor:
+
+- **Across tickets — one relay per ticket, one worktree each.** A scheduler
+  (the `ticket-triage` plugin in this marketplace) ranks the backlog, computes
+  the honest parallel width, and dispatches each startable ticket into its own
+  git worktree; a relay-worthy ticket runs a normal sequential crew there. The
+  crew's run state (`.claude/dev-crew/runs/`) is untracked and the phase-gate
+  hook resolves it CWD-relative, so concurrent relays in separate worktrees
+  isolate for free — no run-id plumbing, no shared-state locking. Merges back
+  to main are the serialization point and belong to the scheduler, not the
+  deployer.
+- **Within a ticket — the `tech-lead` fan-out.** When one contract decomposes
+  into independent work items, tech-lead dispatches parallel `dev` subagents
+  (each item file-partitioned or worktree-isolated) and integration-reviews the
+  merge before qa. See the candidate role in `roles.md`.
+- **Across repos/sessions**, hand off through the issue tracker itself: file
+  the ticket in the other repo, monitor it to resolution, treat the reply as a
+  completion event. The crew never spans a session boundary.
+
+One conductor interleaving multiple relays in a single context is the fallback
+when separate sessions aren't practical — pipeline the phases (dev on ticket B
+while qa verifies ticket A) rather than running gates in lockstep, and keep
+per-ticket run dirs distinct.
 
 ## Safety rails
 
