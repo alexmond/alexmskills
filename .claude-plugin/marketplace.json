@@ -191,7 +191,7 @@
       "name": "progress-channel",
       "displayName": "Progress Channel",
       "source": "./plugins/progress-channel",
-      "description": "One visible channel for every long-running process \u2014 local sweeps, backgrounded commands, and work handed to external systems. A per-machine SQLite store with a context-manager API, a live watch view, learned per-job ETAs and pre-start forecasts, and stall/orphan detection derived from each job's own history instead of a fixed timeout.",
+      "description": "One visible channel for every long-running process \u2014 local sweeps, backgrounded commands, and work handed to external systems. The server that serves the live progress page IS the tracker: a tiny stdlib Python daemon holds live jobs in memory (auto-spawned by the first producer, single writer, no store locking), persists only the duration history to an append-only JSONL, and derives liveness \u2014 orphans by checking producer pids directly, stalls from each job's own learned cadence \u2014 with learned ETAs and pre-start forecasts.",
       "version": "0.1.0",
       "category": "workflow",
       "keywords": [
@@ -199,7 +199,7 @@
         "jobs",
         "eta",
         "monitoring",
-        "long-running"
+        "daemon"
       ]
     },
     {

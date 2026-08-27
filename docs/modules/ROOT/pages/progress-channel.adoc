@@ -1,10 +1,10 @@
 = Progress Channel
 :navtitle: progress-channel
-:description: One visible channel for every long-running process — learned ETAs, pre-start forecasts, and stall/orphan detection from each job's own history.
+:description: One visible channel for every long-running process — the server that serves the live page is the in-memory tracker, with learned ETAs, pre-start forecasts, and stall/orphan detection.
 
 Work that takes minutes is usually reported by whatever the agent happens to print — a carriage-returned counter in one terminal. That fails three ways: the only way to learn the state is to re-ask (pure overhead), the counter can lie (a stale fragment reads as a stall; submission-order iteration pins it at 0), and work handed to another system — a CI run, a media-server queue, a long download — has no representation at all.
 
-This plugin makes a shared progress channel the default for all three: every long-running operation becomes a row in one per-machine SQLite store, and the answer to "are we there yet" is a view of that store, never a re-poll.
+This plugin makes a shared progress channel the default for all three, and the answer to "are we there yet" is a page, never a re-poll.
 
 == Install
 
@@ -13,13 +13,19 @@ This plugin makes a shared progress channel the default for all three: every lon
 /plugin install progress-channel@alexmskills
 ----
 
-No hooks, nothing to configure. The store is created on first use at `~/.claude/progress/jobs.db` (WAL, dedicated file — deliberately not shared with any application's own database, because a long write transaction in a shared file deadlocks). Finished rows auto-prune after 7 days.
+Nothing to configure and no service to manage: the first registered job auto-spawns the daemon.
+
+== Architecture: the page server is the tracker
+
+A stdlib-only Python daemon (`http.server`, zero dependencies) binds `127.0.0.1:7717` and holds live jobs **in memory** — a single writer, so there is no store and no locking at all. It serves the live HTML view at `/`, JSON at `/jobs`, and forecasts at `/forecast?name=`. Binding the port is the single-instance lease.
+
+Only what must survive a restart is persisted: finished runs append to `~/.claude/progress/history.jsonl` — the learning data, `cat`/`jq`-able, no database. Live state is memory-only on purpose: if the daemon restarts, producers re-register on their next flush (the producer is the source of truth for its own job); a reboot kills the jobs anyway. And a job never fails because the tracker is sick — an unreachable, unspawnable daemon degrades the job to a warn-once untracked no-op.
 
 == The discipline
 
 * *Register anything expected to exceed ~10s* — a sweep, a backgrounded command, a call that hands work elsewhere and returns early. `forecast <name>` answers "how long has this taken before" *prior* to starting.
-* *Never answer a progress question by re-polling and narrating.* Run `list` once, or point at `watch`.
-* *External work gets a `mirror` watcher* — one small process polling the foreign system into the same table, exiting when the work goes idle. One list, whatever the source.
+* *Never answer a progress question by re-polling and narrating.* Open the page, run `watch`, or `list` once.
+* *External work gets a `mirror` watcher* — one small process polling the foreign system into the same channel, exiting when the work goes idle. One list, whatever the source.
 
 == Library and CLI
 
@@ -30,19 +36,20 @@ with Job('video integrity', total=10453) as j:
         j.step(detail=item, ok=1)     # categorical counters: ok / truncated / ...
 ----
 
-The job is a context manager — an exception records `failed`; only a SIGKILL-class death leaves a `running` row, and the viewer catches those by pid liveness. Writes are throttled (every 50 steps or 1s, plus on exit), so a 10k-item loop is a handful of transactions.
+The job is a context manager — an exception reports `failed`; only a SIGKILL-class death goes silent, and the daemon's sweep catches those by checking the producer's pid directly (it is local, so no heartbeat protocol is needed). Flushes are throttled (every 50 steps or 1s, plus on exit), so a 10k-item loop is a handful of POSTs.
 
 [source,bash]
 ----
-progress.py list [--all]                 # one-shot view
+progress.py list                         # one-shot view
 progress.py watch                        # live TUI
 progress.py forecast <name>              # pre-start estimate from history
 progress.py run --name build -- make all # wrap any command as a job
 progress.py mirror --name 'immich metadata' --source immich-jobs \
     --poll-cmd '<status cmd>' --interval 30
+progress.py daemon                       # foreground (debug); auto-spawned otherwise
 ----
 
-`mirror`'s running row doubles as a lease: a second watcher for the same `--source` refuses to start while the first is alive.
+`mirror`'s live job doubles as a lease: a second watcher for the same `--source` refuses to start while the first is alive.
 
 == What makes it more than a table
 
@@ -62,9 +69,9 @@ Duration history is keyed by job *shape* — name + kind + order-of-magnitude of
 | Silent longer than 3× the job's *own* learned p95 inter-step gap (floor 30s). A job whose gaps are always long is not stalled — the threshold is learned per job, and a job with no history is never called stalled.
 
 | orphaned ☠
-| The row says `running` but its pid is dead on this host. The next run of the same name also adjudicates its dead predecessors.
+| The producer's pid is dead — killed too hard for the context manager to report. The daemon's sweep adjudicates these actively instead of trusting `running` forever.
 |===
 
 == Verify
 
-`python3 <plugin>/scripts/test-harness.py` — 23 checks against a throwaway store (lifecycle, crash semantics, throttling, shape-keyed history, ETA cutover, liveness classification, lease refusal, concurrent writers). Runs in CI.
+`python3 <plugin>/scripts/test-harness.py` — 27 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers). Runs in CI.
