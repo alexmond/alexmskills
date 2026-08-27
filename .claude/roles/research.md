@@ -41,6 +41,7 @@ synthesizer are persistent seats, listed here for tier/learnings tracking.
 - model: sonnet
 - status: probationary (minted 2026-08-27, demo/promotion survey)
 - learnings:
+  - 2026-08-27 — 1 useful run (17/14 findings, 0 thin). Reddit blocks direct fetch — use a headless browser or corroborate scores via HN/press mirrors; heaviest slice by tool calls (44).
 
 ### demo-tooling-scout
 - charter: how demos are produced and embedded — terminal recorders (VHS/asciinema), GIFs, screenshots, videos, hosted playgrounds
@@ -48,6 +49,7 @@ synthesizer are persistent seats, listed here for tier/learnings tracking.
 - model: sonnet
 - status: probationary (minted 2026-08-27, demo/promotion survey)
 - learnings:
+  - 2026-08-27 — 1 useful run (18/14 findings, 0 thin). Primary-docs constraints (GitHub media limits) verify cleanly; GitHub code search by file extension (.tape) is a strong precedent-finder.
 
 ## Persistent seats
 
@@ -56,6 +58,7 @@ synthesizer are persistent seats, listed here for tier/learnings tracking.
 - model: sonnet
 - status: stable
 - learnings:
+  - 2026-08-27 — quote-via-search misattribution is a real FP class: a page can exist and support the gist while lacking the quoted sentence — fetch the cited page before trusting a quote. Reddit scores are un-recheckable by fetch; downgrade them to approximate rather than refuting.
 
 ### synthesizer
 - charter: dedup across angles, assemble the cited result, own the seams
