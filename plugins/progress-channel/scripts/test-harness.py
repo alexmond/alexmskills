@@ -261,6 +261,54 @@ except Exception as e:
 finally:
     os.environ["PROGRESS_PORT"] = bad_env_port
 
+# 19-21 · shell trio: start / step / finish ----------------------------------
+P = str(HERE / "progress.py")
+tok = subprocess.run([sys.executable, P, "start", "--name", "t-shell",
+                      "--total", "6"], env=env, capture_output=True,
+                     text=True).stdout.strip()
+check("shell: start prints a token", len(tok) == 32, f"tok={tok!r}")
+for i in range(6):
+    subprocess.run([sys.executable, P, "step", tok, "--count", "ok=1",
+                    "--detail", f"f{i}"], env=env, check=True)
+subprocess.run([sys.executable, P, "finish", tok], env=env, check=True)
+r = jobs("t-shell")[0]
+check("shell: steps accumulated, finished done",
+      r["state"] == "done" and r["done"] == 6 and r["counters"] == {"ok": 6},
+      f"r={r}")
+check("shell: token file cleaned up",
+      not (TMP / "tokens" / f"{tok}.json").exists())
+check("shell: run landed in history",
+      any(h["name"] == "t-shell" for h in progress.load_history()))
+
+# 22 · shell trio: --fail ----------------------------------------------------
+tok = subprocess.run([sys.executable, P, "start", "--name", "t-shell-bad"],
+                     env=env, capture_output=True, text=True).stdout.strip()
+subprocess.run([sys.executable, P, "step", tok], env=env, check=True)
+subprocess.run([sys.executable, P, "finish", tok, "--fail", "disk full"],
+               env=env, check=True)
+r = jobs("t-shell-bad")[0]
+check("shell: finish --fail -> failed + error",
+      r["state"] == "failed" and r.get("error") == "disk full")
+
+# 23 · shell trio: liveness anchors to the calling script --------------------
+script = (f'T=$({sys.executable} "{P}" start --name t-shell-orphan --total 9);'
+          f'{sys.executable} "{P}" step $T; echo up; sleep 30')
+sh = subprocess.Popen(["bash", "-c", script], env=env,
+                      stdout=subprocess.PIPE, text=True)
+sh.stdout.readline()
+sh.kill()   # SIGKILL the script: no finish ever runs
+sh.wait()
+check("shell: dead script swept as orphaned",
+      wait_for(lambda: jobs("t-shell-orphan")
+               and jobs("t-shell-orphan")[0]["state"] == "orphaned"),
+      f"{jobs('t-shell-orphan')}")
+
+# 24 · shell trio: unknown token fails loudly --------------------------------
+p = subprocess.run([sys.executable, P, "step", "0" * 32], env=env,
+                   capture_output=True, text=True)
+check("shell: unknown token is a clear error", p.returncode != 0
+      and "unknown token" in p.stderr)
+
 # cleanup --------------------------------------------------------------------
 health = progress._get_json("/health")
 if health:

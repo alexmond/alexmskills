@@ -85,6 +85,28 @@ after `--idle-after` consecutive idle polls, and its live job is the lease —
 a second mirror for the same `--source` refuses to start while the first is
 alive.
 
+## From any script: start / step / finish
+
+Anything that can run a command can be a producer — no Python import needed:
+
+```bash
+P='python3 <plugin>/scripts/progress.py'
+T=$($P start --name 'photo import' --total 800)
+trap '$P finish $T --fail "aborted at $f"' ERR
+for f in *.jpg; do
+    convert "$f" ...
+    $P step $T --count ok=1 --detail "$f"     # -n N, --done N, --total N
+done
+$P finish $T                                   # or: --fail "why" / --cancel
+```
+
+`start` prints a token; the cross-invocation state (count, counters, step
+gaps) lives in a token file under `~/.claude/progress/tokens/`, so `step` is
+stateless for the script and keeps the same 1s POST throttle as the library.
+Liveness anchors to the **calling script's pid** (`--pid` overrides), so a
+script that dies without `finish` is swept as orphaned like any other
+producer.
+
 ## What the view tells you (and why to trust it)
 
 The viewer never takes `running` at face value — that is how counters lie:
@@ -105,7 +127,7 @@ History keeps the last 20 runs per shape — an ETA input, not an archive.
 
 ## Verify it's working
 
-`python3 <plugin>/scripts/test-harness.py` (27 checks: real daemon on an
+`python3 <plugin>/scripts/test-harness.py` (34 checks: real daemon on an
 ephemeral port, SIGKILL orphan sweep, restart re-registration, degraded
-mode) — or register a trivial job and open the page: the row appears at
-registration, not completion.
+mode, shell start/step/finish) — or register a trivial job and open the
+page: the row appears at registration, not completion.

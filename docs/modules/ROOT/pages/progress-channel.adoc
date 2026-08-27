@@ -51,6 +51,23 @@ progress.py daemon                       # foreground (debug); auto-spawned othe
 
 `mirror`'s live job doubles as a lease: a second watcher for the same `--source` refuses to start while the first is alive.
 
+== From any script
+
+Anything that can run a command can be a producer — no Python import needed:
+
+[source,bash]
+----
+T=$(progress.py start --name 'photo import' --total 800)
+trap 'progress.py finish $T --fail "aborted"' ERR
+for f in *.jpg; do
+    convert "$f" ...
+    progress.py step $T --count ok=1 --detail "$f"
+done
+progress.py finish $T
+----
+
+`start` prints a token; the cross-invocation state lives in a token file, so `step` is stateless for the script and keeps the library's 1s POST throttle. Liveness anchors to the *calling script's* pid — a script that dies without `finish` is swept as orphaned like any other producer.
+
 == What makes it more than a table
 
 Duration history is keyed by job *shape* — name + kind + order-of-magnitude of `total` — capped at the last 20 runs per shape, so a sweep over videos and one over thumbnails under the same name never blend into a meaningless median.
@@ -74,4 +91,4 @@ Duration history is keyed by job *shape* — name + kind + order-of-magnitude of
 
 == Verify
 
-`python3 <plugin>/scripts/test-harness.py` — 27 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers). Runs in CI.
+`python3 <plugin>/scripts/test-harness.py` — 34 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers, the shell start/step/finish trio). Runs in CI.

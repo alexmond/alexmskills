@@ -7,6 +7,9 @@ Library:  from progress import Job
             j.step(detail=item, ok=1)
 
 CLI:      python3 progress.py daemon|list|watch|forecast|run|mirror|prune
+Shell:    T=$(progress.py start --name 'photo import' --total 800)
+          progress.py step $T --count ok=1        # in the loop
+          progress.py finish $T                   # or: finish $T --fail "why"
 
 Architecture: the thing that serves the progress page IS the tracker. A tiny
 stdlib HTTP daemon on 127.0.0.1 holds live jobs **in memory** (single
@@ -630,6 +633,137 @@ def cmd_mirror(argv: list[str]) -> int:
     return 0
 
 
+# ── shell integration: start / step / finish ───────────────────────────────
+# Any script that can run a command can be a producer. `start` registers the
+# job and prints a token; the cross-invocation producer state (done, counters,
+# step gaps) lives in a token file, so `step` needs no daemon round-trip to
+# know where it is. Liveness anchors to the CALLING script's pid (getppid),
+# not the short-lived CLI process — a dead script is orphaned correctly.
+
+_GAPS_KEEP = 100
+
+
+def _token_path(token: str) -> Path:
+    if not re.fullmatch(r"[0-9a-f]{32}", token):
+        raise SystemExit(f"progress: malformed token '{token}'")
+    return home() / "tokens" / f"{token}.json"
+
+
+def _token_load(token: str) -> dict:
+    path = _token_path(token)
+    if not path.exists():
+        raise SystemExit(f"progress: unknown token {token} (already finished,"
+                         " or started under a different $PROGRESS_HOME)")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+def _token_save(token: str, state: dict) -> None:
+    path = _token_path(token)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(state), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _token_record(state: dict, status: str = "running",
+                  error: str | None = None) -> dict:
+    rec = {k: state.get(k) for k in
+           ("uid", "name", "kind", "source", "project", "total", "done",
+            "detail", "pid", "host")}
+    rec["status"] = status
+    rec["counters"] = state.get("counters") or None
+    if status != "running":
+        started = _parse_ts(state.get("started_at"))
+        seconds = (datetime.now(timezone.utc) - started).total_seconds() \
+            if started else None
+        rec["error"] = error
+        rec["seconds"] = seconds
+        rec["per_item"] = (seconds / state["done"]) \
+            if state.get("done") and seconds else None
+        gaps = state.get("gaps") or []
+        rec["p95_gap"] = _percentile(gaps, 0.95) if len(gaps) >= 5 else None
+    return rec
+
+
+def cmd_start(argv: list[str]) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(prog="progress start")
+    ap.add_argument("--name", required=True)
+    ap.add_argument("--total", type=int)
+    ap.add_argument("--kind", default="local")
+    ap.add_argument("--source")
+    ap.add_argument("--detail")
+    ap.add_argument("--pid", type=int,
+                    help="liveness pid (default: the calling script)")
+    a = ap.parse_args(argv)
+    state = {
+        "uid": uuid.uuid4().hex, "name": a.name, "kind": a.kind,
+        "source": a.source, "project": os.path.basename(os.getcwd()),
+        "total": a.total, "done": 0, "detail": a.detail,
+        "counters": {}, "gaps": [], "last_step": None,
+        "last_post": 0.0, "started_at": _now(),
+        "pid": a.pid or os.getppid(), "host": os.uname().nodename,
+    }
+    _token_save(state["uid"], state)
+    if ensure_daemon():
+        _post_job(_token_record(state))
+    else:
+        print(f"progress: daemon unreachable — '{a.name}' untracked",
+              file=sys.stderr)
+    print(state["uid"])
+    return 0
+
+
+def cmd_step(argv: list[str]) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(prog="progress step")
+    ap.add_argument("token")
+    ap.add_argument("-n", type=int, default=1, help="items completed (default 1)")
+    ap.add_argument("--done", type=int, help="set the absolute count instead")
+    ap.add_argument("--total", type=int, help="set/adjust the total")
+    ap.add_argument("--detail")
+    ap.add_argument("--count", action="append", default=[],
+                    metavar="KEY=N", help="categorical counter, repeatable")
+    a = ap.parse_args(argv)
+    state = _token_load(a.token)
+    now = time.time()
+    if state.get("last_step") is not None:
+        state.setdefault("gaps", []).append(now - state["last_step"])
+        state["gaps"] = state["gaps"][-_GAPS_KEEP:]
+    state["last_step"] = now
+    state["done"] = a.done if a.done is not None else state.get("done", 0) + a.n
+    if a.total is not None:
+        state["total"] = a.total
+    if a.detail is not None:
+        state["detail"] = a.detail
+    for kv in a.count:
+        k, _, v = kv.partition("=")
+        state.setdefault("counters", {})
+        state["counters"][k] = state["counters"].get(k, 0) + int(v or 1)
+    # Same throttle discipline as the library: the token remembers the last
+    # POST, so a tight shell loop stays a trickle of requests.
+    if a.total is not None or now - state.get("last_post", 0) >= FLUSH_EVERY_SECONDS:
+        if _post_job(_token_record(state)):
+            state["last_post"] = now
+    _token_save(state["uid"], state)
+    return 0
+
+
+def cmd_finish(argv: list[str]) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(prog="progress finish")
+    ap.add_argument("token")
+    ap.add_argument("--fail", metavar="ERROR",
+                    help="finish as failed with this error")
+    ap.add_argument("--cancel", action="store_true")
+    a = ap.parse_args(argv)
+    state = _token_load(a.token)
+    status = "failed" if a.fail else "cancelled" if a.cancel else "done"
+    ensure_daemon()
+    _post_job(_token_record(state, status=status, error=a.fail))
+    _token_path(a.token).unlink(missing_ok=True)
+    return 0
+
+
 def cmd_prune() -> int:
     rows = load_history()
     kept = compact_history(rows)
@@ -652,6 +786,12 @@ def main(argv: list[str]) -> int:
         return cmd_run(rest)
     if verb == "mirror":
         return cmd_mirror(rest)
+    if verb == "start":
+        return cmd_start(rest)
+    if verb == "step":
+        return cmd_step(rest)
+    if verb == "finish":
+        return cmd_finish(rest)
     if verb == "list":
         print("\n".join(cmd_list()))
         return 0
