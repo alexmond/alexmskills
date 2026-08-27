@@ -4,6 +4,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-alexmond.org-informational)](https://www.alexmond.org/alexmskills/)
 
+![demo: the progress-channel plugin — a workload registers itself, watch shows live progress with a learned ETA, and forecast answers "how long will this take" before starting](demo.gif)
+
+> The [`progress-channel`](plugins/progress-channel) plugin live, against a [sample workload](https://github.com/alexmond/skillsample) — recorded with [VHS](https://github.com/charmbracelet/vhs) ([view source](demo.tape)).
+
 A curated **[Claude Code](https://code.claude.com) plugin marketplace** of reusable, self-improving
 skills and agents. Each skill is packaged as an **independently versioned plugin**, so you install and
 update exactly what you need.
