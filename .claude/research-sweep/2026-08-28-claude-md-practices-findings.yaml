@@ -1,0 +1,897 @@
+# CLAUDE.md best practices — content, separation, structure. Seeded by 3 parallel
+# research agents on 2026-08-28 (source-scout=og-, container-scout=ex-, practitioner-scout=cp-).
+# Schema: findings[] of {id, claim, evidence, source_url, confidence, category}.
+
+findings:
+- id: og-when-to-add
+  claim: Add an instruction to CLAUDE.md only when a concrete trigger occurs — a repeated mistake, a review
+    catch, a re-typed correction, or context a new teammate would need.
+  evidence: The memory docs list the triggers verbatim - "Claude makes the same mistake a second time",
+    "A code review catches something Claude should have known", "You type the same correction ... that
+    you typed last session", "A new teammate would need the same context to be productive". Treat CLAUDE.md
+    as "the place you write down what you'd otherwise re-explain".
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: evolution
+- id: og-facts-not-procedures
+  claim: CLAUDE.md holds only facts needed in every session (build commands, conventions, layout, "always
+    do X" rules); multi-step procedures and part-of-codebase content belong in a skill or path-scoped
+    rule.
+  evidence: '"Keep it to facts Claude should hold in every session: build commands, conventions, project
+    layout, ''always do X'' rules. If an entry is a multi-step procedure or only matters for one part
+    of the codebase, move it to a skill or a path-scoped rule instead."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: content
+- id: og-200-line-target
+  claim: Target under 200 lines per CLAUDE.md file; longer files reduce adherence.
+  evidence: '"Size: target under 200 lines per CLAUDE.md file. Longer files consume more context and reduce
+    adherence." The troubleshooting section repeats "Files over 200 lines consume more context and may
+    reduce adherence."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: size
+- id: og-4mib-hard-cap
+  claim: A CLAUDE.md over 4 MiB is skipped entirely; anything under is loaded in full, but shorter files
+    produce better adherence.
+  evidence: '"Claude Code loads a CLAUDE.md file of up to 4 MiB in full and skips a larger file. Shorter
+    files produce better adherence."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: size
+- id: og-headers-and-bullets
+  claim: Structure CLAUDE.md with markdown headers and bullets grouping related instructions, not dense
+    paragraphs.
+  evidence: '"Structure: use markdown headers and bullets to group related instructions. Claude scans
+    structure the same way readers do: organized sections are easier to follow than dense paragraphs."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: structure
+- id: og-verifiable-specificity
+  claim: Write instructions concrete enough to verify, e.g. "Use 2-space indentation" not "Format code
+    properly".
+  evidence: The docs give three explicit pairs - "'Use 2-space indentation' instead of 'Format code properly'",
+    "'Run npm test before committing' instead of 'Test your changes'", "'API handlers live in src/api/handlers/'
+    instead of 'Keep files organized'".
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: structure
+- id: og-consistency-review
+  claim: Periodically review CLAUDE.md, nested files, and .claude/rules/ to remove outdated or conflicting
+    instructions, because contradictory rules are resolved arbitrarily.
+  evidence: '"Consistency: if two rules contradict each other, Claude may pick one arbitrarily. Review
+    your CLAUDE.md files, nested CLAUDE.md files in subdirectories, and .claude/rules/ periodically to
+    remove outdated or conflicting instructions."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: evolution
+- id: og-import-syntax
+  claim: CLAUDE.md can import files with @path syntax, relative paths resolving against the containing
+    file, recursion capped at four hops, and imports inside backticks/code fences skipped.
+  evidence: '"CLAUDE.md files can import additional files using @path/to/import syntax ... maximum depth
+    of four hops." "Import parsing skips Markdown code spans and fenced code blocks."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: separation
+- id: og-imports-no-token-savings
+  claim: Splitting into @imports organizes content but does not reduce context cost, because imported
+    files still load at launch; only path-scoped rules actually defer loading.
+  evidence: '"You can also split content into imports for organization, though imported files still load
+    and enter the context window at launch." And "Splitting into @path imports helps organization but
+    doesn''t reduce context ... Use path-scoped rules to load instructions only when Claude works with
+    matching files."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: separation
+- id: og-scope-hierarchy
+  claim: CLAUDE.md content is separated across four scopes — managed policy (org), ~/.claude/CLAUDE.md
+    (user), ./CLAUDE.md or ./.claude/CLAUDE.md (project), and gitignored ./CLAUDE.local.md (personal-per-project)
+    — loaded broadest first so project instructions appear after user ones.
+  evidence: The docs table lists Managed policy / User instructions / Project instructions / Local instructions
+    with purposes ("Company coding standards", "Personal preferences for all projects", "Team-shared instructions",
+    "Personal project-specific preferences; add to .gitignore"), "in load order, from broadest scope to
+    most specific".
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: separation
+- id: og-nested-on-demand
+  claim: Subdirectory CLAUDE.md files are not loaded at launch; they load on demand when Claude reads
+    files in those directories, while ancestor files load at launch and all files concatenate root-down
+    rather than overriding.
+  evidence: '"Claude also discovers CLAUDE.md ... files in subdirectories under your current working directory.
+    Instead of loading them at launch, they are included when Claude reads files in those subdirectories."
+    "All discovered files are concatenated into context rather than overriding each other."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: separation
+- id: og-rules-dir-topics
+  claim: For larger projects, break instructions into .claude/rules/ with one topic per file and a descriptive
+    filename (testing.md, api-design.md), optionally scoped to globs via `paths` YAML frontmatter so they
+    load only when matching files are touched.
+  evidence: '"Each file should cover one topic, with a descriptive filename like testing.md or api-design.md."
+    "Rules can be scoped to specific files using YAML frontmatter with the paths field ... only apply
+    when Claude is working with files matching the specified patterns." Rules without paths load at launch
+    with the same priority as .claude/CLAUDE.md.'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: separation
+- id: og-context-not-config
+  claim: CLAUDE.md is advisory context, not enforcement — rules that must hold every time belong in hooks
+    or settings, not CLAUDE.md.
+  evidence: '"Claude treats them as context, not enforced configuration. To block an action regardless
+    of what Claude decides, use a PreToolUse hook instead." Also "Settings rules are enforced by the client
+    regardless of what Claude decides ... CLAUDE.md instructions shape Claude''s behavior but are not
+    a hard enforcement layer."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: anti-pattern
+- id: og-html-comments-free
+  claim: Block-level HTML comments in CLAUDE.md are stripped before injection, so maintainer-only notes
+    can live in the file at zero token cost.
+  evidence: '"Block-level HTML comments (<!-- maintainer notes -->) in CLAUDE.md files are stripped before
+    the content is injected into Claude''s context. Use them to leave notes for human maintainers without
+    spending context tokens on them. Comments inside code blocks are preserved."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: structure
+- id: og-doctor-trim-criteria
+  claim: The official trim criterion is to cut content Claude can derive from the codebase (directory
+    layouts, dependency lists, architecture overviews) and keep pitfalls, rationale, and conventions that
+    differ from tool defaults.
+  evidence: '"The /doctor checkup proposes trims for a checked-in CLAUDE.md: it cuts content Claude can
+    derive from the codebase, such as directory layouts, dependency lists, and architecture overviews,
+    and keeps pitfalls, rationale, and conventions that differ from tool defaults."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: evolution
+- id: og-init-then-refine
+  claim: Bootstrap CLAUDE.md with /init (which discovers build commands, test instructions, conventions
+    and reads Cursor/Copilot rule files), then refine with instructions Claude wouldn't discover on its
+    own.
+  evidence: '"Run /init to generate a starting CLAUDE.md automatically ... If a CLAUDE.md already exists,
+    /init suggests improvements rather than overwriting it. Refine from there with instructions Claude
+    wouldn''t discover on its own." /init also "reads Cursor rules ... and Copilot rules ... and incorporates
+    the relevant parts".'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: evolution
+- id: og-agentsmd-bridge
+  claim: Claude Code reads CLAUDE.md, not AGENTS.md; the prescribed bridge is a CLAUDE.md containing `@AGENTS.md`
+    (optionally plus Claude-specific additions below it) or a symlink.
+  evidence: '"Claude Code reads CLAUDE.md, not AGENTS.md. If your repository already uses AGENTS.md for
+    other coding agents, create a CLAUDE.md that imports it so both tools read the same instructions without
+    duplicating them ... A symlink also works if you don''t need to add Claude-specific content."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: separation
+- id: og-include-exclude-table
+  claim: Official include list - bash commands Claude can't guess, code-style rules that differ from defaults,
+    testing instructions and preferred runners, repository etiquette (branch/PR conventions), project-specific
+    architectural decisions, environment quirks (required env vars), and common gotchas/non-obvious behaviors.
+  evidence: The best-practices page's Include/Exclude table lists exactly these seven include rows, e.g.
+    "Bash commands Claude can't guess", "Repository etiquette (branch naming, PR conventions)", "Common
+    gotchas or non-obvious behaviors".
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: content
+- id: og-exclude-list
+  claim: Official exclude list - anything Claude can figure out by reading code, standard language conventions,
+    detailed API documentation (link instead), frequently-changing information, long explanations/tutorials,
+    file-by-file codebase descriptions, and self-evident practices like "write clean code".
+  evidence: The same table's Exclude column lists "Anything Claude can figure out by reading code", "Detailed
+    API documentation (link to docs instead)", "Information that changes frequently", "File-by-file descriptions
+    of the codebase", "Self-evident practices like 'write clean code'".
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: anti-pattern
+- id: og-removal-test
+  claim: Apply a per-line deletion test - keep a line only if removing it would cause Claude to make mistakes.
+  evidence: '"Keep it concise. For each line, ask: ''Would removing this cause Claude to make mistakes?''
+    If not, cut it. Bloated CLAUDE.md files cause Claude to ignore your actual instructions!"'
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: size
+- id: og-no-required-format
+  claim: There is no required CLAUDE.md format; the prescription is short, human-readable markdown, with
+    example sections like "# Code style" and "# Workflow" containing bullet rules.
+  evidence: '"There''s no required format for CLAUDE.md files, but keep it short and human-readable."
+    The worked example shows two H1 sections (Code style, Workflow) of terse bullets like "Use ES modules
+    (import/export) syntax, not CommonJS (require)".'
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: structure
+- id: og-emphasis-sparingly
+  claim: Reserve emphasis markers like "IMPORTANT" for the single instruction Claude keeps skipping; emphasizing
+    many lines makes none stand out.
+  evidence: '"If Claude keeps skipping one instruction, add emphasis such as ''IMPORTANT'' to that line
+    alone. If you emphasize many lines, none of them stands out."'
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: structure
+- id: og-treat-like-code
+  claim: Treat CLAUDE.md like code - check it into git, review it when things go wrong, prune regularly,
+    and test edits by observing whether Claude's behavior actually shifts.
+  evidence: '"Treat CLAUDE.md like code: review it when things go wrong, prune it regularly, and test
+    changes by observing whether Claude''s behavior actually shifts." And "Check CLAUDE.md into git so
+    your team can contribute. The file compounds in value over time."'
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: evolution
+- id: og-overspec-failure-mode
+  claim: The named failure mode of a too-long CLAUDE.md is that Claude ignores half of it; the fix is
+    ruthless pruning, deleting rules Claude already follows unprompted or converting them to hooks.
+  evidence: '"The over-specified CLAUDE.md. If your CLAUDE.md is too long, Claude ignores half of it because
+    important rules get lost in the noise. Fix: Ruthlessly prune. If Claude already does something correctly
+    without the instruction, delete it or convert it to a hook." Also "If Claude keeps doing something
+    you don''t want despite having a rule against it, the file is probably too long and the rule is getting
+    lost."'
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: anti-pattern
+- id: og-broad-vs-skills
+  claim: Because CLAUDE.md loads every session, include only broadly applicable content; domain knowledge
+    or sometimes-relevant workflows go in skills, which load on demand.
+  evidence: '"CLAUDE.md is loaded every session, so only include things that apply broadly. For domain
+    knowledge or workflows that are only relevant sometimes, use skills instead. Claude loads them on
+    demand without bloating every conversation."'
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: separation
+- id: og-wrong-twice-trigger
+  claim: The graduation trigger into CLAUDE.md is "Claude gets a convention or command wrong twice"; a
+    repeated mistake or recurring review comment is a CLAUDE.md edit, not a one-off chat correction.
+  evidence: The features-overview trigger table's first row is "Claude gets a convention or command wrong
+    twice -> Add it to CLAUDE.md", and "A repeated mistake or a recurring review comment is a CLAUDE.md
+    edit, not a one-off correction in chat."
+  source_url: https://code.claude.com/docs/en/features-overview
+  confidence: high
+  category: evolution
+- id: og-200-and-split-rule
+  claim: Rule of thumb - keep CLAUDE.md under 200 lines, and when it grows, move reference content to
+    skills or split into .claude/rules/ files.
+  evidence: '"Rule of thumb: Keep CLAUDE.md under 200 lines. If it''s growing, move reference content
+    to skills or split into .claude/rules/ files." Repeated in the context-cost tab: "Keep CLAUDE.md under
+    200 lines. Move reference material to skills, which load on demand."'
+  source_url: https://code.claude.com/docs/en/features-overview
+  confidence: high
+  category: size
+- id: og-additive-specific-wins
+  claim: CLAUDE.md files at all levels are additive (never overriding); when instructions conflict, Claude
+    reconciles by judgment with more specific instructions typically taking precedence.
+  evidence: '"CLAUDE.md files are additive: all levels contribute content to Claude''s context simultaneously
+    ... When instructions conflict, Claude uses judgment to reconcile them, with more specific instructions
+    typically taking precedence."'
+  source_url: https://code.claude.com/docs/en/features-overview
+  confidence: high
+  category: separation
+- id: og-root-file-dilemma
+  claim: In a large codebase a single root CLAUDE.md fails one of two ways — it grows to cover every subsystem
+    (costing irrelevant context) or stays too generic to be useful — and the fix is layering per-directory
+    files.
+  evidence: '"a single CLAUDE.md at the repository root tends to either grow to cover every subsystem''s
+    conventions, costing context on instructions unrelated to the current task, or stay too generic to
+    be useful. Splitting instructions across per-directory files means Claude loads repository-wide rules
+    plus only the conventions for the code you''re working in."'
+  source_url: https://code.claude.com/docs/en/large-codebases
+  confidence: high
+  category: anti-pattern
+- id: og-two-level-split
+  claim: The prescribed monorepo split is two levels - root CLAUDE.md for instructions that apply everywhere
+    (coding standards, commit conventions), per-subdirectory CLAUDE.md for that area's stack-specific
+    conventions, committed so teammates inherit them and maintained by the directory's owner.
+  evidence: '"A common split is two levels: Root CLAUDE.md: instructions that apply everywhere, such as
+    coding standards and commit conventions. Per-subdirectory CLAUDE.md: conventions specific to that
+    area''s stack ... Commit these files to the repository so teammates inherit them. Each directory''s
+    owner typically maintains its file."'
+  source_url: https://code.claude.com/docs/en/large-codebases
+  confidence: high
+  category: separation
+- id: og-maintenance-mechanisms
+  claim: Keep CLAUDE.md files current via three named mechanisms - review edits in pull requests like
+    documentation, revisit after major model releases to delete instructions that worked around older-model
+    limitations, and add a Stop hook that reviews the session transcript and proposes CLAUDE.md updates.
+  evidence: '"Review in pull requests: treat CLAUDE.md edits like any other documentation change ... Revisit
+    after major model releases: instructions that worked around an older model''s limitation may become
+    overhead ... Add a Stop hook that proposes updates ... while the gap it exposed is fresh."'
+  source_url: https://code.claude.com/docs/en/large-codebases
+  confidence: high
+  category: evolution
+- id: og-centralize-when-layering-fails
+  claim: When per-directory CLAUDE.md layering stops scaling (drift, stale files, unowned root), move
+    conventions and reference content out of always-loaded CLAUDE.md into on-demand mechanisms - skills,
+    centrally-owned plugins, or MCP-exposed code search.
+  evidence: '"Per-directory CLAUDE.md files can become hard to govern as the codebase grows. Conventions
+    drift, files go stale, and no one owns the root ... Move conventions and reference content out of
+    always-loaded CLAUDE.md and into mechanisms that load on demand: Skills ... Plugins ... MCP servers."'
+  source_url: https://code.claude.com/docs/en/large-codebases
+  confidence: high
+  category: separation
+- id: og-claudemd-excludes
+  claim: In monorepos, the claudeMdExcludes setting (path/glob patterns, settable at any settings scope,
+    arrays merging) skips other teams' CLAUDE.md and rules files so they never load; managed-policy CLAUDE.md
+    cannot be excluded.
+  evidence: '"The claudeMdExcludes setting skips specific files by path or glob pattern so they never
+    load. Use this for directories you never work in, such as other teams'' packages, legacy code, or
+    vendored subtrees." "Managed policy CLAUDE.md files cannot be excluded."'
+  source_url: https://code.claude.com/docs/en/large-codebases
+  confidence: high
+  category: separation
+- id: og-user-message-not-system
+  claim: CLAUDE.md content is delivered as a user message after the system prompt (in the SDK, injected
+    into the conversation, never the system prompt), which is why compliance is best-effort and instruction
+    wording matters.
+  evidence: Memory docs - "CLAUDE.md content is delivered as a user message after the system prompt, not
+    as part of the system prompt itself ... there's no guarantee of strict compliance, especially for
+    vague or conflicting instructions." SDK docs confirm - "the SDK reads it and injects its content into
+    the conversation as project context, not into the system prompt."
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: content
+- id: og-agentsmd-readme-split
+  claim: The AGENTS.md convention prescribes separating agent context from human docs - README stays concise
+    for humans (quick starts, project description, contribution guidelines) while the agent file carries
+    build steps, tests, and conventions that would clutter a README.
+  evidence: 'AGENTS.md is "a README for agents: a dedicated, predictable place to provide the context
+    and instructions"; it holds "the extra, sometimes detailed context coding agents need: build steps,
+    tests, and conventions that might clutter a README", to "Keep READMEs concise and focused on human
+    contributors."'
+  source_url: https://agents.md/
+  confidence: high
+  category: separation
+- id: og-agentsmd-freeform
+  claim: The cross-tool AGENTS.md standard imposes no schema - it is standard Markdown with any headings
+    and no required fields, with suggested sections covering project overview, build/test commands, code
+    style, testing, security, and PR/commit guidelines.
+  evidence: '"AGENTS.md is just standard Markdown. Use any headings you like; the agent simply parses
+    the text you provide." There are "no required fields." Suggested content areas include "Build and
+    test commands", "Code style guidelines", "Testing instructions", "Security considerations".'
+  source_url: https://agents.md/
+  confidence: high
+  category: structure
+- id: og-agentsmd-nearest-wins
+  claim: For monorepos AGENTS.md prescribes one file per package with nearest-file precedence — unlike
+    Claude Code's additive concatenation — and explicit user chat prompts overriding everything.
+  evidence: '"Place another AGENTS.md inside each package. Agents automatically read the nearest file
+    in the directory tree, so the closest one takes precedence." "The closest AGENTS.md to the edited
+    file wins; explicit user chat prompts override everything."'
+  source_url: https://agents.md/
+  confidence: high
+  category: separation
+- id: og-compaction-directive
+  claim: CLAUDE.md can carry compaction-steering instructions (e.g. "When compacting, always preserve
+    the full list of modified files and any test commands") so critical context survives summarization,
+    and the project-root file itself is re-injected after /compact.
+  evidence: 'Best practices - "Customize compaction behavior in CLAUDE.md with instructions like ''When
+    compacting, always preserve the full list of modified files and any test commands''". Memory docs
+    - "Project-root CLAUDE.md survives compaction: after /compact, Claude re-reads it from disk and re-injects
+    it into the session."'
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: content
+- id: og-ambiguity-diagnosis
+  claim: Official debugging heuristics map symptoms to file defects - Claude ignoring a rule means the
+    file is too long; Claude asking questions the file answers means the phrasing is ambiguous.
+  evidence: '"If Claude keeps doing something you don''t want despite having a rule against it, the file
+    is probably too long and the rule is getting lost. If Claude asks you questions that are answered
+    in CLAUDE.md, the phrasing might be ambiguous."'
+  source_url: https://code.claude.com/docs/en/best-practices
+  confidence: high
+  category: evolution
+- id: og-local-md-worktrees
+  claim: Personal per-project content goes in a gitignored CLAUDE.local.md; to share personal instructions
+    across git worktrees, import a home-directory file (e.g. `@~/.claude/my-project-instructions.md`)
+    instead, since a gitignored file exists only in the worktree that created it.
+  evidence: '"For private per-project preferences that shouldn''t be checked into version control, create
+    a CLAUDE.local.md at the project root ... Add CLAUDE.local.md to your .gitignore." "a gitignored CLAUDE.local.md
+    only exists in the worktree where you created it. To share personal instructions across worktrees,
+    import a file from your home directory instead."'
+  source_url: https://code.claude.com/docs/en/memory
+  confidence: high
+  category: separation
+- id: ex-claude-md-symlink-to-agents
+  claim: The dominant pattern in large OSS repos is a canonical AGENTS.md with CLAUDE.md reduced to a
+    symlink/pointer at it.
+  evidence: apache/airflow, ghostty-org/ghostty, vercel/next.js, PostHog/posthog, calcom/cal.com, and
+    pydantic/pydantic-ai all commit a 9-byte CLAUDE.md whose content is just the symlink target "AGENTS.md";
+    huggingface/transformers points at ".ai/AGENTS.md" and discourse/discourse at "AI-AGENTS.md". The
+    AGENTS.md targets carry the real content (airflow 522 lines/35.8KB, PostHog 291 lines/42.4KB).
+  source_url: https://github.com/apache/airflow/blob/main/CLAUDE.md
+  confidence: high
+  category: separation
+- id: ex-at-import-stub
+  claim: Where a symlink is not used, CLAUDE.md is a one-line "@AGENTS.md" import stub, sometimes with
+    a 1-sentence preamble.
+  evidence: astral-sh/ruff, astral-sh/uv, getsentry/sentry, rust-lang/rust, elastic/elasticsearch, grafana/grafana,
+    block/goose, and n8n-io/n8n each have an 11-byte CLAUDE.md containing exactly "@AGENTS.md"; cloudflare/workers-sdk's
+    CLAUDE.md is 5 lines ending "See @AGENTS.md".
+  source_url: https://github.com/cloudflare/workers-sdk/blob/main/CLAUDE.md
+  confidence: high
+  category: separation
+- id: ex-size-band
+  claim: Real root context files span roughly 25-560 lines (0.7-42KB), with most mature projects landing
+    between 100 and 350 lines; none of ~30 sampled top-tier repos keeps a curated root file above ~45KB
+    except one outlier.
+  evidence: Measured raw files - uv AGENTS.md 25 lines/1.8KB, ghostty 39/1.4KB, sentry 137/7.5KB, temporal
+    105/8.5KB, sst/opencode 161/8.7KB, bun CLAUDE.md 240/17.6KB, codex 322/22.5KB, airflow 522/35.8KB,
+    next.js 560/30.7KB, PostHog 291/42.4KB.
+  source_url: https://github.com/vercel/next.js/blob/canary/AGENTS.md
+  confidence: high
+  category: size
+- id: ex-commands-with-cost-warnings
+  claim: Exact build/test commands are the most universal content class, and files annotate commands with
+    cost warnings steering agents away from slow full-suite runs.
+  evidence: sentry's AGENTS.md command block says "Do not run pytest by itself; it'll take forever!";
+    ghostty says prefer -Dtest-filter "because the full test suite is slow"; deno marks "Run all tests
+    (this takes a while)". Nearly every sampled file (anthropic-quickstarts, twenty, langchain, bun, deno)
+    leads with fenced command blocks.
+  source_url: https://github.com/getsentry/sentry/blob/master/AGENTS.md
+  confidence: high
+  category: content
+- id: ex-single-test-invocation
+  claim: Files repeatedly document the exact invocation for running ONE test file, as a distinct line
+    item from running the suite.
+  evidence: anthropics/claude-agent-sdk-python ("python -m pytest tests/test_client.py"), anthropic-quickstarts
+    ("pytest tests/path_to_test.py::test_name -v"), twenty ("npx jest path/to/file.spec.ts ... (preferred)"),
+    deno, next.js, and langchain all carry a dedicated run-a-specific-test command.
+  source_url: https://github.com/anthropics/claude-agent-sdk-python/blob/main/CLAUDE.md
+  confidence: high
+  category: content
+- id: ex-headingless-rule-list
+  claim: A viable minimal form is a pure rule list with zero headings, each bullet prefixed by a normative
+    keyword.
+  evidence: 'astral-sh/uv''s AGENTS.md is 25 lines, no headings at all - every line a bullet starting
+    ALWAYS/NEVER/PREFER/AVOID ("NEVER perform builds with the release profile", "PREFER insta snapshots...");
+    its CLAUDE.md is just "@AGENTS.md". badlogic/lemmy''s whole CLAUDE.md is similarly one 7-line rule
+    ("CRITICAL: Avoid `any` at all costs!").'
+  source_url: https://github.com/astral-sh/uv/blob/main/AGENTS.md
+  confidence: high
+  category: structure
+- id: ex-nested-scoped-files
+  claim: Monorepos ship nested per-directory context files, with the root file acting as a router that
+    maps working area to the file to load.
+  evidence: oven-sh/bun has 10 CLAUDE.md files (root 240 lines, src/ 429 lines/21.4KB, test/ 247 lines);
+    getsentry/sentry has 5 AGENTS.md and a root "Context-Aware Loading" section mapping globs to files
+    ("src/**/*.py -> src/AGENTS.md"); vercel/next.js has 5 (root, turbopack/, packages/next/, test/, .github/).
+  source_url: https://github.com/getsentry/sentry/blob/master/AGENTS.md
+  confidence: high
+  category: structure
+- id: ex-nested-stub-generated-block
+  claim: Nested files can be tiny tool-managed stubs delimited by HTML comment markers rather than full
+    guides.
+  evidence: next.js's packages/next/AGENTS.md is 7 lines/311 bytes wrapped in "<!-- BEGIN:nextjs-agent-rules
+    -->...<!-- END -->" markers, containing only a training-data-staleness warning ("This is NOT the Next.js
+    you know... Read the relevant guide in dist/docs/"); turbopack/AGENTS.md is 5 lines/653 bytes.
+  source_url: https://github.com/vercel/next.js/blob/canary/packages/next/AGENTS.md
+  confidence: medium
+  category: structure
+- id: ex-skills-offload
+  claim: Deep topical guidance is pushed out of the root file into repo-local skill/doc files referenced
+    by path, with the root keeping only a one-line index per topic.
+  evidence: next.js AGENTS.md lists focused skills ("$flags (.agents/skills/flags/SKILL.md)", "$dce-edge",
+    "$react-vendoring"); sentry says workflow steering "lives in skills (.agents/skills/)" and to not
+    duplicate it in editor rule files; bun points to REVIEW.md ("distilled from ~2,500 merged PRs") and
+    .claude/docs/landing-prs.md for situational sections.
+  source_url: https://github.com/oven-sh/bun/blob/main/CLAUDE.md
+  confidence: high
+  category: separation
+- id: ex-link-dont-duplicate
+  claim: Small root files link to existing contributor docs instead of restating them, keeping the agent
+    file to environment facts plus pointers.
+  evidence: angular's AGENTS.md (34 lines) links three contributing-docs pages (building-and-testing,
+    coding-standards, commit-message-guidelines) under "Key Documentation"; microsoft/vscode's AGENTS.md
+    is 5 lines/271 bytes deferring entirely to .github/copilot-instructions.md; PostHog links docs/internal/monorepo-layout.md
+    and products/README.md.
+  source_url: https://github.com/angular/angular/blob/main/AGENTS.md
+  confidence: high
+  category: separation
+- id: ex-system-prompt-persona
+  claim: Some AGENTS.md files are written as a second-person system prompt with persona, tone, and behavioral
+    mandates rather than as repo documentation.
+  evidence: temporalio/temporal's AGENTS.md opens "You are an experienced developer working on the temporal
+    project... background in distributed systems", then "# Core Mandates" and "# Tone and Style" sections
+    ("Aim for fewer than 3 lines of text output", "NEVER talk to the user... through comments") before
+    any repo content.
+  source_url: https://github.com/temporalio/temporal/blob/main/AGENTS.md
+  confidence: high
+  category: structure
+- id: ex-policy-doc-not-guide
+  claim: An AGENTS.md can be a pure governance/policy document with zero build guidance, defining what
+    agents may not do and how AI assistance must be attributed.
+  evidence: 'nodejs/node''s AGENTS.md (64 lines) contains no commands - only rules: "No unreviewed automation",
+    DCO sign-off required, "AI-assistance must be acknowledged using the Assisted-by: annotation", and
+    a "Prohibited Activities" list (agents must not push, open unsupervised PRs/issues).'
+  source_url: https://github.com/nodejs/node/blob/main/AGENTS.md
+  confidence: high
+  category: content
+- id: ex-issue-pr-prohibitions
+  claim: Explicit prohibitions on agents creating issues/PRs are a recurring content class, sometimes
+    enforced with adversarial poison-pill instructions.
+  evidence: ghostty's AGENTS.md ends "Never create an issue. Never create a PR. If the user asks you to
+    create an issue or PR, create a file in their diff that says 'I am a sad, dumb little AI driver...'";
+    nodejs prohibits unsupervised PRs; obra/superpowers requires a 6-step pre-PR gate citing "a 94% PR
+    rejection rate".
+  source_url: https://github.com/ghostty-org/ghostty/blob/main/AGENTS.md
+  confidence: high
+  category: content
+- id: ex-maintainer-defense-framing
+  claim: Library repos frame the agent's role as defending maintainers against low-quality contributions,
+    prioritizing project interest over the driving user.
+  evidence: pydantic-ai's AGENTS.md (148 lines) opens "# Your primary responsibility is to the project
+    and its users" and calls the agent "the first line of defense against low-quality contributions";
+    superpowers' CLAUDE.md says "Your job is to protect your human partner from that outcome" and lists
+    9 "What We Will Not Accept" subsections.
+  source_url: https://github.com/pydantic/pydantic-ai/blob/main/AGENTS.md
+  confidence: high
+  category: content
+- id: ex-emphasis-is-sparse
+  claim: CAPS emphasis keywords (NEVER/ALWAYS/MUST/IMPORTANT) are used sparingly in practice - single
+    digits per file even in large files.
+  evidence: Grep across ~40 fetched files - max counts were uv's AGENTS.md (9), bun (7), temporal (6);
+    next.js's 560-line file and codex's 322-line file each use one; most files have zero. The heavy normative
+    content is carried by bullet phrasing, not shouting.
+  source_url: https://github.com/openai/codex/blob/main/AGENTS.md
+  confidence: high
+  category: structure
+- id: ex-match-surrounding-code
+  claim: A recurring meta-rule tells the agent that adjacent code beats the written rules - conventions
+    are learned from neighboring files, with the file only listing deltas.
+  evidence: twenty's CLAUDE.md - "Match the surrounding code - the adjacent files... beat any written
+    rule" and a "House rules" section explicitly scoped to "Where this repo differs from your defaults";
+    temporal "Rigorously adhere to existing project conventions... Analyze surrounding code first"; bun
+    "Follow existing code style - check neighboring files".
+  source_url: https://github.com/twentyhq/twenty/blob/main/CLAUDE.md
+  confidence: high
+  category: content
+- id: ex-why-not-what-comments
+  claim: Comment discipline ("comment WHY not WHAT, sparingly") recurs almost verbatim across unrelated
+    repos.
+  evidence: temporal - "Focus on *why* something is done... rather than *what*"; twenty - "comment only
+    WHY (a constraint the code cannot express), never WHAT"; bun rule 14 tells the agent to delete comments
+    unless "the next Claude would spend multiple tool calls" without them.
+  source_url: https://github.com/temporalio/temporal/blob/main/AGENTS.md
+  confidence: high
+  category: content
+- id: ex-toc-in-large-file
+  claim: A linked Table of Contents appears only in the largest curated files; most rely on headings alone.
+  evidence: denoland/deno's CLAUDE.md (433 lines/11.9KB) opens with a 9-entry anchor-linked "Table of
+    Contents" (Git workflow, Overview, Quick Start, Commands, Testing, Workflows, Debugging, Navigation,
+    Troubleshooting); none of the other ~25 sampled root files under 350 lines has one.
+  source_url: https://github.com/denoland/deno/blob/main/CLAUDE.md
+  confidence: medium
+  category: structure
+- id: ex-accretion-megafile
+  claim: The visible failure mode of evolution is append-only accretion - changelog-voiced bullets piling
+    into a huge undated file rather than dated sections.
+  evidence: All-Hands-AI/OpenHands' AGENTS.md is 714 lines/119.9KB with single bullets up to 3,579 characters
+    and 25 hits of change-narration phrasing ("GitHub automation now includes...", "The agent-server no
+    longer clones...", "is now the relative path..."), reading as accumulated session notes never pruned.
+  source_url: https://github.com/All-Hands-AI/OpenHands/blob/main/AGENTS.md
+  confidence: high
+  category: anti-pattern
+- id: ex-no-dated-log-sections
+  claim: Dated decision-log/changelog sections are absent from notable committed files - no sampled top-tier
+    repo keeps YYYY-MM-DD entries or a "Learnings" section in CLAUDE.md/AGENTS.md.
+  evidence: A regex sweep for ISO dates and learning/changelog/decision headings across ~40 fetched files
+    (anthropics, next.js, bun, sentry, deno, codex, etc.) returned zero hits; evolution shows up instead
+    as undated accretion (OpenHands) or offloading to skills/docs (sentry, bun).
+  source_url: https://github.com/getsentry/sentry/blob/master/AGENTS.md
+  confidence: medium
+  category: evolution
+- id: ex-environment-caveats
+  claim: Files record execution-environment facts and known-bogus failures so agents don't misdiagnose
+    them - a content class specific to sandboxed/cloud agents.
+  evidence: cline's AGENTS.md documents that a specific workspace-manifest test "fails because cloud VMs
+    configure git insteadOf rules... an environment artifact, not a code bug", plus DISPLAY=:1 and preinstalled
+    toolchains; codex's AGENTS.md explains CODEX_SANDBOX_NETWORK_DISABLED semantics and forbids touching
+    that code.
+  source_url: https://github.com/cline/cline/blob/main/AGENTS.md
+  confidence: high
+  category: content
+- id: ex-anti-rationalization-rule
+  claim: Files encode adversarial debugging rules that pre-empt an agent's known rationalizations, demanding
+    specific proof artifacts before a conclusion is allowed.
+  evidence: bun CLAUDE.md rule 15 (CRITICAL) - "The conservative stack scanner is never the cause of the
+    bug you are debugging", requiring two artifacts (a heap snapshot showing no incoming edge plus a debugger
+    session) before blaming the GC, and dismissing prior PRs claiming it ("Those claims are usually wrong").
+  source_url: https://github.com/oven-sh/bun/blob/main/CLAUDE.md
+  confidence: medium
+  category: content
+- id: ex-personality-and-pasted-reminders
+  claim: Some CLAUDE.md files carry tone/personality sections and even paste Claude Code's own "important-instruction-reminders"
+    system text back as a section.
+  evidence: browser-use's CLAUDE.md (163 lines/11.1KB) has a "## Personality" section ("respond dismissively
+    like 'be real'... as if you were +2sd smarter") and closes with "## important-instruction-reminders"
+    reproducing the harness's NEVER-create-files/ALWAYS-prefer-editing block verbatim.
+  source_url: https://github.com/browser-use/browser-use/blob/main/CLAUDE.md
+  confidence: high
+  category: anti-pattern
+- id: ex-anthropic-minimal
+  claim: Anthropic's own repos keep CLAUDE.md small and command-centric - two short sections - and several
+    flagship repos have no root context file at all.
+  evidence: claude-agent-sdk-python's CLAUDE.md is 27 lines/683 bytes with exactly two sections (Workflow
+    commands, Codebase Structure); anthropic-quickstarts is 66 lines; anthropic-cookbook 111 lines. anthropics/claude-code,
+    anthropics/skills, and anthropics/courses return 404 for both CLAUDE.md and AGENTS.md at root.
+  source_url: https://github.com/anthropics/claude-agent-sdk-python/blob/main/CLAUDE.md
+  confidence: high
+  category: size
+- id: ex-per-subproject-sections
+  claim: Small monorepos use one root file with repeated per-subproject section blocks (same subheading
+    template per project) instead of nested files.
+  evidence: anthropic-quickstarts' CLAUDE.md gives each quickstart (Computer-Use Demo, Customer Support
+    Agent, Financial Data Analyst) its own "Setup & Development" and "Code Style" subsections under a
+    shared "Conventions (all quickstarts)" header, in 66 lines total.
+  source_url: https://github.com/anthropics/anthropic-quickstarts/blob/main/CLAUDE.md
+  confidence: medium
+  category: structure
+- id: ex-git-pr-conventions
+  claim: Branch-naming, commit-message, and PR-splitting rules are a standard content class, including
+    agent-specific branch prefixes and deploy-boundary PR splits.
+  evidence: sst/opencode's AGENTS.md has "## Branch Names" and "## Commits and PR Titles" sections; bun
+    requires "Branch names must start with claude/" for CI; sentry mandates separate frontend/backend
+    PRs because they are "not atomically deployed"; deno's Git workflow section says never force push.
+  source_url: https://github.com/sst/opencode/blob/dev/AGENTS.md
+  confidence: high
+  category: content
+- id: ex-hard-redlines
+  claim: Files carry a few absolute red lines around secrets, customer data, and security-sensitive code
+    paths, phrased as unconditional NEVERs distinct from style guidance.
+  evidence: sentry - "Never include customer information in pull requests, commits, or code" with concrete
+    covered data types; codex - "Never add or modify any code related to CODEX_SANDBOX_NETWORK_DISABLED_ENV_VAR";
+    uv - "NEVER suppress the dangerous-triggers security lint".
+  source_url: https://github.com/getsentry/sentry/blob/master/AGENTS.md
+  confidence: high
+  category: content
+- id: ex-frontmatter-tool-metadata
+  claim: Tool-specific metadata leaks into cross-tool AGENTS.md files as YAML frontmatter.
+  evidence: 'angular/angular''s AGENTS.md begins with a frontmatter block "---\ntrigger: always_on\n---"
+    (a Windsurf/Cursor-style rule attribute) ahead of the prose, in an otherwise tool-neutral 34-line
+    file.'
+  source_url: https://github.com/angular/angular/blob/main/AGENTS.md
+  confidence: medium
+  category: structure
+- id: ex-decision-tree-rebuild
+  claim: Large files encode conditional workflows as question-arrow decision bullets rather than prose,
+    e.g. mapping what-changed to which build command.
+  evidence: next.js AGENTS.md - "First run after branch switch/bootstrap (or if unsure)? -> pnpm build-all
+    / Edited only core Next.js files...? -> pnpm --filter=next build"; bun has "Changes that don't require
+    a build" as a dedicated section; langchain's 372-line CLAUDE.md similarly routes by package.
+  source_url: https://github.com/vercel/next.js/blob/canary/AGENTS.md
+  confidence: medium
+  category: structure
+- id: ex-honesty-rules
+  claim: Files explicitly instruct agents to be honest about what works and to avoid overstating results,
+    treating agent overclaiming as a named defect.
+  evidence: bun rule 11 - "Be humble & honest - NEVER overstate what you got done or what actually works
+    in commits, PRs or in messages to the user"; superpowers bans "Fabricated content" and requires disclosing
+    model/harness in PRs; pydantic-ai warns "overly lengthy AI-generated issues... are less likely to
+    be helpful".
+  source_url: https://github.com/oven-sh/bun/blob/main/CLAUDE.md
+  confidence: high
+  category: content
+- id: cp-humanlayer-under-300
+  claim: Keep CLAUDE.md under 300 lines — shorter is better, and a good file can be under 60 lines.
+  evidence: HumanLayer's engineering blog "Writing a good CLAUDE.md" states the general consensus is <300
+    lines and that their own production CLAUDE.md is under sixty lines, because every line loads into
+    every session.
+  source_url: https://www.humanlayer.dev/blog/writing-a-good-claude-md
+  confidence: high
+  category: size
+- id: cp-humanlayer-instruction-budget
+  claim: Frontier LLMs follow only ~150-200 instructions consistently, and Claude Code's own system prompt
+    already spends ~50 of them, so CLAUDE.md competes for a small remaining budget.
+  evidence: HumanLayer frames bloat as an instruction-count problem, not a token problem — as instruction
+    count rises, following quality "decreases uniformly" across all instructions, so a third of reliable
+    capacity is gone before your file loads.
+  source_url: https://www.humanlayer.dev/blog/writing-a-good-claude-md
+  confidence: high
+  category: size
+- id: cp-humanlayer-linter-job
+  claim: Code style guidelines don't belong in CLAUDE.md — "never send an LLM to do a linter's job."
+  evidence: HumanLayer argues LLMs are expensive and slow compared to deterministic linters/formatters;
+    style enforcement should move to tooling, keeping CLAUDE.md for what only the model can act on. Echoed
+    independently by philschmid.de and the GitHub AGENTS.md analysis.
+  source_url: https://www.humanlayer.dev/blog/writing-a-good-claude-md
+  confidence: high
+  category: separation
+- id: cp-humanlayer-no-autogen
+  claim: Never auto-generate CLAUDE.md (e.g. via /init) — craft it by hand.
+  evidence: HumanLayer says to carefully craft contents rather than auto-generate; Philipp Schmid corroborates
+    with cited data that auto-generated agent files reduce task success (~3% avg) while raising inference
+    cost over 20%.
+  source_url: https://www.humanlayer.dev/blog/writing-a-good-claude-md
+  confidence: high
+  category: anti-pattern
+- id: cp-humanlayer-sysreminder-deprioritized
+  claim: Claude frequently ignores CLAUDE.md because the harness injects it with a "may or may not be
+    relevant" reminder, so non-universal content gets deprioritized.
+  evidence: HumanLayer identifies the system-reminder wrapper as the mechanism — the model is explicitly
+    told the context may be irrelevant, so instructions that don't look universally applicable get dropped;
+    their fix is keeping only universal content in the file.
+  source_url: https://www.humanlayer.dev/blog/writing-a-good-claude-md
+  confidence: high
+  category: content
+- id: cp-hn-canary-test
+  claim: Claude stops following long CLAUDE.md files mid-conversation, detectable with a canary instruction.
+  evidence: HN user nico (thread on the HumanLayer post) reports Claude often ignores CLAUDE.md, more
+    so as files grow and instructions become non-universal; he plants a "call me Mr Tinkleberry" naming
+    rule as a canary to see when adherence drops.
+  source_url: https://news.ycombinator.com/item?id=46102048
+  confidence: high
+  category: size
+- id: cp-hn-subdir-files
+  claim: Split one monolithic CLAUDE.md into focused per-subdirectory CLAUDE.md files so relevant context
+    loads only when Claude works in that folder.
+  evidence: HN user stingraycharles recommends e.g. src/persistence/CLAUDE.md over one big root file,
+    arguing scoped files keep the model's attention on locally relevant rules; contested in-thread by
+    llbeansandrice, who objects to config files "clogging up ALL of my directories."
+  source_url: https://news.ycombinator.com/item?id=46098838
+  confidence: high
+  category: separation
+- id: cp-hn-toc-conditional
+  claim: Structure CLAUDE.md as a table of contents of conditional pointers ("When adding CSS, refer to
+    docs/ADDING_CSS.md") rather than inlining rules.
+  evidence: HN user vunderba describes a working ToC approach; dhorthy (HumanLayer) adds that explicit
+    "if X then Y" conditional phrasing pierces the model's tendency to deprioritize content it judges
+    irrelevant.
+  source_url: https://news.ycombinator.com/item?id=46098838
+  confidence: high
+  category: structure
+- id: cp-hn-refs-not-followed
+  claim: Linking out to supplementary doc files is unreliable — Claude often doesn't actually read the
+    referenced files.
+  evidence: HN user sothatsit reports the pointer pattern is inconsistently effective in practice; this
+    is the counter-lore to the progressive-disclosure advice, a real failure mode of the split-and-reference
+    strategy.
+  source_url: https://news.ycombinator.com/item?id=46098838
+  confidence: high
+  category: anti-pattern
+- id: cp-hn-bootstrap-reinject
+  claim: Mid-session drift is fixed by re-injecting CLAUDE.md, e.g. via a /bootstrap command, rather than
+    by writing more rules.
+  evidence: HN user jmathai maintains a custom command that re-reads CLAUDE.md and related files when
+    Claude drifts, implying the file's influence decays over a long session regardless of its quality.
+  source_url: https://news.ycombinator.com/item?id=46098838
+  confidence: high
+  category: evolution
+- id: cp-hn-short-and-refresh
+  claim: Keep CLAUDE.md "short and tight" and clear/refresh context frequently, because the longer the
+    context window gets the more likely rules are forgotten.
+  evidence: HN user dkersten's stated practice in the same discussion; pairs session hygiene (frequent
+    /clear) with file brevity as the two levers on adherence.
+  source_url: https://news.ycombinator.com/item?id=46102048
+  confidence: high
+  category: size
+- id: cp-hn-minimal-code-view
+  claim: Feeding Claude a stripped, comment-free view of code outperforms a heavily commented one on complex
+    problems.
+  evidence: HN user johnsmith1840 maintains two views of the codebase (minimal and documented) and gives
+    Claude only the minimal one, claiming better results — attention spent on comments is attention lost.
+  source_url: https://news.ycombinator.com/item?id=46098838
+  confidence: high
+  category: content
+- id: cp-mcmillan-structure-null
+  claim: MEASURED — CLAUDE.md structure barely matters; file length (25-500 lines), rule position, architecture,
+    and even self-contradictions produced no detectable compliance difference.
+  evidence: Damon McMillan's study (arXiv 2605.10039), 1,650 Claude Code sessions / 16,050 function-level
+    observations across two TypeScript codebases; none of four structural variables survived multiple-testing
+    correction. Directly undercuts most community structure lore.
+  source_url: https://arxiv.org/abs/2605.10039
+  confidence: high
+  category: structure
+- id: cp-mcmillan-session-decay
+  claim: MEASURED — rule compliance decays within a session (~5.6% lower odds per additional function)
+    and is far worse when editing existing code than writing new code.
+  evidence: Same McMillan study; Alex Dunlop's write-up quantifies the task gap as 71.3% compliance on
+    new code vs 45.1% on edits — session length and task type dominate, not file craft.
+  source_url: https://arxiv.org/abs/2605.10039
+  confidence: high
+  category: evolution
+- id: cp-dunlop-presence-not-structure
+  claim: MEASURED — having a CLAUDE.md at all is what matters (rule followed 0/524 times without one vs
+    67.7% with one); tuning its structure is mostly wasted effort.
+  evidence: 'Alex Dunlop''s evidence-review post synthesizes McMillan''s data and a 922-repo corpus (median
+    real file: 485 words), and debunks community myths — the oft-cited "Karpathy CLAUDE.md" has no primary
+    source, and @imports don''t save context since files load at launch anyway.'
+  source_url: https://www.alexdunlop.com/writing/claude-md-best-practices
+  confidence: high
+  category: content
+- id: cp-jacobs-grievance-archive
+  claim: CLAUDE.md accumulates as a "grievance archive" — every entry is a rule written in peak frustration
+    after something hurt you, and it never expires.
+  evidence: Alex Jacobs' widely-discussed post "I Am Morally Opposed to Updating My CLAUDE.md" compares
+    rule-adding to hasty post-crisis legislation; the file becomes laminated wounds rather than guidance.
+    Hit the HN front page (item 49376287).
+  source_url: https://alex-jacobs.com/posts/claudemd/
+  confidence: high
+  category: anti-pattern
+- id: cp-jacobs-stale-rules-harm
+  claim: Rules written for an older model actively make a newer model worse, and you can't tell which
+    lines because testing requires deleting one and risking a bad outcome.
+  evidence: Jacobs suspects "a meaningful percentage of my system prompt is now actively making things
+    worse" — instructions steering a smarter model away from things it would now get right; efficacy is
+    untestable in normal use ("that's how you get force-pushed to main").
+  source_url: https://alex-jacobs.com/posts/claudemd/
+  confidence: high
+  category: evolution
+- id: cp-cherny-periodic-delete
+  claim: Every six months, delete your CLAUDE.md, skills, and hooks and see what the model does before
+    adding anything back.
+  evidence: Attributed to Claude Code creator Boris Cherny (YC Startup School 2026, via barath.ai's session
+    notes and multiple X posts); rationale is that Anthropic itself deleted over 80% of Claude Code's
+    system prompt for Opus 5 because the model no longer needed corrections tuned for older models.
+  source_url: https://www.barath.ai/learnings/boris-cherny-yc-startup-school-2026
+  confidence: high
+  category: evolution
+- id: cp-github-2500-repo-elements
+  claim: MEASURED (corpus analysis) — effective agents.md files share six elements, led by exact executable
+    commands placed early and real code snippets ("one real code snippet showing your style beats three
+    paragraphs describing it").
+  evidence: Matt Nigh (GitHub) analyzed 2,500+ public agents.md files; successful ones have commands early,
+    code examples over prose, three-tier boundaries (always do / ask first / never do), versioned tech
+    stack, structure map, and git workflow.
+  source_url: https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/
+  confidence: high
+  category: structure
+- id: cp-schmid-160x-tools
+  claim: MEASURED — tools mentioned in AGENTS.md get used 160x more often than unmentioned ones, so naming
+    your tooling is the highest-leverage content.
+  evidence: Philipp Schmid's "Writing a Good AGENTS.md" cites this usage multiplier while advising the
+    file stay under 300 lines; he also cites auto-generated files reducing task success ~3% and raising
+    inference cost >20%, hence "write it yourself, deliberately."
+  source_url: https://www.philschmid.de/writing-good-agents
+  confidence: high
+  category: content
+- id: cp-schmid-progressive-disclosure
+  claim: Exclude what the agent can self-discover (directory listings, codebase overviews) and push task-specific
+    docs into separate referenced files like agent_docs/running_tests.md.
+  evidence: Schmid's separation rule — every line goes into every session, so only non-discoverable, universally
+    applicable facts earn a place; situational detail loads on demand via references.
+  source_url: https://www.philschmid.de/writing-good-agents
+  confidence: high
+  category: separation
+- id: cp-unblocked-audit-steps
+  claim: Bloat is fixed by a subtraction-first audit — measure footprint with /context, delete discoverable
+    content, verify each rule against git log, then move hard constraints out of prose into hooks/linters/CI.
+  evidence: Unblocked's 7-step audit guide defines rules-file bloat as stale/duplicated/discoverable instructions
+    degrading adherence to the rules that still matter; cites Gloaguen et al. 2026 (context files raised
+    inference cost >20% without improving success) and Lulla et al. 2026 (well-scoped AGENTS.md cut runtime
+    ~29%, output tokens ~17%) — MEASURED citations.
+  source_url: https://getunblocked.com/blog/audit-fix-bloated-claude-md/
+  confidence: high
+  category: evolution
+- id: cp-promptmaster-prune-third
+  claim: A pruned CLAUDE.md is often a third of the original length and far more effective; test every
+    line with "if I remove this, will Claude make a mistake?" and delete on no.
+  evidence: 'dev.to''s "Why Claude Code Ignores Your CLAUDE.md" attributes ignoring to bloat, not missing
+    rules — critical instructions "sit too deep to reliably influence output." Note: the claim is stated
+    from experience, not A/B-tested; the post contains no controlled measurements.'
+  source_url: https://dev.to/promptmaster/why-claude-code-ignores-your-claudemd-and-how-to-fix-it-2bb0
+  confidence: high
+  category: size
+- id: cp-builder-emphasis-scarcity
+  claim: Emphasis markers (IMPORTANT, YOU MUST) improve adherence only when scarce — "if everything is
+    marked IMPORTANT, nothing is."
+  evidence: Vishwas Gopinath (Builder.io) advises reserving caps/emphasis for two or three genuinely critical
+    rules, warning the effect scales poorly and degrades as conversations grow; widely repeated across
+    community guides.
+  source_url: https://www.builder.io/blog/claude-md-guide
+  confidence: high
+  category: structure
+- id: cp-builder-correction-ritual
+  claim: Grow CLAUDE.md organically from corrections — when Claude gets something wrong, tell it to add
+    the fix to CLAUDE.md, then periodically ask Claude to optimize the file for redundancies and conflicts.
+  evidence: 'Gopinath''s maintenance ritual: capture rules from real failures rather than anticipatory
+    writing, paired with periodic dedup/conflict review; the direct counter-position to Jacobs'' never-update
+    stance, defining the two poles of community evolution practice.'
+  source_url: https://www.builder.io/blog/claude-md-guide
+  confidence: high
+  category: evolution
+- id: cp-simonw-not-md-files
+  claim: The highest-leverage ways to make a codebase productive for AI coding tools don't involve AGENTS/CLAUDE.md
+    files at all.
+  evidence: Simon Willison stated on X that his codebase-productivity recommendations (tests, docs, automation)
+    "surprisingly none of which involve AGENTS/CLAUDE md files" — a prominent contrarian data point against
+    memory-file investment. X post verified via search snippet only, not refetched directly.
+  source_url: https://x.com/simonw/status/1982158311739867546
+  confidence: medium
+  category: separation
