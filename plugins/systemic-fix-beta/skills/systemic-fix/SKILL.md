@@ -1,16 +1,13 @@
 ---
 name: systemic-fix
 description: >-
-  Discipline for bug fixes: treats the local fault as one instance of a class, not the whole
-  problem — checks scope (grep for the same pattern elsewhere, in a repo-calibrated search
-  order), names the class of mistake, and proposes prevention drawn from the repo's actual
-  lint/pre-commit/test tooling — reporting findings before any patch and defaulting to a
-  local fix. Use whenever a bug is found during ordinary work, or when the user says "is
-  this systemic?", "look wider", "find related bugs", "fix the class, not the instance", or
-  runs `/systemic-fix` (`/systemic-fix recalibrate` redoes the calibration scan). On the
-  first run in a repo it performs a ~30s read-only calibration scan (module map, bug-label
-  taxonomy, existing discipline hooks) into `.claude/systemic-fix/profile.md` and lets the
-  user pick the grep scope and gating once per repo.
+  Discipline for bug fixes: treat the local fault as one instance of a class — check scope
+  (grep the pattern elsewhere in repo-calibrated order), name the class, propose prevention from
+  the repo's actual lint/pre-commit/test tooling, and report findings before any patch (default:
+  local fix only). Use whenever a bug is found during ordinary work, or on "is this systemic?",
+  "look wider", "find related bugs", "fix the class, not the instance", or `/systemic-fix`
+  (`recalibrate` redoes the ~30s first-run calibration into `.claude/systemic-fix/profile.md`).
+
 ---
 
 # systemic-fix

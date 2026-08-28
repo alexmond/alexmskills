@@ -1,6 +1,13 @@
 ---
 name: evolve
-description: Audit + refine the role files in `.claude/roles/` so role personas keep improving after the first graduation. Surfaces consolidation candidates (3+ Learnings entries on one topic become a merge proposal), staleness candidates (Learnings citing files/symbols that no longer exist), Body drift (cumulative learnings contradict the Charter/Body), and solo-to-core graduation candidates. All proposals are user-gated — the skill never silently rewrites a role file. Use when the user says "evolve roles", "audit roles", "consolidate role learnings", "refresh roles", "what should we graduate", or "roles are getting stale". Runs proactively too — periodically when many sessions across a repo have appended to role files. Complements (doesn't replace) the SessionStart `roles-init-audit.py` hook, which is reactive and lightweight; this skill is on-demand and deeper.
+description: >-
+  Audit + refine the role files in `.claude/roles/` so personas keep improving after first
+  graduation: consolidation candidates (3+ Learnings on one topic), staleness (Learnings citing
+  vanished files/symbols), Body drift, and solo-to-core graduation — all proposals user-gated,
+  never silent rewrites. Use when the user says "evolve roles", "audit roles", "consolidate role
+  learnings", "refresh roles", "what should we graduate", or "roles are getting stale"; also
+  periodically when many sessions have appended to role files.
+
 ---
 
 # Evolve Roles

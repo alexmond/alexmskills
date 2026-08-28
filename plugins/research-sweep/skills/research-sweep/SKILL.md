@@ -1,6 +1,13 @@
 ---
 name: research-sweep
-description: The "discover" orchestrator on the marketplace's shared role substrate — the counterpart to dev-crew (deliver) and brainstorm-panel (decide). Compose a task-fit team of coverage roles for an information space, partition it into non-overlapping angles, fan the roles out as parallel research agents under one output contract, merge their results from the agent transcripts via jq (without dumping the JSONL back into context), dedup, and adversarially verify the synthesized findings. Use when the user asks for something "comprehensive", "exhaustive", "as many as possible", "every X", a "catalog/survey/landscape of Y", or any large-scale gathering task where one agent's coverage would be insufficient and re-outputting each agent's result into a Write call would burn output tokens unnecessarily.
+description: >-
+  The "discover" orchestrator on the shared role substrate — counterpart to dev-crew (deliver)
+  and brainstorm-panel (decide). Composes a task-fit team of coverage roles, partitions the space
+  into non-overlapping angles, fans them out as parallel agents under one output contract, then
+  dedups and adversarially verifies the merged, cited findings. Use when the user asks for
+  something "comprehensive", "exhaustive", "as many as possible", "every X", or a
+  "catalog/survey/landscape of Y" — any gathering task too large for one agent's coverage.
+
 argument-hint: "[research or catalog question]"
 ---
 

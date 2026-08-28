@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-08-28 — **desc-budget-gate** — the 15k skill-listing budget regressed a 2nd time (16.4k, unchecked since the 08-18 fix); 4 longest descs trimmed, make validate now gates it. Why: a convention nothing checks rots silently — twice is the proof.
 - 2026-08-28 — **capture-side-evolve** — evolve 1.5.0 (#37 epic, 5 subtasks): unadopted/empty-log/recurrence/layout-drift states + default-off capture triggers, fleet-calibrated (33 repos, 2 FP classes fixed pre-ship). Why: every mechanism pruned existing entries; none noticed a log never written to.
 - 2026-08-28 — **researched-rulebook-ships-in-plugin** — CLAUDE.md-practices sweep (96 findings, 12/12 verified) ships as references/claude-md-best-practices.md INSIDE evolve, not a repo doc. Why: rules the structure review cites must travel with the plugin to every consumer.
 - 2026-08-28 — **live-session-demo** — brainstorm-panel 1.3.1: first REAL recorded-session demo (12 takes); full take-by-take playbook in docs/decisions/2026-08-28-live-session-recording-findings.md. Why: interactivity, not timing, is what breaks scripted recordings.

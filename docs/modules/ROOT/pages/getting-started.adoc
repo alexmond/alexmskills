@@ -1,5 +1,12 @@
 = Getting Started
 
+[NOTE]
+====
+Two in-progress plugins ship with a `-beta` suffix (`tune-repo-beta`,
+`systemic-fix-beta`) — install them the same way; see the README's beta
+section for their graduation path.
+====
+
 == Add the marketplace
 
 Add the marketplace once:

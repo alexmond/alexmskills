@@ -1,16 +1,13 @@
 ---
 name: brainstorm-panel
 description: >-
-  Given a piece of targeted work — a problem to solve, a deliverable to improve,
-  or an idea to develop — assemble the right panel of role-specialized agents,
-  pick a coordination style suited to the task, and run a brainstorming loop where
-  the panel generates, critiques, and refines until it converges on a strong
-  result. The skill chooses the team and the management style itself based on the
-  work; the user just supplies the work. Use this whenever the user hands over a
-  task and wants multiple expert perspectives applied to it — when they ask to
-  "brainstorm," "get a team on this," make something "better / more appealing /
-  more convincing," explore options, or pressure-test an idea. Trigger even if the
-  user only describes the work and doesn't name roles, a process, or a "panel."
+  Given targeted work — a problem, a deliverable to improve, an idea to develop — assemble the
+  right panel of role-specialized agents, pick a coordination style suited to the task, and run a
+  generate-critique-refine loop until it converges. The skill picks the team and process from the
+  work itself. Use when the user hands over work wanting multiple expert perspectives — when they
+  say "brainstorm", "get a team on this", make it "better / more appealing / more convincing",
+  explore options, or pressure-test an idea — even if they never name roles or a "panel".
+
 ---
 
 # Brainstorm Panel

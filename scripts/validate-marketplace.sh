@@ -134,6 +134,39 @@ validate_docs() {
 
 validate_docs "$root/.claude-plugin/marketplace.json"
 
+# --- description budget -----------------------------------------------------
+# Every skill's name+description sits in context for every session; the shared
+# listing budget is ~15,000 chars. It crept over twice (2026-08-18, 2026-08-28)
+# with nothing checking it — past the cap, skills silently stop triggering.
+validate_desc_budget() {
+  local budget=15000
+  local total
+  total=$(python3 - "$root" <<'PY'
+import re, glob, sys
+total = 0
+for f in glob.glob(sys.argv[1] + '/plugins/*/skills/*/SKILL.md'):
+    m = re.match(r'^---\n(.*?)\n---', open(f).read(), re.DOTALL)
+    if not m:
+        continue
+    fm = m.group(1)
+    d = re.search(r'description:\s*(.*?)(?=\n[a-z_-]+:|\Z)', fm, re.DOTALL)
+    n = re.search(r'name:\s*(\S+)', fm)
+    total += len(' '.join(d.group(1).split())) if d else 0
+    total += len(n.group(1)) if n else 0
+print(total)
+PY
+)
+  echo
+  echo "Description budget"
+  if [ "$total" -le "$budget" ]; then
+    note "skill name+description total ${total} chars (budget ${budget})"
+  else
+    err "skill name+description total ${total} chars exceeds the ${budget}-char listing budget — trim descriptions (skills silently stop triggering past the cap)"
+  fi
+}
+
+validate_desc_budget
+
 echo
 if [ "$fail" -eq 0 ]; then
   echo "Marketplace valid."
