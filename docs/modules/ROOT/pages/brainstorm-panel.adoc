@@ -6,6 +6,12 @@ Hand this skill a piece of targeted work and it decides who should be in the roo
 See xref:role-system.adoc[The Role System] for how panel seats are shared with the crew and evolve, and
 xref:role-system-usage.adoc#usage-sequence[Choosing & chaining] for how to chain it with research and crew.
 
+TIP: Watch it live: the repo ships a
+https://github.com/alexmond/alexmskills/blob/main/plugins/brainstorm-panel/demo/demo.gif[26-second demo GIF]
+of a real recorded session — roster gate, `go`, parallel seats, verdict — with its
+https://github.com/alexmond/alexmskills/blob/main/plugins/brainstorm-panel/demo/demo.tape[VHS tape source]
+committed alongside.
+
 == Install
 
 [source,text]

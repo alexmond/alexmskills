@@ -7,6 +7,11 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-28
+
+### Added
+- **brainstorm-panel 1.3.1** — first per-plugin demo: `demo/demo.tape` + `demo/demo.gif`, a **real recorded Claude Code session** (no mockups) run against the [skillsample](https://github.com/alexmond/skillsample) demo stage — the panel diagnoses the repo, proposes a 3-seat roster (demo director / repo-conventions skeptic / recording practitioner) and stops at the review gate, `go` convenes three parallel seat agents, and the director triages real cross-seat disagreement into a decide-only verdict. Recording-hardened invocation documented in the tape: slash-form skill call (a globally-installed brainstorming skill can shadow the bare word "brainstorm"), `--disallowedTools AskUserQuestion` (selection dialogs can't be driven by scripted keystrokes), `--strict-mcp-config`, pre-seeded `.claude` state + a stage-repo CLAUDE.md that opts panel runs out of state persistence (the `.claude` sensitive-file/own-settings dialogs would stall an unattended tape). `Wait+Screen` regexes gate each beat, so the tape survives nondeterministic model timing.
+
 ## 2026-08-27
 
 ### Added
