@@ -1,6 +1,7 @@
 # CLAUDE.md best practices — content, separation, structure. Seeded by 3 parallel
 # research agents on 2026-08-28 (source-scout=og-, container-scout=ex-, practitioner-scout=cp-).
 # Schema: findings[] of {id, claim, evidence, source_url, confidence, category}.
+# Verified 2026-08-28: 12-sample adversarial check, 12/12 held; 3 cosmetic corrections applied.
 
 findings:
 - id: og-when-to-add
@@ -563,7 +564,7 @@ findings:
   claim: The visible failure mode of evolution is append-only accretion - changelog-voiced bullets piling
     into a huge undated file rather than dated sections.
   evidence: All-Hands-AI/OpenHands' AGENTS.md is 714 lines/119.9KB with single bullets up to 3,579 characters
-    and 25 hits of change-narration phrasing ("GitHub automation now includes...", "The agent-server no
+    and repeated change-narration phrasing ("GitHub automation now includes...", "The agent-server no
     longer clones...", "is now the relative path..."), reading as accumulated session notes never pruned.
   source_url: https://github.com/All-Hands-AI/OpenHands/blob/main/AGENTS.md
   confidence: high
@@ -608,8 +609,8 @@ findings:
 - id: ex-anthropic-minimal
   claim: Anthropic's own repos keep CLAUDE.md small and command-centric - two short sections - and several
     flagship repos have no root context file at all.
-  evidence: claude-agent-sdk-python's CLAUDE.md is 27 lines/683 bytes with exactly two sections (Workflow
-    commands, Codebase Structure); anthropic-quickstarts is 66 lines; anthropic-cookbook 111 lines. anthropics/claude-code,
+  evidence: claude-agent-sdk-python's CLAUDE.md is 27 lines/683 bytes with exactly two sections (`# Workflow`,
+    `# Codebase Structure`); anthropic-quickstarts is 66 lines; anthropic-cookbook 111 lines. anthropics/claude-code,
     anthropics/skills, and anthropics/courses return 404 for both CLAUDE.md and AGENTS.md at root.
   source_url: https://github.com/anthropics/claude-agent-sdk-python/blob/main/CLAUDE.md
   confidence: high
@@ -779,8 +780,8 @@ findings:
   confidence: high
   category: structure
 - id: cp-mcmillan-session-decay
-  claim: MEASURED — rule compliance decays within a session (~5.6% lower odds per additional function)
-    and is far worse when editing existing code than writing new code.
+  claim: MEASURED — rule compliance decays within a session (non-monotonic; on the order of ~5.6% lower
+    odds per additional function) and is far worse when editing existing code than writing new code.
   evidence: Same McMillan study; Alex Dunlop's write-up quantifies the task gap as 71.3% compliance on
     new code vs 45.1% on edits — session length and task type dominate, not file craft.
   source_url: https://arxiv.org/abs/2605.10039

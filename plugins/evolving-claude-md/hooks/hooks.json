@@ -24,6 +24,30 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/skills/evolving-claude-md/capture-triggers.py commit 2>/dev/null || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/skills/evolving-claude-md/capture-triggers.py stop 2>/dev/null || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PostCompact": [
       {
         "matcher": ".*",

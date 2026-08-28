@@ -409,6 +409,182 @@ def t_nested_can_be_switched_off():
               proc.stdout[:140])
 
 
+# --- capture-side checks (issue #37 / #39 / #41) --------------------------
+# The pinned cases from the issue, plus drift. Negative cases carry equal
+# weight: every one of these injects into SessionStart context when it fires.
+
+def _git(r: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(r), *args], capture_output=True, timeout=10)
+
+
+def git_repo(tmp: Path, name: str, claude_md: str, commits: int = 1,
+             tracked: dict[str, str] | None = None) -> Path:
+    r = repo(tmp, name, claude_md)
+    _git(r, "init", "-q")
+    _git(r, "config", "user.email", "t@t")
+    _git(r, "config", "user.name", "t")
+    for rel, content in (tracked or {}).items():
+        p = r / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(content, encoding="utf-8")
+    _git(r, "add", "-A")
+    _git(r, "commit", "-qm", "seed")
+    for i in range(commits - 1):
+        _git(r, "commit", "-q", "--allow-empty", "-m", f"c{i}")
+    return r
+
+
+def t_adoption_fires_on_handrolled_log():
+    txt = ("# proj\n\n## Hard-won gotchas\n\n"
+           "- find is bfs here\n- mtime is worthless\n- extension != codec\n")
+    got = audit.adoption_candidate(txt, 0)
+    check("hand-rolled gotchas + 0 D&L entries → adoption fires",
+          got is not None and "UNADOPTED" in got, str(got))
+
+
+def t_adoption_silent_when_log_healthy():
+    txt = "# proj\n\n## Hard-won gotchas\n\n- a\n- b\n- c\n"
+    check("adoption silent when D&L entries exist",
+          audit.adoption_candidate(txt, 6) is None)
+    check("adoption silent when the heading has <3 bullets",
+          audit.adoption_candidate("# p\n\n## Learnings\n\n- only one\n", 0) is None)
+    check("adoption silent on a plain file",
+          audit.adoption_candidate(FULL, 0) is None)
+
+
+def t_empty_log_needs_all_three_signals():
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        young = git_repo(tmp, "young", "# p\n", commits=3)
+        check("a 3-commit new repo is never called an empty log",
+              audit.empty_log_signal("# p\n", 0, str(young)) is None)
+        docs = {f"docs/f{i}.md": "x" * 4000 for i in range(10)}
+        old = git_repo(tmp, "old", "# p\n", commits=25, tracked=docs)
+        got = audit.empty_log_signal("# p\n", 0, str(old))
+        check("25 commits + heavy docs/ + no entries → empty-log fires",
+              got is not None and "EMPTY LOG" in got, str(got))
+        check("empty-log silent once entries exist",
+              audit.empty_log_signal("# p\n", 5, str(old)) is None)
+
+
+def t_recurrence_matches_time_not_file():
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        r = git_repo(tmp, "recur", "# p\n", tracked={
+            "docs/a.md": "This is the third time a heuristic pointed the wrong way.",
+            "docs/b.md": "Open the third file in the list.",
+        })
+        got = audit.docs_recurrences(str(r))
+        check("'the third time' in docs fires recurrence",
+              got == ["docs/a.md"], str(got))
+        r2 = git_repo(tmp, "norec", "# p\n", tracked={
+            "docs/b.md": "Open the third file in the list."})
+        check("'the third file' stays silent",
+              audit.docs_recurrences(str(r2)) == [])
+
+
+def t_layout_drift_both_directions():
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        tracked = {f"engine/f{i}.py": "x" for i in range(4)}
+        tracked.update({"docs/readme.md": "x"})
+        r = git_repo(tmp, "drift", "# p\nsee `plugins/` for code\n", tracked=tracked)
+        new, gone = audit.layout_drift((r / "CLAUDE.md").read_text(), str(r))
+        check("a tracked, unmentioned top-level dir fires drift",
+              new == ["engine"], str(new))
+        check("conventional dirs (docs) are exempt from drift",
+              "docs" not in new)
+        r2 = git_repo(tmp, "ok", "# p\nthe engine/ dir holds the core\n", tracked=tracked)
+        new2, _ = audit.layout_drift((r2 / "CLAUDE.md").read_text(), str(r2))
+        check("mentioning the dir clears drift", new2 == [], str(new2))
+        # stale-layout: `engine/` had history, then vanished
+        _git(r, "rm", "-rq", "engine")
+        _git(r, "commit", "-qm", "drop engine")
+        _, gone3 = audit.layout_drift("# p\nsee `engine/` for the core\n", str(r))
+        check("a mentioned dir gone from the tree (with history) is stale layout",
+              gone3 == ["engine/"], str(gone3))
+        _, gone4 = audit.layout_drift("# p\ndecks land under `presentation/`\n", str(r))
+        check("a foreign path with no git history here stays silent",
+              gone4 == [], str(gone4))
+
+
+def t_drift_respects_min_files_and_skip():
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        r = git_repo(tmp, "small", "# p\n", tracked={"scratch/one.txt": "x"})
+        new, _ = audit.layout_drift((r / "CLAUDE.md").read_text(), str(r))
+        check("a dir under drift_min_files stays silent", new == [], str(new))
+        r2 = git_repo(tmp, "skip", "# p\n<!-- audit-skip: layout-drift -->\n",
+                      tracked={f"engine/f{i}.py": "x" for i in range(4)})
+        new2, gone2 = audit.layout_drift((r2 / "CLAUDE.md").read_text(), str(r2),
+                                         skipped={"layout-drift"})
+        check("audit-skip: layout-drift opts out", new2 == [] and gone2 == [])
+
+
+def t_capture_triggers_are_default_off():
+    with tempfile.TemporaryDirectory() as t:
+        r = git_repo(Path(t), "cap", "# p\n")
+        payload = json.dumps({"tool_input": {"command": "git commit -m x"}})
+        proc = subprocess.run(
+            [sys.executable, str(HERE / "capture-triggers.py"), "commit"],
+            input=payload, cwd=str(r), capture_output=True, text=True, timeout=10)
+        check("commit mining is silent by default",
+              proc.returncode == 0 and proc.stdout.strip() == "", proc.stdout[:120])
+
+
+def t_commit_mining_fires_on_gotcha_language():
+    with tempfile.TemporaryDirectory() as t:
+        r = git_repo(Path(t), "mine", "# p\n")
+        _git(r, "commit", "-q", "--allow-empty", "-m",
+             "fix: turns out the API silently reports success")
+        cdir = r / ".claude" / "evolving-claude-md"; cdir.mkdir(parents=True)
+        (cdir / "config.json").write_text(json.dumps({"commit_mining": True}))
+        payload = json.dumps({"tool_input": {"command": "git commit -m x"}})
+        proc = subprocess.run(
+            [sys.executable, str(HERE / "capture-triggers.py"), "commit"],
+            input=payload, cwd=str(r), capture_output=True, text=True, timeout=10)
+        check("gotcha-shaped commit message fires the promotion nudge",
+              "gotcha-shaped" in proc.stdout and "learn-on-failure" in proc.stdout,
+              proc.stdout[:160])
+        _git(r, "commit", "-q", "--allow-empty", "-m", "chore: bump version")
+        proc2 = subprocess.run(
+            [sys.executable, str(HERE / "capture-triggers.py"), "commit"],
+            input=payload, cwd=str(r), capture_output=True, text=True, timeout=10)
+        check("a routine commit message stays silent",
+              proc2.stdout.strip() == "", proc2.stdout[:120])
+
+
+def t_session_end_capture_fires_once():
+    with tempfile.TemporaryDirectory() as t:
+        r = git_repo(Path(t), "stopcap", "# p\n")
+        cdir = r / ".claude" / "evolving-claude-md"; cdir.mkdir(parents=True)
+        (cdir / "config.json").write_text(json.dumps({"capture_prompt": "session-end"}))
+        transcript = r / "t.jsonl"
+        transcript.write_text(
+            '{"name": "Bash", "input": {"command": "git commit -m x"}}\n'
+            '{"name": "Edit", "file_path": "src/a.py"}\n')
+        payload = json.dumps({"session_id": "s1", "transcript_path": str(transcript)})
+        run = lambda: subprocess.run(
+            [sys.executable, str(HERE / "capture-triggers.py"), "stop"],
+            input=payload, cwd=str(r), capture_output=True, text=True, timeout=10)
+        p1 = run()
+        check("session with commits but no CLAUDE.md touch blocks stop once",
+              '"decision": "block"' in p1.stdout and "0-3" in p1.stdout, p1.stdout[:160])
+        p2 = run()
+        check("the second stop in the same session is silent",
+              p2.stdout.strip() == "", p2.stdout[:120])
+        t2 = r / "t2.jsonl"
+        t2.write_text(
+            '{"name": "Bash", "input": {"command": "git commit -m x"}}\n'
+            '{"name": "Edit", "file_path": "CLAUDE.md"}\n')
+        p3 = subprocess.run(
+            [sys.executable, str(HERE / "capture-triggers.py"), "stop"],
+            input=json.dumps({"session_id": "s2", "transcript_path": str(t2)}),
+            cwd=str(r), capture_output=True, text=True, timeout=10)
+        check("a session that DID touch CLAUDE.md is never prompted",
+              p3.stdout.strip() == "", p3.stdout[:120])
+
+
 CHECKS = [
     t_command_gap_is_grounded_in_the_build_file,
     t_command_gap_clears_when_mentioned,
@@ -430,6 +606,15 @@ CHECKS = [
     t_coverage_can_be_switched_off,
     t_companion_files_are_measured,
     t_nested_can_be_switched_off,
+    t_adoption_fires_on_handrolled_log,
+    t_adoption_silent_when_log_healthy,
+    t_empty_log_needs_all_three_signals,
+    t_recurrence_matches_time_not_file,
+    t_layout_drift_both_directions,
+    t_drift_respects_min_files_and_skip,
+    t_capture_triggers_are_default_off,
+    t_commit_mining_fires_on_gotcha_language,
+    t_session_end_capture_fires_once,
 ]
 
 

@@ -91,6 +91,13 @@ DEFAULTS: dict[str, object] = {
     "layout_min_dirs": 5,
     "coverage": True,      # the upward check (build command, layout)
     "nested": True,        # also size-check nested CLAUDE.md + .claude.local.md
+    # --- capture-side checks (issue #37) ---
+    "adoption_check": True,       # hand-rolled learnings section, zero D&L entries
+    "empty_log_commits": 20,      # empty-log state needs at least this many commits
+    "empty_log_docs_ratio": 5,    # ... and docs/ markdown outweighing CLAUDE.md by this
+    "docs_recurrence": True,      # self-counting language in docs/ ("the third time")
+    "layout_drift": True,         # git-tracked top-level dir unmentioned in CLAUDE.md
+    "drift_min_files": 3,         # ... with at least this many tracked files in it
 }
 
 
@@ -213,6 +220,162 @@ def coverage_gaps(text: str, root: str = ".", cfg: dict | None = None) -> list[s
     return gaps
 
 
+# --- capture-side checks (issue #37): the audit's blind spot was a log that ---
+# --- was never written to. These detect knowledge that went somewhere else. ---
+
+# A hand-rolled learnings section: the repo already tried to solve the problem,
+# just not in the format the parser reads. Zero-FP by construction — a repo
+# either has such a heading or it doesn't.
+ADOPTION_HEADING_RE = re.compile(
+    r"^#{2,4}\s+.*\b(gotchas?|learnings?|lessons?|hard-won|decisions?|notes to self)\b.*$",
+    re.I | re.MULTILINE,
+)
+
+# Ordinal self-counting in docs/ — a rule that has proven itself repeatedly in
+# prose and never graduated to the file that loads every turn. Anchored on
+# recurrence phrasing ("the third time", never "the third file").
+RECURRENCE_RE = (
+    r"the (second|third|fourth|fifth|sixth|[0-9]+(st|nd|rd|th)) time"
+    r"|same mistake again|this keeps happening|for the [0-9N]th time"
+)
+
+# Top-level dirs whose meaning is conventional enough that not describing them
+# is rarely a gap. Everything else git tracks should be locatable from CLAUDE.md.
+DRIFT_EXEMPT_DIRS = {"docs", "doc", "test", "tests", "examples", "example", "scripts"}
+
+
+def _git_lines(args: list[str], root: str = ".") -> list[str]:
+    """Run a git command, return stdout lines; [] on any failure."""
+    import subprocess
+    try:
+        r = subprocess.run(
+            ["git", "-C", root, *args],
+            capture_output=True, text=True, timeout=3,
+        )
+        if r.returncode != 0:
+            return []
+        return [ln for ln in r.stdout.splitlines() if ln]
+    except Exception:
+        return []
+
+
+def adoption_candidate(text: str, entry_count: int) -> str | None:
+    """A learnings-shaped heading with bullets under it, while the parseable
+    D&L log has zero entries — the audit state `unadopted`."""
+    if entry_count:
+        return None
+    for m in ADOPTION_HEADING_RE.finditer(text):
+        heading = m.group(0).strip()
+        if SECTION_HEADING.lstrip("# ").lower() in heading.lower():
+            continue  # the D&L heading itself is the format, not a hand-rolled log
+        after = text[m.end():]
+        nxt = re.search(r"\n#{1,4} ", after)
+        body = after[: nxt.start()] if nxt else after
+        bullets = len(re.findall(r"^\s*[-*] ", body, re.MULTILINE))
+        if bullets >= 3:
+            return (
+                f"UNADOPTED hand-rolled log: `{heading.lstrip('# ')}` holds "
+                f"{bullets} bullets but 0 are parseable D&L entries — offer the "
+                f"migration (each bullet dated + topic-tagged under `{SECTION_HEADING}`)."
+            )
+    return None
+
+
+def empty_log_signal(text: str, entry_count: int, root: str = ".",
+                     cfg: dict | None = None) -> str | None:
+    """Distinguish 'empty' from 'healthy': a repo with real history and a docs/
+    tree that dwarfs CLAUDE.md, but no D&L entries — the learning went elsewhere."""
+    cfg = cfg or DEFAULTS
+    if entry_count:
+        return None
+    commits = _git_lines(["rev-list", "--count", "HEAD"], root)
+    n_commits = int(commits[0]) if commits and commits[0].isdigit() else 0
+    if n_commits < int(cfg["empty_log_commits"]):
+        return None
+    docs_kb = 0.0
+    for d in ("docs", "doc"):
+        p = os.path.join(root, d)
+        if not os.path.isdir(p):
+            continue
+        for dirpath, dirnames, filenames in os.walk(p):
+            dirnames[:] = [x for x in dirnames if x not in NESTED_SKIP_DIRS]
+            for fn in filenames:
+                if fn.endswith((".md", ".adoc", ".rst")):
+                    try:
+                        docs_kb += os.path.getsize(os.path.join(dirpath, fn)) / 1024.0
+                    except OSError:
+                        pass
+    claude_kb = max(len(text.encode("utf-8")) / 1024.0, 0.1)
+    if docs_kb < float(cfg["empty_log_docs_ratio"]) * claude_kb:
+        return None
+    return (
+        f"EMPTY LOG is not healthy here: {n_commits} commits and "
+        f"{docs_kb:.0f} KB of docs vs {claude_kb:.1f} KB of CLAUDE.md, yet 0 D&L "
+        f"entries — the learning is going somewhere that doesn't load every turn."
+    )
+
+
+def docs_recurrences(root: str = ".") -> list[str]:
+    """Self-counting language in docs — 'the third time X happened' is a rule
+    begging to graduate into CLAUDE.md."""
+    hits = _git_lines(
+        ["grep", "-iEl", RECURRENCE_RE, "--", "docs/*.md", "docs/**/*.md",
+         "doc/*.md", "doc/**/*.md"],
+        root,
+    )
+    return sorted(set(hits))[:5]
+
+
+def layout_drift(text: str, root: str = ".", cfg: dict | None = None,
+                 skipped: set[str] | None = None) -> tuple[list[str], list[str]]:
+    """Structure drift, both directions (issue #37 review additions):
+
+    - new-dir drift: a git-tracked top-level directory (with enough tracked
+      files to matter) whose name appears nowhere in CLAUDE.md;
+    - stale-layout: a backticked `dir/` mentioned in CLAUDE.md that no longer
+      exists in the tree.
+
+    The plain layout check is one-shot — satisfied forever once any layout
+    prose exists. This is the check that keeps the prose tracking the tree.
+    """
+    cfg = cfg or DEFAULTS
+    skipped = skipped or set()
+    if "layout-drift" in skipped:
+        return [], []
+    lower = text.lower()
+
+    # -z: NUL-separated, no C-quoting — a path with spaces or non-ASCII chars
+    # would otherwise arrive wrapped in literal quotes (found in calibration).
+    counts: dict[str, int] = {}
+    raw = _git_lines(["-c", "core.quotePath=false", "ls-files", "-z"], root)
+    for path in ("\0".join(raw)).split("\0"):
+        if "/" not in path:
+            continue
+        top = path.split("/", 1)[0]
+        counts[top] = counts.get(top, 0) + 1
+
+    unmentioned = [
+        d for d, n in sorted(counts.items())
+        if n >= int(cfg["drift_min_files"])
+        and not d.startswith(".")
+        and d not in LAYOUT_IGNORE_DIRS
+        and d.lower() not in DRIFT_EXEMPT_DIRS
+        and not re.search(r"\b" + re.escape(d.lower()) + r"\b", lower)
+    ]
+
+    gone = []
+    for tok in set(re.findall(r"`([A-Za-z0-9_.\-]+(?:/[A-Za-z0-9_.\-]+)*/)`", text)):
+        if os.path.isdir(os.path.join(root, tok)):
+            continue
+        # Foreign-path filter (the memory-hygiene calibration lesson): a
+        # backticked dir that never existed in THIS repo's history is a path in
+        # some other repo (a skill's output dir, an example) — not stale layout.
+        if not _git_lines(["log", "-1", "--format=%h", "--", tok], root):
+            continue
+        gone.append(tok)
+    return unmentioned[:6], sorted(gone)[:6]
+
+
 NESTED_MAX_DEPTH = 3       # deep enough for packages/<x>/<y>/CLAUDE.md, shallow enough to stay fast
 NESTED_SKIP_DIRS = {
     ".git", ".idea", ".vscode", "node_modules", "target", "build", "dist",
@@ -272,22 +435,59 @@ def main() -> int:
 
     parts: list[str] = []
 
+    skipped = {
+        s.strip().lower()
+        for m in SKIP_RE.findall(text)
+        for s in m.split(",")
+    }
+
     idx = text.find(SECTION_HEADING)
     if idx == -1:
         # No D&L wiring. Still report file size + total dated bullets so
-        # bloat doesn't grow unwatched (the old script returned silently).
+        # bloat doesn't grow unwatched (the old script returned silently) —
+        # and run the capture-side checks: this path is exactly where a log
+        # that was never written to hides (issue #37).
         dated_bullets = len(
             re.findall(r"^- (?:~~)?\d{4}-\d{2}-\d{2}", text, re.MULTILINE)
         )
         gaps = coverage_gaps(text, cfg=cfg) if cfg["coverage"] else []
+        adoption = adoption_candidate(text, 0) if cfg["adoption_check"] else None
+        empty = empty_log_signal(text, 0, cfg=cfg)
+        recur = docs_recurrences() if cfg["docs_recurrence"] else []
+        drift_new, drift_gone = (
+            layout_drift(text, ".", cfg, skipped) if cfg["layout_drift"] else ([], [])
+        )
         if (file_kb < float(cfg["file_warn_kb"])
                 and dated_bullets < float(cfg["entries_warn"])
-                and not gaps and not heavy):
+                and not gaps and not heavy and not adoption and not empty
+                and not recur and not drift_new and not drift_gone):
             return 0
         parts.append(
             f"📝 CLAUDE.md audit: no `{SECTION_HEADING}` section found "
             f"({file_kb:.1f} KB, {dated_bullets} dated bullets elsewhere)."
         )
+        if adoption:
+            parts.append(f"🔎 {adoption}")
+        if empty:
+            parts.append(f"🔎 {empty}")
+        if recur:
+            listed = ", ".join(f"`{p}`" for p in recur[:3])
+            parts.append(
+                f"🔎 Docs are counting their own recurrences ({listed}) — a rule "
+                f"that has proven itself in prose belongs in CLAUDE.md."
+            )
+        if drift_new:
+            parts.append(
+                f"🔎 Layout drift — tracked top-level dir"
+                f"{'' if len(drift_new) == 1 else 's'} CLAUDE.md never mentions: "
+                + ", ".join(f"`{d}/`" for d in drift_new)
+                + ". Describe or `<!-- audit-skip: layout-drift -->`."
+            )
+        if drift_gone:
+            parts.append(
+                "🔎 Stale layout — mentioned but gone from the tree: "
+                + ", ".join(f"`{d}`" for d in drift_gone) + " (removal candidates)."
+            )
         if file_kb > float(cfg["file_recommend_kb"]):
             parts.append("**Whole-file compaction RECOMMENDED.**")
         elif file_kb > float(cfg["file_warn_kb"]):
@@ -387,8 +587,20 @@ def main() -> int:
 
     gaps = coverage_gaps(text, cfg=cfg) if cfg["coverage"] else []
 
+    # Capture-side checks run on this path too: a D&L section with zero
+    # entries is still an unwritten log, and drift/recurrence are independent
+    # of the log's health entirely.
+    adoption = adoption_candidate(text, entry_count) if cfg["adoption_check"] else None
+    empty = empty_log_signal(text, entry_count, cfg=cfg)
+    recur = docs_recurrences() if cfg["docs_recurrence"] else []
+    drift_new, drift_gone = (
+        layout_drift(text, ".", cfg, skipped) if cfg["layout_drift"] else ([], [])
+    )
+
     if (not level and not mega and not clusters and not stale
-            and not stale_pins and not stale_seqs and not gaps and not heavy):
+            and not stale_pins and not stale_seqs and not gaps and not heavy
+            and not adoption and not empty and not recur
+            and not drift_new and not drift_gone):
         return 0
 
     parts.append(
@@ -441,6 +653,29 @@ def main() -> int:
         parts.append(
             f"⚠️ {len(stale_seqs)} stale sequence fact{'' if len(stale_seqs) == 1 else 's'} "
             f"(strike/update candidates): {listed}{more}."
+        )
+
+    if adoption:
+        parts.append(f"🔎 {adoption}")
+    if empty:
+        parts.append(f"🔎 {empty}")
+    if recur:
+        listed = ", ".join(f"`{p}`" for p in recur[:3])
+        parts.append(
+            f"🔎 Docs are counting their own recurrences ({listed}) — a rule "
+            f"that has proven itself in prose belongs in CLAUDE.md."
+        )
+    if drift_new:
+        parts.append(
+            f"🔎 Layout drift — tracked top-level dir"
+            f"{'' if len(drift_new) == 1 else 's'} CLAUDE.md never mentions: "
+            + ", ".join(f"`{d}/`" for d in drift_new)
+            + ". Describe or `<!-- audit-skip: layout-drift -->`."
+        )
+    if drift_gone:
+        parts.append(
+            "🔎 Stale layout — mentioned but gone from the tree: "
+            + ", ".join(f"`{d}`" for d in drift_gone) + " (removal candidates)."
         )
 
     if heavy:

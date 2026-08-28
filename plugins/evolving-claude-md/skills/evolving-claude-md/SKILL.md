@@ -116,7 +116,7 @@ Only the root file gets the full treatment — Decisions & Learnings parsing,
 staleness, coverage — because that is where the log lives and reporting on five
 files at every session start would be its own kind of noise.
 
-## The three hooks
+## The hooks
 
 ### SessionStart audit (`audit-claude-md.py`)
 
@@ -127,6 +127,7 @@ Fires once per session. Reads CLAUDE.md, identifies:
 - Any topic tag with 3+ entries → graduation candidate
 - **Staleness** (predicates in `freshness.py`, the shared vendorable core) — entries citing backticked artifacts `git grep` can no longer find; version pins a build file (`pom.xml`, `package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`) now contradicts; and "latest is `V27`"-style sequence facts where the tree holds a higher-numbered file. All grounded in the tree, silent when parsing is uncertain → strike/update candidates
 - **Coverage gaps** — the one check that pushes *up* (see below)
+- **Capture-side states** (issue #37) — `unadopted` (a hand-rolled gotchas/learnings section with bullets but zero parseable D&L entries → offer the migration); `empty log` (20+ commits, docs/ markdown ≥5× CLAUDE.md, no D&L entries — the learning is going somewhere that doesn't load every turn); docs **recurrence** ("the third time…" self-counting language in docs/ — a rule begging to graduate); **layout drift** (a git-tracked top-level dir CLAUDE.md never mentions, and the reverse: a mentioned `dir/` gone from the tree — the plain layout check is one-shot and satisfied forever, this is what keeps prose tracking the tree; foreign paths are filtered by requiring the dir to have existed in this repo's git history)
 
 Silent when healthy. When triggered, emits `hookSpecificOutput.additionalContext` so the assistant sees the recommendation and can propose action.
 
@@ -138,6 +139,24 @@ Fires before any `Write|Edit` of CLAUDE.md. Reads the proposed content, validate
 - Body ≤200 chars
 
 If any entry violates, denies with a `reason` explaining which line + how to fix. The assistant retries with a corrected entry.
+
+### Capture triggers (`capture-triggers.py`) — default OFF
+
+The write path the other hooks never had. Two opt-in triggers
+(`.claude/evolving-claude-md/config.json`), off until calibration measures
+their noise (the retired gotchas check's 59%-fire lesson gates these too):
+
+- **Session-end capture** (`"capture_prompt": "session-end"`, Stop hook) —
+  commits + edits but CLAUDE.md untouched and no `docs/decisions/` file →
+  block the stop once: nominate 0–3 entries. Zero is explicitly allowed.
+- **Commit mining** (`"commit_mining": true`, PostToolUse on Bash) — a commit
+  message with gotcha-shaped language ("turns out", "silently", "reports
+  success") is a finished learning; suggest promoting it while context is hot.
+
+Both prompts route: repo-durable, team-relevant → a D&L entry here;
+machine-personal or private → the `learn-on-failure` skill to user memory.
+One capture engine, two destinations — this plugin owns the triggers,
+learn-on-failure owns the memory-side write path.
 
 ### PostCompact audit
 
@@ -234,6 +253,25 @@ no D&L log, so it was only re-detecting "hasn't adopted this skill", which the a
 already says. Gotchas arrive by *graduation* from the log; the topic-cluster check is
 the grounded way to prompt for them. Don't re-add it without data.
 
+## Structure review — evolve the file's shape, not just its entries
+
+The file's *internal structure* rots with the project: sections outlive their
+subject, content sits at the wrong level, layout prose stops matching the
+tree. Run a structure review when the user asks ("review CLAUDE.md
+structure"), when drift/adoption states fire, or during a compaction pass:
+
+1. **Ground in the rulebook** —
+   [references/claude-md-best-practices.md](references/claude-md-best-practices.md),
+   the researched, cited practices. Every recommendation must trace to a rule
+   there or to a tree-provable audit state. No invented taste.
+2. **Inventory the file** — sections, sizes, content classes, current flags.
+3. **Recommend, don't rewrite** — adds / moves / removals as a short list,
+   each with its citation and destination (inline, `docs/`, `.claude/rules/`,
+   a skill, user memory, deletion). The user picks; apply what they accept.
+4. **Respect the measured hierarchy** — presence, brevity, and consistency
+   dominate; reordering is mostly noise (see the rulebook's "what NOT to
+   optimize"). Prefer deletions and relocations over rearrangements.
+
 ## Quality bar for entries
 
 Each entry passes all three:
@@ -276,6 +314,7 @@ calibration across real repos.
 - **Topic tag inconsistency.** Lint enforces presence; the audit surfaces clustering. Pick existing tags before inventing new ones.
 - **Graduating too eagerly.** A pattern with 3 entries spread across one week isn't stable — wait 14 days minimum.
 - **Skipping the archive.** Quarterly archive is operational; nothing automates it. Calendar reminder.
+- **The log is never written to.** Every other failure mode assumes entries exist. If a session ends with commits but no new entry, the mechanism has failed *silently* — which is worse than failing loudly. A repo whose findings all live in `docs/` has this failure; the capture-side audit states and the (opt-in) capture triggers exist for exactly this.
 
 ## Boundary — this skill vs `memory-hygiene`
 

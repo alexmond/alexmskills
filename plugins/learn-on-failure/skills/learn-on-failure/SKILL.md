@@ -5,7 +5,8 @@ description: >
   a task required more than one fix cycle to resolve — e.g. a test failed and needed a
   second attempt, a compile error required a correction, an API behaved unexpectedly, or
   an assumption proved wrong mid-task. Also invoke when the user explicitly asks to
-  remember something. Do NOT invoke for routine single-pass work.
+  remember something — "remember this", "save this learning", "don't make that mistake
+  again". Do NOT invoke for routine single-pass work.
 argument-hint: "[topic] [what you learned]"
 ---
 
@@ -56,6 +57,18 @@ If triggered **by the user**, record exactly what they stated in `$ARGUMENTS`.
 
 5. Confirm to the user what was saved and where (one line is enough).
 
+6. **Log the fire** — append one line to `<repo>/.claude/learn-on-failure/log.md`
+   (create the file if absent):
+
+   ```
+   - YYYY-MM-DD — auto|user — <topic> — <what was saved, one line>
+   ```
+
+   This is the skill's only instrumentation. A prose-triggered skill that never
+   fires looks identical to a repo with nothing to learn; the log is what makes
+   under-firing visible and auditable (the same failure mode evolving-claude-md's
+   issue #37 documents for CLAUDE.md logs).
+
 ### What to save
 
 - Root causes of multi-cycle failures and the correct fix
@@ -71,3 +84,8 @@ If triggered **by the user**, record exactly what they stated in `$ARGUMENTS`.
 - Temporary task state or in-progress work
 - Anything already covered verbatim in the project's `CLAUDE.md`
 - Guesses or conclusions that were not verified by a passing test or explicit confirmation
+- **Repo-durable, team-relevant learnings in a repo running `evolving-claude-md`** —
+  those belong in CLAUDE.md's Decisions & Learnings log (committed, team-shared),
+  not in user memory. This skill is the write path for the *personal* remainder:
+  machine-specific quirks, private context, preferences. One capture engine, two
+  destinations — evolving-claude-md's capture prompts route here for that half.

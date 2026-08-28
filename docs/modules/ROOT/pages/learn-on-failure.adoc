@@ -40,6 +40,17 @@ On an automatic trigger it derives, from the conversation: the root cause of the
 
 Short insights go into a `MEMORY.md` section (kept under 200 lines); detailed learnings go into a topic file with a one-line index reference. Entries are bullet points that lead with *what to do / check* and follow with *why*, superseding stale notes rather than duplicating them. Confirms in one line where it saved.
 
+== What's new in 1.1.0
+
+* Every fire appends one line to the consuming repo's
+  `.claude/learn-on-failure/log.md` — a prose-triggered skill that never fires
+  looks identical to a repo with nothing to learn, and the log is what makes
+  under-firing visible.
+* Routing: repo-durable, team-relevant learnings belong in
+  xref:evolving-claude-md.adoc[evolving-claude-md]'s Decisions & Learnings log,
+  not user memory; this skill is the write path for the personal remainder.
+  evolving-claude-md's capture prompts route here for that half.
+
 == Notes
 
 * Saves root causes, non-obvious API quirks, version constraints (e.g. BCrypt `$2y$` vs `$2a$`), architectural decisions, and stated user preferences.

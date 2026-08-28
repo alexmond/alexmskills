@@ -37,6 +37,38 @@ The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the
 * *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
 * *PostCompact* — re-runs the audit so the assistant sees the current state without paying to re-read the whole file.
 
+== What's new in 1.5.0 — the capture side
+
+Every earlier mechanism was pruning pressure on entries that already exist; the
+blind spot was a log that was *never written to* (issue
+https://github.com/alexmond/alexmskills/issues/37[#37] — installed for weeks on
+a 127-commit repo, zero output, while sessions rediscovered the same gotchas).
+
+New tree-grounded audit states, fleet-calibrated on 33 repos:
+
+* *Unadopted* — a hand-rolled gotchas/learnings heading with bullets but zero
+  parseable D&L entries: the repo already tried to solve the problem by hand;
+  the audit offers the migration.
+* *Empty log* — 20+ commits, `docs/` markdown at least 5x CLAUDE.md, and no
+  entries: the learning is going somewhere that doesn't load every turn.
+* *Docs recurrence* — "the third time..." self-counting language in `docs/`; a
+  rule that proves itself in prose belongs in the file that loads every session.
+* *Layout drift*, both directions — a git-tracked top-level directory CLAUDE.md
+  never mentions, and a mentioned `dir/` gone from the tree (filtered by git
+  history so foreign paths from skill docs never fire).
+
+New opt-in *capture triggers* (both default **off** until real-use noise is
+measured): a session-end prompt when a session committed and edited files but
+never touched CLAUDE.md, and commit-message mining that offers to promote
+gotcha-shaped commit prose while the context is hot. Both route entries:
+repo-durable → the D&L log; machine-personal → the `learn-on-failure` skill.
+
+New *structure review*: analyze the file's internal shape against a shipped,
+researched rulebook (`references/claude-md-best-practices.md` — 96 cited
+findings from official docs, ~40 real repo files, and measured studies;
+adversarially verified). Recommendations must cite a rule or a tree-provable
+check, and the measured evidence hierarchy caps cosmetic rearrangement.
+
 == What's new in 1.1.1
 
 * *Merge as the fourth downward pressure* — SKILL.md now documents merging same-session same-area clusters (phased rollouts `e2a`/`e2b`/`e3`/`e4`; multi-aspect bursts within ~48h) as the compaction lever that works *pre-14-days*. Graduation and quarterly archive both require old entries; merge does not. Discovered while compacting a sibling repo's 37-entry log when the audit fired "RECOMMENDED" but every documented pressure was blocked.
