@@ -116,12 +116,34 @@ in the pipeline.
 Expect at least one to come back false. That is the review working, and the falsification is usually
 the single most valuable paragraph in the document — record what survives and what replaces the claim.
 
+**Then name the slice most likely to falsify them, and run it FIRST, alone.** Ask: where would a
+counterexample live if one existed? That is rarely the obvious-competitor slice — it is usually an
+adjacent field that solved your problem for different reasons. Run that one slice as a cheap probe
+and let it report before briefing anything else.
+
+The reason is sequencing, not curiosity. A hypothesis that falsifies *last* leaves every other slice
+having researched a question the evidence then demolishes — they gathered against the wrong claim
+and none of them looked for the narrowed one. Falsify early and the remaining slices can be briefed
+against what actually survived.
+
 ## Phase 1 — Discover
 
 **Commit to the schema before launching anything.** Agents that return subtly different shapes cannot
 be merged. Lock the entry fields (`id`, `name`, `url`, `slice`, `delivery_model`, `licence`,
 `evidence` …), the tier rules, and the forbidden behaviours — no fabrication, omit unknown fields
 rather than guess — and paste that block **verbatim** into every agent prompt.
+
+**Put the hypotheses in the schema.** Give every entry one verdict field per hypothesis:
+
+```yaml
+    h1_verdict: refutes | supports | silent    # does THIS system refute H1?
+    h1_evidence: <the specific mechanism, or why it does not apply>
+```
+
+Without this, testing a hypothesis means reading a hundred entries hunting for counterexamples, and
+a counterexample buried in one prose field of one entry gets missed. With it, falsification is
+`grep 'h1_verdict: refutes'` — and an agent that has to *rule on* your hypothesis engages with it far
+harder than one merely filling in a description.
 
 **Partition into disjoint slices.** Competitive spaces have their own natural axes, which are not the
 generic ones: by **market slice**, by **delivery model**, by **adjacency ring**, by **era of entry**.
@@ -131,7 +153,19 @@ conflicts at the seams. See [references/partition-axes.md](references/partition-
 Aim for 4–6 slices. Each prompt carries: one line of context, the schema verbatim, the slice it owns
 and nobody else touches, source guidance, the verification rules, a numeric floor so the agent does
 not stop at the famous three, "return YAML only in a fenced block", and **"answer directly — do not
-spawn sub-agents and do not wait on anything"**. Without that last clause an agent may delegate its
+spawn sub-agents and do not wait on anything"**.
+
+**Give each slice a depth budget, not just a volume floor.** Count is the easy half and it hides the
+failure that matters: a slice can hit its entry target while leaving the pivotal dimension blank.
+
+- **Direct peers** — the systems a user would pick *instead of* the subject — require **CODE tier on
+  every pivotal dimension**, or an explicit `unreached: <why>` marker. Never a bare `unknown`.
+- **Contrast slices** (SaaS, vendor-bundled, the dead) need liveness, licensing and the lesson.
+  MARKET tier is the right answer there and inflating it wastes the budget.
+
+State the budget in the prompt and check it on return: **`unknown` counts per slice are the quality
+metric**, not entry counts. If the peer slice comes back half-unknown on the dimension the thesis
+turns on, the review is hollow however many rows it has — re-run that slice before analysing. Without that last clause an agent may delegate its
 slice and then return a progress report instead of data, burning its whole budget on coordination.
 
 Launch them **in a single message** so they run concurrently, with `run_in_background: true`.
@@ -173,6 +207,17 @@ life. Check the archived flag, find the last *substantive* commit with bot and n
 out, and diff documented capabilities against what the source actually still contains. Dead and dying
 competitors are among the most valuable findings in a review — each one is a lesson about the
 category. Procedure and the known traps: [references/liveness-forensics.md](references/liveness-forensics.md).
+
+**Seam reconciliation — mechanical, and before you draft anything.** Merge the slices and list every
+system returned by more than one. Each collision is either a duplicate to fold or a **contradiction
+to resolve** — two slices disagreeing on the same system's liveness or behaviour. Resolve by evidence
+quality, not by preference, and record the resolution.
+
+Do this **before** drafting: a contradiction caught pre-draft is a merge, caught post-draft it is a
+rewrite. And treat a cluster of collisions as a **partition flaw rather than agent error** — a slice
+defined by a cross-cutting property (a "dead and dormant" slice, say) is not disjoint from anything,
+because deadness is a property every slice's members can have. Scope such a slice to what no other
+slice would return, or drop it and rely on the per-entry `liveness` field.
 
 **Adversarial verification — by a fresh agent that did not gather the data**, so it has no stake in
 defending it. Its mandate: spot-check a 10–20% sample against primary sources; hunt fabricated URLs,
