@@ -7,6 +7,24 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-08-29
+
+### Added
+- **competitive-review 0.1.0** — new plugin. Turns "how do we compare?" into a positioning document
+  that survives a year. Four modes (`review` / `refresh` / `teardown` / `render`) and four mechanisms
+  the generic competitor-analysis skills lack: **falsifiable hypotheses committed before the research**
+  (gated on user approval, so the review can come back and falsify them); a **claim-tier citation
+  contract** — MARKET needs a URL *and retrieval date*, REPO needs verbatim host API metadata, CODE
+  needs `file:line` at a pinned commit — with `(unverified)` as a first-class marker and
+  unverified-negative kept distinct from false; **liveness forensics** that catch the five traps a
+  last-commit date hides (org-wide no-op commit batches, README-vs-source drift, the archived project
+  whose live fork is the real rival, commit-vs-release cadence, stars as a lagging indicator); and a
+  **refresh mode** whose payload is the delta — DIED / NEW / FALSIFIED / STALE / DRIFT — where STALE
+  is the subject's *own* rows that shipped since the last review. Standalone: no dependency on
+  research-sweep, though it uses the same schema-first → disjoint-slices → jq-extract → adversarially-
+  verify shape. Distilled from three hand-written reviews; five references keep SKILL.md under the
+  body-size rule.
+
 ## 2026-08-28
 
 ### Changed

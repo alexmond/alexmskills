@@ -1,0 +1,116 @@
+= Competitive Review
+:navtitle: competitive-review
+
+Turns "how do we compare?" into a positioning document that is still trustworthy a year later. Finding the competitors is the cheap half — any agent with a search tool produces a plausible list, and that list rots within a quarter. This skill exists for the expensive half: *evidence discipline*. Falsifiable hypotheses are written before the research so they can come back falsified; every claim carries a tier and the citation that tier demands; liveness is investigated rather than inferred from a commit date; and a refresh reports what *changed* — including which of your own claimed gaps you have since closed.
+
+The output is an internal positioning document, not marketing copy.
+
+== Install
+
+[source,text]
+----
+/plugin install competitive-review@alexmskills
+----
+
+== Trigger it
+
+[source,text]
+----
+/competitive-review:competitive-review
+----
+
+Or ask in natural language: "run a competitor analysis", "how does this compare to the competition", "who else does this", "is our positioning still true".
+
+== When to use it
+
+* Positioning questions — "where do we actually win", "what should we build next"
+* Category-shaped or plural asks — "who else does this", "what is the landscape"
+* Refreshing a review that has gone stale
+* Skip it for a single named competitor, a one-off feature check, or a clarification against a current review — those are lookups, not reviews
+
+== The four modes
+
+[cols="1,2,3"]
+|===
+| Mode | When | What it does
+
+| `review`
+| No existing document
+| The whole pipeline, cold
+
+| `refresh`
+| An existing document is found
+| Diffs the world against it; reports what changed and what that invalidated
+
+| `teardown <competitor>`
+| "How does X actually do Y"
+| Deep code mode on one rival; appends an evidenced section
+
+| `render`
+| "Rebuild the review page"
+| Regenerates `index.html` and screenshots from the existing markdown
+|===
+
+== What it does
+
+=== Commits to hypotheses before researching
+
+Two to four *falsifiable* claims, written into the document before any agent runs, and approved by you first. "We are well positioned" is useless — nothing could falsify it. "No self-hosted tool in this category treats X and Y as separate concerns" is testable.
+
+Expect at least one to come back false. That is the review working, and the falsification is usually the most valuable paragraph in the document.
+
+=== Tiers every claim, and cites it
+
+[cols="1,2,3"]
+|===
+| Tier | Claim type | Required evidence
+
+| *MARKET*
+| Pricing, licensing, positioning, roadmap
+| Source URL *plus retrieval date*
+
+| *REPO*
+| Alive/dead, activity, licence, releases
+| Host API metadata, captured verbatim
+
+| *CODE*
+| "It implements X this way"
+| `file:line` at a pinned commit in a local checkout
+|===
+
+Unverifiable claims are marked `(unverified)`, collected into a caveats register, and explicitly barred from being quoted as fact. An "unverified-negative" — no positive evidence found, no upstream denial — is a distinct label from "does not have it"; uniqueness claims about your own project are nearly always this.
+
+=== Investigates liveness instead of guessing it
+
+A last-commit date is not evidence of life, and a quiet repo is not evidence of death. The forensics pass catches the org-wide no-op commit batch that makes a dormant project look active, the README documenting an integration the source no longer contains, the archived project whose live fork is the real competitor, and the gap between commit cadence and release cadence. Every competitor gets a verdict — active, maintained, dormant, dead, superseded — with the evidence that produced it.
+
+=== Fans out, then adversarially verifies
+
+Locks an entry schema before launching, partitions the category on an axis that carves it cleanly (market slice, delivery model, adjacency ring, era of entry), runs 4–6 agents in one message, and extracts their results straight from the transcripts via `jq` without dumping JSONL back into context. Then a *fresh* agent that did not gather the data spot-checks a sample, hunts fabricated URLs and dates, checks the seams between slices, and names what is missing.
+
+=== Produces three artifacts
+
+`docs/competitive-review/competitor-analysis.md` (canonical), a self-contained `index.html` companion that opens from disk with no build step, and UI-benchmark screenshots where the interface is the product.
+
+=== Learns per category
+
+A source-trust ledger records which registries proved authoritative for this category and which fabricated; the run log records hypotheses and their verdicts, thin slices, and liveness traps. Patterns that hold across three runs graduate into the repo's `CLAUDE.md`.
+
+== Files it owns
+
+[cols="1,2"]
+|===
+| Path | Purpose
+
+| `docs/competitive-review/competitor-analysis.md`
+| The canonical document
+
+| `docs/competitive-review/index.html`
+| Self-contained companion page
+
+| `.claude/competitive-review/log.md`
+| Per-run evidence — hypotheses, verdicts, thin slices, verifier findings
+
+| `.claude/competitive-review/sources.md`
+| Source-trust ledger for this category
+|===

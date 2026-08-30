@@ -30,6 +30,7 @@
 * Agents & research
 ** xref:review-agents.adoc[Review Agents]
 ** xref:research-sweep.adoc[Research Sweep]
+** xref:competitive-review.adoc[Competitive Review]
 * Beta plugins
 ** xref:tune-repo.adoc[Tune Repo]
 ** xref:systemic-fix.adoc[Systemic Fix]

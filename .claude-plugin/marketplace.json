@@ -158,6 +158,21 @@
       ]
     },
     {
+      "name": "competitive-review",
+      "displayName": "Competitive Review",
+      "source": "./plugins/competitive-review",
+      "description": "Evidence-tiered competitive analysis: falsifiable hypotheses stated before the research, a claim-tier citation contract (market / repo / code), liveness forensics that catch dead-but-committing projects, and a refresh mode that reports what changed and what it invalidated.",
+      "version": "0.1.0",
+      "category": "research",
+      "keywords": [
+        "competitive-analysis",
+        "research",
+        "positioning",
+        "evidence",
+        "verification"
+      ]
+    },
+    {
       "name": "roles",
       "displayName": "Role Registry",
       "source": "./plugins/roles",

@@ -41,6 +41,7 @@ that captures every multi-cycle debugging detour.
 | [`ticket-triage`](plugins/ticket-triage) | workflow | 0.1.0 | Backlog-drain loop: rank the open tickets, dispatch the startable ones in parallel (worktree-isolated, role-briefed, honest width), verify and merge each result, and re-triage on every completion until the queue is empty or everything left needs the user. |
 | [`review-agents`](plugins/review-agents) | review | 1.1.0 | Specialist review subagents for Java/Maven projects — code review, test running, dependency/CVE auditing. No-write by construction: Write/Edit withheld. |
 | [`research-sweep`](plugins/research-sweep) | research | 1.2.1 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
+| [`competitive-review`](plugins/competitive-review) | research | 0.1.0 | Evidence-tiered competitor review: falsifiable hypotheses stated before the research, a claim-tier citation contract (market / repo / code), liveness forensics that catch dead-but-committing projects, and a refresh mode that reports what changed and what it invalidated. |
 
 ## The Role System
 
@@ -91,6 +92,7 @@ Then install what you want — copy-paste any of these:
 /plugin install ticket-triage@alexmskills
 /plugin install review-agents@alexmskills
 /plugin install research-sweep@alexmskills
+/plugin install competitive-review@alexmskills
 ```
 
 Or browse interactively with `/plugin` (Discover tab). After a maintainer pushes an update, refresh

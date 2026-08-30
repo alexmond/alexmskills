@@ -93,6 +93,9 @@ Guided procedures for a specific job, start to finish.
 | xref:research-sweep.adoc[research-sweep]
 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies the findings.
 
+| xref:competitive-review.adoc[competitive-review]
+| Evidence-tiered competitor review: falsifiable hypotheses stated before the research, a claim-tier citation contract, liveness forensics, and a refresh mode that reports what changed.
+
 | xref:review-agents.adoc[review-agents]
 | Read-only specialist subagents for code review, test running, and dependency/CVE auditing on lighter model tiers.
 |===

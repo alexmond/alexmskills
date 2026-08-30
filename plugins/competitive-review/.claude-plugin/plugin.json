@@ -1,0 +1,19 @@
+{
+  "name": "competitive-review",
+  "description": "Evidence-tiered competitive analysis: falsifiable hypotheses stated before the research, a claim-tier citation contract (market / repo / code), liveness forensics that catch dead-but-committing projects, and a refresh mode that reports what changed and what it invalidated.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "competitive-analysis",
+    "research",
+    "positioning",
+    "evidence",
+    "verification"
+  ]
+}
