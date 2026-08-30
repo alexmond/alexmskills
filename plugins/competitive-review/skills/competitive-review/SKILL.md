@@ -225,10 +225,16 @@ revised sections with the date they were revised so a reader can tell new analys
 Opt-in, per competitor, for open-source rivals only. This is what promotes a claim from "their docs
 say" to "their code does".
 
-1. **Prefer a checkout that already exists** on the machine before cloning anything.
+1. **Prefer a checkout that already exists** on the machine before cloning anything — but **verify it
+   is upstream before trusting a line of it.** An existing local clone is usually a fork you have
+   patched, and your patches sit exactly where you believe the competitor is weakest. Check
+   `git status --porcelain` for uncommitted work and `git log <pin>..HEAD` for local commits, then
+   read every cited file with `git show <pin>:<path>` rather than from the working tree.
 2. Otherwise clone shallow into a durable workspace — `${COMPETITIVE_REVIEW_WORKSPACE:-$HOME/.cache/competitive-review}/<owner>-<repo>` — so later runs update rather than re-clone.
 3. **Pin the commit** and record it. Every CODE claim cites `path/to/file.ext:LINE` and is only valid
-   at that commit.
+   at that commit. If you are also comparing against a *running* instance, record its released
+   version too — a checked-out `main` is routinely ahead of anything deployed, and a claim read from
+   it can describe a version nobody runs. Where source and deployment disagree, say so.
 4. Read in order: entry points, the module that owns the behaviour in question, its tests, and the
    release notes around it. Tests are the highest-signal source for what a project believes it does.
 5. Never let a CODE claim outlive its pin. On refresh, re-resolve the line or re-verify the claim.

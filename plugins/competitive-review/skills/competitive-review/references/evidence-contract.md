@@ -37,6 +37,34 @@ Alive/dead, activity, release cadence, licence, stars, contributor count.
 CODE claims are the only ones that let you say what a competitor *does* rather than what it *says*.
 They are also the only ones that expire silently — the line moves and nobody notices. Always pin.
 
+**The checkout is not the competitor.** A local clone of a rival is very often a *fork you have
+already patched*, and your patches cluster in exactly the areas you are about to write up as their
+defects — you cloned it because something was wrong, and then you fixed it. That makes the working
+tree the single most dangerous place to read a CODE claim from.
+
+Before any CODE claim, establish that you are reading upstream:
+
+```bash
+git -C <checkout> status --porcelain          # uncommitted work = your changes, not theirs
+git -C <checkout> log --oneline <pin>..HEAD   # local commits ahead of the pinned upstream ref
+git -C <checkout> show <pin>:path/to/file.ts  # read THIS, not the working file
+```
+
+Read the file at the pin with `git show`, not from the filesystem. A working-tree read that finds
+the capability you were about to report as missing is the review falsifying its own hypothesis with
+your unshipped code — the most expensive possible error, because it looks like a finding.
+
+**Source is not deployment.** A checked-out `main` can be many releases ahead of what anyone is
+actually running, so a CODE claim read from it may describe a version that has not shipped. If you
+are comparing against a *running* instance — yours or a reference deployment — state both versions
+and say which one each claim comes from:
+
+> "The source tree splits `person` into `person` + `person_group`; the deployed instance is on 3.1.0
+> and has neither table. Treat the split as forward-looking design in source, not ground truth."
+
+Where the two disagree, say so explicitly rather than picking one. A comparison silently drawn
+against an unreleased tree overstates what a competitor delivers today.
+
 ## The four rules
 
 ### 1. `(unverified)` is a first-class marker
