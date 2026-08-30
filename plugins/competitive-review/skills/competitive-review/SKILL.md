@@ -130,7 +130,9 @@ conflicts at the seams. See [references/partition-axes.md](references/partition-
 
 Aim for 4–6 slices. Each prompt carries: one line of context, the schema verbatim, the slice it owns
 and nobody else touches, source guidance, the verification rules, a numeric floor so the agent does
-not stop at the famous three, and "return YAML only in a fenced block".
+not stop at the famous three, "return YAML only in a fenced block", and **"answer directly — do not
+spawn sub-agents and do not wait on anything"**. Without that last clause an agent may delegate its
+slice and then return a progress report instead of data, burning its whole budget on coordination.
 
 Launch them **in a single message** so they run concurrently, with `run_in_background: true`.
 
@@ -151,9 +153,16 @@ TASKS=~/.claude/projects/<encoded-cwd>/<session-id>/subagents
 grep -c '^  - id:' /tmp/competitors.yaml
 ```
 
-A thin slice is a **diagnosis, not a verdict**: either the slice genuinely holds few players (lower
-the floor, note the true depth) or the agent under-delivered (re-run with a stronger floor, or re-cut
-the angle). Log which it was.
+A thin slice is a **diagnosis, not a verdict**. Classify before re-running:
+
+- **slice-thin** — the slice genuinely holds few players. Lower the floor and note its true depth.
+- **agent-thin** — the slice is plentiful but the agent under-delivered: it stopped at the famous
+  few, lost its web tools, or **went off-contract** (delegated, then reported status instead of data).
+- **wrong angle** — the slice does not carve this category. Re-cut it rather than re-running it.
+
+An off-contract agent is usually **recoverable**: it still holds its research, so resume it with a
+corrected brief — answer directly, no delegation, output the schema — before paying for a cold
+re-run. Log which diagnosis it was and what fixed it.
 
 ## Phase 2 — Verify
 

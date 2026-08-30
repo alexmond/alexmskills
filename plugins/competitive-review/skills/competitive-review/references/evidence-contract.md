@@ -54,6 +54,21 @@ Read the file at the pin with `git show`, not from the filesystem. A working-tre
 the capability you were about to report as missing is the review falsifying its own hypothesis with
 your unshipped code — the most expensive possible error, because it looks like a finding.
 
+**This binds the verifier too, and it is where the rule actually fails.** An agent told to check a
+claim "at commit X" will open the file from disk, find the line, and report the pin in good faith —
+line numbers and all — with no signal that anything went wrong. Observed in practice: a verification
+agent reported a claim appearing at two sites in a pinned file; both the second site and the shifted
+line numbers came from uncommitted local work, and its report stated it had read the pin.
+
+So never instruct an agent to read "at commit X". Give it the mechanical form:
+
+> Read every file with `git show <pin>:<path>`. Do not open the file from the working tree. If your
+> line numbers disagree with the ones you were given, say so rather than correcting them — a
+> disagreement means one of us read a dirty tree.
+
+A line-number correction from a verifier is a **contamination signal**, not a fix. Check the tree
+before accepting it.
+
 **Source is not deployment.** A checked-out `main` can be many releases ahead of what anyone is
 actually running, so a CODE claim read from it may describe a version that has not shipped. If you
 are comparing against a *running* instance — yours or a reference deployment — state both versions
