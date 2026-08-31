@@ -324,6 +324,23 @@
         "self-learning",
         "accessibility"
       ]
+    },
+    {
+      "name": "spring-batch",
+      "displayName": "Spring Batch development",
+      "source": "./plugins/spring-batch",
+      "description": "Spring Batch 5/6 development: what the framework actually does versus what its API suggests, grounded in runnable samples. The job repository Boot 4 does not give you, restart versus a new JobInstance, ExitStatus routing and deciders, tasklet transaction boundaries, stride partitioning, the counter that lets a job report DONE having done nothing, and the testing package most projects declare and never use.",
+      "version": "0.1.0",
+      "category": "development",
+      "keywords": [
+        "spring-batch",
+        "spring-boot",
+        "java",
+        "batch",
+        "etl",
+        "jobs",
+        "testing"
+      ]
     }
   ]
 }
