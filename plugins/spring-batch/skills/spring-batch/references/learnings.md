@@ -1,0 +1,63 @@
+# Spring Batch — corrections log
+
+Dated corrections whose reasoning did not fit in `SKILL.md`. Read this when a
+rule in the skill surprises you: what is here is usually *why* the rule is
+phrased the way it is.
+
+Format:
+
+```
+- YYYY-MM-DD — what was believed → what is actually true, and how it was checked.
+```
+
+---
+
+- 2026-08-30 — Believed `spring-boot-starter-batch` plus a `DataSource` gives a
+  JDBC `JobRepository`. → It does not. Boot 4 ships no JDBC job-repository
+  auto-configuration; you get `ResourcelessJobRepository`, every execution has id
+  1, no `BATCH_*` table is created, and restart silently does not exist. Checked
+  by listing all eleven classes of `org.springframework.boot.batch.autoconfigure`
+  and by printing `repository.getClass()` in a running context.
+
+- 2026-08-30 — Believed a job "continues" after a server restart. → Only if the
+  *same* `JobInstance` is relaunched. A random per-launch parameter
+  (`addString("runToken", UUID.randomUUID())`) makes every launch a new instance,
+  so resume is unreachable. Proven in `RestartSemanticsTest`, then reproduced on
+  a live 31,568-asset sweep: the killed run's record stayed `RUNNING` forever and
+  a fresh run picked up the remainder from the *data model*, not from Batch.
+
+- 2026-08-30 — Believed 7 items at chunk size 3 gives 4 commits (three chunks
+  plus a final empty one). → It gives **3**. Asserted against
+  `StepExecution.getCommitCount()`.
+
+- 2026-08-30 — Believed the current transaction's *name* could show that
+  `RepeatStatus.CONTINUABLE` commits between invocations. → It cannot: the name
+  is derived from the step and is identical every time. Counting `afterCommit`
+  synchronizations works — 5 invocations, 5 commits.
+
+- 2026-08-30 — Believed stride partitioning lands within ~5% of a perfect split.
+  → Measured 1.08× on clustered cost, against 2.33× for contiguous ranges. The
+  bound in the test now comes from the measurement. Stride is not near-perfect;
+  it is simply far better, and the *ratio between the two* is the argument.
+
+- 2026-08-30 — Believed `JobInstanceAlreadyCompleteException` lives in
+  `org.springframework.batch.core.repository`. → `...core.launch` in Batch 6.
+  Compiler, not memory.
+
+- 2026-08-30 — Believed declaring your own `jobRepository` bean simply overrides
+  Boot's. → The context fails to start with `BeanDefinitionOverrideException`.
+  Exclude `BatchAutoConfiguration`; do not reach for
+  `spring.main.allow-bean-definition-overriding`, which resolves the clash by
+  registration order.
+
+- 2026-08-30 — Believed a job reporting `done = <population>` and `COMPLETED` had
+  processed the population. → `done` counts items the reader produced, including
+  ones the processor declined to attempt. Two live sweeps reported
+  `done=31,568` having written zero rows, because a blank archive root made every
+  file "absent". Report attempted and skipped separately.
+
+- 2026-08-30 — Believed a per-file `exec` was an acceptable cost for metadata
+  extraction. → 286 ms of every 298 ms was interpreter startup. But the
+  replacement's *end-to-end* gain was 33.6×, not the 175× the component
+  benchmark suggested: the job also does I/O and chunk commits. **Never quote a
+  component rate as a system rate.**
