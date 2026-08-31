@@ -18,7 +18,7 @@ file, and **correct the file when it is wrong** (see *Growing this skill*).
 
 ---
 
-## 1. Boot 4 does not give you a persistent JobRepository
+## 1. The default JobRepository stores nothing, and that is deliberate
 
 **The single most expensive thing to not know.**
 
@@ -26,6 +26,13 @@ file, and **correct the file when it is wrong** (see *Growing this skill*).
 `ResourcelessJobRepository`. There is no `BatchJdbcAutoConfiguration` in Boot 4's
 batch module — all eleven classes of `org.springframework.boot.batch.autoconfigure`
 were checked.
+
+**It is a design decision, not an omission.** `whatsnew.html`: it has been the
+default since 5.2, "no longer requires an in-memory database (H2, HSQLDB) for
+metadata storage", which "improves default performance and reduces memory
+footprint". Knowing that changes how you argue about it: the framework is not
+broken, it is optimised for the case where nobody restarts anything, and it does
+not tell you which case you are in.
 
 What that looks like: the job runs, every step executes, it reports `COMPLETED`,
 and **nothing is written down**. Every execution comes back id `1`, no `BATCH_*`
@@ -39,8 +46,20 @@ tables: []
 repository impl: ResourcelessJobRepository
 ```
 
-Wire it by hand — and **exclude Boot's autoconfiguration or the context fails**
-with `BeanDefinitionOverrideException` on bean `jobRepository`:
+**Ask for JDBC explicitly.** Batch 6 added `@EnableJdbcJobRepository` for exactly
+this — store-specific configuration moved out of `@EnableBatchProcessing`:
+
+```java
+@EnableBatchProcessing(taskExecutorRef = "batchTaskExecutor")
+@EnableJdbcJobRepository(dataSourceRef = "batchDataSource",
+                         transactionManagerRef = "batchTransactionManager")
+class MyJobConfiguration { }
+```
+
+Prefer that to hand-building a `JobRepositoryFactoryBean`. Hand-wiring still
+works and is what you will find in pre-6 code, but it is now the older way, and
+it brings the next problem with it: **declaring your own `jobRepository` bean
+makes the context fail** with `BeanDefinitionOverrideException`, so it needs
 
 ```java
 @SpringBootApplication(exclude = BatchAutoConfiguration.class)
@@ -168,6 +187,43 @@ it is simply close.
 
 ---
 
+## 5a. A rerunnable reader: the process indicator
+
+If you find yourself wanting a reader that does not save its position, the
+framework already names the pattern — `readers-and-writers/process-indicator.html`:
+
+> "many developers choose to make their database readers 'rerunnable' by using a
+> process indicator. An extra column is added to the input data to indicate
+> whether or not it has been processed."
+
+A marker column, flipped when an item is written, plus a `WHERE PROCESSED_IND =
+false`, plus:
+
+```java
+.saveState(false)   // the current row number is irrelevant on restart
+```
+
+The reader then "does not make any entries in the `ExecutionContext` for any
+executions in which it participates."
+
+**Why this matters more than it looks:** re-entrancy moves out of Spring Batch's
+`ExecutionContext` and into your data model. The consequences follow from that
+and are easy to hit by accident —
+
+- restart is no longer the framework's job, so §2's `JobInstance` machinery stops
+  being load-bearing;
+- **the marker table is now the work queue**, which is what makes a second
+  process a worker without a message broker (§9);
+- but two readers will select the same rows unless the query claims them —
+  `FOR UPDATE SKIP LOCKED`, or a lease column. The pattern gives you
+  rerunnability, not concurrency.
+
+If a project has built this by hand — a `WHERE NOT EXISTS (…done marker…)` reader
+with an empty `update()` — it has implemented the process indicator. Say so, and
+check `saveState` is actually false rather than merely unused.
+
+---
+
 ## 6. A job that did nothing can report `DONE` at full population
 
 `done` counts what the reader produced, not what the job attempted. A run in
@@ -262,6 +318,20 @@ list**.
 
 `spring-boot-starter-batch` does **not** pull `spring-boot-starter-jdbc`.
 
+**Consolidations in 6 worth knowing before you write a bean for one** —
+from `whatsnew.html`:
+
+- `JobOperator` **extends** `JobLauncher`; no separate `JobLauncher` bean.
+- `JobRepository` **extends** `JobExplorer`; no separate `JobExplorer` bean.
+- `JobRegistry` auto-registers jobs; `JobRegistrySmartInitializingSingleton` is gone.
+- A `TransactionManager` is optional, defaulting to `ResourcelessTransactionManager`.
+- `ChunkOrientedStep` (via `ChunkOrientedStepBuilder`) replaces
+  `ChunkOrientedTasklet` / `TaskletStep`.
+- Retry now uses **Spring Framework 7's** retry, not the Spring Retry library.
+- `CommandLineJobOperator` replaces `CommandLineJobRunner`.
+- Deprecated: `@EnableBatchProcessing(modular = true)`, JUnit 4 support in
+  `spring-batch-test`, Jackson 2, the `batch:` XML namespace.
+
 ---
 
 ## Sources
@@ -269,6 +339,9 @@ list**.
 - Reference: <https://docs.spring.io/spring-batch/reference/>
 - Flow control: <https://docs.spring.io/spring-batch/reference/step/controlling-flow.html>
 - Spring Batch Integration: <https://docs.spring.io/spring-batch/reference/spring-batch-integration.html>
+- **`references/reference-map.md` — which reference page answers which question**,
+  plus what each page settled when it was read in full. Start there rather than
+  the docs index.
 - Runnable samples: `~/IdeaProjects/spring-boot-playground/spring-boot-batch-parent/`
 
 **Prefer the samples over this file.** Prose drifts; a test that runs does not.

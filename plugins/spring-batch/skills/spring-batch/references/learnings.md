@@ -61,3 +61,25 @@ Format:
   replacement's *end-to-end* gain was 33.6×, not the 175× the component
   benchmark suggested: the job also does I/O and chunk commits. **Never quote a
   component rate as a system rate.**
+
+- 2026-08-31 — Believed `ResourcelessJobRepository` being the default was an
+  oversight in Boot 4's autoconfiguration. → It is a **deliberate Spring Batch
+  decision since 5.2**: `whatsnew.html` says it removes the need for an in-memory
+  database for metadata and "improves default performance and reduces memory
+  footprint". The consequence (a job that reports COMPLETED and stores nothing)
+  is unchanged; the framing was wrong, and the framing decides whether you argue
+  with the framework or configure it.
+
+- 2026-08-31 — Recommended hand-wiring a `JobRepositoryFactoryBean` to get a JDBC
+  repository. → Batch 6 added **`@EnableJdbcJobRepository`** for exactly this,
+  moving store-specific configuration out of `@EnableBatchProcessing`. The
+  hand-wired form still works and is what pre-6 code looks like, but it is the
+  older way and it drags in the `BeanDefinitionOverrideException` problem. Read
+  the docs before recommending the workaround you happened to find first.
+
+- 2026-08-31 — Wrote a section on "a reader that saves no state" as though it
+  were a local invention. → It is a **documented, named pattern**: the *process
+  indicator*, `readers-and-writers/process-indicator.html`, a marker column plus
+  `saveState(false)`. A pattern with a name in the reference is a pattern other
+  people's code and questions will use that name for. Search the docs for a name
+  before describing a shape.
