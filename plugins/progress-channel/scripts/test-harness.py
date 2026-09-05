@@ -44,7 +44,9 @@ def check(name, cond, note=""):
 
 
 def jobs(name=None):
-    data = progress._get_json("/jobs") or {"jobs": []}
+    # state=all: these tests assert on finished/orphaned rows too. The bare
+    # /jobs default is live-only, which is the *view* default, not the store.
+    data = progress._get_json("/jobs?state=all") or {"jobs": []}
     rows = data["jobs"]
     return [j for j in rows if j.get("name") == name] if name else rows
 
@@ -396,6 +398,152 @@ progress.append_history({"name": "perl slowthing.pl", "kind": "background",
 out = hook_out({"command": "perl slowthing.pl --all"})
 check("hook: learned history triggers the suggestion",
       "tracked history" in out, out[:120])
+
+# session identity, per-session query, agent attribution ----------------------
+def _jobs(q=""):
+    return (progress._get_json("/jobs" + q) or {"jobs": []})["jobs"]
+
+os.environ["CLAUDE_CODE_SESSION_ID"] = "sess-AAA"
+with progress.Job("sess A job", total=2) as ja:
+    ja.step()
+    os.environ["CLAUDE_CODE_SESSION_ID"] = "sess-BBB"
+    os.environ["CLAUDE_CODE_AGENT"] = "explorer"
+    with progress.Job("sess B job", total=2) as jb:
+        jb.step()
+        a_rows = _jobs("?session=sess-AAA")
+        b_rows = _jobs("?session=sess-BBB")
+        allrows = _jobs("?state=all")
+        check("session: record carries the id from the environment",
+              any(r.get("session") == "sess-AAA" for r in allrows))
+        check("session: query returns only that session",
+              [r["name"] for r in a_rows] == ["sess A job"], str(a_rows)[:120])
+        check("session: the other session is not visible",
+              all(r.get("session") == "sess-BBB" for r in b_rows))
+        check("agent: subagent job is attributed",
+              any(r.get("agent") == "explorer" for r in b_rows), str(b_rows)[:120])
+        check("agent: main-loop job carries no agent",
+              all(not r.get("agent") for r in a_rows))
+os.environ.pop("CLAUDE_CODE_AGENT", None)
+os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+
+# progress modes ---------------------------------------------------------------
+with progress.Job("mode items", total=4) as j:
+    j.step(); j.step()
+    j._flush()                      # steps are throttled; force the POST
+    r = jobs("mode items")[0]
+    check("progress: items mode is measured",
+          r["progress_mode"] == "items" and abs(r["progress"] - 0.5) < 1e-6,
+          str(r.get("progress")))
+
+with progress.Job("mode time", expect_seconds=100) as j:
+    r = jobs("mode time")[0]
+    check("progress: declared duration gives time mode",
+          r["progress_mode"] == "time" and 0 <= r["progress"] < 0.2, str(r.get("progress")))
+
+with progress.Job("mode creep") as j:
+    r = jobs("mode creep")[0]
+    check("progress: nothing to measure gives creep",
+          r["progress_mode"] == "creep" and r["progress"] < 0.1, str(r.get("progress")))
+
+with progress.Job("mode eta") as j:      # first run seeds the history
+    time.sleep(0.4)
+with progress.Job("mode eta") as j:      # second run can estimate against it
+    time.sleep(0.2)
+    r = [x for x in jobs("mode eta") if x["state"] == "running"][0]
+    check("progress: own history gives eta mode", r["progress_mode"] == "eta",
+          str(r.get("progress_mode")))
+
+# state filter + linger --------------------------------------------------------
+with progress.Job("live one", total=2) as j:
+    j.step()
+    names = {r["name"] for r in _jobs()}
+    check("state: bare /jobs returns live work", "live one" in names)
+    # The whole suite runs in seconds, so every finished row is still inside the
+    # linger window — "is an old row hidden" is not observable here. Assert the
+    # invariant that produces that behaviour instead: any non-live row in the
+    # bare view finished within the linger, and the bare view never exceeds all.
+    import datetime as _dt
+    _lin = progress._linger_seconds()
+    _now = _dt.datetime.now(_dt.timezone.utc)
+    _stale = [r["name"] for r in _jobs()
+              if r["state"] not in progress.LIVE_STATES
+              and (progress._parse_ts(r.get("finished_at")) is None
+                   or (_now - progress._parse_ts(r["finished_at"])).total_seconds() > _lin)]
+    check("state: bare /jobs carries no finished row past the linger",
+          _stale == [], str(_stale)[:160])
+    check("state: bare /jobs is a subset of ?state=all",
+          names <= {r["name"] for r in _jobs("?state=all")})
+    check("state: ?state=all still returns finished rows",
+          "mode items" in {r["name"] for r in _jobs("?state=all")})
+    check("state: explicit ?state=done selects only that",
+          all(r["state"] == "done" for r in _jobs("?state=done")))
+
+check("linger: a just-finished job is still in the live view",
+      "live one" in {r["name"] for r in _jobs()})
+check("linger: it is a finished row, not a running one",
+      all(r["state"] != "running" for r in _jobs() if r["name"] == "live one"),
+      str([r["state"] for r in _jobs() if r["name"] == "live one"]))
+
+# ping heartbeat + watchdog ----------------------------------------------------
+P = [sys.executable, str(HERE / "progress.py")]
+tok = subprocess.run(P + ["start", "--name", "pinger", "--seconds", "60",
+                          "--timeout", "1", "--pid", "1"],
+                     capture_output=True, text=True).stdout.strip()
+subprocess.run(P + ["ping", tok, "-n", "3"], capture_output=True)
+r = jobs("pinger")[0]
+check("ping: advances the count and posts immediately", r.get("done") == 3, str(r.get("done")))
+check("ping: --timeout is recorded on the job", r.get("ping_timeout") == 1.0,
+      str(r.get("ping_timeout")))
+subprocess.run(P + ["ping", tok, "--total", "50", "--seconds", "5"], capture_output=True)
+r = jobs("pinger")[0]
+check("ping: overrides total and expected duration",
+      r.get("total") == 50 and r.get("expect_seconds") == 5.0,
+      f"total={r.get('total')} secs={r.get('expect_seconds')}")
+
+check("watchdog: silence past --timeout marks the job stopped",
+      wait_for(lambda: any(x.get("state") == "stopped"
+                           for x in jobs("pinger")), timeout=8.0),
+      str([x.get("state") for x in jobs("pinger")]))
+
+# status line renderer --------------------------------------------------------
+_sl = importlib.util.spec_from_file_location("pcstatus", HERE / "statusline.py")
+statusline = importlib.util.module_from_spec(_sl)
+_sl.loader.exec_module(statusline)
+
+check("statusline: idle renders nothing", statusline.render("no-such-session") is None)
+check("statusline: bar is exactly the requested width",
+      len(statusline.bar(0.5, 10)) == 10, repr(statusline.bar(0.5, 10)))
+check("statusline: a full bar has no empty cells",
+      statusline.bar(1.0, 8) == "\u2588" * 8, repr(statusline.bar(1.0, 8)))
+check("statusline: an empty bar has no filled cells",
+      statusline.bar(0.0, 8) == "\u2591" * 8, repr(statusline.bar(0.0, 8)))
+check("statusline: no gap between filled and empty runs",
+      " " not in statusline.bar(2 / 18, 18), repr(statusline.bar(2 / 18, 18)))
+
+os.environ["CLAUDE_CODE_SESSION_ID"] = "sess-SL"
+with progress.Job("sl job", total=4) as slj:
+    slj.step(); slj._flush()
+    out = statusline.render("sess-SL")
+    check("statusline: renders this session's live job",
+          out is not None and "sl job" in out, repr(out))
+    check("statusline: an items job shows its counts", out and "1/4" in out, repr(out))
+    check("statusline: another session sees nothing",
+          statusline.render("sess-OTHER") is None)
+    os.environ["CLAUDE_CODE_AGENT"] = "explorer"
+    with progress.Job("agent job", total=2) as aj:
+        aj.step(); aj._flush()
+        out = statusline.render("sess-SL")
+        check("statusline: subagent work is labelled with the agent",
+              out and "explorer: agent job" in out, repr(out))
+os.environ.pop("CLAUDE_CODE_AGENT", None)
+os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+
+_port = os.environ.get("PROGRESS_PORT")
+os.environ["PROGRESS_PORT"] = "1"          # nothing listening
+check("statusline: a dead daemon renders nothing, never raises",
+      statusline.render("sess-SL") is None)
+if _port:
+    os.environ["PROGRESS_PORT"] = _port
 
 # cleanup --------------------------------------------------------------------
 health = progress._get_json("/health")
