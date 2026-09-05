@@ -11,11 +11,13 @@ sample behind it, the source is named — prefer checking it over trusting this
 file, and **correct the file when it is wrong** (see *Growing this skill*).
 
 > **Ground new behaviour in the playground first.**
-> `~/IdeaProjects/spring-boot-playground/spring-boot-batch-parent/` holds one
-> module per mechanism, each asserting behaviour rather than describing it:
-> `spring-boot-batch-restart`, `-flow`, `-tasklet`, `-partition`.
-> When you are unsure what the framework does, **write the case there and run
-> it** — that is what the modules are for. 17 tests, H2, no external services.
+> [`spring-boot-playground`](https://github.com/alexmond/spring-boot-playground)'s
+> `spring-boot-batch-parent/` holds one module per mechanism, each asserting
+> behaviour rather than describing it: `spring-boot-batch-restart`, `-flow`,
+> `-tasklet`, `-partition`. When you are unsure what the framework does,
+> **write the case there and run it** — that is what the modules are for
+> (use a local checkout if one exists; otherwise clone the repo).
+> 17 tests, H2, no external services.
 
 ---
 
@@ -414,7 +416,7 @@ from `whatsnew.html`:
 - **`references/reference-map.md` — which reference page answers which question**,
   plus what each page settled when it was read in full. Start there rather than
   the docs index.
-- Runnable samples: `~/IdeaProjects/spring-boot-playground/spring-boot-batch-parent/`
+- Runnable samples: [`spring-boot-playground/spring-boot-batch-parent`](https://github.com/alexmond/spring-boot-playground/tree/main/spring-boot-batch-parent)
 
 **Prefer the samples over this file.** Prose drifts; a test that runs does not.
 
