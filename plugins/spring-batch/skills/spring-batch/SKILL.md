@@ -224,6 +224,77 @@ check `saveState` is actually false rather than merely unused.
 
 ---
 
+## 5b. A `split` is not a partition — choose the primitive before tuning the width
+
+Both fan work out concurrently and both converge, so they are easy to conflate.
+They answer different questions:
+
+| | `split` | `Partitioner` |
+|---|---|---|
+| states | **no order is required** among these branches | **one dataset, sliced** |
+| branches are | different work | the same work over different rows |
+| write targets | should be **disjoint** | the **same destination**, by design |
+| merge | none — the join is just a barrier | `StepExecutionAggregator` |
+| width means | how much unrelated work overlaps | **tuning**, and nothing else |
+
+**The tell is the write target.** Branches writing to the same place is the
+*normal* case for a partition and a defect for a split — that is why Batch ships
+an aggregator for one and nothing for the other.
+
+**The symptom of choosing wrong: a concurrency dial carrying safety.** With no
+aggregator available, the only lever left is the executor's concurrency limit, so
+it ends up expressing everything — real write contention, a shared external host,
+and plain caution — as one number. That number then looks like a performance knob,
+because it is one, and somebody raises it.
+
+**Why that is worse than a slow job.** Safety that lives in a tuning parameter is
+removed by tuning. A split throttled to 1 hides an overlapping write completely:
+it looks safe because nothing ever overlaps in practice. Raise the width for speed
+six months later and the corruption arrives with no warning, attached to a change
+that looks unrelated.
+
+Field instance (venice-vr, 2026-09): a codebase with **no `Partitioner`, no
+`StepExecutionAggregator` and no partition step anywhere**, expressing three
+`split`s — two of which are partition-shaped. One fans four branches that all
+produce viewpoint judgements for the same city's paintings; another fans three
+fetches that all write OSM layers for one city's bbox. Neither is independent
+work that happens to converge; both are slices of one job over one dataset. Its
+`splitWidth` defaulted to 1 and was serialising two unrelated branch chains to
+protect a host that only three other branches touched.
+
+Before setting a split's width, say which of these it is answering:
+
+1. branches write disjointly → parallel, and the width is just capacity
+2. branches slice one dataset → this is a **partition**; use one, and the width is tuning
+3. branches share an **external host** → throttle *the branches that share it*, not the composition
+4. branches genuinely cannot interleave → it is a **sequence**; say so structurally
+
+Only (4) is a reason to serialise, and it is the rarest.
+
+**The runnable case:** `spring-boot-batch-split`, `SharedTargetJobs` +
+`SharedTargetTest`. Two branches of one split each read-modify-write a single
+shared target; the read and the write are separated by an explicit hold, so the
+interleaving is deterministic rather than a flaky race. The pair is the point —
+neither job is interesting alone:
+
+- `overlappingWriteJob` (width 2) leaves the target at **1** after two
+  increments. One update is lost, and the job still reports `COMPLETED` — Batch
+  has no opinion about a shared target, so no status it reports is evidence
+  about the data.
+- `throttledToOneJob` (width 1) leaves it at **2**. Same graph, same steps, same
+  target; only the executor's concurrency limit differs.
+
+A third test asserts the two results differ, so the case cannot quietly stop
+demonstrating its own claim. What it pins is not "concurrency loses updates" —
+it is that **the only difference between the correct run and the corrupt one is
+a number that reads like a performance knob**.
+
+Still open: a `spring-boot-batch-partition` counterpart showing
+`StepExecutionAggregator` reconciling the same overlapping writes a bare `split`
+corrupts — which would pin the other half of the table above.
+
+---
+
 ## 6. A job that did nothing can report `DONE` at full population
 
 `done` counts what the reader produced, not what the job attempted. A run in
