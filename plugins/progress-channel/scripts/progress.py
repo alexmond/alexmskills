@@ -289,9 +289,16 @@ class Tracker:
         uid = rec["uid"]
         with self.lock:
             job = self.jobs.get(uid, {})
+            prev_done = job.get("done")
             job.update(rec)
             job["updated_at"] = _now()
             job.setdefault("started_at", job["updated_at"])
+            # done_at is when the COUNT last moved, which is not the same as
+            # updated_at (a ping or a detail change bumps that too). The ETA
+            # needs the former: rate must come from completed work only.
+            if job.get("done") != prev_done:
+                job["done_at"] = job["updated_at"]
+            job.setdefault("done_at", job["started_at"])
             job.pop("_stall_notified", None)  # activity resets the stall episode
             if job.get("status", "running") != "running":
                 self.jobs.pop(uid, None)
@@ -405,24 +412,62 @@ class Tracker:
         return "running"
 
     def eta_seconds(self, job: dict) -> float | None:
-        """Pre-cutover the history median predicts; as the run's own evidence
-        accumulates its observed rate takes over (blend by progress)."""
+        """Seconds of work left. Pre-cutover the history median predicts; as the
+        run's own evidence accumulates its observed rate takes over.
+
+        Two things here exist to stop "time left" counting UP.
+
+        The rate comes from **completed work only** — elapsed at the moment the
+        last item landed, over the items that landed. Dividing by *now* instead
+        inflates the rate every second the current item is still in flight, so
+        the estimate grows between steps; on a 15-item job with slow steps that
+        is almost all of the time.
+
+        Then the time already spent on the in-flight item is **subtracted**, so
+        the number ticks down in real time instead of holding still between
+        steps and jumping at each one. It floors at zero: a job past its own
+        estimate reads "any moment now", never negative.
+        """
         total, done = job.get("total"), job.get("done", 0)
         if not total or done <= 0:
             return None
         started = _parse_ts(job.get("started_at"))
         if started is None:
             return None
-        elapsed = (datetime.now(timezone.utc) - started).total_seconds()
-        current = elapsed / done
+        now = datetime.now(timezone.utc)
         hist = hist_per_item(self.history, job.get("name"), job.get("kind"),
                              total_bucket(total))
-        if hist is not None:
+        marked = _parse_ts(job.get("done_at"))
+        current, in_flight = None, 0.0
+
+        if marked is None:
+            # No done_at: a record written before it was tracked, or a synthetic
+            # one. Elapsed/done is the only evidence there is — keep the old
+            # estimate rather than refusing. Nothing to subtract, so it holds
+            # steady rather than ticking down.
+            current = max((now - started).total_seconds(), 0.0) / done
+        else:
+            worked = (marked - started).total_seconds()
+            in_flight = max((now - marked).total_seconds(), 0.0)
+            if worked > 0:
+                current = worked / done
+            elif hist is None:
+                # Timestamps are second-resolution, so a job whose items have
+                # all landed inside one second has no rate of its own yet. Say
+                # NOTHING rather than dividing by now — that grows every second
+                # the current item is in flight, which is what made the estimate
+                # count UP instead of down.
+                return None
+
+        if current is None:
+            rate = hist
+        elif hist is not None:
             w = min(1.0, (done / total) / ETA_CUTOVER_FRACTION)
             rate = w * current + (1 - w) * hist
         else:
             rate = current
-        return max(0, total - done) * rate
+
+        return max(0.0, max(0, total - done) * rate - in_flight)
 
     def progress(self, job: dict) -> tuple[float | None, str]:
         """(ratio 0..1 or None, mode).

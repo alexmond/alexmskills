@@ -505,6 +505,41 @@ check("watchdog: silence past --timeout marks the job stopped",
                            for x in jobs("pinger")), timeout=8.0),
       str([x.get("state") for x in jobs("pinger")]))
 
+# eta counts down -------------------------------------------------------------
+# Regression: the rate used to be elapsed/done measured at *now*, so between
+# two item completions it inflated every second and "time left" counted UP.
+# total is large on purpose: with a small total the remaining estimate is only
+# a few seconds, so a slow moment floors both samples at zero and the assertion
+# becomes a coin flip. 100 items keeps the estimate far above the sample gap.
+with progress.Job("eta countdown", total=100) as ej:
+    # 1.1s, not 0.4s: _now() is second-resolution, so sub-second steps all share
+    # a timestamp and the job has no measurable rate to assert against.
+    time.sleep(1.1); ej.step(); ej._flush()
+    time.sleep(1.1); ej.step(); ej._flush()
+    e1 = jobs("eta countdown")[0].get("eta_seconds")
+    check("eta: an estimate exists once items have landed", e1 is not None)
+    time.sleep(1.3)
+    e2 = jobs("eta countdown")[0].get("eta_seconds")
+    check("eta: the estimate is comfortably above the sample gap",
+          e1 is not None and e1 > 3.0, str(e1))
+    check("eta: time left counts down between steps",
+          e1 is not None and e2 is not None and e2 < e1, f"{e1} -> {e2}")
+    check("eta: never negative", e2 is None or e2 >= 0, str(e2))
+
+    # A heartbeat that does not move the count must not re-baseline the rate:
+    # done_at tracks the count, updated_at tracks any traffic.
+    before = jobs("eta countdown")[0].get("eta_seconds")
+    ej.step(0); ej._flush()
+    after = jobs("eta countdown")[0].get("eta_seconds")
+    check("eta: a heartbeat that moves no items does not reset the estimate",
+          after is not None and before is not None and after <= before + 0.5,
+          f"{before} -> {after}")
+
+    row = jobs("eta countdown")[0]
+    check("eta: done_at is tracked separately from updated_at",
+          row.get("done_at") is not None and row.get("done_at") != row.get("updated_at"),
+          f"done_at={row.get('done_at')} updated_at={row.get('updated_at')}")
+
 # status line renderer --------------------------------------------------------
 _sl = importlib.util.spec_from_file_location("pcstatus", HERE / "statusline.py")
 statusline = importlib.util.module_from_spec(_sl)
