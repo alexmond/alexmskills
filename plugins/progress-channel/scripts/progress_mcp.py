@@ -81,7 +81,7 @@ def _text(payload) -> dict:
 def call_tool(name: str, args: dict) -> dict:
     if name == "progress_list":
         progress.ensure_daemon()
-        data = progress._get_json("/jobs")
+        data = progress._get_json("/jobs?state=all")
         if not data:
             return _text("daemon unreachable — nothing tracked")
         return _text([progress._fmt_row(j) for j in data["jobs"]] or "(no jobs)")

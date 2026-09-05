@@ -35,6 +35,7 @@ producers degrade to a warn-once no-op.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import statistics
@@ -56,7 +57,16 @@ DEFAULT_PORT = 7717
 FLUSH_EVERY_STEPS = 50
 FLUSH_EVERY_SECONDS = 1.0
 HISTORY_KEEP = 20            # runs kept per (name, kind, total_bucket)
-FINISHED_KEEP_HOURS = 24     # finished jobs shown in the view this long
+# Two different clocks, deliberately. REMOVAL is when a finished row leaves the
+# store for good (it is still queryable with ?state=all until then). LINGER is
+# how long it keeps appearing in the LIVE view next to running work — long
+# enough to see a job land on 100%, short enough that the view stays about what
+# is happening now.
+FINISHED_KEEP_HOURS = 24     # removal: done/failed rows are dropped after this
+DONE_LINGER_SECONDS = 20     # visibility: finished rows stay in the live view
+ORPHAN_KEEP_MINUTES = 30     # orphans are already dead — a much shorter leash
+FINISHED_KEEP_MAX = 60       # hard cap, so a busy day cannot grow the view
+LIVE_STATES = ("running", "stalled")   # what /jobs returns when no state is asked for
 ETA_CUTOVER_FRACTION = 0.10  # current-run rate fully trusted past this progress
 STALL_GAP_FACTOR = 3.0       # stalled when silent > factor * learned p95 gap
 STALL_GAP_FLOOR = 30.0       # ... but never call a gap under this a stall
@@ -69,6 +79,18 @@ def home() -> Path:
 
 def port() -> int:
     return int(os.environ.get("PROGRESS_PORT", DEFAULT_PORT))
+
+
+def _expiry() -> tuple[float, float, int]:
+    """(finished hours, orphan minutes, hard cap) — env-tunable so an operator
+    can change retention without editing the plugin."""
+    return (float(os.environ.get("PROGRESS_FINISHED_HOURS", FINISHED_KEEP_HOURS)),
+            float(os.environ.get("PROGRESS_ORPHAN_MINUTES", ORPHAN_KEEP_MINUTES)),
+            int(os.environ.get("PROGRESS_FINISHED_MAX", FINISHED_KEEP_MAX)))
+
+
+def _linger_seconds() -> float:
+    return float(os.environ.get("PROGRESS_DONE_LINGER", DONE_LINGER_SECONDS))
 
 
 def base_url() -> str:
@@ -157,6 +179,34 @@ def hist_per_item(rows: list[dict], name, kind, bucket) -> float | None:
             if _shape(r) == (name, kind, bucket)
             and r.get("status") == "done" and r.get("per_item")]
     return statistics.median(vals[-HISTORY_KEEP:]) if vals else None
+
+
+def hist_median_seconds(rows: list[dict], name, kind) -> float | None:
+    """Median wall-clock duration of past runs of this job. Used to fill a
+    time-based bar when the caller did not declare an expected duration."""
+    vals = [r["seconds"] for r in rows
+            if r.get("name") == name and r.get("kind") == kind
+            and r.get("status") == "done" and r.get("seconds")]
+    return statistics.median(vals[-HISTORY_KEEP:]) if vals else None
+
+
+def session_identity() -> tuple[str | None, str | None, str | None]:
+    """(session id, session name, agent) of the work that owns this job.
+
+    A subagent runs under its parent's CLAUDE_CODE_SESSION_ID, which is what
+    you want — its work belongs to your session and should show in your status
+    line. CLAUDE_CODE_AGENT is set only inside a subagent, so it is the one
+    thing that distinguishes "the main loop is doing this" from "an agent I
+    spawned is doing this".
+
+    Claude Code exports CLAUDE_CODE_SESSION_ID into every tool process, so a
+    producer started by a session inherits it with nothing to plumb through.
+    Work started outside a session — cron, a bare shell — carries None and
+    appears only in the unfiltered view.
+    """
+    return (os.environ.get("CLAUDE_CODE_SESSION_ID") or None,
+            os.environ.get("CLAUDE_CODE_SESSION_NAME") or None,
+            os.environ.get("CLAUDE_CODE_AGENT") or None)
 
 
 def hist_p95_gap(rows: list[dict], name) -> float | None:
@@ -278,15 +328,34 @@ class Tracker:
                     self.finished.append(job)
                     self._record_history(job)
                     self._notify(job, "orphaned")
+                elif self.classify(job) == "stopped":
+                    job["status"] = "stopped"
+                    job["error"] = ("no ping within %ss" % job.get("ping_timeout"))
+                    job["finished_at"] = _now()
+                    self.jobs.pop(uid)
+                    self.finished.append(job)
+                    self._record_history(job)
+                    self._notify(job, "stopped")
                 elif (not job.get("_stall_notified")
                         and self.classify(job) == "stalled"):
                     job["_stall_notified"] = True  # once per stall episode
                     self._notify(job, "stalled")
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=FINISHED_KEEP_HOURS)
-            self.finished = [
-                j for j in self.finished
-                if (_parse_ts(j.get("finished_at")) or datetime.now(timezone.utc)) > cutoff
-            ][-60:]
+            # Expiry. An orphan is a job whose producer died — it is already
+            # over, and keeping it for a day just buries the live rows under
+            # wreckage. done/failed stay longer because you look them up on
+            # purpose ("did the nightly pass?"); orphans you look at now or
+            # never. The hard cap bounds a pathological day either way.
+            now = datetime.now(timezone.utc)
+            fin_hours, orph_minutes, keep_max = _expiry()
+            fin_cutoff = now - timedelta(hours=fin_hours)
+            orph_cutoff = now - timedelta(minutes=orph_minutes)
+
+            def _unexpired(j: dict) -> bool:
+                ts = _parse_ts(j.get("finished_at")) or now
+                return ts > (orph_cutoff if j.get("status") == "orphaned"
+                             else fin_cutoff)
+
+            self.finished = [j for j in self.finished if _unexpired(j)][-keep_max:]
 
     def _notify(self, job: dict, event: str) -> None:
         """User hook: an executable at ~/.claude/progress/notify is the whole
@@ -324,6 +393,11 @@ class Tracker:
         updated = _parse_ts(job.get("updated_at"))
         if updated is not None:
             silent = (datetime.now(timezone.utc) - updated).total_seconds()
+            # An explicit timeout is a contract the producer opted into, so it
+            # outranks the learned stall heuristic and is terminal, not advisory.
+            timeout = job.get("ping_timeout")
+            if timeout and silent > float(timeout):
+                return "stopped"
             p95 = hist_p95_gap(self.history, job.get("name"))
             if p95 is not None and silent > max(STALL_GAP_FACTOR * p95,
                                                 STALL_GAP_FLOOR):
@@ -350,6 +424,44 @@ class Tracker:
             rate = current
         return max(0, total - done) * rate
 
+    def progress(self, job: dict) -> tuple[float | None, str]:
+        """(ratio 0..1 or None, mode).
+
+        Computed here, once, so the page, the status line and any other reader
+        cannot disagree about what a bar means. Four modes, most-honest first:
+
+          items  done/total — real measurement
+          time   elapsed against a duration the caller declared
+          eta    elapsed against the median of this job's own past runs
+          creep  nothing to measure against: the open-ended curve Claude Code's
+                 own /compact bar uses, 1-exp(-t/90), capped so it never ends
+
+        `time` and `eta` cap at 0.99: a job that overruns its estimate must not
+        read as finished, because that is exactly when you most want to look.
+        """
+        status = job.get("status", "running")
+        if status != "running":
+            return (1.0 if status == "done" else None), status
+
+        total, done = job.get("total"), job.get("done", 0)
+        if total:
+            return max(0.0, min(1.0, done / total)), "items"
+
+        started = _parse_ts(job.get("started_at"))
+        elapsed = (datetime.now(timezone.utc) - started).total_seconds() \
+            if started else 0.0
+        elapsed = max(0.0, elapsed)
+
+        expect = job.get("expect_seconds")
+        if expect and expect > 0:
+            return min(0.99, elapsed / expect), "time"
+
+        hist = hist_median_seconds(self.history, job.get("name"), job.get("kind"))
+        if hist and hist > 0:
+            return min(0.99, elapsed / hist), "eta"
+
+        return min(0.95, 1 - math.exp(-elapsed / 90.0)), "creep"
+
     def snapshot(self) -> list[dict]:
         with self.lock:
             rows = []
@@ -362,6 +474,7 @@ class Tracker:
                 out["state"] = self.classify(job)
                 out["eta_seconds"] = self.eta_seconds(job) \
                     if out["state"] == "running" else None
+                out["progress"], out["progress_mode"] = self.progress(job)
                 rows.append(out)
             return rows
 
@@ -374,11 +487,15 @@ PAGE = """<!doctype html><meta charset="utf-8"><title>progress</title>
  .running{color:#8c8}.done{color:#666}.failed{color:#e77}.orphaned{color:#e77}
  .stalled{color:#eb6}.bar{background:#333;height:.5em;min-width:8em}
  .bar>div{background:#8ac;height:100%}
- small{color:#777}
+ small{color:#777} a{color:#8ac} .mode{color:#777;font-size:.85em}
+ /* A time/eta/creep bar is an estimate, not a measurement. Hatching it keeps
+    that visible at a glance so an estimated bar is never read as a counted one. */
+ .est>div{background:repeating-linear-gradient(90deg,#8ac 0 6px,#4a6a86 6px 12px)}
 </style>
-<h1>progress <small id="ts"></small></h1>
-<table><thead><tr><th>job</th><th>state</th><th>progress</th><th>eta</th>
-<th>counters</th><th>detail</th></tr></thead><tbody id="rows"></tbody></table>
+<h1>progress <small id="ts"></small> <small id="filter"></small></h1>
+<table><thead><tr><th>job</th><th>session</th><th>state</th><th>progress</th>
+<th>eta</th><th>counters</th><th>detail</th></tr></thead>
+<tbody id="rows"></tbody></table>
 <h1 style="margin-top:2em">history <small>last runs per job · trend</small></h1>
 <table><thead><tr><th>job</th><th>runs</th><th>durations</th><th>median</th>
 <th>trend</th></tr></thead><tbody id="hist"></tbody></table>
@@ -390,15 +507,52 @@ function dur(s){if(s==null)return"";s=Math.round(s);
 function spark(secs){const m=Math.max(...secs);
  return secs.map(s=>`<span style="display:inline-block;width:6px;margin-right:1px;`+
   `background:#8ac;height:${Math.max(2,Math.round(14*s/m))}px" title="${dur(s)}"></span>`).join("")}
+// ?session=<id> narrows the page to one Claude Code session. The filter is
+// applied by the daemon, not here, so the page and the status line ask the
+// same question and cannot drift apart.
+const Q=new URLSearchParams(location.search);
+const SESSION=Q.get("session");
+// The daemon now returns live work only unless asked otherwise, so the page
+// carries the toggle rather than hiding finished rows with no way back.
+const STATE=Q.get("state");
+function qs(over){const p=new URLSearchParams();
+ if(SESSION)p.set("session",SESSION);
+ const s=over===undefined?STATE:over; if(s)p.set("state",s);
+ const q=p.toString(); return q?"?"+q:"";}
+function sessCell(j){
+ if(!j.session)return "\u2014";
+ const label=esc(j.session_name||j.session.slice(0,8));
+ if(SESSION)return label;
+ const p=new URLSearchParams();p.set("session",j.session);if(STATE)p.set("state",STATE);
+ return `<a href="?${p.toString()}">${label}</a>`;
+}
 async function tick(){try{
- const r=await fetch("/jobs");const d=await r.json();
+ const r=await fetch("/jobs"+qs());
+ const d=await r.json();
  document.getElementById("ts").textContent=d.now;
+ const bits=[];
+ if(SESSION){const p2=new URLSearchParams();if(STATE)p2.set("state",STATE);
+  const href=p2.toString()?"?"+p2.toString():"?";
+  bits.push(`session ${esc(SESSION.slice(0,8))} <a href="${href}">\u2715</a>`);}
+ bits.push(STATE==="all"
+  ?`showing all <a href="${qs(null)}">live only</a>`
+  :`live only <a href="${qs("all")}">show all</a>`);
+ document.getElementById("filter").innerHTML="\u00b7 "+bits.join(" \u00b7 ");
  document.getElementById("rows").innerHTML=d.jobs.map(j=>{
-  const pct=j.total?Math.min(100,100*j.done/j.total):null;
-  const bar=pct==null?j.done:`<div class="bar"><div style="width:${pct}%"></div></div>${j.done}/${j.total}`;
+  const p=j.progress;
+  const est=j.progress_mode&&j.progress_mode!=="items"&&j.progress_mode!=="done";
+  let bar;
+  if(p==null){bar=j.done;}
+  else{
+   const pct=Math.round(100*p);
+   const tail=j.progress_mode==="items"?`${j.done}/${j.total}`
+    :`${pct}% <span class="mode">${esc(j.progress_mode)}</span>`;
+   bar=`<div class="bar${est?" est":""}"><div style="width:${pct}%"></div></div>${tail}`;
+  }
   const c=j.counters?Object.entries(j.counters).map(([k,v])=>k+"="+v).join(" "):"";
   const det=esc(j.detail||j.error||"")+(j.tail?` <details><summary>output</summary><pre>${esc(j.tail)}</pre></details>`:"");
-  return `<tr class="${j.state}"><td>${esc(j.name)}</td><td>${j.state}</td>`+
+  return `<tr class="${j.state}"><td>${esc(j.name)}</td><td>${sessCell(j)}</td>`+
+   `<td>${j.state}</td>`+
    `<td>${bar}</td><td>${dur(j.eta_seconds)}</td><td>${esc(c)}</td>`+
    `<td>${det}</td></tr>`}).join("");
  const h=await (await fetch("/history")).json();
@@ -446,7 +600,42 @@ def run_daemon(bind_port: int | None = None,
             elif path.path == "/health":
                 self._json({"ok": True, "pid": os.getpid()})
             elif path.path == "/jobs":
-                self._json({"now": _now(), "jobs": tracker.snapshot()})
+                rows = tracker.snapshot()
+                q = urllib.parse.parse_qs(path.query)
+
+                want = (q.get("session") or [None])[0]
+                if want:
+                    # Exact match only. A job with no session (cron, bare shell)
+                    # is deliberately excluded: a per-session view that quietly
+                    # included machine-wide work would be worse than useless.
+                    rows = [r for r in rows if r.get("session") == want]
+
+                # state: absent -> live work only. A channel you glance at
+                # should answer "what is happening now"; finished rows are
+                # history and are one ?state=all away. Explicit states may be
+                # comma-separated (?state=done,failed).
+                state_q = (q.get("state") or [None])[0]
+                if state_q != "all":
+                    if state_q:
+                        wanted = [s.strip() for s in state_q.split(",") if s.strip()]
+                        rows = [r for r in rows if r.get("state") in wanted]
+                    else:
+                        # Live default: running work, plus anything that finished
+                        # within the linger window so a job is actually seen
+                        # reaching 100% instead of blinking out of existence.
+                        linger = _linger_seconds()
+                        now_dt = datetime.now(timezone.utc)
+
+                        def _live(r: dict) -> bool:
+                            if r.get("state") in LIVE_STATES:
+                                return True
+                            ts = _parse_ts(r.get("finished_at"))
+                            return ts is not None and \
+                                (now_dt - ts).total_seconds() <= linger
+
+                        rows = [r for r in rows if _live(r)]
+
+                self._json({"now": _now(), "jobs": rows})
             elif path.path == "/forecast":
                 name = urllib.parse.parse_qs(path.query).get("name", [""])[0]
                 self._json({"text": forecast_text(tracker.history, name)})
@@ -530,10 +719,23 @@ class Job:
 
     def __init__(self, name: str, total: int | None = None, kind: str = "local",
                  source: str | None = None, detail: str | None = None,
-                 project: str | None = None):
+                 project: str | None = None, expect_seconds: float | None = None,
+                 ping_timeout: float | None = None):
         self.name, self.total, self.kind = name, total, kind
         self.source, self.detail = source, detail
         self.project = project or os.path.basename(os.getcwd())
+        # Time-based work: pass expect_seconds when the job knows roughly how
+        # long it should take but cannot count items (a download, a remote
+        # build). Leave both total and expect_seconds unset and the bar falls
+        # back to this job's own history, then to an open-ended creep.
+        self.expect_seconds = expect_seconds
+        # Watchdog: if the producer goes quiet for longer than this, the job is
+        # declared stopped. Distinct from `stalled` (a learned, advisory guess
+        # that resolves itself) and from `orphaned` (the pid is provably gone).
+        # This is for producers whose pid says nothing useful — a remote job, a
+        # shell that forks, anything polled rather than owned.
+        self.ping_timeout = ping_timeout
+        self.session, self.session_name, self.agent = session_identity()
         self.uid = uuid.uuid4().hex
         self.done = 0
         self.tail: str | None = None    # last output lines, shown on the page
@@ -551,6 +753,10 @@ class Job:
             "uid": self.uid, "name": self.name, "kind": self.kind,
             "source": self.source, "project": self.project,
             "total": self.total, "done": self.done, "status": status,
+            "expect_seconds": self.expect_seconds,
+            "ping_timeout": self.ping_timeout,
+            "session": self.session, "session_name": self.session_name,
+            "agent": self.agent,
             "detail": self.detail, "tail": self.tail,
             "counters": self.counters or None,
             "pid": os.getpid(), "host": os.uname().nodename,
@@ -644,7 +850,9 @@ def cmd_list() -> list[str]:
     if not _get_json("/health", timeout=0.5):
         return [f"(no daemon on {base_url()} — nothing tracked; it starts"
                 " with the first job)"]
-    data = _get_json("/jobs")
+    # Deliberate surface: `list` is asked for, so it shows everything. Only the
+    # ambient surfaces (page, status line) default to live work.
+    data = _get_json("/jobs?state=all")
     if not data:
         return ["(daemon unreachable)"]
     return [_fmt_row(j) for j in data["jobs"]] or ["(no jobs)"]
@@ -775,7 +983,9 @@ def _token_record(state: dict, status: str = "running",
                   error: str | None = None) -> dict:
     rec = {k: state.get(k) for k in
            ("uid", "name", "kind", "source", "project", "total", "done",
-            "detail", "pid", "host")}
+            "detail", "pid", "host",
+            "expect_seconds", "ping_timeout",
+            "session", "session_name", "agent")}
     rec["status"] = status
     rec["counters"] = state.get("counters") or None
     if status != "running":
@@ -796,6 +1006,12 @@ def cmd_start(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(prog="progress start")
     ap.add_argument("--name", required=True)
     ap.add_argument("--total", type=int)
+    ap.add_argument("--seconds", type=float, dest="expect_seconds",
+                    help="expected duration; fills the bar on time when there "
+                         "is nothing to count")
+    ap.add_argument("--timeout", type=float, dest="ping_timeout",
+                    help="declare the job stopped after this many seconds "
+                         "without a step or ping")
     ap.add_argument("--kind", default="local")
     ap.add_argument("--source")
     ap.add_argument("--detail")
@@ -806,6 +1022,9 @@ def cmd_start(argv: list[str]) -> int:
         "uid": uuid.uuid4().hex, "name": a.name, "kind": a.kind,
         "source": a.source, "project": os.path.basename(os.getcwd()),
         "total": a.total, "done": 0, "detail": a.detail,
+        "expect_seconds": a.expect_seconds, "ping_timeout": a.ping_timeout,
+        "session": session_identity()[0], "session_name": session_identity()[1],
+        "agent": session_identity()[2],
         "counters": {}, "gaps": [], "last_step": None,
         "last_post": 0.0, "started_at": _now(),
         "pid": a.pid or os.getppid(), "host": os.uname().nodename,
@@ -855,6 +1074,46 @@ def cmd_step(argv: list[str]) -> int:
     return 0
 
 
+def cmd_ping(argv: list[str]) -> int:
+    """Heartbeat, with optional overrides.
+
+    `step` advances a count and is throttled; `ping` says "still alive" and
+    always POSTs immediately, because a heartbeat a throttle might swallow is
+    not a heartbeat. Use it for time-based work with nothing to count, and to
+    correct a job's shape mid-run (--total/--seconds/--timeout).
+    """
+    import argparse
+    ap = argparse.ArgumentParser(prog="progress ping")
+    ap.add_argument("token")
+    ap.add_argument("-n", type=int, default=0,
+                    help="items completed since the last ping (default 0)")
+    ap.add_argument("--done", type=int, help="set the absolute count instead")
+    ap.add_argument("--total", type=int, help="override the total")
+    ap.add_argument("--seconds", type=float, dest="expect_seconds",
+                    help="override the expected duration")
+    ap.add_argument("--timeout", type=float, dest="ping_timeout",
+                    help="override the no-ping-means-stopped window")
+    ap.add_argument("--detail")
+    a = ap.parse_args(argv)
+
+    state = _token_load(a.token)
+    now = time.time()
+    if a.done is not None:
+        state["done"] = a.done
+    elif a.n:
+        state["done"] = state.get("done", 0) + a.n
+    for key, val in (("total", a.total), ("expect_seconds", a.expect_seconds),
+                     ("ping_timeout", a.ping_timeout), ("detail", a.detail)):
+        if val is not None:
+            state[key] = val
+    if a.n or a.done is not None:
+        state["last_step"] = now
+    if _post_job(_token_record(state)):     # never throttled
+        state["last_post"] = now
+    _token_save(state["uid"], state)
+    return 0
+
+
 def cmd_finish(argv: list[str]) -> int:
     import argparse
     ap = argparse.ArgumentParser(prog="progress finish")
@@ -897,6 +1156,8 @@ def main(argv: list[str]) -> int:
         return cmd_start(rest)
     if verb == "step":
         return cmd_step(rest)
+    if verb == "ping":
+        return cmd_ping(rest)
     if verb == "finish":
         return cmd_finish(rest)
     if verb == "list":

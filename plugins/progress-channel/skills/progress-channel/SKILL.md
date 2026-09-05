@@ -68,13 +68,14 @@ with Job('video integrity', total=10453) as j:
 ## CLI
 
 ```bash
-python3 <plugin>/scripts/progress.py list              # one-shot view
+python3 <plugin>/scripts/progress.py list              # one-shot view (all states)
 python3 <plugin>/scripts/progress.py watch             # live TUI
 python3 <plugin>/scripts/progress.py forecast <name>   # pre-start estimate
 python3 <plugin>/scripts/progress.py run --name build --total 1 -- make all
 python3 <plugin>/scripts/progress.py mirror --name 'immich metadata' \
     --source immich-jobs --poll-cmd '<status cmd>' --interval 30
 python3 <plugin>/scripts/progress.py daemon            # foreground (debug)
+python3 <plugin>/scripts/statusline.py                # status-line rows (stdin: session JSON)
 python3 <plugin>/scripts/progress.py prune             # compact history.jsonl
 ```
 
@@ -106,6 +107,131 @@ stateless for the script and keeps the same 1s POST throttle as the library.
 Liveness anchors to the **calling script's pid** (`--pid` overrides), so a
 script that dies without `finish` is swept as orphaned like any other
 producer.
+
+## Scoping: whose job is this?
+
+Every producer records the Claude Code session that owns it, for free —
+Claude Code exports `CLAUDE_CODE_SESSION_ID` into every tool process, so
+nothing has to be plumbed through. `CLAUDE_CODE_AGENT` (set only inside a
+subagent) is recorded too, so a subagent's work shows under the session that
+spawned it while still being attributable to the agent.
+
+```bash
+curl -s 'localhost:7717/jobs?session=<id>'    # one session's work
+```
+
+The page takes the same `?session=` parameter and its session column links to
+it. Work started outside a session — cron, a bare shell — carries no session
+and appears only in the unfiltered view; the filter is an exact match, because
+a per-session view that quietly included machine-wide work would be worse than
+useless.
+
+## What `/jobs` returns, and for how long
+
+**`/jobs` returns live work only.** That is the whole point of an ambient
+surface: it answers "what is happening now", not "what has ever happened".
+
+- `?state=all` — everything still retained
+- `?state=done,failed` — an explicit comma-separated set
+- absent — `running` + `stalled`, **plus** anything finished within the linger
+  window, so a job is visibly seen reaching 100% instead of blinking out
+
+Deliberate surfaces are not filtered: `list`, `watch` and the MCP
+`progress_list` all ask for `?state=all`, because you went looking.
+
+Two clocks, deliberately separate:
+
+| | default | env | meaning |
+|---|---|---|---|
+| linger | 20 s | `PROGRESS_DONE_LINGER` | how long a finished row stays in the **live view** |
+| removal | 24 h | `PROGRESS_FINISHED_HOURS` | when a done/failed row is **dropped** |
+| orphan removal | 30 min | `PROGRESS_ORPHAN_MINUTES` | orphans are already dead — a shorter leash |
+| hard cap | 60 | `PROGRESS_FINISHED_MAX` | bounds a pathological day |
+
+## Time-based progress
+
+Not all work counts items. A bar fills from the best evidence available, and
+**says which**, so an estimate is never mistaken for a measurement:
+
+| mode | fills against | when |
+|---|---|---|
+| `items` | `done/total` | a total is known — the only measured mode |
+| `time` | elapsed / declared duration | `Job(expect_seconds=)` / `start --seconds` |
+| `eta` | elapsed / median of this job's past runs | history exists for the name |
+| `creep` | `1-exp(-t/90)`, capped 95 % | nothing to measure against |
+
+`time` and `eta` cap at 99 %: a job that overruns its estimate must not read as
+finished, because that is exactly when you want to look at it. The page hatches
+estimated bars; the status line prints the mode.
+
+## Heartbeats: `ping` and the stopped watchdog
+
+`step` advances a count and is throttled. **`ping` says "still alive" and always
+posts immediately** — a heartbeat a throttle might swallow is not a heartbeat.
+
+```bash
+T=$($P start --name 'remote build' --seconds 300 --timeout 60)
+while ...; do $P ping $T; done              # time-based: just a heartbeat
+$P ping $T -n 5                              # or carry items along
+$P ping $T --total 900 --seconds 600         # override the shape mid-run
+```
+
+`--timeout N` is a contract the producer opts into: **no step or ping for N
+seconds and the job is declared `stopped`** and retired. This is for producers
+whose pid says nothing useful — a remote job, a shell that forks, anything
+polled rather than owned. It outranks the learned `stalled` heuristic, which
+stays advisory and self-resolving.
+
+## Status line (per-session, in the Claude Code window)
+
+`scripts/statusline.py` ships with the plugin and puts this session's live work
+in the Claude Code prompt:
+
+```
+⏳ research sweep      █████▌░░░░░░░░░░░░  31% 11/36 · ~7s left
+⏳ remote build        ░░░░░░░░░░░░░░░░░░   0% time
+⏳ explorer: scan repo █████████████▌░░░░  75% 6/8
+```
+
+The status line is the **only** surface in the Claude Code window a user script
+can drive on its own schedule: `statusLine.refreshInterval` re-runs the command
+on a timer (minimum 1 s). Tool stdout is a sanitised pipe with no terminal —
+carriage returns, cursor control and even colour are stripped — so this is the
+one place a live bar can go.
+
+Use it as the whole status line, in `~/.claude/settings.json`:
+
+```json
+{"statusLine": {"type": "command",
+                "command": "python3 <plugin>/scripts/statusline.py",
+                "refreshInterval": 1}}
+```
+
+**`refreshInterval` is what makes it animate.** Without it the line repaints
+only on events (a new assistant message, `/compact` finishing) and a running
+job looks frozen.
+
+Or append it to a status line you already have:
+
+```python
+spec = importlib.util.spec_from_file_location("pc", "<plugin>/scripts/statusline.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+rows = m.render(payload.get("session_id"))     # None when idle
+if rows:
+    lines.append(rows)
+```
+
+Rows are scoped to the session (server-side), capped at 3, and label subagent
+work with the agent's name. Colour works here even though it is stripped from
+tool output.
+
+Two rules any replacement must keep:
+
+- **never spawn the daemon** — producers do that; a status line that did would
+  start daemons because somebody looked at their prompt
+- **never block** — a 250 ms timeout and a silent failure, because a missing
+  progress row is a far smaller problem than a frozen status line, which is
+  usually carrying other information too
 
 ## Notifications
 
