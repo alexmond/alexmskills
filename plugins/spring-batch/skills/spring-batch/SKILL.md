@@ -1,6 +1,7 @@
 ---
 name: spring-batch
-description: Spring Batch 5/6 development — job repository wiring, restart versus a new JobInstance, flow and deciders, tasklet transaction boundaries, partitioning strategy, and testing. Use when writing or debugging a Spring Batch job, when a job "completes" having done nothing, when asking whether a job resumes after a restart, when choosing between a tasklet and a chunk step, when partitioning work across workers, or when a batch test passes and pins nothing. Grounded in runnable samples in spring-boot-playground.
+description: >
+  Spring Batch 5/6 development — job repository wiring, restart vs a new JobInstance, deciders, tasklet transactions, partitioning. Use when writing or debugging a Spring Batch job, when a job "completes" having done nothing, when asking whether a job resumes after restart, choosing a tasklet vs a chunk step, partitioning work, or when a batch test passes and pins nothing.
 ---
 
 ## Spring Batch development

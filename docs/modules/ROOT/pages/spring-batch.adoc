@@ -1,0 +1,39 @@
+= Spring Batch
+:navtitle: spring-batch
+:description: Spring Batch 5/6 development grounded in runnable samples — what the framework actually does versus what its API suggests.
+
+A domain-reference skill for Spring Batch 5/6 development: job repository wiring
+(and the one Boot 4 deliberately does *not* give you), restart versus a new
+`JobInstance`, `ExitStatus` routing and deciders, tasklet transaction boundaries,
+stride partitioning, the counter that lets a job report `DONE` having done
+nothing, and the testing package most projects declare and never use.
+
+What makes it more than a cheat sheet: every claim is *paid for* — grounded in
+runnable sample modules (one module per mechanism, each asserting behaviour
+rather than describing it) in the author's
+https://github.com/alexmond/spring-boot-playground[spring-boot-playground] repo.
+When the skill is unsure what the framework does, its own instruction is to write
+the case there and run it, then correct the file.
+
+== Install
+
+[source,text]
+----
+/plugin install spring-batch@alexmskills
+----
+
+== When it fires
+
+* Writing or debugging a Spring Batch job.
+* A job "completes" having done nothing.
+* "Does this job resume after a restart, or start over?"
+* Choosing between a tasklet and a chunk step.
+* Partitioning work across workers.
+* A batch test that passes while pinning nothing.
+
+== How it grows
+
+The skill carries its own learning loop: hard-won corrections append to
+`references/learnings.md`, and `references/reference-map.md` maps each claim to
+the sample module that proves it. When reality disagrees with the file, the
+file gets corrected — the samples are the arbiter.

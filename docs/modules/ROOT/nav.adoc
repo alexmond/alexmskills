@@ -27,6 +27,8 @@
 ** xref:mindmap-prompt.adoc[Mindmap Prompt]
 ** xref:progress-channel.adoc[Progress Channel]
 ** xref:ticket-triage.adoc[Ticket Triage]
+* Development reference
+** xref:spring-batch.adoc[Spring Batch]
 * Agents & research
 ** xref:review-agents.adoc[Review Agents]
 ** xref:research-sweep.adoc[Research Sweep]

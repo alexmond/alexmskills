@@ -84,6 +84,18 @@ Guided procedures for a specific job, start to finish.
 | Scans a codebase for OWASP-style vulnerabilities and reports them with remediation.
 |===
 
+== Development reference
+
+Domain knowledge skills, grounded in runnable samples.
+
+[cols="1,3",options="header"]
+|===
+| Plugin | What it does
+
+| xref:spring-batch.adoc[spring-batch]
+| Spring Batch 5/6 development — what the framework actually does versus what its API suggests: restart semantics, deciders, tasklet transactions, partitioning, and the job repository Boot 4 doesn't give you.
+|===
+
 == Agents & research
 
 [cols="1,3",options="header"]
