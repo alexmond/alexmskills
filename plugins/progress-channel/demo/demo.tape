@@ -1,7 +1,7 @@
-# alexmskills root demo — the progress-channel plugin, live.
-# Regenerate with: vhs demo.tape
+# progress-channel demo (CLI view) — also embedded in the repo-root README.
+# Regenerate from this directory: vhs demo.tape
 # Needs: vhs + ttyd + ffmpeg, and alexmond/skillsample checked out as a
-# sibling of this repo (the demo stage the workload runs from).
+# sibling of the alexmskills repo (the demo stage the workload runs from).
 # The hidden prelude uses a throwaway PROGRESS_HOME/PORT and seeds one run
 # so the visible run shows a learned ETA and the forecast has history.
 
@@ -17,11 +17,11 @@ Set TypingSpeed 45ms
 Hide
 Type `export PROGRESS_HOME=$(mktemp -d) PROGRESS_PORT=7727`
 Enter
-Type `export PROGRESS_CLI="python3 $PWD/plugins/progress-channel/scripts/progress.py"`
+Type `export PROGRESS_CLI="python3 $PWD/../scripts/progress.py"`
 Enter
 Type `progress() { $PROGRESS_CLI "$@"; }`
 Enter
-Type `cd ../skillsample`
+Type `cd ../../../../skillsample`
 Enter
 Type `TOTAL=40 DELAY=0.03 ./workloads/import-photos.sh >/dev/null 2>&1`
 Enter

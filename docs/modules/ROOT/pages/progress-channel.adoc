@@ -6,6 +6,43 @@ Work that takes minutes is usually reported by whatever the agent happens to pri
 
 This plugin makes a shared progress channel the default for all three, and the answer to "are we there yet" is a page, never a re-poll.
 
+[TIP]
+====
+Two recorded demos ship next to the plugin, both run against the
+https://github.com/alexmond/skillsample[skillsample] demo stage:
+the https://github.com/alexmond/alexmskills/blob/main/plugins/progress-channel/demo/demo.gif[CLI demo GIF]
+(a workload registers itself, `watch` follows it live, `forecast` answers "how long" before starting), and the
+https://github.com/alexmond/alexmskills/blob/main/plugins/progress-channel/demo/demo-claude.gif[Claude Code demo GIF]
+— a **real recorded session** where a simulated Maven reactor build reports itself on the session's status line.
+====
+
+== What it looks like
+
+=== In Claude Code — the status line
+
+A job started from any tool call inherits the session id, so the session's status
+line shows a live bar for *its own* work only (the status line is the one surface
+in the Claude Code window that supports colour and self-scheduled refresh). Here a
+real recorded session runs a simulated Maven reactor build: the build registers
+itself, Claude answers and moves on, and the bar fills with a live ETA — nobody
+re-polls, nobody narrates:
+
+image::progress-claude-statusline.png[A Claude Code session — the maven build's live bar and ETA in the status line,width=100%]
+
+=== In the terminal — list, forecast, watch
+
+image::progress-cli-forecast.png[progress list shows live and finished jobs; forecast answers before starting,width=100%]
+
+image::progress-cli-watch.png[progress watch — the live TUI,width=100%]
+
+=== The live page
+
+The daemon serves the tracker itself at `http://127.0.0.1:7717/` — live jobs with
+ETAs (counted `4/8`, time-based `26% time`, and estimate-labelled bars), plus
+per-job duration history with sparklines and trend:
+
+image::progress-page.png[The live progress page — running jobs with ETAs and per-job duration history,width=100%]
+
 == Install
 
 [source,text]

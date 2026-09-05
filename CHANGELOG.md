@@ -7,6 +7,11 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-09-05
+
+### Changed
+- **progress-channel 0.3.2** — the demos move home and the docs get eyes. The repo-root `demo.gif`/`demo.tape` (the README hero) relocate to `plugins/progress-channel/demo/` next to what they demo (the brainstorm-panel precedent); the tape regenerates from its new directory. New `demo/demo-claude.tape` + `demo-claude.gif`: a **real recorded Claude Code session** where a simulated Maven reactor build (`skillsample/workloads/maven-build.sh`) registers itself on the channel and the session's status line shows the live bar with an ETA while Claude backgrounds the build and moves on — the "register, then move on" discipline on camera. The docs page gains a *What it looks like* section: the status-line bar in Claude Code, `list`/`forecast`/`watch` in the terminal, and the live page with all three bar modes (counted, time-based, estimate-labelled) plus history sparklines. Recording note for future tapes: VHS v0.11 rejects *unquoted* absolute `Output`/`Screenshot` paths — quote them.
+
 ## 2026-08-28
 
 ### Changed

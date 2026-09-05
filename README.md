@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-alexmond.org-informational)](https://www.alexmond.org/alexmskills/)
 
-![demo: the progress-channel plugin — a workload registers itself, watch shows live progress with a learned ETA, and forecast answers "how long will this take" before starting](demo.gif)
+![demo: the progress-channel plugin — a workload registers itself, watch shows live progress with a learned ETA, and forecast answers "how long will this take" before starting](plugins/progress-channel/demo/demo.gif)
 
-> The [`progress-channel`](plugins/progress-channel) plugin live, against a [sample workload](https://github.com/alexmond/skillsample) — recorded with [VHS](https://github.com/charmbracelet/vhs) ([view source](demo.tape)).
+> The [`progress-channel`](plugins/progress-channel) plugin live, against a [sample workload](https://github.com/alexmond/skillsample) — recorded with [VHS](https://github.com/charmbracelet/vhs) ([view source](plugins/progress-channel/demo/demo.tape)).
 
 A curated **[Claude Code](https://code.claude.com) plugin marketplace** of reusable, self-improving
 skills and agents. Each skill is packaged as an **independently versioned plugin**, so you install and
@@ -37,7 +37,8 @@ that captures every multi-cycle debugging detour.
 | [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
 | [`mindmap-prompt`](plugins/mindmap-prompt) | workflow | 0.2.2 | Sketch ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. `✦` expands any node with `claude -p` running in your repo. Saves as JSON Canvas (`.canvas`) so maps are git-diffable, reworkable, and open in Obsidian. |
 | [`screenshot-tour`](plugins/screenshot-tour) | workflow | 1.1.0 | Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product (CLI/web/library/TUI) under `presentation/`. |
-| [`progress-channel`](plugins/progress-channel) | workflow | 0.2.0 | One visible channel for every long-running process — local sweeps, backgrounded commands, and mirrored external work. The server behind the live page is the in-memory tracker (stdlib daemon, auto-spawned), with learned ETAs, pre-start forecasts, and stall/orphan detection from each job's own history. |
+| [`progress-channel`](plugins/progress-channel) | workflow | 0.3.2 | One visible channel for every long-running process — local sweeps, backgrounded commands, and mirrored external work. The server behind the live page is the in-memory tracker (stdlib daemon, auto-spawned), with learned ETAs, pre-start forecasts, and stall/orphan detection from each job's own history. [▶ CLI demo](plugins/progress-channel/demo/demo.gif) · [▶ Claude demo](plugins/progress-channel/demo/demo-claude.gif) — a real recorded session. |
+| [`spring-batch`](plugins/spring-batch) | development | 0.1.0 | Spring Batch 5/6 development grounded in runnable samples — restart vs a new JobInstance, deciders, tasklet transaction boundaries, partitioning, and the job repository Boot 4 doesn't give you. |
 | [`ticket-triage`](plugins/ticket-triage) | workflow | 0.1.0 | Backlog-drain loop: rank the open tickets, dispatch the startable ones in parallel (worktree-isolated, role-briefed, honest width), verify and merge each result, and re-triage on every completion until the queue is empty or everything left needs the user. |
 | [`review-agents`](plugins/review-agents) | review | 1.1.0 | Specialist review subagents for Java/Maven projects — code review, test running, dependency/CVE auditing. No-write by construction: Write/Edit withheld. |
 | [`research-sweep`](plugins/research-sweep) | research | 1.2.1 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
@@ -91,6 +92,7 @@ Then install what you want — copy-paste any of these:
 /plugin install ticket-triage@alexmskills
 /plugin install review-agents@alexmskills
 /plugin install research-sweep@alexmskills
+/plugin install spring-batch@alexmskills
 ```
 
 Or browse interactively with `/plugin` (Discover tab). After a maintainer pushes an update, refresh
