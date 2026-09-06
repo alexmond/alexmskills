@@ -308,8 +308,9 @@ the page.
 
 ## Verify it's working
 
-`python3 <plugin>/scripts/test-harness.py` (44 checks: real daemon on an
+`python3 <plugin>/scripts/test-harness.py` (101 checks: real daemon on an
 ephemeral port, SIGKILL orphan sweep, restart re-registration, degraded
 mode, shell start/step/finish, notify hook, trend, MCP handshake, advisory
-hook) — or register a trivial job and open the page: the row appears at
-registration, not completion.
+hook, status line, eta~ stem matching, retention, upgrade handshake) — or
+register a trivial job and open the page: the row appears at registration,
+not completion.

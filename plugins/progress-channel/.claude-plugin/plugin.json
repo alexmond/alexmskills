@@ -1,6 +1,6 @@
 {
   "name": "progress-channel",
-  "description": "One visible channel for every long-running process — local sweeps, backgrounded commands, and work handed to external systems. The server that serves the live progress page IS the tracker: a tiny stdlib Python daemon holds live jobs in memory (auto-spawned by the first producer, single writer, no store locking), persists only the duration history to an append-only JSONL, and derives liveness — orphans by checking producer pids directly, stalls from each job's own learned cadence — with learned ETAs and pre-start forecasts.",
+  "description": "One visible channel for every long-running process — local sweeps, backgrounded commands, and work handed to external systems. The server that serves the live progress page IS the tracker: a tiny stdlib Python daemon holds live jobs in memory (auto-spawned by the first producer, single writer, no store locking), persists only the duration history to a size-bounded JSONL (names idle past the retention window are forgotten), and derives liveness — orphans by checking producer pids directly, stalls from each job's own learned cadence — with learned ETAs and pre-start forecasts.",
   "version": "0.4.0",
   "author": {
     "name": "Alex Mondshain",
