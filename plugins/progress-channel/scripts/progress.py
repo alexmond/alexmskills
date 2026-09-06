@@ -38,6 +38,7 @@ import json
 import math
 import os
 import re
+import signal
 import statistics
 import subprocess
 import sys
@@ -70,6 +71,7 @@ LIVE_STATES = ("running", "stalled")   # what /jobs returns when no state is ask
 ETA_CUTOVER_FRACTION = 0.10  # current-run rate fully trusted past this progress
 STALL_GAP_FACTOR = 3.0       # stalled when silent > factor * learned p95 gap
 STALL_GAP_FLOOR = 30.0       # ... but never call a gap under this a stall
+HISTORY_DAYS = 7             # a name with no run in this window is forgotten
 
 
 def home() -> Path:
@@ -91,6 +93,32 @@ def _expiry() -> tuple[float, float, int]:
 
 def _linger_seconds() -> float:
     return float(os.environ.get("PROGRESS_DONE_LINGER", DONE_LINGER_SECONDS))
+
+
+def _history_days() -> float:
+    return float(os.environ.get("PROGRESS_HISTORY_DAYS", HISTORY_DAYS))
+
+
+def plugin_version() -> str:
+    """The installed plugin's version — the daemon's build identity, used by
+    the upgrade handshake in ensure_daemon(). Read from plugin.json so `make
+    bump` is the only version knob; a checkout without a manifest is 'dev'."""
+    try:
+        manifest = (Path(__file__).resolve().parent.parent
+                    / ".claude-plugin" / "plugin.json")
+        return str(json.loads(manifest.read_text(encoding="utf-8"))["version"])
+    except (OSError, ValueError, KeyError):
+        return "dev"
+
+
+def _ver_tuple(v) -> tuple:
+    """'0.4.0' -> (0,4,0); anything non-numeric ('dev') sorts below every
+    release, so a dev checkout never bullies an installed daemon off the port
+    — but any installed client replaces a dev daemon."""
+    try:
+        return tuple(int(x) for x in str(v).split("."))
+    except (ValueError, TypeError):
+        return (-1,)
 
 
 def base_url() -> str:
@@ -140,6 +168,62 @@ def _shape(rec: dict) -> tuple:
     return (rec.get("name"), rec.get("kind"), rec.get("total_bucket", 0))
 
 
+def name_stem(name) -> str:
+    """Stable identity of a job name across argument noise: lowercase, tokens
+    that look like paths dropped, digits and punctuation stripped — so
+    'make /home/a' and 'make /home/b' share an estimate while staying
+    distinct from 'pytest'. Feeds the similar-job fallback, never the exact
+    name match."""
+    toks = []
+    for t in str(name or "").lower().split():
+        if "/" in t or "\\" in t:
+            continue
+        t = re.sub(r"[^a-z]+", "", t)
+        if t:
+            toks.append(t)
+    return " ".join(toks[:4]) or str(name or "").strip().lower()
+
+
+def _rec_stem(rec: dict) -> str:
+    # rows written before 0.4.0 carry no name_stem; derive it on read
+    return rec.get("name_stem") or name_stem(rec.get("name"))
+
+
+def prune_history(rows: list[dict],
+                  now: datetime | None = None) -> list[dict]:
+    """Forget dead job names: if a name's LATEST run is older than
+    PROGRESS_HISTORY_DAYS (default 7), every row under it goes — estimate,
+    stall threshold, sparkline. Per-name rather than per-row, so an active
+    job keeps its full learning window while an abandoned one disappears
+    entirely. Rows with no parseable finished_at cannot prove freshness and
+    go with the dead."""
+    now = now or datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=_history_days())
+    latest: dict[str, datetime] = {}
+    for r in rows:
+        ts = _parse_ts(r.get("finished_at"))
+        if ts is None:
+            continue
+        n = r.get("name")
+        if n not in latest or ts > latest[n]:
+            latest[n] = ts
+    return [r for r in rows
+            if latest.get(r.get("name")) is not None
+            and latest[r.get("name")] > cutoff]
+
+
+def rewrite_history(rows: list[dict]) -> None:
+    """Persist the pruned/compacted view — atomic replace. The daemon is the
+    only history writer, and it calls this only at startup and on the daily
+    retention pass, so there is no append racing the rewrite."""
+    path = home() / "history.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text("".join(json.dumps(r) + "\n" for r in rows),
+                   encoding="utf-8")
+    tmp.replace(path)
+
+
 def load_history() -> list[dict]:
     path = home() / "history.jsonl"
     rows: list[dict] = []
@@ -186,6 +270,19 @@ def hist_median_seconds(rows: list[dict], name, kind) -> float | None:
     time-based bar when the caller did not declare an expected duration."""
     vals = [r["seconds"] for r in rows
             if r.get("name") == name and r.get("kind") == kind
+            and r.get("status") == "done" and r.get("seconds")]
+    return statistics.median(vals[-HISTORY_KEEP:]) if vals else None
+
+
+def hist_stem_median_seconds(rows: list[dict], stem: str, kind,
+                             project=None) -> float | None:
+    """Similar-job fallback for a name that has never run: median duration of
+    jobs sharing the name stem (and project, when given). Feeds the 'eta~'
+    bar — a borrowed estimate, labelled so it is never read as the job's
+    own history."""
+    vals = [r["seconds"] for r in rows
+            if _rec_stem(r) == stem and r.get("kind") == kind
+            and (project is None or r.get("project") == project)
             and r.get("status") == "done" and r.get("seconds")]
     return statistics.median(vals[-HISTORY_KEEP:]) if vals else None
 
@@ -282,7 +379,11 @@ class Tracker:
         self.lock = threading.Lock()
         self.jobs: dict[str, dict] = {}       # uid -> live job dict
         self.finished: list[dict] = []        # recent finished, view only
-        self.history = compact_history(load_history())
+        self.history = compact_history(prune_history(load_history()))
+        # Startup is the safe writer moment: persist what retention and
+        # compaction decided, so the file cannot grow without bound.
+        rewrite_history(self.history)
+        self._last_prune = time.time()
         self.host = os.uname().nodename
 
     def upsert(self, rec: dict) -> None:
@@ -317,6 +418,12 @@ class Tracker:
             "seconds": job.get("seconds"), "per_item": job.get("per_item"),
             "p95_gap": job.get("p95_gap"), "status": job.get("status"),
             "host": job.get("host"), "finished_at": job["finished_at"],
+            # Context for similar-job estimates and future analysis. Session
+            # ids are ephemeral (recorded for audit, never matched on);
+            # project and name_stem are the stable similarity keys.
+            "project": job.get("project"), "source": job.get("source"),
+            "session": job.get("session"), "agent": job.get("agent"),
+            "name_stem": name_stem(job.get("name")),
         }
         self.history.append(rec)
         append_history(rec)
@@ -363,6 +470,13 @@ class Tracker:
                              else fin_cutoff)
 
             self.finished = [j for j in self.finished if _unexpired(j)][-keep_max:]
+
+            # Daily retention pass: a daemon that runs for weeks must not
+            # hold (and serve estimates from) history a restart would prune.
+            if time.time() - self._last_prune > 86400:
+                self._last_prune = time.time()
+                self.history = compact_history(prune_history(self.history))
+                rewrite_history(self.history)
 
     def _notify(self, job: dict, event: str) -> None:
         """User hook: an executable at ~/.claude/progress/notify is the whole
@@ -505,6 +619,17 @@ class Tracker:
         if hist and hist > 0:
             return min(0.99, elapsed / hist), "eta"
 
+        # Never ran under this exact name: borrow from similar jobs — same
+        # name stem in the same project first, then the stem anywhere. The
+        # distinct 'eta~' label keeps a borrowed estimate honest.
+        stem = name_stem(job.get("name"))
+        near = (hist_stem_median_seconds(self.history, stem, job.get("kind"),
+                                         job.get("project"))
+                or hist_stem_median_seconds(self.history, stem,
+                                            job.get("kind")))
+        if near and near > 0:
+            return min(0.99, elapsed / near), "eta~"
+
         return min(0.95, 1 - math.exp(-elapsed / 90.0)), "creep"
 
     def snapshot(self) -> list[dict]:
@@ -643,7 +768,8 @@ def run_daemon(bind_port: int | None = None,
             if path.path == "/":
                 self._send(200, PAGE.encode(), "text/html; charset=utf-8")
             elif path.path == "/health":
-                self._json({"ok": True, "pid": os.getpid()})
+                self._json({"ok": True, "pid": os.getpid(),
+                            "version": plugin_version()})
             elif path.path == "/jobs":
                 rows = tracker.snapshot()
                 q = urllib.parse.parse_qs(path.query)
@@ -690,6 +816,15 @@ def run_daemon(bind_port: int | None = None,
                 self._json({"error": "not found"}, 404)
 
         def do_POST(self):
+            if self.path == "/shutdown":
+                # Upgrade handshake: a newer client asks this daemon to step
+                # aside so the port lease passes to a fresh spawn of the new
+                # code. Live jobs survive the swap — every producer
+                # re-registers on its next flush. Localhost bind is the only
+                # auth, same trust model as the rest of the API.
+                self._json({"ok": True, "pid": os.getpid()})
+                threading.Thread(target=srv.shutdown, daemon=True).start()
+                return
             if self.path != "/jobs":
                 self._json({"error": "not found"}, 404)
                 return
@@ -734,13 +869,43 @@ def _get_json(path: str, timeout: float = 2.0) -> dict | None:
 _spawn_attempted = False
 
 
+def _post_plain(path: str, timeout: float = 1.0) -> bool:
+    req = urllib.request.Request(base_url() + path, data=b"{}", method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout):
+            return True
+    except (urllib.error.URLError, ConnectionError, TimeoutError, OSError):
+        return False
+
+
 def ensure_daemon() -> bool:
     """Auto-spawn: producers never require a separately-managed service.
     Binding the port is the single-instance lease, so a lost race is a win
-    (someone else's daemon answers). One spawn attempt per process."""
+    (someone else's daemon answers). One spawn attempt per process.
+
+    Upgrade handshake: when the answering daemon reports an OLDER version
+    than this client (plugin upgraded; the old daemon still holds the port),
+    ask it to shut down — falling back to SIGTERM on its reported pid for
+    pre-0.4 daemons that have no /shutdown — and spawn the new code. Only a
+    strictly newer client evicts, so a dev checkout ('dev' sorts below every
+    release) and concurrent same-version producers never churn the daemon.
+    Live jobs survive: producers re-register on their next flush."""
     global _spawn_attempted
-    if _get_json("/health", timeout=0.5):
-        return True
+    health = _get_json("/health", timeout=0.5)
+    if health:
+        if _ver_tuple(plugin_version()) <= _ver_tuple(health.get("version")):
+            return True
+        if not _post_plain("/shutdown"):
+            try:
+                os.kill(int(health.get("pid") or 0), signal.SIGTERM)
+            except (OSError, ValueError, TypeError):
+                pass
+        for _ in range(20):
+            time.sleep(0.1)
+            if not _get_json("/health", timeout=0.3):
+                break
+        else:
+            return True  # it would not die; an old tracker beats none
     if _spawn_attempted:
         return False
     _spawn_attempted = True
@@ -1177,10 +1342,8 @@ def cmd_finish(argv: list[str]) -> int:
 
 def cmd_prune() -> int:
     rows = load_history()
-    kept = compact_history(rows)
-    path = home() / "history.jsonl"
-    path.write_text("".join(json.dumps(r) + "\n" for r in kept),
-                    encoding="utf-8")
+    kept = compact_history(prune_history(rows))
+    rewrite_history(kept)
     print(f"history: {len(rows)} -> {len(kept)} row(s)")
     return 0
 

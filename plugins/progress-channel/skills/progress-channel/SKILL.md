@@ -76,7 +76,7 @@ python3 <plugin>/scripts/progress.py mirror --name 'immich metadata' \
     --source immich-jobs --poll-cmd '<status cmd>' --interval 30
 python3 <plugin>/scripts/progress.py daemon            # foreground (debug)
 python3 <plugin>/scripts/statusline.py                # status-line rows (stdin: session JSON)
-python3 <plugin>/scripts/progress.py prune             # compact history.jsonl
+python3 <plugin>/scripts/progress.py prune             # compact history.jsonl + drop names idle >7d
 ```
 
 `run` wraps any command as a job (duration feeds the forecast even without
@@ -158,7 +158,15 @@ Not all work counts items. A bar fills from the best evidence available, and
 | `items` | `done/total` | a total is known — the only measured mode |
 | `time` | elapsed / declared duration | `Job(expect_seconds=)` / `start --seconds` |
 | `eta` | elapsed / median of this job's past runs | history exists for the name |
+| `eta~` | elapsed / median of *similar* jobs' runs | name never ran, but its **stem** did |
 | `creep` | `1-exp(-t/90)`, capped 95 % | nothing to measure against |
+
+`eta~` is the borrowed estimate: the name is normalized to a stem (lowercase,
+path-ish tokens dropped, digits stripped — `make /home/a` ≈ `make /home/b`,
+still ≠ `pytest`) and matched against same-stem runs in the same project
+first, then anywhere. History records carry `project`/`session`/`agent` for
+this; matching uses only the stable keys (stem, project) — session ids are
+recorded for audit, never matched on.
 
 `time` and `eta` cap at 99 %: a job that overruns its estimate must not read as
 finished, because that is exactly when you want to look at it. The page hatches
@@ -279,7 +287,19 @@ The viewer never takes `running` at face value — that is how counters lie:
   current run's own observed rate takes over. First run of a shape shows no
   estimate rather than extrapolating.
 
-History keeps the last 20 runs per shape — an ETA input, not an archive.
+History keeps the last 20 runs per shape — an ETA input, not an archive —
+and **forgets dead names**: a job name with no run in the last 7 days loses
+every row (estimate, stall threshold, sparkline) at daemon startup, on a
+daily sweep pass, and on `prune`. Per-name, not per-row, so one fresh run
+keeps a job's whole learning window. `PROGRESS_HISTORY_DAYS` widens it for
+monthly jobs.
+
+**Upgrades restart the daemon by handshake**: `/health` reports the plugin
+version, and a producer from a *newer* install asks the old daemon to
+`/shutdown` (SIGTERM fallback for pre-0.4 daemons) and respawns the new
+code — no stale daemon holds the port across a plugin update. Only strictly
+newer evicts, so a dev checkout never bullies an installed daemon, and live
+jobs survive because every producer re-registers on its next flush.
 The page's history section adds per-job duration sparklines and a **trend**
 tag ("slowing +40%") when recent same-shape runs drift from the older
 baseline; `forecast` prints the same trend. `run` also tees the wrapped

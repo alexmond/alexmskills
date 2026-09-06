@@ -580,6 +580,105 @@ check("statusline: a dead daemon renders nothing, never raises",
 if _port:
     os.environ["PROGRESS_PORT"] = _port
 
+# name-stem similarity (0.4.0) ----------------------------------------------
+check("stem: paths and digits stripped",
+      progress.name_stem("make /home/a/proj -j8") == "make j",
+      repr(progress.name_stem("make /home/a/proj -j8")))
+check("stem: 'reel 03 restore' == 'reel 07 restore'",
+      progress.name_stem("reel 03 restore") == progress.name_stem("reel 07 restore"))
+check("stem: distinct commands stay distinct",
+      progress.name_stem("maven build") != progress.name_stem("pytest run"))
+check("stem: pure-path name falls back to lowercased original",
+      progress.name_stem("/usr/bin/x") == "/usr/bin/x")
+
+_now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+_hist = [
+    {"name": "remote build 01", "name_stem": "remote build",
+     "kind": "local", "project": "projA", "status": "done", "seconds": 100,
+     "finished_at": _now},
+    {"name": "remote build /tmp/b2", "kind": "local", "project": "projA",
+     "status": "done", "seconds": 300, "finished_at": _now},  # pre-0.4 row: no stem, derived on read
+]
+t2 = progress.Tracker()
+t2.history = _hist
+job_new = {"name": "remote build /tmp/b3", "kind": "local", "project": "projA",
+           "status": "running", "done": 0,
+           "started_at": (datetime.now(timezone.utc) - timedelta(seconds=50)
+                          ).strftime("%Y-%m-%dT%H:%M:%SZ")}
+ratio, mode = t2.progress(job_new)
+check("eta~: unseen name borrows stem-mates' median, labelled eta~",
+      mode == "eta~" and ratio is not None and 0.2 < ratio < 0.3,
+      f"{mode} {ratio}")
+job_exact = dict(job_new, name="remote build 01")
+check("eta~: exact-name history still wins with plain eta",
+      t2.progress(job_exact)[1] == "eta")
+job_other_proj = dict(job_new, project="projB")
+check("eta~: falls through to global stem when project has none",
+      t2.progress(job_other_proj)[1] == "eta~")
+job_alien = dict(job_new, name="database vacuum")
+check("eta~: unrelated stem still creeps",
+      t2.progress(job_alien)[1] == "creep")
+
+# history enrichment (0.4.0) -------------------------------------------------
+rows_now = progress.load_history()
+enriched = [r for r in rows_now if r.get("name_stem")]
+check("history: records carry name_stem/project context",
+      enriched and all("project" in r for r in enriched),
+      f"{len(enriched)} enriched of {len(rows_now)}")
+
+# retention (0.4.0) -----------------------------------------------------------
+_old = (datetime.now(timezone.utc) - timedelta(days=9)
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+_fresh = (datetime.now(timezone.utc) - timedelta(days=2)
+          ).strftime("%Y-%m-%dT%H:%M:%SZ")
+_rows = [
+    {"name": "dead job", "status": "done", "seconds": 5, "finished_at": _old},
+    {"name": "alive job", "status": "done", "seconds": 5, "finished_at": _old},
+    {"name": "alive job", "status": "done", "seconds": 6, "finished_at": _fresh},
+    {"name": "no-ts job", "status": "done", "seconds": 7},
+]
+kept = progress.prune_history(_rows)
+names = {r["name"] for r in kept}
+check("retention: a name idle >7d loses every row", "dead job" not in names)
+check("retention: one fresh run keeps the whole name (old rows too)",
+      len([r for r in kept if r["name"] == "alive job"]) == 2)
+check("retention: a row that can't prove freshness goes with the dead",
+      "no-ts job" not in names)
+os.environ["PROGRESS_HISTORY_DAYS"] = "30"
+check("retention: PROGRESS_HISTORY_DAYS widens the window",
+      "dead job" in {r["name"] for r in progress.prune_history(_rows)})
+os.environ.pop("PROGRESS_HISTORY_DAYS", None)
+
+# daemon startup persists the prune
+hist_path = TMP / "history.jsonl"
+with open(hist_path, "a", encoding="utf-8") as f:
+    f.write(json.dumps({"name": "ancient", "status": "done", "seconds": 3,
+                        "finished_at": _old}) + "\n")
+progress.Tracker()   # init prunes + rewrites the file
+on_disk = hist_path.read_text()
+check("retention: daemon startup rewrites the file without dead names",
+      "ancient" not in on_disk and on_disk.strip())
+
+# upgrade handshake (0.4.0) ---------------------------------------------------
+health = progress._get_json("/health")
+check("upgrade: /health reports the plugin version",
+      health and health.get("version") == progress.plugin_version(),
+      repr(health))
+check("upgrade: dev sorts below every release",
+      progress._ver_tuple("dev") < progress._ver_tuple("0.0.1"))
+check("upgrade: version tuples order numerically",
+      progress._ver_tuple("0.10.0") > progress._ver_tuple("0.9.9"))
+old_pid = health["pid"]
+check("upgrade: /shutdown is acknowledged", progress._post_plain("/shutdown"))
+check("upgrade: daemon releases the port on request",
+      wait_for(lambda: progress._get_json("/health", timeout=0.3) is None))
+progress._spawn_attempted = False
+check("upgrade: ensure_daemon respawns after a shutdown",
+      progress.ensure_daemon())
+new_health = progress._get_json("/health")
+check("upgrade: the replacement is a new process",
+      new_health and new_health["pid"] != old_pid)
+
 # cleanup --------------------------------------------------------------------
 health = progress._get_json("/health")
 if health:

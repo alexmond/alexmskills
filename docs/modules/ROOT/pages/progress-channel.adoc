@@ -56,6 +56,8 @@ Nothing to configure and no service to manage: the first registered job auto-spa
 
 A stdlib-only Python daemon (`http.server`, zero dependencies) binds `127.0.0.1:7717` and holds live jobs **in memory** — a single writer, so there is no store and no locking at all. It serves the live HTML view at `/`, JSON at `/jobs`, and forecasts at `/forecast?name=`. Binding the port is the single-instance lease.
 
+Upgrades restart the daemon by handshake (0.4.0): `/health` reports the plugin version, and a producer from a strictly newer install asks the old daemon to step aside (`/shutdown`, with a SIGTERM fallback for older daemons) and respawns the new code — live jobs survive because every producer re-registers on its next flush.
+
 Only what must survive a restart is persisted: finished runs append to `~/.claude/progress/history.jsonl` — the learning data, `cat`/`jq`-able, no database. Live state is memory-only on purpose: if the daemon restarts, producers re-register on their next flush (the producer is the source of truth for its own job); a reboot kills the jobs anyway. And a job never fails because the tracker is sick — an unreachable, unspawnable daemon degrades the job to a warn-once untracked no-op.
 
 == The discipline
@@ -118,6 +120,12 @@ Duration history is keyed by job *shape* — name + kind + order-of-magnitude of
 
 | Pre-start forecast
 | `forecast <name>` prints the p25–p75 duration band of past successful runs — answerable before starting, which changes whether the job gets started at all.
+
+| Borrowed estimate (`eta~`, 0.4.0)
+| A job whose exact name never ran borrows the median of *similar* jobs: the name is normalized to a stem (paths dropped, digits stripped — `make /home/a` ≈ `make /home/b`) and matched within the same project first, then anywhere. The bar is labelled `eta~` so a borrowed estimate is never read as the job's own history. History records carry project/session/agent context; only the stable keys (stem, project) are matched on.
+
+| Retention (0.4.0)
+| A name with no run in the last 7 days (`PROGRESS_HISTORY_DAYS`) loses all its history — per-name, not per-row, so one fresh run keeps a job's whole learning window while an abandoned name disappears entirely. Applied at daemon startup, daily, and on `prune`; the file is rewritten atomically so it cannot grow without bound.
 
 | stalled ⏸
 | Silent longer than 3× the job's *own* learned p95 inter-step gap (floor 30s). A job whose gaps are always long is not stalled — the threshold is learned per job, and a job with no history is never called stalled.
