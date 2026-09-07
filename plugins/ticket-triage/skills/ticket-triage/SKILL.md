@@ -65,9 +65,22 @@ Triage does not end when the agents are dispatched. **Every time an agent
 finishes, run the same steps again** — so the backlog keeps draining without the
 user re-asking.
 
+**The round is a FILE, not a memory.** Write `.claude/ticket-triage/round.md`
+at dispatch — the ranked set, each lane with its ticket and branch, the next
+candidate, and a relay log — update it on every merge and every relay, delete it
+when the queue empties. Without it the loop lives only in the conductor's
+context, and one compaction reduces it to prose about an intention; nobody, the
+user included, can then answer "is the loop still running?" by looking.
+→ `references/round-file-and-relays.md`.
+
 ### The cycle, on each completion
 
-1. **Finish the finished one first.** Verify the load-bearing claims (see
+1. **Finish the finished one first — after checking it is not an ECHO.** A
+   completion can re-fire hours later carrying the lane's own stale self-report
+   ("not merged, not pushed"), true when written and false on arrival. Check the
+   task-id against the round file and `git branch --merged main`; never take a
+   lane's account of its own merge state, since the conductor merges and the
+   lane cannot know. Then verify the load-bearing claims (see
    *Reports are evidence*), merge if green, delete the branch and its worktree,
    close the issue. **Before choosing the next ticket** — merging is what moves
    main and frees the files the next agent may need. Dispatching before merging
@@ -81,7 +94,9 @@ user re-asking.
 5. **Pick the executor, then dispatch** with a full brief, in **its own
    worktree** — or **skip** with one line saying why.
 6. **Wait for the next completion.** No polling, no spinning, no starting
-   something weaker just to be starting something.
+   something weaker just to be starting something. **An operator question
+   SUSPENDS the loop; it does not end it** — answer it, then return to step 2
+   and say in one line what was dispatched, or why nothing was.
 
 ### When to skip — start nothing, say why in one line
 
@@ -157,7 +172,11 @@ code out from under another.
   line. Never weaken set equality to a subset check to make a merge pass.
 - **The conductor messages a running lane when a premise it was GIVEN has
   changed**, and reports every such relay in the main session: a relay is a
-  decision, and the user should not learn of it from a merge commit.
+  decision, and the user should not learn of it from a merge commit. **Log it AT
+  SEND** — one round-file line per `SendMessage` — and render the new lines in
+  each report. A rule that depends on narrating a tool call you made three calls
+  ago breaks exactly when the round is busy, which is when relays happen: 76
+  sent in one session, 47 of them decisions, and the user saw none.
 - **A lane ESCALATES for a role; it does not seat one.** It names the role it
   needs — skeptic, architect, reviewer — and reports. Seating is the conductor's
   call, answered explicitly: seated, folded, filed, or declined with a reason.
@@ -197,20 +216,10 @@ dispatched does not treat an unseated role as dead.
 - **`general-purpose`** for work that is genuinely neither: filing tickets, a
   docs sweep, a measurement someone else will interpret. Say so when used.
 
-Role-dispatch discipline (when the `roles` substrate is present):
-
-- The brief tells the agent to **read the role file** (and seed it from the
-  plugin if absent) — never merely name the role at it.
-- **Seed the registry on main before dispatching** a round that needs roles
-  `.claude/roles/` doesn't yet hold — otherwise every agent *creates* the file
-  and they collide on merge.
-- **One role file, one writer per round.** Name the owner in each brief; the
-  others *report* their learning line so the conductor applies it.
-- **Role files are repo state, so learnings belong in the PR.** A worktree
-  agent that appends a learning and never commits it has thrown it away.
-- Minting a new role needs a **stated gap** — one sentence naming work no
-  existing role covers — and a line in the report saying a role was minted and
-  why.
+Role-dispatch discipline when the `roles` substrate is present — read the role
+file rather than naming it, seed the registry on main before the round, one
+writer per role file, learnings belong in the PR, and a mint needs a stated gap:
+→ `references/role-dispatch.md`.
 
 If the `roles` plugin isn't installed, dispatch generic agents with the same
 briefs; everything else in this skill still applies.

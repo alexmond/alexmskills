@@ -207,7 +207,7 @@
       "displayName": "Ticket Triage",
       "source": "./plugins/ticket-triage",
       "description": "Backlog-drain loop: rank the open tickets, dispatch the genuinely startable ones in parallel (worktree-isolated, role-briefed, honest width), verify and merge each result, and re-triage on every completion until the queue is empty or everything left needs the user.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "workflow",
       "keywords": [
         "triage",
