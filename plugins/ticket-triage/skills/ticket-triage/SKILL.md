@@ -285,6 +285,38 @@ arrangement it cannot explain.
   say "I verified these facts myself; do not inherit my guesses — measure anything
   else" produce lanes that push back accurately, which is most of the value.
 
+### A lane ESCALATES for a role; it does not seat one
+
+A lane will hit things its own role cannot settle: a claim it cannot verify, a
+design decision above its scope, code that wants a second read, a finding that
+belongs to somebody else's territory. **It names the role it thinks is needed and
+reports; the conductor decides whether to seat it.**
+
+The lane must not spawn that role itself. Nesting is technically allowed, but a
+role seated inside a lane is invisible to the conductor and to the user — it
+breaks the same property as lane-to-lane messaging, one level down, and its
+findings arrive folded into somebody else's report where they cannot be ranked.
+
+**What a good escalation looks like** — the finding, the role, and why that role:
+
+- *"`HuntAttemptWriter` has the same defect I just fixed, but it is main's code and
+  not my lane's — this wants its own lane."* Became a rank-1 data-loss ticket.
+- *"This control passed first time; I do not trust it."* → **skeptic**. The lane
+  that said this found its own test was pinning nothing, and fixed it.
+- *"The premise I was given is only true on an unmerged branch."* → back to the
+  **conductor**, whose brief was wrong.
+- *"Two tables now need one grain decision and I can only see one of them."* →
+  **architect**, before either lane commits to a shape.
+
+**The conductor answers every escalation explicitly**, in the main session, with
+one of: seated (which role, which lane), folded into an existing lane, filed as a
+ticket, or declined with a reason. An escalation that gets no answer teaches the
+lane to stop raising them — and the next one will be the expensive one.
+
+**Escalate the judgement, not the work.** "I need a skeptic on this claim" is an
+escalation. "I could not get the build to pass" is a report, and the answer is
+usually a better brief rather than another agent.
+
 ### Sequencing under a target
 
 - **Do not dispatch two lanes whose outputs must agree.** Where one lane's answer
