@@ -8,6 +8,10 @@ description: >-
   "triage the backlog", "prioritise", "continue with priorities", "start in
   parallel", "drain the backlog", or a bare "go" against the repo's backlog, and
   stay in the loop until the queue is empty or everything left needs the user.
+  Also takes a TARGET — "triage <target>", "work toward X", "drive the X epic",
+  "everything that unblocks X", "keep going on X" — which re-ranks the backlog by
+  what advances that goal rather than by absolute severity, and coordinates lanes
+  that must not collide while they converge on it.
   Covers where the backlog actually lives, how to rank, how to size the parallel
   width honestly, how to brief an agent so its result is trustworthy, and how to
   merge and clean up.
@@ -135,7 +139,52 @@ label. **Raise a label when you know something the filer could not** (e.g. the
 broken module is one that publishes irreversibly), and say what you knew that
 they did not, in a comment on the ticket, so the change is auditable.
 
+## Running toward a TARGET
+
+`triage <target>` is the same loop with a different ranking key. The target is a
+goal — an epic, a capability, a migration — not a ticket: *"get the city UI onto
+the database"*, *"V16 work"*, *"batches migration"*.
+
+**A target re-ranks; it does not filter.** Two rules, and they pull opposite ways:
+
+- **A ticket that BLOCKS the target outranks its own label.** A p3 research ticket
+  that nothing can proceed without is the top of the queue, and the label is
+  evidence of what the filer knew, not of what the target needs. Say the promotion
+  out loud, with what the target made true that the filer could not have known.
+- **A rank-1 defect still preempts, target or not.** Data loss, a wrong answer
+  served confidently, a broken instrument — these are not deferrable because they
+  are off-target. Fix, then resume. Sequencing under a target is not a licence to
+  step over a live defect.
+
+**Name the blockers before dispatching anything.** A target with no stated blocker
+list is a wish. Write down what must be true for the target to be reachable, then
+rank *that* list — the backlog is a source of candidates, not the plan. Most of
+the useful work in a targeted run is deciding what the target actually requires,
+and that decision is usually wrong in the same direction twice: it under-counts
+the DESIGN questions and over-counts the code.
+
+**The target's own tickets are usually not enough.** Expect to file as you go:
+work toward a goal surfaces defects the goal did not name, and those are often
+better findings than the planned work. File them ranked and placed, and be
+explicit about which ones are on the critical path versus merely discovered.
+
+**Say what the target does NOT include.** A target attracts scope. The line
+between "this advances the goal" and "this is adjacent and interesting" has to be
+drawn out loud, per round, or the round never ends.
+
+**Stop when the target is reached, not when the backlog empties.** Report against
+the target: what is now true that was not, what remains, and what the next
+increment costs. A targeted run that drains ten tickets without moving the goal
+has failed, and should say so.
+
 ## Parallel width is what is INDEPENDENT, not what is open
+
+Rough scale, from Anthropic's published guidance and consistent with practice
+here: a single fact-find is **one** agent; a comparison across a few dimensions is
+**2-4**; genuinely complex work is **10+ but only with clearly divided
+responsibilities**. Their early failure was spawning 50 agents for a simple query.
+For repo work in worktrees, **3-5 concurrent lanes** is the band where the machine
+and the merge queue both keep up.
 
 The most common misjudgement. Nine open tickets does not mean nine agents.
 
@@ -159,6 +208,95 @@ The most common misjudgement. Nine open tickets does not mean nine agents.
 - **Say the width out loud and why.** "Two, because the other four are blocked
   by design" is a result; quietly starting two and not mentioning the rest is
   not.
+
+## Lanes that can see each other
+
+File partitioning stops two lanes editing one line. It does not stop the failure
+that actually happens: **two lanes make claims about a tree that will only exist
+after both merge.** Observed shapes, all real:
+
+- **A control and the thing it counts, in different lanes.** One lane writes a
+  test asserting an exact set — tables with no writer, files with no author,
+  declared authors. Another lane adds a member of that set. Each is correct alone;
+  the merge is the first tree where both are true, and it is red. **Set equality is
+  what makes this visible, and it must not be weakened to a subset check** — that
+  would merge silently and leave the new members permanently unchecked.
+- **A lane reasoning from another lane's UNMERGED branch.** A brief asserted a fix
+  was in place; it was true only on a branch not yet in main. The lane measured,
+  found it absent, worked around it, and said so — which is the good outcome, and
+  only happened because the brief told it not to inherit the conductor's guesses.
+- **One lane moving code out from under another.** A lane relocated two loaders;
+  a second lane added imports for them. Merged: two unused imports, and a
+  checkstyle failure with no obvious owner.
+- **Two lanes solving the same problem for different artifacts**, each adding the
+  same hook, where taking either side alone silently drops the other's input.
+
+### The manifest
+
+Before dispatch, write what each lane OWNS and what it will ADD:
+
+- **paths it may edit** — the classic partition;
+- **enumerating controls it will touch** — any test asserting an exact set. This is
+  the collision surface that file lists miss, because the file is shared and the
+  edit is a one-line list change;
+- **shared registries** — decision logs, inventories, role files. Expect these to
+  conflict on every round; resolve by keeping both sides, and check that the
+  boundary between them did not cut a statement in half.
+
+Repos that already have a session coordinator should use it rather than growing a
+second one; the manifest is a *concept*, not necessarily a new file.
+
+### Who may talk to whom (lanes do NOT talk to each other)
+
+**Findings flow lane -> conductor -> lane, never lane -> lane.** This is
+Anthropic's own finding from their multi-agent research system: subagents report
+to the orchestrator, which synthesises and re-delegates. Two lanes negotiating
+directly produce an agreement nobody else sees, and the conductor then merges an
+arrangement it cannot explain.
+
+- **A lane REPORTS what it needs from another lane's territory; it does not go and
+  take it.** That rule already exists for files and it extends to facts.
+- **The conductor messages a RUNNING lane when a premise it was given has
+  CHANGED** — a measurement that moves its design, a decision the user took
+  mid-flight, a sibling's finding that makes its approach wrong. That is
+  orchestrator -> subagent, it is worth interrupting for, and it is the one
+  direction that carries real value mid-flight. Status curiosity is not.
+- **Every relay is REPORTED in the main session, as it happens.** Routing through
+  the conductor is not enough on its own — if a finding passes from one lane to
+  another and the user only learns of it from a merge commit, the coordination is
+  invisible at the moment it mattered. State it in one line when it happens: which
+  lane found what, which lane was told, and what changed in their instructions.
+
+  This is not status chatter. A relay is the conductor CHANGING a lane's premise
+  mid-flight, which is a decision — often one the user would have made differently.
+  Concretely, these are worth a line each: a measurement that overturns a brief; a
+  design change passed to a running lane; one lane's finding that invalidates
+  another's approach; a lane correcting the conductor.
+
+  The test: after the round, could the user reconstruct why each lane did what it
+  did, without reading a transcript? If a lane's output only makes sense given a
+  message it received, that message belonged in the main session.
+
+- **Prevent overlap; do not detect it afterwards.** Anthropic's duplicate-work
+  failure came from vague task descriptions — three subagents independently
+  researching the same thing — and the fix was making responsibilities mutually
+  exclusive in the prompt, before execution. A manifest is that, written down.
+- **When a lane corrects the conductor, check it and say so plainly.** Briefs that
+  say "I verified these facts myself; do not inherit my guesses — measure anything
+  else" produce lanes that push back accurately, which is most of the value.
+
+### Sequencing under a target
+
+- **Do not dispatch two lanes whose outputs must agree.** Where one lane's answer
+  determines another's shape — a design decision and the code that implements it —
+  run them in series, and put the design first even when the code looks startable.
+- **Design lanes parallelise cleanly with build lanes.** A lane producing a
+  decision doc collides with nothing, so it is the safest way to keep width up
+  while a schema or refactor lane holds a large surface.
+- **A lane that must not touch something should be told so explicitly**, with the
+  reason and the owner. "Do not edit any migration; V16 is reopened under #776 and
+  another lane owns it" is worth more than a file list, because it survives the
+  lane discovering a genuine reason to want it.
 
 ## Pick the executor, then write the brief
 
@@ -198,7 +336,19 @@ briefs; everything else in this skill still applies.
 
 The brief is most of the quality. What repeatedly matters:
 
+- **Four things, every time: objective, output format, which tools and sources to
+  use, and clear boundaries.** Anthropic's lead agent failed exactly here — vague
+  briefs produced subagents doing each other's work — and the fix was detail, not
+  more agents.
 - **Point at the issue and tell the agent to verify, not assume.**
+- **Name the siblings and what they hold.** A lane that knows "another lane owns
+  the migration, and a third is adding writers to the table your control counts"
+  reports a collision instead of working around it silently. A file list alone
+  does not carry this: the dangerous overlap is usually a shared *assertion*, not
+  a shared line.
+- **Say which of your facts came from an unmerged branch**, if any. A lane that
+  measures and finds them absent has done the right thing, and should be told to
+  say so rather than route around it.
 - **Never hand over an unverified hypothesis as fact.** "I verified these
   facts myself; do not inherit my guesses — measure anything else you rely on"
   is the line that produces good work, and what lets an agent correct you
