@@ -1,20 +1,16 @@
 ---
 name: ticket-triage
 description: >-
-  Review the open tickets, rank them, work out what is genuinely startable versus
-  blocked, and run the startable ones in parallel through to merged — then KEEP
-  GOING: re-triage every time an agent finishes, so the backlog drains without
-  being re-asked. Use whenever the ask is "what's next", "review tickets",
-  "triage the backlog", "prioritise", "continue with priorities", "start in
-  parallel", "drain the backlog", or a bare "go" against the repo's backlog, and
-  stay in the loop until the queue is empty or everything left needs the user.
-  Also takes a TARGET — "triage <target>", "work toward X", "drive the X epic",
-  "everything that unblocks X", "keep going on X" — which re-ranks the backlog by
-  what advances that goal rather than by absolute severity, and coordinates lanes
-  that must not collide while they converge on it.
-  Covers where the backlog actually lives, how to rank, how to size the parallel
-  width honestly, how to brief an agent so its result is trustworthy, and how to
-  merge and clean up.
+  Rank the open tickets, work out what is genuinely startable versus blocked, run
+  the startable ones in parallel through to merged — then KEEP GOING: re-triage
+  every time an agent finishes, so the backlog drains without being re-asked. Use
+  for "what's next", "review tickets", "triage the backlog", "prioritise", "start
+  in parallel", "drain the backlog", or a bare "go". Also takes a TARGET —
+  "triage <target>", "work toward X", "drive the X epic" — which re-ranks by what
+  unblocks that goal rather than by absolute severity, and coordinates lanes so
+  they converge without colliding. Covers where the backlog lives, ranking,
+  honest parallel width, briefing an agent so its result is trustworthy, and
+  merging.
 ---
 
 # ticket-triage

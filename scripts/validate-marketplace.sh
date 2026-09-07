@@ -139,32 +139,35 @@ validate_docs "$root/.claude-plugin/marketplace.json"
 # listing budget is ~15,000 chars. It crept over twice (2026-08-18, 2026-08-28)
 # with nothing checking it — past the cap, skills silently stop triggering.
 validate_desc_budget() {
-  local budget=15000
-  local total
-  total=$(python3 - "$root" <<'PY'
-import re, glob, sys
-total = 0
-for f in glob.glob(sys.argv[1] + '/plugins/*/skills/*/SKILL.md'):
-    m = re.match(r'^---\n(.*?)\n---', open(f).read(), re.DOTALL)
-    if not m:
-        continue
-    fm = m.group(1)
-    d = re.search(r'description:\s*(.*?)(?=\n[a-z_-]+:|\Z)', fm, re.DOTALL)
-    n = re.search(r'name:\s*(\S+)', fm)
-    total += len(' '.join(d.group(1).split())) if d else 0
-    total += len(n.group(1)) if n else 0
-print(total)
-PY
-)
+  local budget=15000 mp="$root/.claude-plugin/marketplace.json"
+  local out total top
+  # Counts what the MARKETPLACE DECLARES, not what is on disk. validate_channel
+  # already scopes to `.plugins[]`; this used to glob plugins/*/skills/*/SKILL.md,
+  # so an untracked in-progress plugin failed the release gate for every unrelated
+  # plugin in the catalog (observed 2026-09-07: a 632-char local-only plugin put a
+  # 14,990-char catalog over the cap). A skill consumes the listing budget only if
+  # a session can actually install it.
+  out="$(python3 "$root/scripts/skill-desc-budget.py" "$root" "$mp" "$budget")" || {
+    err "description budget could not be computed"; return; }
+  total="$(printf '%s\n' "$out" | sed -n 1p)"
+  # Attribution, because "trim descriptions" naming nobody is a verdict with no
+  # next step -- and the obvious suspect is wrong: the largest consumer is a
+  # plugin shipping SEVERAL skills, not the one being edited.
+  top="$(printf '%s\n' "$out" | sed -n 2p | tr ' ' '\n' | sed 's/^\([0-9]*\):\(.*\)$/      \1  \2/')"
   echo
   echo "Description budget"
-  if [ "$total" -le "$budget" ]; then
-    note "skill name+description total ${total} chars (budget ${budget})"
+  if [ "$total" -gt "$budget" ]; then
+    err "skill name+description total ${total} chars exceeds the ${budget}-char listing budget — skills silently stop triggering past the cap. Largest:"
+    printf '%s\n' "$top"
+  elif [ "$total" -gt $(( budget * 95 / 100 )) ]; then
+    # A cliff-edge alarm is too late: the catalog sat at 14,999 of 15,000 with
+    # nothing saying so, and the next contributor tripped it. Warn on approach.
+    warn "skill name+description total ${total} chars — under ${budget}, but only $(( budget - total )) to spare. Largest:"
+    printf '%s\n' "$top"
   else
-    err "skill name+description total ${total} chars exceeds the ${budget}-char listing budget — trim descriptions (skills silently stop triggering past the cap)"
+    note "skill name+description total ${total} chars (budget ${budget}, $(( budget - total )) to spare)"
   fi
 }
-
 validate_desc_budget
 
 echo
