@@ -162,7 +162,7 @@
       "displayName": "Role Registry",
       "source": "./plugins/roles",
       "description": "A per-repo repository of evolving roles (.claude/roles/) usable solo, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles — with seed personas, init + graduation-audit hook, and the shared-core convention.",
-      "version": "1.3.1",
+      "version": "1.4.0",
       "category": "self-learning",
       "keywords": [
         "roles",

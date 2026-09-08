@@ -91,12 +91,15 @@ user included, can then answer "is the loop still running?" by looking.
    close the issue. **Before choosing the next ticket** — merging is what moves
    main and frees the files the next agent may need. Dispatching before merging
    is how two agents end up rebasing onto each other.
-2. **Re-snapshot.** Never rank from a list taken an hour ago — merges close
-   tickets, agents file new ones, and a research ticket can produce a blocker
-   that outranks everything queued.
-3. **Re-rank the whole open set**, not just the tail you remember. A finding
-   ranks on its own merits the moment it lands, not queued behind the plan.
-4. **Pick the top startable ticket** and check it against the skip list.
+2. **Re-snapshot.** Never rank from an hour-old list — merges close tickets, agents file
+   new ones, and a research ticket can produce a blocker that outranks the queue.
+3. **Re-rank the whole open set.** A finding ranks on its own merits the moment it lands,
+   not queued behind the plan.
+4. **Re-check the RUNNING lanes, then pick.** A merge moves `main` underneath them, and a
+   lane that overturned its own brief is no longer doing what its partition describes —
+   re-verify each one's premise and ownership and RE-ARRANGE (relay, narrow, or stop)
+   rather than discovering the overlap at merge. Then pick the top startable ticket and
+   check it against the skip list.
 5. **Pick the executor, then dispatch** with a full brief, in **its own
    worktree** — or **skip** with one line saying why.
 6. **Wait for the next completion.** No polling, no spinning, no starting
@@ -106,12 +109,10 @@ user included, can then answer "is the loop still running?" by looking.
 
 ### When to skip — start nothing, say why in one line
 
-- **Blocked by an open dependency.** Blocked means blocked: N tickets that all
-  need one definitional ticket first would otherwise produce N incompatible
-  answers — the exact failure the foundation ticket exists to prevent.
-- **Would collide on files with a running agent.** Partition by file *before*
-  dispatch; if the top ticket wants a file a running agent owns, take the next
-  ticket that doesn't, or wait.
+- **Blocked by an open dependency.** N tickets needing one definitional ticket first would
+  otherwise produce N incompatible answers — the failure the foundation ticket prevents.
+- **Would collide with a running lane** — by file, or by shared assertion. Partition
+  before dispatch and RE-CHECK it after every merge; take the next ticket, or wait.
 - **Needs the user's decision** — irreversible (publishing, releasing) or
   preference. Never dispatch these; surface them separately.
 - **Parked by decision** with a stated gate that hasn't fired. Re-check the
@@ -120,19 +121,18 @@ user included, can then answer "is the loop still running?" by looking.
   instrument first; it outranks the feature.
 - **The queue is empty**, or everything left is one of the above.
 
-A skip is a normal outcome, not a failure.
+A skip is a normal outcome.
 
 ### When to stop looping
 
-When **every** remaining item is parked, user-decision, or blocked: say so
-**once**, list what would unblock the queue, and stop. Don't re-announce the
-same standstill on every completion — that trains the user to ignore the
-report. Resume when a merge, a decision, or a new ticket changes the set.
+When **every** remaining item is parked, user-decision, or blocked: say so **once**, list
+what would unblock the queue, and stop. Re-announcing the same standstill trains the user
+to ignore the report. Resume when a merge, a decision or a new ticket changes the set.
 
 ### What the loop must never do
 
 - **Never widen scope to keep busy.** An empty queue is a result.
-- **Never start something irreversible** because it was next in the ranking.
+- **Never start something irreversible** because it was next.
 - **Never exceed the honest parallel width** just because agents are free.
 
 ## Ranking
