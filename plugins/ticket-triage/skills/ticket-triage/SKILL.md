@@ -65,8 +65,14 @@ Triage does not end when the agents are dispatched. **Every time an agent
 finishes, run the same steps again** — so the backlog keeps draining without the
 user re-asking.
 
-**The round is a FILE, not a memory.** Write `.claude/ticket-triage/round.md`
-at dispatch — the ranked set, each lane with its ticket and branch, the next
+**START BY READING `.claude/ticket-triage/round.md`.** If it exists, a round is in
+flight: adopt its target, its ranking and its blocked list rather than re-deriving them,
+verify the lanes it names against `git branch --merged main`, and continue from its next
+candidate. Re-ranking from scratch over a live round wastes the previous session's work and
+risks re-dispatching finished tickets. **The file is the state of the loop, not a log.**
+Say in one line what you adopted, so the user can see the plan survived.
+
+**And write it.** `.claude/ticket-triage/round.md`, at dispatch — the ranked set, each lane with its ticket and branch, the next
 candidate, and a relay log — update it on every merge and every relay, delete it
 when the queue empties. Without it the loop lives only in the conductor's
 context, and one compaction reduces it to prose about an intention; nobody, the
@@ -170,6 +176,8 @@ code out from under another.
 - **Partition by what will COLLIDE, not what will be edited.** The dangerous
   overlap is a shared *assertion* — a test asserting an exact set — not a shared
   line. Never weaken set equality to a subset check to make a merge pass.
+- **The round file's LANES table names the ROLE, not just the ticket.** The role is the
+  reviewable decision — a table of tickets cannot answer "why was a skeptic seated here".
 - **The conductor messages a running lane when a premise it was GIVEN has
   changed**, and reports every such relay in the main session: a relay is a
   decision, and the user should not learn of it from a merge commit. **Log it AT
@@ -188,19 +196,10 @@ manifest, and worked escalations.
 
 ### The conductor is a role too
 
-Every role in `.claude/roles/` is SEATED — dispatched as a subagent with its own
-context. The conductor is the one that is not: it is the role the MAIN session
-adopts, and it is the lead in all four orchestrators (this skill, `dev-crew`,
-`brainstorm-panel`, `research-sweep`).
-
-Give it a `conductor.md` alongside the others. It earns the same charter / body /
-learnings structure for the same reason they do — scheduling mistakes recur, and
-today they have nowhere to accumulate: a lesson learned while running a crew does
-not reach the triage loop, because skill-scoped learnings files do not see each
-other. The recurring ones are about ASSERTING and MERGING, not about ranking.
-
-Mark it non-seated in its "When to use", so tooling that assumes a role is
-dispatched does not treat an unseated role as dead.
+Every role in `.claude/roles/` is SEATED as a subagent. The conductor is the one that is
+not — it is the role the MAIN session adopts, and it is the lead in all four orchestrators.
+Give it a `conductor.md` alongside the others, marked non-seated: scheduling mistakes recur
+and today have nowhere to accumulate. → `references/role-dispatch.md`.
 
 ### The executor — generic is the fallback, not the default
 
@@ -241,18 +240,15 @@ The brief is most of the quality. What repeatedly matters:
 - **Say which of your facts came from an unmerged branch**, if any. A lane that
   measures and finds them absent has done the right thing, and should be told to
   say so rather than route around it.
-- **Never hand over an unverified hypothesis as fact.** "I verified these
-  facts myself; do not inherit my guesses — measure anything else you rely on"
-  is the line that produces good work, and what lets an agent correct you
-  cleanly. When a count feeds a brief, sanity-check the pattern against one
-  known-positive instance before quoting it.
+- **Never hand over an unverified hypothesis as fact.** "I verified these facts myself;
+  do not inherit my guesses — measure anything else you rely on" is what lets an agent
+  correct you cleanly, and they will: **a stale premise is the most expensive brief defect
+  there is**, because the lane trusts it and builds before discovering it.
 - **State the constraints that are already decided** (from the profile) so
   they aren't re-litigated per ticket.
-- **Demand a control, not a green run.** A green test that has never been
-  shown to fail pins nothing — ask for the mutation, the pre-fix rebuild, the
-  positive control. A new check should assert **its own file is tracked** and
-  that it scanned what it claims to scan; "it passed" and "it ran" are
-  different facts.
+- **Demand a control, not a green run.** A green test never shown to fail pins nothing —
+  ask for the mutation or the pre-fix red. A new check must assert its own file is tracked
+  and that it scanned what it claims to; "it passed" and "it ran" are different facts.
 - **Name the verification the repo already requires** (the profile's gate
   command), and the sweep rule: unrelated findings become issues, not scope
   creep.
@@ -305,15 +301,12 @@ shape for a round that ends or a finding that changes the plan.
 
 ## Composition
 
-- **`dev-crew`** (this marketplace) runs one relay-worthy ticket through its
-  gated phases. Triage schedules across tickets; the crew executes within one.
-  Each relay runs in the ticket's worktree — the crew's run state is untracked
-  and CWD-relative, so parallel relays isolate for free.
-- **Cross-session/cross-repo work** hands off through the issue tracker
-  itself: file the ticket in the other repo, monitor it to resolution, and
-  treat the reply as a completion event in this loop.
-- **The `roles` plugin** supplies the persona substrate and the learning loop
-  the dispatch discipline above assumes.
+- **`dev-crew`** runs one relay-worthy ticket through its gated phases; triage schedules
+  ACROSS tickets, the crew executes WITHIN one. Each relay runs in the ticket's worktree —
+  crew run state is untracked and CWD-relative, so parallel relays isolate for free.
+- **Cross-repo work** hands off through the issue tracker: file it there, monitor to
+  resolution, treat the reply as a completion event in this loop.
+- **The `roles` plugin** supplies the persona substrate the dispatch discipline assumes.
 
 All three are optional; triage degrades to generic agents and a single repo.
 

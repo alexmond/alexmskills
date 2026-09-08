@@ -29,10 +29,10 @@ lost the context, and by the user.
 4. #766  p2  surrogate keys                             blocked by #776
 
 ## Lanes
-| lane | ticket | branch | verification | state |
-|---|---|---|---|---|
-| a47f… | #743 | rehearse-v16 | test-affected | running |
-| a4e5… | #783 | site-photo-port | test-affected | merged 2026-09-07 19:14 |
+| lane | ticket | ROLE | owns | verification | state |
+|---|---|---|---|---|---|
+| a47f… | #743 | skeptic | `tools-workflows/` | test-affected | running |
+| a4e5… | #783 | step-porter | `tools-steps/` | test-affected | merged 19:14 |
 
 ## Relays  (append AT SEND, never after)
 - 19:02  a47f…  correction  my V16 layout is wrong: Flyway scans recursively
@@ -105,3 +105,34 @@ rather than result and does not survive into the summary.
 A rule that depends on narrating a tool call you made three calls ago will break
 every time the round is busy, which is exactly when relays happen. Hence: log at
 send, render what is new in each report.
+
+## Starting or continuing from the round file
+
+A session that finds `round.md` is joining a round in flight, not starting one.
+
+**Adopt rather than re-derive.** Take its target, its ranked groups and its blocked list as
+given. Re-ranking from scratch discards the previous session's grounding work and risks
+re-dispatching a ticket that has already merged.
+
+**Verify only what can have changed since:**
+
+- the lanes it names, against `git branch --merged main` — a lane's own report of its merge
+  state is the one claim never to trust, because the conductor merges and the lane cannot know;
+- whether any ticket it ranks has since closed;
+- whether an owner-decision it flagged has been answered.
+
+**Then say in one line what you adopted** — target, next candidate, and anything you found
+already done. The user should be able to see the plan survived the session boundary without
+reading the file themselves.
+
+**Delete it when the queue empties**, so its presence always means "a round is live".
+
+### Why the ROLE column is not decoration
+
+The role is chosen from what the ticket IS, never from its area label — a failure with no
+established cause is a `debugger` job, a choice between designs an `architect` job, a
+too-clean claim a `skeptic`. That makes it a **reviewable decision**: a later reader can ask
+whether it was the right seat, and the roster's accumulated learnings can be traced back to
+the runs that produced them. A table of tickets alone cannot answer *"why was a skeptic
+seated here"* — and when a lane returns a surprising verdict, the role it was given is
+usually half the explanation.

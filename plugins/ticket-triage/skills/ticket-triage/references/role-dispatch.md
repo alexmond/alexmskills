@@ -22,3 +22,19 @@ briefs — everything else in the skill still holds.
   existing role covers — plus a line in the report saying a role was minted and
   why. Without the gap sentence, roles proliferate into near-duplicates and the
   learning loop fragments across them.
+
+## The conductor role file
+
+Every role in `.claude/roles/` is SEATED — dispatched as a subagent with its own
+context. The conductor is the one that is not: it is the role the MAIN session
+adopts, and it is the lead in all four orchestrators (this skill, `dev-crew`,
+`brainstorm-panel`, `research-sweep`).
+
+Give it a `conductor.md` alongside the others. It earns the same charter / body /
+learnings structure for the same reason they do — scheduling mistakes recur, and
+today they have nowhere to accumulate: a lesson learned while running a crew does
+not reach the triage loop, because skill-scoped learnings files do not see each
+other. The recurring ones are about ASSERTING and MERGING, not about ranking.
+
+Mark it non-seated in its "When to use", so tooling that assumes a role is
+dispatched does not treat an unseated role as dead.
