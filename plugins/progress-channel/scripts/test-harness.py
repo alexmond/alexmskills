@@ -679,6 +679,122 @@ new_health = progress._get_json("/health")
 check("upgrade: the replacement is a new process",
       new_health and new_health["pid"] != old_pid)
 
+# whats-new hook (0.5.0) — one notice per install/upgrade, with setup offer --
+HOOK_WN = HERE.parent / "hooks" / "whats-new.py"
+wn_marker = TMP / "last-version"
+wn_marker.unlink(missing_ok=True)
+
+
+def run_whats_new():
+    return subprocess.run([sys.executable, str(HOOK_WN)], env=dict(os.environ),
+                          capture_output=True, text=True).stdout
+
+out = run_whats_new()
+check("whats-new: fresh install emits one orientation notice",
+      "newly installed" in out, out[:120])
+check("whats-new: unwired status line makes the notice offer setup",
+      "NOT set up" in out, out[:200])
+check("whats-new: marker recorded", wn_marker.exists())
+check("whats-new: second session is silent", run_whats_new() == "")
+wn_marker.write_text("0.0.1\n")
+out = run_whats_new()
+check("whats-new: version change emits an upgrade notice with both versions",
+      "upgraded 0.0.1" in out and progress.plugin_version() in out, out[:160])
+
+# statusline_seen (0.5.0) — the wired-renderer signal --------------------------
+check("statusline_seen: fresh daemon reports false",
+      (progress._get_json("/health") or {}).get("statusline_seen") is False)
+
+HOOK_SP = HERE.parent / "hooks" / "suggest-progress.py"
+
+
+def run_suggest(cmd):
+    payload = json.dumps({"tool_name": "Bash", "tool_input": {"command": cmd}})
+    return subprocess.run([sys.executable, str(HOOK_SP)], env=dict(os.environ),
+                          input=payload, capture_output=True, text=True).stdout
+
+(TMP / ".statusline-tipped").unlink(missing_ok=True)
+out = run_suggest("mvn -B verify")
+check("advisory: maven suggests the tap, not the run wrapper",
+      "progress_tap.py" in out, out[:200])
+check("advisory: unwired status line gets the weekly tip",
+      "status" in out and "line" in out and (TMP / ".statusline-tipped").exists(),
+      out[:200])
+check("advisory: tip marker suppresses a second tip within the week",
+      "set up the progress status line" not in run_suggest("mvn -B verify"))
+out = run_suggest("git clone https://example.com/big.git")
+check("advisory: git clone is long-running now, tap-suggested with --pattern git",
+      "progress_tap.py" in out and "--pattern git" in out, out[:200])
+check("advisory: plain git stays short-safe",
+      run_suggest("git status") == "")
+
+progress._get_json("/jobs?session=wired-probe")
+check("statusline_seen: flips true after one session-filtered poll",
+      (progress._get_json("/health") or {}).get("statusline_seen") is True)
+check("statusline_seen: /jobs carries the flag for the page banner",
+      (progress._get_json("/jobs?state=all") or {}).get("statusline_seen") is True)
+
+# progress_tap (0.5.0) — measured bars from a build's own output --------------
+TAP = HERE / "progress_tap.py"
+MAVEN_OUT = ("[INFO] Scanning...\n"
+             "[INFO] Building acme-core 1.0 [1/3]\n"
+             "[INFO] Building acme-api 1.0 [2/3]\n"
+             "[INFO] Building acme-dist 1.0 [3/3]\n"
+             "[INFO] BUILD SUCCESS\n")
+r = subprocess.run([sys.executable, str(TAP), "tap maven"], env=dict(os.environ),
+                   input=MAVEN_OUT.encode(), capture_output=True)
+check("tap: stdin forwarded byte-for-byte", r.stdout == MAVEN_OUT.encode())
+check("tap: exits 0", r.returncode == 0)
+row = (jobs("tap maven") or [{}])[0]
+check("tap: maven reactor line becomes a measured 3/3 done job",
+      row.get("done") == 3 and row.get("total") == 3
+      and row.get("state") == "done", str(row)[:120])
+
+GIT_OUT = ("Cloning into 'big'...\n"
+           "Receiving objects:  10% (10/100)\r"
+           "Receiving objects: 100% (100/100), done.\n"
+           "Resolving deltas: 100% (40/40), done.\n")
+r = subprocess.run([sys.executable, str(TAP), "tap git", "--pattern", "git"],
+                   env=dict(os.environ), input=GIT_OUT.encode(),
+                   capture_output=True)
+check("tap: git \\r-separated updates forwarded unchanged",
+      r.stdout == GIT_OUT.encode())
+row = (jobs("tap git") or [{}])[0]
+check("tap: git phases parse through carriage returns (deltas 40/40)",
+      row.get("done") == 40 and row.get("total") == 40
+      and row.get("state") == "done", str(row)[:120])
+
+r = subprocess.run([sys.executable, str(TAP), "quiet job", "--quiet"],
+                   env=dict(os.environ), input=b"hello\n", capture_output=True)
+check("tap: --quiet is a pure cat, registers nothing",
+      r.stdout == b"hello\n" and not jobs("quiet job"))
+
+env_dead = dict(os.environ, PROGRESS_PORT="1")
+r = subprocess.run([sys.executable, str(TAP), "dead daemon"], env=env_dead,
+                   input=MAVEN_OUT.encode(), capture_output=True, timeout=30)
+check("tap: dead daemon degrades to cat, still exit 0",
+      r.stdout == MAVEN_OUT.encode() and r.returncode == 0)
+
+# statusline_wrap (0.5.0) ------------------------------------------------------
+WRAP = HERE / "statusline_wrap.py"
+os.environ["CLAUDE_CODE_SESSION_ID"] = "sess-WRAP"
+with progress.Job("wrap job", total=4) as wj:
+    wj.step(); wj._flush()
+    r = subprocess.run([sys.executable, str(WRAP), "--", "echo", "MYLINE"],
+                       env=dict(os.environ),
+                       input=json.dumps({"session_id": "sess-WRAP"}).encode(),
+                       capture_output=True)
+    out = r.stdout.decode()
+    check("wrap: existing status line output kept, progress rows appended",
+          out.startswith("MYLINE") and "wrap job" in out, out[:120])
+    r = subprocess.run([sys.executable, str(WRAP), "--", "false"],
+                       env=dict(os.environ),
+                       input=json.dumps({"session_id": "sess-WRAP"}).encode(),
+                       capture_output=True)
+    check("wrap: failing wrapped command still renders the progress half",
+          "wrap job" in r.stdout.decode())
+os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+
 # cleanup --------------------------------------------------------------------
 health = progress._get_json("/health")
 if health:

@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-09-11 — **statusline-discovery** — 0.5.0: wired-or-not is measured (statusline_seen = any /jobs?session poll this boot), surfaced as page banner + weekly nudge tip + once-per-upgrade SessionStart notice; tap generalized from venice-vr's gate (maven/git measured bars). Why: settings-sniffing false-positives on custom status lines, and install-time hooks don't exist — the daemon's own traffic is the honest signal.
 - 2026-09-05 — **progress-eta-borrowing** — 0.4.0: eta~ stem-match borrowed estimates (paths/digits stripped, project-first), per-NAME 7d retention, /shutdown version handshake on upgrade. Why: exact-name matching never fired for nudge-generated names, and a stale daemon held the port across every plugin update.
 - 2026-09-05 — **demo-colocation** — root demo.gif/tape moved into progress-channel/demo (brainstorm precedent) + new real-Claude maven-build demo; VHS 0.11 needs QUOTED absolute Screenshot/Output paths. Why: demos belong next to what they demo, and the unquoted-path parse error cost a take.
 - 2026-08-28 — **desc-budget-gate** — the 15k skill-listing budget regressed a 2nd time (16.4k, unchecked since the 08-18 fix); 4 longest descs trimmed, make validate now gates it. Why: a convention nothing checks rots silently — twice is the proof.

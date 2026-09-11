@@ -76,6 +76,7 @@ python3 <plugin>/scripts/progress.py mirror --name 'immich metadata' \
     --source immich-jobs --poll-cmd '<status cmd>' --interval 30
 python3 <plugin>/scripts/progress.py daemon            # foreground (debug)
 python3 <plugin>/scripts/statusline.py                # status-line rows (stdin: session JSON)
+<cmd> 2>&1 | <plugin>/scripts/progress_tap.py <name>  # measured bar from a build's own output
 python3 <plugin>/scripts/progress.py prune             # compact history.jsonl + drop names idle >7d
 ```
 
@@ -240,6 +241,43 @@ Two rules any replacement must keep:
 - **never block** — a 250 ms timeout and a silent failure, because a missing
   progress row is a far smaller problem than a frozen status line, which is
   usually carrying other information too
+
+### Set it up on request
+
+When the user asks to wire this up ("set up the progress status line", "show
+progress in my status line"), do the edit for them — `~/.claude/settings.json`:
+
+1. **No `statusLine` configured** → set it to `scripts/statusline.py` (absolute
+   plugin path) with `"refreshInterval": 1`, as above.
+2. **A status line already exists** → keep it and wrap it:
+   `"command": "python3 <plugin>/scripts/statusline_wrap.py -- <their command>"`
+   — runs their command unchanged and appends the progress rows.
+
+Then tell the user to restart the session (settings load at startup). Whether a
+renderer is actually wired is knowable without guessing: `/health` reports
+`statusline_seen` — true once any status line has polled this daemon boot. The
+live page shows a setup banner while it is false, the advisory nudge adds a
+weekly tip, and the once-per-upgrade notice offers this setup — so if the user
+seems unaware of the integration, offer it once.
+
+## Tap: a measured bar from a build's own output
+
+`scripts/progress_tap.py` is a transparent pipe filter: stdin is forwarded
+byte-for-byte, and position lines the tool already prints become a **measured**
+`items` bar — no estimate needed. Maven's reactor prints `[3/15]`; git prints
+`Receiving objects: 42% (12345/29292)`:
+
+```bash
+mvn -B verify 2>&1              | progress_tap.py 'gate: full' > build.log
+git clone --progress <url> 2>&1 | progress_tap.py 'clone linux' --pattern git
+tool 2>&1 | progress_tap.py migrate --pattern 'count:^migrated' --total 800
+```
+
+Patterns: `maven` (default) · `git` · `batch` · `count:<regex>`. Two caveats
+the callers must own: a pipeline's `$?` is the **tap's** — read
+`${PIPESTATUS[0]}` for the build's verdict — and git prints no position in a
+pipe unless `--progress` is passed. If the channel is down the tap degrades to
+`cat` in silence; a progress bar is never worth a broken build.
 
 ## Notifications
 

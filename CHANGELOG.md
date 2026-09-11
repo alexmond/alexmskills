@@ -7,6 +7,11 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-09-11
+
+### Added
+- **progress-channel 0.5.0** — the integration that finds you, and measured bars for Maven/git. **Discovery**: the daemon now *knows* whether the status-line integration is wired — a wired renderer polls `/jobs?session=` every second, so one such query this boot sets `statusline_seen` (on `/health` and `/jobs`); no settings parsing, no false positives on custom status lines. While it's false: the live page shows a one-line setup banner, the advisory nudge appends an at-most-weekly tip, and a new **SessionStart whats-new hook** emits exactly one notice per install or upgrade (last-version marker in `~/.claude/progress/`, written before emitting) that mentions what changed and offers the setup when unwired. **Setup on request**: SKILL.md now instructs Claude to perform the `settings.json` edit ("set up the progress status line"), and new `statusline_wrap.py` makes append-to-existing a one-line change — runs the user's current status-line command unchanged and adds the progress rows. **Tap** (`progress_tap.py`, generalized from venice-vr's production gate filter): a transparent pipe filter that turns a tool's own position lines into a *measured* items bar — Maven reactor `[3/15]`, git `Receiving objects: 42% (12345/29292)` (carriage-return-aware; git needs `--progress` in a pipe), Spring Batch steps, `count:<regex>`; degrades to `cat` when the channel is down, callers read `${PIPESTATUS[0]}`. The advisory hook suggests the tap for Maven/Gradle/make and now recognizes long git ops (`clone|fetch|pull|lfs|submodule`) instead of blanket-exempting git. Docs page gains the wiring snippet it lacked. Harness 101 → 123 checks.
+
 ## 2026-09-05
 
 ### Added

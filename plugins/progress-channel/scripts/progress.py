@@ -661,7 +661,12 @@ PAGE = """<!doctype html><meta charset="utf-8"><title>progress</title>
  /* A time/eta/creep bar is an estimate, not a measurement. Hatching it keeps
     that visible at a glance so an estimated bar is never read as a counted one. */
  .est>div{background:repeating-linear-gradient(90deg,#8ac 0 6px,#4a6a86 6px 12px)}
+ #wire{display:none;background:#2a2312;color:#eb6;border:1px solid #554;
+       padding:.4em .8em;margin-bottom:1em}
 </style>
+<div id="wire">these bars can also render live in your Claude Code status line —
+no session has it wired yet. Ask Claude: <b>"set up the progress status line"</b>
+(or see the plugin's SKILL.md, section <i>Status line</i>).</div>
 <h1>progress <small id="ts"></small> <small id="filter"></small></h1>
 <table><thead><tr><th>job</th><th>session</th><th>state</th><th>progress</th>
 <th>eta</th><th>counters</th><th>detail</th></tr></thead>
@@ -708,6 +713,10 @@ async function tick(){try{
   ?`showing all <a href="${qs(null)}">live only</a>`
   :`live only <a href="${qs("all")}">show all</a>`);
  document.getElementById("filter").innerHTML="\u00b7 "+bits.join(" \u00b7 ");
+ // Discovery banner: session-scoped work exists but no status-line renderer
+ // has ever polled this daemon \u2014 the person likely never found the integration.
+ document.getElementById("wire").style.display=
+  (d.statusline_seen===false&&d.jobs.some(j=>j.session))?"block":"none";
  document.getElementById("rows").innerHTML=d.jobs.map(j=>{
   const p=j.progress;
   const est=j.progress_mode&&j.progress_mode!=="items"&&j.progress_mode!=="done";
@@ -739,6 +748,12 @@ tick();setInterval(tick,2000);
 def run_daemon(bind_port: int | None = None,
                sweep_interval: float | None = None) -> None:
     tracker = Tracker()
+    # A wired status line polls /jobs?session=... every second, so one such
+    # query this boot proves a renderer exists — the accurate answer to "is
+    # the status-line integration set up", with nobody's settings parsed.
+    # The discovery surfaces (page banner, advisory tip, whats-new hook)
+    # all read this one flag.
+    wired = {"statusline_seen": False}
     interval = sweep_interval if sweep_interval is not None else float(
         os.environ.get("PROGRESS_SWEEP", "2.0"))
 
@@ -769,13 +784,15 @@ def run_daemon(bind_port: int | None = None,
                 self._send(200, PAGE.encode(), "text/html; charset=utf-8")
             elif path.path == "/health":
                 self._json({"ok": True, "pid": os.getpid(),
-                            "version": plugin_version()})
+                            "version": plugin_version(),
+                            "statusline_seen": wired["statusline_seen"]})
             elif path.path == "/jobs":
                 rows = tracker.snapshot()
                 q = urllib.parse.parse_qs(path.query)
 
                 want = (q.get("session") or [None])[0]
                 if want:
+                    wired["statusline_seen"] = True
                     # Exact match only. A job with no session (cron, bare shell)
                     # is deliberately excluded: a per-session view that quietly
                     # included machine-wide work would be worse than useless.
@@ -806,7 +823,8 @@ def run_daemon(bind_port: int | None = None,
 
                         rows = [r for r in rows if _live(r)]
 
-                self._json({"now": _now(), "jobs": rows})
+                self._json({"now": _now(), "jobs": rows,
+                            "statusline_seen": wired["statusline_seen"]})
             elif path.path == "/forecast":
                 name = urllib.parse.parse_qs(path.query).get("name", [""])[0]
                 self._json({"text": forecast_text(tracker.history, name)})

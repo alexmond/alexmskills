@@ -29,6 +29,19 @@ re-polls, nobody narrates:
 
 image::progress-claude-statusline.png[A Claude Code session — the maven build's live bar and ETA in the status line,width=100%]
 
+Wiring it up is one edit to `~/.claude/settings.json` — or just ask Claude to *"set up the progress status line"* and it makes the edit for you (0.5.0):
+
+[source,json]
+----
+{"statusLine": {"type": "command",
+                "command": "python3 <plugin>/scripts/statusline.py",
+                "refreshInterval": 1}}
+----
+
+Already have a status line? Wrap it instead — `statusline_wrap.py -- <your command>` runs it unchanged and appends the progress rows. `refreshInterval` is what makes the bar animate.
+
+If you installed the plugin and never found this integration, 0.5.0 finds *you*: the daemon knows whether any status line has ever polled it (`statusline_seen` on `/health` — no settings are parsed), and while none has, the live page shows a one-line setup banner, the advisory nudge adds an at-most-weekly tip, and a once-per-install/upgrade session notice offers the setup.
+
 === In the terminal — list, forecast, watch
 
 image::progress-cli-forecast.png[progress list shows live and finished jobs; forecast answers before starting,width=100%]
@@ -89,6 +102,18 @@ progress.py daemon                       # foreground (debug); auto-spawned othe
 ----
 
 `mirror`'s live job doubles as a lease: a second watcher for the same `--source` refuses to start while the first is alive.
+
+=== Tap: measured bars for Maven and git (0.5.0)
+
+`progress_tap.py` is a transparent pipe filter (generalized from the production tap in a large multi-module project's build gate): stdin passes through byte-for-byte, and the position lines the tool already prints — Maven's reactor `[3/15]`, git's `Receiving objects: 42% (12345/29292)` — become a *measured* `items` bar rather than a time estimate:
+
+[source,bash]
+----
+mvn -B verify 2>&1              | progress_tap.py 'gate: full' > build.log
+git clone --progress <url> 2>&1 | progress_tap.py 'clone linux' --pattern git
+----
+
+Patterns: `maven` (default), `git`, `batch`, `count:<regex>` with `--total`. Read `${PIPESTATUS[0]}` for the build's verdict (a pipeline's `$?` is the tap's), and pass `--progress` to git in a pipe. Daemon down? It degrades to `cat`, silently — a bar is never worth a broken build. The advisory nudge suggests the tap automatically for Maven/Gradle/make and long git operations (`clone`, `fetch`, `pull`, `lfs`, `submodule`).
 
 == From any script
 
