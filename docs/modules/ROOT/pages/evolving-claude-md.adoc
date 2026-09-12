@@ -37,6 +37,47 @@ The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the
 * *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
 * *PostCompact* — re-runs the audit so the assistant sees the current state without paying to re-read the whole file.
 
+== What's new in 1.6.0 — the inlet
+
+1.5.0 gave the log a write path. 1.6.0 asks whether a given write has earned its
+place, because every mechanism before it was *downstream* of a write nothing
+gated: four pruning pressures, zero inlet control.
+
+*The bar decides; the six triggers only nominate.* Write the candidate as a
+sentence that is true about the repo _tomorrow_, then name what a future session
+does differently knowing it. If the only true sentence is "we did X", there is no
+entry — the changelog, the tickets and git log already hold it. A delivery earns
+an entry only when it *taught* something: a constraint, a trap, a reversal. Most
+sessions nominate zero, and zero is the right answer to a session that merely
+shipped. The session-end capture prompt carries the bar, and *what NOT to log*
+gains the durable-artifact rule: where a repo keeps a changelog, ADRs or tickets,
+an entry is earned only by the part that isn't in them.
+
+*New audit check — CHANGELOG MIRROR.* Measures that duplication directly: entries
+naming a version `CHANGELOG.md` already documents. It found 63% on the repo that
+motivated the change and stays silent on logs of real learnings.
+
+*Parallel lanes spool instead of colliding.* Measured on one 2,400-commit repo
+running worktree lanes: 86 of 257 non-merge `CLAUDE.md` edits were made on lane
+branches, and all 50 merge commits touching the file were resolving them. A lane
+— a linked git worktree, or any non-default branch with `"lane_spool": "branch"`
+— now routes its nominations to `.claude/evolving-claude-md/incoming/<branch>.md`.
+One file per writer, so the conflict class *disappears* rather than being
+resolved. Then `capture-triggers.py fold` prints every lane's nominations
+together with cross-lane near-duplicates flagged, for one writer to curate on the
+default branch — five lanes on one epic learn the same lesson five times, and
+only a reader holding all of them can dedup it. An ordinary feature branch is
+deliberately not a lane: one writer at a time merges cleanly.
+
+*Obsolescence findings name the edit.* `MISSING from the layout` and `OBSOLETE in
+the layout` now prescribe the change to make — add the line, or strike it — because
+a flag a reader must translate into an action is a flag that gets skimmed past.
+
+A fifth check was written and *cut before shipping*: tag-uniqueness looked like a
+clean symptom until calibration showed the fleet's healthiest log runs 100%
+distinct tags and the changelog-shaped one 98%. It measured naming style, not
+quality, and would have flagged the best repo in the fleet.
+
 == What's new in 1.5.0 — the capture side
 
 Every earlier mechanism was pruning pressure on entries that already exist; the
