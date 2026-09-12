@@ -54,7 +54,7 @@ findings:
     kind: subagent
     origin: lst97/claude-code-sub-agents
     source_url: https://github.com/lst97/claude-code-sub-agents
-    supervises: "Master orchestrator for complex, multi-agent tasks" — analyzes requirements, assembles optimal 1-3 agent teams, manages collaborative workflows
+    supervises: "\"Master orchestrator for complex, multi-agent tasks\" \u2014 analyzes requirements, assembles optimal 1-3 agent teams, manages collaborative workflows"
     drift_detection: none documented
     verification: "manages multi-phase collaboration with quality gates and validation checkpoints"
     parallelism: sequential and parallel patterns (e.g. performance-engineer + database-optimizer in parallel for independent analysis); deliberately avoids over-orchestrating simple tasks
@@ -101,7 +101,7 @@ findings:
     supervises: Fan-out of independent investigation/fix subagents (3+ unrelated failures, no shared state) from a main Claude Code session
     drift_detection: prevention by brief-tightening — explicit scope constraints ("Do NOT change production code") and output requirements so agents don't wander
     verification: review each agent summary, check for conflicting edits across agents, run full test suite, spot-check for systematic errors
-    parallelism: "multiple dispatch calls in one response = parallel, one per response = sequential"; parallel only when domains are provably independent
+    parallelism: "\"multiple dispatch calls in one response = parallel, one per response = sequential\"; parallel only when domains are provably independent"
     learning_loop: none documented
     confidence: high
   - id: subagent-driven-development
@@ -109,8 +109,8 @@ findings:
     kind: skill
     origin: obra/superpowers
     source_url: https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md
-    supervises: Plan execution as conductor: one fresh implementer subagent per task, gated by spec-reviewer + code-quality reviewer, final whole-branch review
-    drift_detection: spec is binding authority; decision ledger ("Ruling: <decision> — <why> — <cost if wrong>") as recovery map; scoped re-reviews block scope creep
+    supervises: "Plan execution as conductor: one fresh implementer subagent per task, gated by spec-reviewer + code-quality reviewer, final whole-branch review"
+    drift_detection: "spec is binding authority; decision ledger (\"Ruling: <decision> \u2014 <why> \u2014 <cost if wrong>\") as recovery map; scoped re-reviews block scope creep"
     verification: two-gate review per task (spec compliance AND quality) on work the conductor didn't run; up to 5 fix rounds, rounds 4-5 escalate to fresh implementer on a stronger model
     parallelism: deliberately serialized — "Never dispatch multiple implementation subagents in parallel (conflicts)"; review may overlap next task's implementation
     learning_loop: within-run escalation ladder only (stuck implementer -> capability upgrade); no cross-run persistence documented
@@ -131,7 +131,7 @@ findings:
     kind: plugin
     origin: matthews-wong/claude-code-plugins
     source_url: https://github.com/matthews-wong/claude-code-plugins
-    supervises: "Fan a big task into independent lanes, then synthesize"; sibling worktree-isolation plugin runs agents on isolated git worktrees "to avoid merge chaos"
+    supervises: "\"Fan a big task into independent lanes, then synthesize\"; sibling worktree-isolation plugin runs agents on isolated git worktrees \"to avoid merge chaos\""
     drift_detection: none documented
     verification: synthesis step merges lane outputs; no adversarial re-check documented
     parallelism: independent-lane fan-out; no ceiling documented
@@ -155,7 +155,7 @@ findings:
     source_url: https://github.com/affaan-m/claude-swarm
     supervises: Opus-driven decomposition of a coding task into a dependency graph, then parallel Agent SDK workers under an htop-style terminal dashboard (progress, tool usage, cost, file conflicts)
     drift_detection: file-conflict detection "prevents agents from stepping on each other"; real-time per-agent monitoring; no semantic drift check documented
-    verification: "Phase 2.5 Quality Gate — Opus 4.6 reviews all agent outputs for correctness, consistency, and completeness" after parallel execution
+    verification: "\"Phase 2.5 Quality Gate \u2014 Opus 4.6 reviews all agent outputs for correctness, consistency, and completeness\" after parallel execution"
     parallelism: dependency-aware scheduling; --max-agents ceiling (default 4); hard cost limit cancels remaining tasks over budget
     learning_loop: none documented
     confidence: high
@@ -390,7 +390,7 @@ findings:
     supervises: Primary Droid delegates to custom droids via the Task tool; each runs non-interactively in a fresh context window and hands back one final message the parent must retrieve/summarize
     drift_detection: none documented; foreground mode streams live progress to the parent
     verification: none documented — parent consumes the subagent's single final message; subagents cannot AskUser or spawn their own Task subagents
-    parallelism: background mode (run_in_background: true) returns a task_id for parallel work, retrieved via TaskOutput or stopped via TaskStop; resume continues a prior subagent session; autonomy clamped to the org's Maximum Autonomy Level
+    parallelism: "background mode (run_in_background: true) returns a task_id for parallel work, retrieved via TaskOutput or stopped via TaskStop; resume continues a prior subagent session; autonomy clamped to the org's Maximum Autonomy Level"
     learning_loop: none documented
     confidence: high
 
