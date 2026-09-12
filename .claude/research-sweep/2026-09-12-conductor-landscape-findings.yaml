@@ -76,7 +76,7 @@ findings:
     kind: tool
     origin: ruvnet/claude-flow
     source_url: https://github.com/ruvnet/claude-flow
-    supervises: Queen-led hive-mind swarms of Claude Code agents in hierarchical/mesh/adaptive topologies with consensus protocols (Raft, Byzantine, Gossip) via MCP
+    supervises: Queen-led hive-mind swarms of Claude Code agents in hierarchical/mesh/adaptive topologies with consensus protocols
     drift_detection: behavioral trust scoring "0.4×success + 0.2×uptime + 0.2×threat + 0.2×integrity" with instant downgrades; audit tool snapshots project to catch regressions
     verification: consensus mechanisms plus readiness grading (1-100) and regression snapshots; agent self-reports weighted by trust score
     parallelism: parallel tool fan-out (4-6+ concurrent tool calls per response) with visible per-agent completion tracking
@@ -119,7 +119,7 @@ findings:
     name: agent-kickoff
     kind: plugin
     origin: matthews-wong/claude-code-plugins
-    source_url: https://github.com/matthews-wong/claude-code-plugins
+    source_url: https://github.com/matthews-wong/claude-code-plugins/tree/main/agent-kickoff
     supervises: "Decompose a task and kick off subagents in parallel (agent-to-agent)"
     drift_detection: none documented
     verification: none documented in this plugin (sibling verify-before-review/e2e-verifier plugins cover it separately)
@@ -194,6 +194,8 @@ findings:
     confidence: high
 
   # === agent a0a943ff8bb1305b0 ===
+  # seam notes (verifier): ag2-group-manager-patterns is the community fork of autogen-groupchatmanager (one lineage);
+  # langgraph-multi-agent-architectures subsumes langgraph-subagents-supervisor; VoltAgent/wshobson/lst97 collections share lineage.
 
   - id: langgraph-subagents-supervisor
     name: Subagents pattern (supervisor calling agents as tools)
@@ -444,7 +446,7 @@ findings:
     name: Towards a science of scaling agent systems (Google/MIT)
     kind: study
     origin: Google Research blog (with MIT), 180-configuration controlled study
-    source_url: https://research.google/blog/towards-a-science-of-scaling-agent-systems-when-and-why-agent-systems-work/
+    source_url: https://research.google/blog/towards-a-science-of-scaling-agent-systems-when-and-why-agent-systems-work/   # paper: arXiv 2512.08296
     supervises: When to fan out at all, and why a central orchestrator that validates is the error firewall
     drift_detection: none documented
     verification: "MEASURED: independent (uncoordinated) multi-agent systems amplified errors 17.2x; centralized systems contained amplification to 4.4x via orchestrator validation — the validation bottleneck is what contains error propagation"
@@ -465,7 +467,7 @@ findings:
   - id: agenticflict-merge-conflicts
     name: AgenticFlict — merge conflicts in AI-agent PRs at scale
     kind: study
-    origin: UNLV (AIware 2026), arXiv 2604.03551
+    origin: Ogenrwot & Businge, AIware 2026, arXiv 2604.03551
     source_url: https://arxiv.org/abs/2604.03551
     supervises: The integration tax of parallel lanes — quantifies how often concurrently produced agent work collides at merge
     drift_detection: none documented
@@ -492,7 +494,7 @@ findings:
     supervises: Routing scarce human attention across ~20 live agents — agents do mechanical work, human keeps the judgment calls (~80/20)
     drift_detection: Reads Claude Code's session JSONL directly for ground-truth state (active/idle/stuck) instead of scraping terminals; fswatch flags sessions idle with unsubmitted messages; tmux capture-pane spot-checks without interrupting
     verification: "Completion is never self-reported: PR merge state/CI/reviews queried via GitHub API, worktree branch state inspected live, and worktrees only cleaned up after verifying the PR actually merged; agent-maintained metadata rots ('they frequently forgot') — trust session files and repo state, not agent claims"
-    parallelism: "MEASURED: ~20 peak agents across 2 projects; $2-5 per PR with cost discipline vs $15-30 undisciplined; 15+ sessions forces a prioritized attention dashboard; 5 agents spawn in ~3s"
+    parallelism: "MEASURED: ~20 peak agents across 2 projects; $2-5 per PR with cost discipline vs $15-30 undisciplined; 15+ sessions forces a prioritized attention dashboard; batch-spawns 5 agents in seconds"
     learning_loop: Failure-driven simplification carried forward — full clones→worktrees, complex approvals→binary gates, tmux send-keys→file-based prompts after escaping bugs
     confidence: high
   - id: fleet-swarms-hn-lessons
