@@ -1,0 +1,20 @@
+{
+  "name": "conductor",
+  "description": "The runtime half of multi-lane orchestration: detect a lane that has drifted from its brief, decide relay-vs-re-scope-vs-pause, read a verdict you did not run, and hold the machine's real parallelism ceiling. Carries four measured deviation shapes — the control that pins a blocker in place, the report taken as fact, the stale premise, and the collision only visible after both lanes merge — and a learnings loop that writes to the consuming repo and graduates into .claude/roles/conductor.md.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "orchestration",
+    "subagents",
+    "conductor",
+    "self-evolving",
+    "parallel",
+    "code-review"
+  ]
+}
