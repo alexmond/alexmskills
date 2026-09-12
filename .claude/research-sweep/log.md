@@ -54,3 +54,26 @@ bottom. (Schema: see the shipped seed in the research-sweep plugin.)
 - steering: roster approved via "implement whole scope"; no gate edits
 - outcome: committed-at .claude/research-sweep/2026-08-28-claude-md-practices-findings.yaml; shipped synthesis at plugins/evolving-claude-md/references/claude-md-best-practices.md (in-plugin rulebook — first sweep whose deliverable ships inside a plugin)
 - graduated: practitioner-scout minted probationary (1 useful run); verifier row gains the raw-github-byte-exact pattern
+
+## conductor-landscape-2026-09-12  2026-09-12  alexmskills
+- question: conductor-type skills/agents/roles across the coding-agent ecosystem, to position plugins/conductor 0.1.0
+- corpus: Claude Code marketplaces/collections / framework+product official docs / practitioner lore + measured studies
+- roster: container-scout(stable) + entity-scout(stable, first use this repo) + practitioner-scout(probationary, 2nd run) + verifier(skeptic) + synthesizer
+- partition: by artifact locus — shipped CC ecosystem / framework-native roles / practice+measurement, do-NOT-cover fences
+- schema: findings{id,name,kind,origin,source_url,supervises,drift_detection,verification,parallelism,learning_loop,confidence}
+- per-role:
+  - container-scout: volume=17 (target 14), thin=no, notes=marketplace long tail found; 2 thin-but-real plugin entries flagged marginal by verifier
+  - entity-scout: volume=18 (target 12), thin=no, notes=official docs only; adk.dev verified as REAL official Google domain (verifier initially suspected fabrication)
+  - practitioner-scout: volume=14 (target 12), thin=no, notes=6 MEASURED sources (MAST, Agent-as-a-Judge, Google/MIT scaling, METR RCT, AgenticFlict, Anthropic MARS) — again the highest-value slice
+- verifier:
+  - sample: 22/49 (45%), stratified, weighted to load-bearing numbers; 30+ numeric claims traced
+  - fabrications: 0; corrections: 5 precision fixes (unsourced consensus trio, unconfirmable ~3s, inferred origin, 2 citation-depth nits)
+  - duplicates: 3 lineage seams flagged (AG2=AutoGen-0.2 fork; langgraph entry subsumption; agent-collection lineage) — noted in file, not merged
+  - gaps: 5 named (CC Agent Teams first-party, Bedrock supervisor, Cursor 2.0 parallel, GitHub Agent HQ, Codex cloud) — reported to user, not researched to schema depth
+  - verdict: ACCEPT WITH CORRECTIONS (applied)
+- thin: none
+- dedup-hotspots: framework lineage (forks/renames: AutoGen->AG2) is the seam class for vendor-partitioned sweeps — add a lineage-note rule instead of merging
+- source-trust: official framework docs quote-stable; arXiv HTML full text verifies percentages exactly; HN item ids resolve stably; suspicious-looking precise numbers were ALL real this run
+- steering: roster launched on direct sweep directive (logged precedent); no gate edits
+- outcome: committed-at .claude/research-sweep/2026-09-12-conductor-landscape-findings.yaml; comparison delivered in-conversation (conductor 0.1.0 positioning)
+- graduated: practitioner-scout 2nd useful run (1 more to stable); entity-scout first useful run in this repo; verifier row gains real-domain-not-fabricated (adk.dev) caution
