@@ -1,0 +1,552 @@
+# Conductor-type orchestration landscape — 3 parallel scouts, 2026-09-12
+# Schema: findings[{id,name,kind,origin,source_url,supervises,drift_detection,verification,parallelism,learning_loop,confidence}]
+
+findings:
+
+  # === agent a0588c3458af86bd6 ===
+
+  - id: multi-agent-coordinator-voltagent
+    name: multi-agent-coordinator
+    kind: subagent
+    origin: VoltAgent/awesome-claude-code-subagents
+    source_url: https://github.com/VoltAgent/awesome-claude-code-subagents/blob/main/categories/09-meta-orchestration/multi-agent-coordinator.md
+    supervises: Designs coordination plans for multiple Claude Code subagents — sequencing, file-based hand-offs, shared-state ownership, failure recovery (retry/fallback/skip/escalate)
+    drift_detection: none documented — explicitly disclaims runtime monitoring ("You do not run a live system, so you never report runtime metrics you did not observe")
+    verification: none documented — plan-only artifact; execution verification delegated to the invoking orchestrator
+    parallelism: plans sequential-vs-parallel lanes via dependency analysis; does not enforce scheduling at runtime
+    learning_loop: none documented
+    confidence: high
+  - id: agent-organizer-voltagent
+    name: agent-organizer
+    kind: subagent
+    origin: VoltAgent/awesome-claude-code-subagents
+    source_url: https://github.com/VoltAgent/awesome-claude-code-subagents/blob/main/categories/09-meta-orchestration/agent-organizer.md
+    supervises: Decomposes a complex task into subtasks and matches each to a suitable subagent, emitting a team plan document
+    drift_detection: none documented — "You cannot run agents, monitor execution, measure response times"
+    verification: honesty constraints only — must flag uncertain agent-subtask fit; "never invent completion rates … or utilization figures"
+    parallelism: classifies execution pattern per plan — sequential, parallel (independent subtasks), or staged pipeline
+    learning_loop: can consume sibling knowledge-synthesizer output but keeps no state of its own
+    confidence: high
+  - id: workflow-orchestrator-voltagent
+    name: workflow-orchestrator
+    kind: subagent
+    origin: VoltAgent/awesome-claude-code-subagents
+    source_url: https://github.com/VoltAgent/awesome-claude-code-subagents/blob/main/categories/09-meta-orchestration/workflow-orchestrator.md
+    supervises: Designs workflow/state-machine specs — states, transitions, guards, retry/timeout/dead-letter policies, saga compensation, human approval gates
+    drift_detection: none documented at runtime; grounds claims in path:line citations and refuses unobserved execution metrics
+    verification: flags requirement gaps rather than inventing behavior; spec correctness over breadth
+    parallelism: parallel split/join constructs within designed flows
+    learning_loop: reads recurring failure patterns from sibling agents (performance-monitor, error-coordinator) to inform designs
+    confidence: high
+  - id: tech-lead-orchestrator
+    name: tech-lead-orchestrator
+    kind: subagent
+    origin: vijaythecoder/awesome-claude-agents
+    source_url: https://raw.githubusercontent.com/vijaythecoder/awesome-claude-agents/main/agents/orchestrators/tech-lead-orchestrator.md
+    supervises: Delegates every task of a multi-step dev project to specialist sub-agents; forbidden from implementing anything itself
+    drift_detection: mandatory structured response format (violation = "orchestration failure") and exact agent-name matching against system context
+    verification: accountability via explicit task-to-agent assignment and execution-order tracking; no result re-checking documented
+    parallelism: hard ceiling — "Maximum 2 agents run in parallel"; sequential ordering otherwise
+    learning_loop: none documented
+    confidence: high
+  - id: agent-organizer-lst97
+    name: agent-organizer
+    kind: subagent
+    origin: lst97/claude-code-sub-agents
+    source_url: https://github.com/lst97/claude-code-sub-agents
+    supervises: "Master orchestrator for complex, multi-agent tasks" — analyzes requirements, assembles optimal 1-3 agent teams, manages collaborative workflows
+    drift_detection: none documented
+    verification: "manages multi-phase collaboration with quality gates and validation checkpoints"
+    parallelism: sequential and parallel patterns (e.g. performance-engineer + database-optimizer in parallel for independent analysis); deliberately avoids over-orchestrating simple tasks
+    learning_loop: none documented — team selection is per-run project analysis, not persisted
+    confidence: high
+  - id: wshobson-agents-workflows
+    name: wshobson/agents multi-agent workflows
+    kind: plugin
+    origin: wshobson/agents
+    source_url: https://github.com/wshobson/agents
+    supervises: 16 multi-agent coordination workflows (full-stack feature, security, ML, incident response) across a large plugin marketplace of specialist agents
+    drift_detection: none documented
+    verification: none documented
+    parallelism: none documented — tiered model strategy (Opus for architecture/security, Sonnet for testing, Haiku for ops) is the stated coordination lever
+    learning_loop: none documented
+    confidence: medium
+  - id: claude-flow
+    name: claude-flow
+    kind: tool
+    origin: ruvnet/claude-flow
+    source_url: https://github.com/ruvnet/claude-flow
+    supervises: Queen-led hive-mind swarms of Claude Code agents in hierarchical/mesh/adaptive topologies with consensus protocols (Raft, Byzantine, Gossip) via MCP
+    drift_detection: behavioral trust scoring "0.4×success + 0.2×uptime + 0.2×threat + 0.2×integrity" with instant downgrades; audit tool snapshots project to catch regressions
+    verification: consensus mechanisms plus readiness grading (1-100) and regression snapshots; agent self-reports weighted by trust score
+    parallelism: parallel tool fan-out (4-6+ concurrent tool calls per response) with visible per-agent completion tracking
+    learning_loop: HNSW-indexed AgentDB memory persists across sessions; "SONA self-learning with pattern matching" — planner retrieves past solutions each run
+    confidence: high
+  - id: claude-squad
+    name: claude-squad
+    kind: tool
+    origin: smtg-ai/claude-squad
+    source_url: https://github.com/smtg-ai/claude-squad
+    supervises: Multiple Claude Code (and Codex/Gemini/Aider) sessions as a terminal supervisor — create, attach/reprompt, review, commit/push per task
+    drift_detection: none documented — human attaches to a tmux session to inspect and re-steer
+    verification: human checkout/review of each workspace's changes before merge; no automated verdict handling
+    parallelism: one tmux session + git worktree per task ("each task gets its own isolated git workspace"); no documented ceiling
+    learning_loop: none documented
+    confidence: high
+  - id: dispatching-parallel-agents
+    name: dispatching-parallel-agents
+    kind: skill
+    origin: obra/superpowers
+    source_url: https://github.com/obra/superpowers/blob/main/skills/dispatching-parallel-agents/SKILL.md
+    supervises: Fan-out of independent investigation/fix subagents (3+ unrelated failures, no shared state) from a main Claude Code session
+    drift_detection: prevention by brief-tightening — explicit scope constraints ("Do NOT change production code") and output requirements so agents don't wander
+    verification: review each agent summary, check for conflicting edits across agents, run full test suite, spot-check for systematic errors
+    parallelism: "multiple dispatch calls in one response = parallel, one per response = sequential"; parallel only when domains are provably independent
+    learning_loop: none documented
+    confidence: high
+  - id: subagent-driven-development
+    name: subagent-driven-development
+    kind: skill
+    origin: obra/superpowers
+    source_url: https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md
+    supervises: Plan execution as conductor: one fresh implementer subagent per task, gated by spec-reviewer + code-quality reviewer, final whole-branch review
+    drift_detection: spec is binding authority; decision ledger ("Ruling: <decision> — <why> — <cost if wrong>") as recovery map; scoped re-reviews block scope creep
+    verification: two-gate review per task (spec compliance AND quality) on work the conductor didn't run; up to 5 fix rounds, rounds 4-5 escalate to fresh implementer on a stronger model
+    parallelism: deliberately serialized — "Never dispatch multiple implementation subagents in parallel (conflicts)"; review may overlap next task's implementation
+    learning_loop: within-run escalation ladder only (stuck implementer -> capability upgrade); no cross-run persistence documented
+    confidence: high
+  - id: agent-kickoff
+    name: agent-kickoff
+    kind: plugin
+    origin: matthews-wong/claude-code-plugins
+    source_url: https://github.com/matthews-wong/claude-code-plugins
+    supervises: "Decompose a task and kick off subagents in parallel (agent-to-agent)"
+    drift_detection: none documented
+    verification: none documented in this plugin (sibling verify-before-review/e2e-verifier plugins cover it separately)
+    parallelism: parallel subagent kickoff is the plugin's function; no ceiling documented
+    learning_loop: none documented
+    confidence: high
+  - id: parallel-lanes
+    name: parallel-lanes
+    kind: plugin
+    origin: matthews-wong/claude-code-plugins
+    source_url: https://github.com/matthews-wong/claude-code-plugins
+    supervises: "Fan a big task into independent lanes, then synthesize"; sibling worktree-isolation plugin runs agents on isolated git worktrees "to avoid merge chaos"
+    drift_detection: none documented
+    verification: synthesis step merges lane outputs; no adversarial re-check documented
+    parallelism: independent-lane fan-out; no ceiling documented
+    learning_loop: none documented
+    confidence: high
+  - id: swarm-orchestration-skill-kieranklaassen
+    name: Claude Code Swarm Orchestration Skill
+    kind: skill
+    origin: kieranklaassen (GitHub gist)
+    source_url: https://gist.github.com/kieranklaassen/4f2aba89594a4aea4ad64d753984b2ea
+    supervises: TeammateTool teams ("one leader, multiple teammates" with inbox messaging) plus a shared JSON task queue with dependency auto-unblocking; parallel-specialist, pipeline, and self-organizing swarm patterns
+    drift_detection: none documented
+    verification: none documented — focus is initial orchestration, not ongoing QA
+    parallelism: task-claiming from shared queue; blocked tasks auto-unblock when dependencies complete; no ceiling documented
+    learning_loop: none documented
+    confidence: high
+  - id: claude-swarm-affaan
+    name: claude-swarm
+    kind: tool
+    origin: affaan-m/claude-swarm
+    source_url: https://github.com/affaan-m/claude-swarm
+    supervises: Opus-driven decomposition of a coding task into a dependency graph, then parallel Agent SDK workers under an htop-style terminal dashboard (progress, tool usage, cost, file conflicts)
+    drift_detection: file-conflict detection "prevents agents from stepping on each other"; real-time per-agent monitoring; no semantic drift check documented
+    verification: "Phase 2.5 Quality Gate — Opus 4.6 reviews all agent outputs for correctness, consistency, and completeness" after parallel execution
+    parallelism: dependency-aware scheduling; --max-agents ceiling (default 4); hard cost limit cancels remaining tasks over budget
+    learning_loop: none documented
+    confidence: high
+  - id: claude-swarm-parruda
+    name: claude_swarm
+    kind: tool
+    origin: parruda/claude-swarm (RubyGems claude_swarm)
+    source_url: https://rubygems.org/gems/claude_swarm
+    supervises: A main Claude Code instance connected to a YAML-defined topology of specialized Claude Code instances (frontend/backend/testing/DevOps roles) communicating over MCP
+    drift_detection: none documented
+    verification: none documented
+    parallelism: topology-defined multi-instance collaboration; no ceiling documented
+    learning_loop: none documented
+    confidence: medium
+  - id: conductor-build
+    name: Conductor
+    kind: tool
+    origin: conductor.build
+    source_url: https://conductor.build
+    supervises: Parallel Claude Code / Codex / Cursor agents in isolated workspaces on a Mac, with an at-a-glance board of what each is working on
+    drift_detection: human-in-the-loop visibility dashboard; no automated drift check documented
+    verification: human reviews and merges each agent's changes
+    parallelism: one isolated workspace per agent; no documented ceiling
+    learning_loop: none documented
+    confidence: high
+  - id: claude-code-agent-farm
+    name: claude_code_agent_farm
+    kind: tool
+    origin: Dicklesworthstone/claude_code_agent_farm
+    source_url: https://github.com/Dicklesworthstone/claude_code_agent_farm
+    supervises: 20+ (up to 50 via max_agents) parallel Claude Code agents doing bug-fix/best-practice sweeps, coordinated by lock files, work-plan registries, and chunked work distribution
+    drift_detection: heartbeat files with stale-heartbeat detection (>2 min), adaptive idle timeout (3x median cycle time), auto-restart of errored/idle agents, stale-lock reclamation (>2h)
+    verification: git commits with rich diff summaries, HTML run reports, state JSON tracking per-agent metrics; no semantic re-review of agent claims
+    parallelism: max_agents config ceiling; per-stack chunk sizing with dynamic adjustment "max(10, total_lines / agents / 2)"
+    learning_loop: persistent monitor-state JSON, work registries, and timestamped settings backups across runs; "no explicit machine learning component"
+    confidence: high
+
+  # === agent a0a943ff8bb1305b0 ===
+
+  - id: langgraph-subagents-supervisor
+    name: Subagents pattern (supervisor calling agents as tools)
+    kind: framework-role
+    origin: LangChain / LangGraph
+    source_url: https://docs.langchain.com/oss/python/langchain/multi-agent/subagents
+    supervises: A main agent coordinates specialized subagents wrapped as tools; all routing passes through it and results return to it, never directly to the user
+    drift_detection: none documented — supervisor receives results but no off-brief check is described
+    verification: none documented; supervisor incorporates subagent tool results as-is
+    parallelism: main agent can invoke multiple subagents in a single turn (parallel tool calls); async vs sync execution modes
+    learning_loop: none documented — subagents are stateless by design (isolated context per invocation; optional "forked" mode passes supervisor history)
+    confidence: high
+  - id: langgraph-multi-agent-architectures
+    name: Multi-agent architectures (handoffs / router / skills)
+    kind: framework-role
+    origin: LangChain / LangGraph
+    source_url: https://docs.langchain.com/oss/python/langchain/multi-agent
+    supervises: Four documented designs — subagents-as-tools, handoffs (tool calls update state to switch the active agent), router (classify then dispatch to specialists), skills (single agent loads context on demand)
+    drift_detection: none documented
+    verification: none documented — router "synthesizes results into a combined response" but no verification step
+    parallelism: subagents and router patterns support concurrent execution; handoffs are sequential
+    learning_loop: none documented; handoffs/skills keep conversation state within a session only
+    confidence: high
+  - id: crewai-hierarchical-manager
+    name: Hierarchical process manager agent (manager_llm / manager_agent)
+    kind: framework-role
+    origin: CrewAI
+    source_url: https://docs.crewai.com/en/learn/hierarchical-process
+    supervises: Auto-created (manager_llm) or custom (manager_agent) manager that allocates tasks to crew agents based on roles/capabilities and oversees execution
+    drift_detection: none documented
+    verification: documented "result validation" — manager "evaluates outcomes to ensure they meet the required standards" before progression
+    parallelism: none documented — tasks progress sequentially under the manager despite the hierarchy
+    learning_loop: none documented on this page
+    confidence: high
+  - id: autogen-groupchatmanager
+    name: GroupChatManager (AutoGen 0.2 GroupChat)
+    kind: framework-role
+    origin: Microsoft AutoGen 0.2
+    source_url: https://microsoft.github.io/autogen/0.2/docs/topics/groupchat/customized_speaker_selection
+    supervises: Conversation flow among group-chat agents — holds state and picks the next speaker via auto (LLM), manual, round_robin, random, or a custom selection function (StateFlow pattern for deterministic workflows)
+    drift_detection: none documented; custom selector functions can inspect groupchat.messages to route deterministically
+    verification: none documented
+    parallelism: none documented — one speaker per turn
+    learning_loop: none documented
+    confidence: high
+  - id: autogen-selectorgroupchat
+    name: SelectorGroupChat (AgentChat)
+    kind: framework-role
+    origin: Microsoft AutoGen (0.4+ AgentChat)
+    source_url: https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/selector-group-chat.html
+    supervises: Turn-taking team where a generative model selects the next speaker from agent names/descriptions plus shared conversation context; overridable via selector_func and candidate_func
+    drift_detection: none documented beyond termination conditions (TextMentionTermination, MaxMessageTermination); no repeat-speaker by default unless allow_repeated_speaker=True
+    verification: none documented — no automatic result verification between agents
+    parallelism: none documented — sequential, each participant takes one step per turn
+    learning_loop: none documented; context resets via reset()
+    confidence: high
+  - id: ag2-group-manager-patterns
+    name: GroupChatManager + orchestration patterns (AutoPattern et al.)
+    kind: framework-role
+    origin: AG2 (formerly AutoGen)
+    source_url: https://docs.ag2.ai/latest/docs/user-guide/advanced-concepts/orchestration/group-chat/introduction/
+    supervises: A Group Manager coordinating agents in shared conversation context; patterns (AutoPattern, RoundRobinPattern, RandomPattern, ManualPattern) govern who takes the next turn, with context-based transitions
+    drift_detection: none documented on this page (guardrails/safeguards live in separate sections)
+    verification: none documented
+    parallelism: none documented — turn-based group chat
+    learning_loop: none documented
+    confidence: high
+  - id: metagpt-sop-team
+    name: SOP-driven Team ("Code = SOP(Team)")
+    kind: framework-role
+    origin: MetaGPT (FoundationAgents)
+    source_url: https://github.com/FoundationAgents/MetaGPT
+    supervises: A virtual software company of role agents (product manager, architect, project manager, engineer, QA) coordinated by materialized standard operating procedures rather than a single LLM supervisor
+    drift_detection: none documented — SOP workflow structure constrains each role's outputs instead
+    verification: role-based reviews and QA gates on intermediate deliverables (requirements, APIs, docs) before progression
+    parallelism: none documented
+    learning_loop: none documented in the repo README
+    confidence: high
+  - id: chatdev-chatchain
+    name: ChatChain phase orchestration (instructor/assistant dual agents)
+    kind: framework-role
+    origin: OpenBMB ChatDev
+    source_url: https://github.com/OpenBMB/ChatDev
+    supervises: Sequential functional phases (design, coding, testing, documenting) run as dual-agent seminars among CEO/CTO/Programmer/Reviewer/Tester roles; ChatDev 2.0 replaces the fixed chain with configurable YAML/DAG workflows
+    drift_detection: none documented as a supervisor function; phase structure plus review/testing phases bound each exchange
+    verification: dedicated Reviewer (code review) and Tester (testing) phases validate the Programmer's output
+    parallelism: 2.0 DAG topologies scale to "more than a thousand agents without exceeding context limits"; no ceiling mechanism documented
+    learning_loop: Experiential Co-Learning and Iterative Experience Refinement — agents "accumulate shortcut-oriented experiences to effectively solve new tasks"
+    confidence: high
+  - id: openai-agents-orchestration
+    name: Orchestrator agent via handoffs / agents-as-tools
+    kind: framework-role
+    origin: OpenAI Agents SDK
+    source_url: https://openai.github.io/openai-agents-python/multi_agent/
+    supervises: Two LLM-driven modes — a manager agent keeps the conversation and invokes specialists via Agent.as_tool(), or a triage agent hands off so the specialist becomes the active agent; plus deterministic code-based orchestration
+    drift_detection: none documented as automatic; docs recommend running the agent in a loop to "critique itself" and monitoring
+    verification: documented pattern of evaluator agents assessing outputs in iterative loops, plus structured outputs inspected by code
+    parallelism: parallelization via Python primitives like asyncio.gather for independent tasks (examples/agent_patterns); no ceiling documented
+    learning_loop: none documented
+    confidence: high
+  - id: adk-workflow-agents
+    name: Workflow agents (SequentialAgent / ParallelAgent / LoopAgent)
+    kind: framework-role
+    origin: Google ADK
+    source_url: https://adk.dev/workflows/
+    supervises: Deterministic composition of sub-agents — templated fixed execution logic extending BaseAgent, plus graph-based workflows (ADK 2.0) with branching and experimental Agent Routing (router functions for fallback/A-B/auto-routing)
+    drift_detection: none documented — predictability comes from templated/graph execution, not runtime checks
+    verification: none documented at this layer (see generator-critic pattern entry)
+    parallelism: ParallelAgent runs sub-agents concurrently; no concurrency ceiling documented
+    learning_loop: none documented
+    confidence: high
+  - id: adk-coordinator-dispatcher
+    name: Coordinator/Dispatcher pattern (LLM-driven delegation)
+    kind: framework-role
+    origin: Google ADK
+    source_url: https://adk.dev/workflows/patterns/
+    supervises: A central LlmAgent routing requests to specialist sub_agents via LLM-Driven Delegation (transfer) or explicit AgentTool invocation; hierarchical task decomposition returns results up the agent tree
+    drift_detection: none documented; LoopAgent checker agents can set escalate=True to break iterative loops
+    verification: Generator-Critic pattern — generator writes via output_key to Shared Session State, a reviewer agent reads and critiques before acceptance
+    parallelism: Parallel Fan-Out/Gather via ParallelAgent with per-agent state keys, then an aggregator agent; loops bounded by max_iterations
+    learning_loop: none documented beyond shared session state within a run
+    confidence: high
+  - id: smolagents-manager-agent
+    name: Manager agent with managed_agents
+    kind: framework-role
+    origin: Hugging Face smolagents
+    source_url: https://huggingface.co/docs/smolagents/examples/multiagents
+    supervises: A CodeAgent manager that plans and calls sub-agents (passed as managed_agents, each requiring name and description) like tools inside its code steps
+    drift_detection: none documented; sub-agents bounded by max_steps
+    verification: none documented — manager consumes the sub-agent's returned report directly
+    parallelism: none documented on this page — manager delegates within its sequential reasoning loop
+    learning_loop: none documented
+    confidence: high
+  - id: claude-agent-sdk-subagents
+    name: Orchestrator with subagents (Agent tool)
+    kind: framework-role
+    origin: Anthropic Claude Agent SDK
+    source_url: https://code.claude.com/docs/en/agent-sdk/subagents
+    supervises: Main agent spawns AgentDefinition subagents via the Agent tool for focused subtasks with context isolation (only the final message returns), tool restrictions, and per-agent model/effort overrides
+    drift_detection: maxTurns marks an unfinished subagent's output as partial so the orchestrator knows to resume; otherwise none documented
+    verification: subagent final messages are scanned for instruction-shaped patterns (control-tag imitation, turn markers) before the parent reads them; content itself is not fact-checked
+    parallelism: concurrent subagents with explicit caps — CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS (default 20), spawn depth CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH (default 3), maxBudgetUsd spend cap; Workflow tool for dozens-to-hundreds scale
+    learning_loop: per-agent memory field ('user'|'project'|'local'); subagent transcripts persist and can be resumed via agentId + session resume
+    confidence: high
+  - id: sk-agent-orchestration
+    name: Agent Orchestration patterns (Concurrent/Sequential/Handoff/GroupChat)
+    kind: framework-role
+    origin: Microsoft Semantic Kernel
+    source_url: https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-orchestration/
+    supervises: Unified orchestration objects over member agents — Concurrent broadcasts a task to all, Sequential pipelines results, Handoff passes control on context/rules, Group Chat is "coordinated by a group manager"
+    drift_detection: none documented
+    verification: none documented — framework "abstracts away ... result aggregation"
+    parallelism: ConcurrentOrchestration collects independent results in parallel on an InProcessRuntime; no ceiling documented
+    learning_loop: none documented (experimental-stage framework)
+    confidence: high
+  - id: sk-magentic-manager
+    name: StandardMagenticManager (Magentic orchestration)
+    kind: framework-role
+    origin: Microsoft Semantic Kernel (from AutoGen's Magentic-One)
+    source_url: https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-orchestration/magentic
+    supervises: A dedicated manager that plans the workflow, maintains shared context, selects which specialist acts next "based on the evolving context, task progress, and agent capabilities," and synthesizes the final answer
+    drift_detection: manager "tracks progress and adapts the workflow in real time" — re-plans mid-run; MaximumInvocationCount bounds runaway loops
+    verification: manager aggregates and synthesizes agent outputs into the final answer; no explicit per-result verification documented
+    parallelism: none documented — manager picks one agent to act next per round
+    learning_loop: none documented
+    confidence: high
+  - id: llamaindex-agentworkflow
+    name: AgentWorkflow + orchestrator-agent patterns
+    kind: framework-role
+    origin: LlamaIndex
+    source_url: https://developers.llamaindex.ai/python/framework/understanding/agent/multi_agent/
+    supervises: Three tiers — AgentWorkflow (root agent, peers reached via can_handoff_to until a final answer), Orchestrator (specialists' run methods wrapped as tools under one top-level agent deciding every step), Custom Planner (LLM emits a structured plan your code executes)
+    drift_detection: none documented
+    verification: none documented — tool/agent results return to the orchestrator unchecked
+    parallelism: none documented on this page
+    learning_loop: none documented; shared Context/workflow state persists only across the run
+    confidence: high
+  - id: devin-coordinator-session
+    name: Coordinator session (parallel managed Devins)
+    kind: product
+    origin: Cognition Devin
+    source_url: https://docs.devin.ai/work-with-devin/advanced-capabilities.md
+    supervises: One Devin session acts as coordinator — "scoping the work, monitoring progress, resolving conflicts, and compiling results" — spinning up managed child Devins with specific prompts, playbooks, tags, and ACU limits, each in an isolated VM
+    drift_detection: coordinator monitors progress and ACU consumption, can message child sessions with follow-up instructions, and can sleep or terminate them
+    verification: coordinator resolves conflicts between workstreams and compiles results into a unified output; no formal verification protocol documented
+    parallelism: true parallel child sessions (isolated VMs) with per-child ACU limits; no explicit ceiling documented on this page
+    learning_loop: session analysis of past sessions, playbook creation from successful runs, and knowledge-base consolidation/dedup for future runs
+    confidence: high
+  - id: factory-droid-subagents
+    name: Custom droids (Task-tool subagents)
+    kind: product
+    origin: Factory
+    source_url: https://docs.factory.ai/harness/subagents
+    supervises: Primary Droid delegates to custom droids via the Task tool; each runs non-interactively in a fresh context window and hands back one final message the parent must retrieve/summarize
+    drift_detection: none documented; foreground mode streams live progress to the parent
+    verification: none documented — parent consumes the subagent's single final message; subagents cannot AskUser or spawn their own Task subagents
+    parallelism: background mode (run_in_background: true) returns a task_id for parallel work, retrieved via TaskOutput or stopped via TaskStop; resume continues a prior subagent session; autonomy clamped to the org's Maximum Autonomy Level
+    learning_loop: none documented
+    confidence: high
+
+  # === agent a408447396b9ba578 ===
+
+  - id: anthropic-multi-agent-research-system
+    name: Anthropic multi-agent research system (orchestrator-worker lessons)
+    kind: pattern
+    origin: Anthropic engineering blog
+    source_url: https://www.anthropic.com/engineering/multi-agent-research-system
+    supervises: How a lead agent decomposes, briefs, and scales subagent effort so parallel workers neither duplicate nor gap
+    drift_detection: No active monitor — drift prevented up front via detailed briefs ("each subagent needs an objective, an output format, guidance on tools and sources, and clear task boundaries"); early failures were agents continuing past sufficient results, fixed in prompts, plus step-by-step simulations to watch where agents go wrong
+    verification: A dedicated CitationAgent re-checks claims against sources; LLM-as-judge rubric (0.0-1.0 + pass/fail) scoring factual accuracy, citation accuracy, completeness
+    parallelism: "MEASURED: multi-agent uses ~15x tokens of chat (single agent ~4x); explicit effort-scaling rules: 1 agent/3-10 tool calls for fact-finding, 2-4 subagents/10-15 calls for comparisons, 10+ only for complex research; parallel tool calls cut research time up to 90%; Opus lead + Sonnet subagents beat single Opus by 90.2% on internal eval; token spend alone explains 80% of performance variance"
+    learning_loop: Prompt-engineering fixes accumulated from observed simulation failures (repeated searches, wrong tool choices); no automated cross-run memory described
+    confidence: high
+  - id: claude-code-best-practices-parallel
+    name: Claude Code best practices — verify-loop, writer/reviewer, fan-out
+    kind: pattern
+    origin: Anthropic (Claude Code docs, formerly engineering best-practices post)
+    source_url: https://code.claude.com/docs/en/best-practices
+    supervises: Making unattended and parallel sessions trustworthy — close the loop with a runnable check instead of the human being the verification loop
+    drift_detection: "Course-correct early and often; after two failed corrections /clear and re-prompt (context is polluted); 'Claude stops when the work looks done — without a check, looks-done is the only signal'"
+    verification: "Give Claude a check it can run (tests, build, screenshot diff); demand evidence not assertions (test output, command + result); adversarial review by a fresh-context subagent that sees only diff + criteria; Writer/Reviewer split across sessions since 'a fresh context improves code review'; warning that a reviewer prompted to find gaps will always report some"
+    parallelism: Worktrees as the isolation default for parallel CLI sessions; /batch splits a change across 5-30 subagents each in its own worktree opening a PR; fan-out via claude -p loops with --allowedTools scoped; test on 2-3 files before running the full set
+    learning_loop: CLAUDE.md as persistent compounding memory, with pruning discipline (bloated files cause instructions to be ignored); refine fan-out prompts from the first few failures before scaling
+    confidence: high
+  - id: mast-failure-taxonomy
+    name: MAST — Why Do Multi-Agent LLM Systems Fail?
+    kind: study
+    origin: Cemri, Pan, Yang et al. (UC Berkeley), arXiv 2503.13657
+    source_url: https://arxiv.org/html/2503.13657v3
+    supervises: Names the 14 failure modes a conductor must watch for, grounded in 1,600+ annotated traces across 7 MAS frameworks (kappa=0.88)
+    drift_detection: "MEASURED: inter-agent misalignment is 32.15% of all failures — task derailment 7.4%, reasoning-action mismatch 13.2%, fail-to-ask-clarification 6.8%; system design issues are 44.2% (disobeyed task spec 11.8%, step repetition 15.7%, unaware of termination conditions 12.4%) — i.e. most drift is baked in at briefing time, not emergent"
+    verification: "MEASURED: task-verification failures are 23.5% of all failures — incorrect verification 9.1%, no/incomplete verification 8.2%, premature termination 6.2%; adding high-level task verification to ChatDev raised task success +15.6% on ProgramDev; role-adherence-at-termination fix gave +9.4%"
+    parallelism: none documented
+    learning_loop: Released dataset + an LLM annotator so teams can classify their own traces against the taxonomy
+    confidence: high
+  - id: agent-as-a-judge
+    name: Agent-as-a-Judge — evaluate agents with agents
+    kind: study
+    origin: Zhuge et al. (Meta AI / KAUST), arXiv 2410.10934, ICML 2025
+    source_url: https://arxiv.org/abs/2410.10934
+    supervises: Reading and grading another agent's work you didn't run — judging the whole trajectory with intermediate feedback, not just the final artifact
+    drift_detection: Evaluates intermediate steps of the task-solving process, catching mid-trajectory divergence that outcome-only checks miss
+    verification: "MEASURED: on DevAI (55 dev tasks, 365 hierarchical requirements) an agentic judge with tools reached 92.07%/90.44% alignment with human consensus (gray/black-box) vs 70.76%/60.38% for plain LLM-as-a-judge — a judge that can open files and run things beats one that only reads the report; cost was 2.29% and time 2.36% of human judging"
+    parallelism: none documented
+    learning_loop: Judge feedback positioned as reward signal for improving the judged agents over time
+    confidence: high
+  - id: google-scaling-agent-systems
+    name: Towards a science of scaling agent systems (Google/MIT)
+    kind: study
+    origin: Google Research blog (with MIT), 180-configuration controlled study
+    source_url: https://research.google/blog/towards-a-science-of-scaling-agent-systems-when-and-why-agent-systems-work/
+    supervises: When to fan out at all, and why a central orchestrator that validates is the error firewall
+    drift_detection: none documented
+    verification: "MEASURED: independent (uncoordinated) multi-agent systems amplified errors 17.2x; centralized systems contained amplification to 4.4x via orchestrator validation — the validation bottleneck is what contains error propagation"
+    parallelism: "MEASURED: multi-agent gained +80.9% over single agent on decomposable financial-reasoning tasks, but degraded 39-70% on sequential planning tasks (PlanCraft -70%) across ALL multi-agent variants; past ~45% single-agent success rate, adding agents yields diminishing/negative returns; 180 configs, 5 architectures, 3 model families tested; predictive model picks the right architecture for 87% of unseen configs"
+    learning_loop: none documented
+    confidence: high
+  - id: metr-dev-slowdown-rct
+    name: METR RCT — early-2025 AI slowed experienced OSS devs 19%
+    kind: study
+    origin: METR (randomized controlled trial)
+    source_url: https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/
+    supervises: The supervision-overhead baseline — the human review/steer cost of agent work is real, large, and invisible to the supervisor
+    drift_detection: none documented
+    verification: "MEASURED: developers spent ~9% of task time reviewing/modifying AI output (per screen recordings); the perception gap is the headline for conductors — devs expected 24% speedup, experienced a 19% slowdown, and STILL believed they'd been sped up 20% afterward; self-reported productivity of agent workflows cannot be trusted"
+    parallelism: "MEASURED: 16 experienced devs, 246 real issues (~2h each) on mature repos they knew well; caveat: study's own Feb-2026 update says late-2025 tools shifted the picture"
+    learning_loop: none documented
+    confidence: high
+  - id: agenticflict-merge-conflicts
+    name: AgenticFlict — merge conflicts in AI-agent PRs at scale
+    kind: study
+    origin: UNLV (AIware 2026), arXiv 2604.03551
+    source_url: https://arxiv.org/abs/2604.03551
+    supervises: The integration tax of parallel lanes — quantifies how often concurrently produced agent work collides at merge
+    drift_detection: none documented
+    verification: none documented
+    parallelism: "MEASURED: of 142K+ agentic PRs from 59K+ repos (107K+ processed via deterministic merge simulation), 27.67% hit merge conflicts, 336K+ conflict regions total; conflicts are 'frequent and often substantial' with noticeable variation across agents — a conductor scheduling lanes on one repo should expect roughly 1-in-4 integration collisions without partitioning"
+    learning_loop: none documented
+    confidence: high
+  - id: readysolutions-seven-sessions
+    name: Seven parallel sessions, three spiraled — structural guards over vigilance
+    kind: lore
+    origin: Ready Solutions AI (practitioner blog)
+    source_url: https://readysolutions.ai/blog/2026-06-06-parallel-claude-code-sessions-one-repo/
+    supervises: Stopping the compounding "death spiral" where a session's in-context model goes stale as adjacent files change under it
+    drift_detection: "Caught only by manual observation — 'each one more confused than the last as adjacent files changed underneath it mid-run'; the signal is rising confusion/archaeology instead of progress; a spiraled session is cheaper to discard than untangle"
+    verification: CI required checks stay the authority on what lands; merge gate verifies each integration before the next; points to a separate 'verification contract' for fleet-scale work
+    parallelism: "Sustainable width was 4-8 concurrent sessions/day AFTER adding three structural guards (write-path deny hooks outside the worktree, worktree root pinned in subagent dispatch, serialized one-at-a-time merge gate); width is 'an output of partitioning quality, not a target'; MEASURED side-cost: 2GB codebase ballooned to 9.82GB of worktree dependency installs"
+    learning_loop: Lesson generalized as enforce isolation structurally, not behaviorally — prompts asking agents to stay in-lane failed where hooks succeeded
+    confidence: high
+  - id: pkarnal-20-agents-home-directory
+    name: Running 20 parallel agents with human-in-the-loop orchestration
+    kind: lore
+    origin: pkarnal.com (practitioner blog, ~2,000 lines of bash + tmux)
+    source_url: https://pkarnal.com/blog/parallel-ai-agents
+    supervises: Routing scarce human attention across ~20 live agents — agents do mechanical work, human keeps the judgment calls (~80/20)
+    drift_detection: Reads Claude Code's session JSONL directly for ground-truth state (active/idle/stuck) instead of scraping terminals; fswatch flags sessions idle with unsubmitted messages; tmux capture-pane spot-checks without interrupting
+    verification: "Completion is never self-reported: PR merge state/CI/reviews queried via GitHub API, worktree branch state inspected live, and worktrees only cleaned up after verifying the PR actually merged; agent-maintained metadata rots ('they frequently forgot') — trust session files and repo state, not agent claims"
+    parallelism: "MEASURED: ~20 peak agents across 2 projects; $2-5 per PR with cost discipline vs $15-30 undisciplined; 15+ sessions forces a prioritized attention dashboard; 5 agents spawn in ~3s"
+    learning_loop: Failure-driven simplification carried forward — full clones→worktrees, complex approvals→binary gates, tmux send-keys→file-based prompts after escaping bugs
+    confidence: high
+  - id: fleet-swarms-hn-lessons
+    name: Lessons from running Claude Code swarms at scale (fleet)
+    kind: lore
+    origin: Show HN / fleet author (Hacker News discussion)
+    source_url: https://news.ycombinator.com/item?id=48407998
+    supervises: A control-plane UI over 10-15 concurrent agents — task creation, monitoring, and interaction replacing the IDE entirely
+    drift_detection: Evolved from CLI-watching to a UI control plane precisely because terminal-level observation didn't scale
+    verification: none documented
+    parallelism: "MEASURED: practical ceiling ~10-15 concurrent agents before API rate limits bite; ~15k tokens (~7% of context) burned by system tools per session; plugins can silently duplicate token cost"
+    learning_loop: "'CLAUDE.md is a terrible abstraction' — always-loaded flat instructions waste tokens; a hierarchical knowledge base with progressive disclosure and per-task plugin attachment carried lessons better across the swarm"
+    confidence: medium
+  - id: boris-cherny-multi-claude-playbook
+    name: Multi-Claude playbook (Boris Cherny / Claude Code team workflow)
+    kind: lore
+    origin: Vibe Coder blog distilling Anthropic Claude Code team practice
+    source_url: https://blog.vibecoder.me/multi-claude-parallel-agents-anthropic-workflow
+    supervises: One engineer multiplexing ~15 concurrent Claude sessions (5 terminal + 5-10 web + mobile) without losing track of any lane
+    drift_detection: Session naming discipline (/rename REFACTOR-AUTH etc.), a single control plane (claude agents) instead of tab-cycling, desktop layout showing git status per session, notifications when a session needs input
+    verification: Each agent tests its own work before opening a PR; /batch only creates PRs for agents whose tests pass; the human reviews stacks of finished PRs rather than nursing broken branches
+    parallelism: "Cherny's routine 10-30 PRs/day, record ~150/day; 'running 5 Claudes on the same branch' called the most common failure mode — one worktree per task; advice to start at 2 sessions and build naming/routing habits before scaling to 5+"
+    learning_loop: none documented
+    confidence: medium
+  - id: hn-shared-memory-orchestrator
+    name: 20+ coordinating agents — shared memory, claim locks, and the observability gap
+    kind: lore
+    origin: Show HN discussion (open-source orchestrator author + commenters)
+    source_url: https://news.ycombinator.com/item?id=46990733
+    supervises: Coordinating 20+ agents on real work via shared key-value memory with pub/sub and state subscriptions
+    drift_detection: "TTL-based claim locks prevent duplicate work; the community pushback names the core problem — 'You can't observe what 20 agents are doing'; OP concedes and falls back to centralized activity logs reviewed post-hoc instead of live watching"
+    verification: "First-verified-wins ranking among competing solutions; observed failure mode: 'generating solutions that obviously didn't compile... plan collapse — not verifying its own work'; human review admitted as the missing piece for high-stakes decisions"
+    parallelism: No hard ceiling given; design constraint is keeping per-agent context focused "instead of one agent suffocating on state"
+    learning_loop: Failed strategies written to shared memory so reassigned agents avoid prior dead-ends — an explicit within-run lesson channel
+    confidence: medium
+  - id: simonw-parallel-agent-lifestyle
+    name: Embracing the parallel coding agent lifestyle
+    kind: lore
+    origin: Simon Willison (simonwillison.net)
+    source_url: https://simonwillison.net/2025/Oct/5/parallel-coding-agents/
+    supervises: Choosing WHICH work to parallelize so the human review bottleneck never saturates
+    drift_detection: none documented
+    verification: "Parallelizes only what's cheap to check: research/PoCs (no kept modifications), codebase Q&A, low-stakes maintenance ('deprecation warning? chuck that at a bot'), and work from his own spec — 'code that started from your own specification is a lot less effort to review'"
+    parallelism: "'I can only focus on reviewing and landing one significant change at a time' — one significant lane plus N low-oversight lanes; agents isolated in different directories; risky work goes to async/sandboxed agents to limit blast radius"
+    learning_loop: Deliberate experimentation, learning "from both their successes and their failures"
+    confidence: high
+  - id: pragmatic-engineer-parallel-trend
+    name: Programming by kicking off parallel AI agents (industry survey)
+    kind: lore
+    origin: Gergely Orosz, The Pragmatic Engineer
+    source_url: https://blog.pragmaticengineer.com/new-trend-programming-by-kicking-off-parallel-ai-agents/
+    supervises: Cross-practitioner corroboration that human review capacity, not agent count, is the ceiling
+    drift_detection: none documented
+    verification: "Convergent testimony that review is the gate: Willison's one-significant-change limit; Armin Ronacher — 'it's only so much my mind can review!' — who scaled the practice BACK; author: 'the natural bottleneck on all of this is how fast I can review the results'"
+    parallelism: Adopters run "several" Claude Code/Codex instances; adoption skews senior+ (engineers already skilled at context-switching and juggling workstreams); no quantified productivity data
+    learning_loop: none documented
+    confidence: high
