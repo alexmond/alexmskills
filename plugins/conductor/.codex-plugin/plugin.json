@@ -1,0 +1,43 @@
+{
+  "name": "conductor",
+  "version": "0.1.0",
+  "description": "The runtime half of multi-lane orchestration: detect a lane that has drifted from its brief, decide relay-vs-re-scope-vs-pause, read a verdict you did not run, and hold the machine's real parallelism ceiling. Carries four measured deviation shapes — the control that pins a blocker in place, the report taken as fact, the stale premise, and the collision only visible after both lanes merge — and a learnings loop that writes to the consuming repo and graduates into .claude/roles/conductor.md.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "orchestration",
+    "subagents",
+    "conductor",
+    "self-evolving",
+    "parallel",
+    "code-review"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 2,
+    "enforcement": "portable",
+    "needsToolTranslation": true
+  },
+  "interface": {
+    "displayName": "Conductor",
+    "shortDescription": "The runtime half of multi-lane orchestration: detect a lane that has drifted from its brief, decide relay-vs-re-scope-vs",
+    "longDescription": "The runtime half of multi-lane orchestration: detect a lane that has drifted from its brief, decide relay-vs-re-scope-vs-pause, read a verdict you did not run, and hold the machine's real parallelism ceiling. Carries four measured deviation shapes — the control that pins a blocker in place, the report taken as fact, the stale premise, and the collision only visible after both lanes merge — and a learnings loop that writes to the consuming repo and graduates into .claude/roles/conductor.md. Spawns parallel subagents. On Codex this needs `multi_agent = true` in `~/.codex/config.toml`; the skill's references/codex-tools.md maps the tool names.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use conductor."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

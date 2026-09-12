@@ -1,0 +1,43 @@
+{
+  "name": "mindmap-prompt",
+  "version": "0.2.2",
+  "description": "Drop ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. Offline and dependency-free: a self-contained page for capture, a deterministic compiler for the map -> prompt step, and JSON Canvas (.canvas) as the save format so a map can be reworked later or opened in Obsidian. A ✦ control hands any node to `claude -p` in your repo to expand it into sub-ideas or sharpen its wording, previewed before it lands.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "mindmap",
+    "canvas",
+    "prompt",
+    "json-canvas",
+    "ideation",
+    "ai"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 2,
+    "enforcement": "portable",
+    "needsToolTranslation": true
+  },
+  "interface": {
+    "displayName": "Mindmap Prompt",
+    "shortDescription": "Drop ideas on a canvas, connect them, and compile the map into an organized Markdown prompt",
+    "longDescription": "Drop ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. Offline and dependency-free: a self-contained page for capture, a deterministic compiler for the map -> prompt step, and JSON Canvas (.canvas) as the save format so a map can be reworked later or opened in Obsidian. A ✦ control hands any node to `claude -p` in your repo to expand it into sub-ideas or sharpen its wording, previewed before it lands. Spawns parallel subagents. On Codex this needs `multi_agent = true` in `~/.codex/config.toml`; the skill's references/codex-tools.md maps the tool names.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use mindmap-prompt."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

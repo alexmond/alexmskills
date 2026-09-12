@@ -1,0 +1,43 @@
+{
+  "name": "memory-hygiene",
+  "version": "0.1.0",
+  "description": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes — supersession is strike-through plus a dated correction.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "memory",
+    "agent-memory",
+    "freshness",
+    "hooks",
+    "hygiene",
+    "rot"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 3,
+    "enforcement": "claude-code",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Memory Hygiene",
+    "shortDescription": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, v",
+    "longDescription": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes — supersession is strike-through plus a dated correction. Ships Claude Code hooks, which have no Codex equivalent. The skill and its scripts work, but the rules it enforces automatically on Claude Code are advisory here.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use memory-hygiene."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

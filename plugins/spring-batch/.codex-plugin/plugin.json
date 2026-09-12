@@ -1,0 +1,43 @@
+{
+  "name": "spring-batch",
+  "version": "0.1.1",
+  "description": "Spring Batch 5/6 development: what the framework actually does versus what its API suggests, grounded in runnable samples. Restart versus a new JobInstance, flow and deciders, tasklet transaction boundaries, partitioning, the job repository Boot 4 does not give you, and the testing package most projects declare and never use.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "",
+  "repository": "",
+  "license": "MIT",
+  "keywords": [
+    "spring-batch",
+    "spring-boot",
+    "java",
+    "batch",
+    "etl",
+    "jobs"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 1,
+    "enforcement": "portable",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Spring Batch development",
+    "shortDescription": "Spring Batch 5/6 development: what the framework actually does versus what its API suggests, grounded in runnable sample",
+    "longDescription": "Spring Batch 5/6 development: what the framework actually does versus what its API suggests, grounded in runnable samples. Restart versus a new JobInstance, flow and deciders, tasklet transaction boundaries, partitioning, the job repository Boot 4 does not give you, and the testing package most projects declare and never use.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use spring-batch."
+    ],
+    "websiteURL": ""
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "implement-issue",
+  "version": "1.0.0",
+  "description": "Drive a GitHub issue from branch to pull request with a language and build-tool agnostic workflow.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "issue",
+    "pull-request",
+    "workflow",
+    "git"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 1,
+    "enforcement": "portable",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Implement Issue",
+    "shortDescription": "Drive a GitHub issue from branch to pull request with a language and build-tool agnostic workflow",
+    "longDescription": "Drive a GitHub issue from branch to pull request with a language and build-tool agnostic workflow.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use implement-issue."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

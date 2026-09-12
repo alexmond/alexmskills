@@ -174,6 +174,20 @@ validate_desc_budget() {
 }
 validate_desc_budget
 
+# --- codex packaging ---------------------------------------------------------
+# The Codex manifests are GENERATED from the Claude-side ones, so the only way
+# they can be wrong is by being stale. Superpowers keeps six hand-written
+# per-harness manifests in sync with a stamping list; a generator plus this
+# check makes the drift impossible instead of merely discouraged.
+echo
+echo "Codex packaging"
+if out="$(python3 "$root/scripts/gen-codex-manifests.py" --check 2>&1)"; then
+  note "$out"
+else
+  printf '%s\n' "$out" | sed 's/^/  /'
+  err "Codex manifests are stale — run \`make codex\` and commit the result"
+fi
+
 echo
 if [ "$fail" -eq 0 ]; then
   echo "Marketplace valid."

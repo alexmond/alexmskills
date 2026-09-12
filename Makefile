@@ -10,6 +10,9 @@ help: ## Show this help
 validate: ## Validate the marketplace + all plugin manifests
 	@bash scripts/validate-marketplace.sh
 
+codex: ## Regenerate the Codex-side manifests from the Claude-side source of truth
+	@python3 scripts/gen-codex-manifests.py
+
 test-coach: ## Run the prompt-coach release test harness (run after each release)
 	@python3 plugins/prompt-coach/scripts/test-harness.py
 

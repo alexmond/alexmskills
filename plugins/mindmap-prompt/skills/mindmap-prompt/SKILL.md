@@ -142,3 +142,7 @@ because that's content the user wrote that won't reach the prompt.
 - **`.canvas` is JSON Canvas 1.0** — plain JSON, diffs cleanly in git, and opens in
   Obsidian.
 - Deliberately *not* a chain builder or an agent canvas. It compiles one prompt.
+
+## Platform adaptation
+
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.

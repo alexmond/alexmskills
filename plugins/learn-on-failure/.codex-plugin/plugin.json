@@ -1,0 +1,41 @@
+{
+  "name": "learn-on-failure",
+  "version": "1.1.0",
+  "description": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "memory",
+    "learning",
+    "retrospective",
+    "first-run"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 1,
+    "enforcement": "portable",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Learn on Failure",
+    "shortDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve",
+    "longDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use learn-on-failure."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

@@ -56,15 +56,11 @@ a panel adds nothing.
 Before composing the team, check the repo for standing guidance and honor it:
 
 - **`CLAUDE.md`** (and `~/.claude/CLAUDE.md`): conventions, stack, and any
-  panel-specific hints. A repo may declare which specialist roles always belong on
-  its panel — e.g. a `## Panel roles` block saying "always seat a Venetian-history
-  expert and a geolocation/GIS reviewer alongside the standard UI/usability/
-  marketing roles." Seat those automatically; they're additive to what you derive
-  from the work. Read for **standing user preferences** too (e.g. a dependency
-  policy): an explicit preference recorded here or in project memory **outranks
-  any seat's veto** later in the loop — if a role objects to something the user
-  has standing guidance on, override the objection knowingly and note that you
-  did.
+  panel-specific hints. A repo may declare specialist roles that always belong on
+  its panel (a `## Panel roles` block); seat those automatically, additive to what
+  you derive from the work. Read for **standing user preferences** too: an explicit
+  preference recorded here or in project memory **outranks any seat's veto** later
+  in the loop — override a conflicting objection knowingly, and say that you did.
 - **Existing artifacts** in scope (the file, neighboring components, README) for
   the conventions and constraints the panel must respect.
 - **The panel log** — `.claude/brainstorm-panel/log.md` in the repo, if present.
@@ -369,3 +365,7 @@ in every repo without per-project copies. It can also be installed as the
 domain specialists come from each project's `CLAUDE.md` (see "Read the project
 context"), so the same skill seats a historian and GIS reviewer in one repo and a
 reliability engineer in another, with nothing duplicated.
+
+## Platform adaptation
+
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.

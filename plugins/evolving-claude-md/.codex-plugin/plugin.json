@@ -1,0 +1,43 @@
+{
+  "name": "evolving-claude-md",
+  "version": "1.6.0",
+  "description": "Turn CLAUDE.md into a living Decisions & Learnings log that stays bounded: a format contract enforced at write time by a PreToolUse lint, four downward pressures (strike-through, merge, graduation, quarterly archive), staleness detection against the tree, and a tree-grounded coverage check for the essentials a file can pass every size threshold and still be missing.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "claude-md",
+    "memory",
+    "learning",
+    "hooks",
+    "adr",
+    "self-evolving"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 3,
+    "enforcement": "claude-code",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Evolving CLAUDE.md",
+    "shortDescription": "Turn CLAUDE",
+    "longDescription": "Turn CLAUDE.md into a living Decisions & Learnings log that stays bounded: a format contract enforced at write time by a PreToolUse lint, four downward pressures (strike-through, merge, graduation, quarterly archive), staleness detection against the tree, and a tree-grounded coverage check for the essentials a file can pass every size threshold and still be missing. Ships Claude Code hooks, which have no Codex equivalent. The skill and its scripts work, but the rules it enforces automatically on Claude Code are advisory here.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use evolving-claude-md."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

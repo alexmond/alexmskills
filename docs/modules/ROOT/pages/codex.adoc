@@ -1,0 +1,98 @@
+= Codex compatibility
+:navtitle: Codex
+:description: How this catalog packages for Codex as well as Claude Code — two marketplaces, generated manifests, and an honest three-tier statement of what actually ports.
+
+Claude Code is this catalog's native harness. Every plugin also ships a
+Codex-side manifest, and the repo carries a second marketplace — but *ported*
+and *identical* are different claims, so each plugin declares which one applies.
+
+== Two marketplaces, one catalog
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| marketplace
+| `.claude-plugin/marketplace.json`
+| `.agents/plugins/marketplace.json`
+
+| per-plugin manifest
+| `plugins/<name>/.claude-plugin/plugin.json`
+| `plugins/<name>/.codex-plugin/plugin.json`
+
+| instructions file
+| `CLAUDE.md`
+| `AGENTS.md` (a symlink to it — identical bytes, drift impossible)
+|===
+
+The Codex manifests are **generated**, never hand-written:
+
+[source,bash]
+----
+make codex          # regenerate from the Claude-side source of truth
+make validate       # fails if they are stale
+----
+
+This is the one place we deliberately diverge from the reference implementation.
+https://github.com/obra/superpowers[Superpowers] — which pioneered the
+cross-harness skills repo and supports six — hand-maintains a manifest per
+harness and keeps versions aligned with a nine-entry stamping list. That works
+until someone adds a seventh manifest and forgets the list. Deriving the Codex
+manifests from the Claude ones makes the drift impossible instead of merely
+discouraged, and the check is a diff.
+
+== Three tiers of portability
+
+Tiers are computed from the tree, not hand-listed, so a plugin that gains hooks
+tomorrow is re-tiered by the next `make codex`. They appear in each Codex
+manifest under `compatibility`.
+
+[cols="1,1,4",options="header"]
+|===
+| Tier | Count | What it means
+
+| *1 — portable*
+| 10
+| Prose skills. Same behaviour on any harness; nothing to translate.
+
+| *2 — needs tool translation*
+| 6
+| Spawns or defines subagents. The skill ships `references/codex-tools.md`
+mapping `Agent` → `spawn_agent`, the result wait → `wait_agent`, corrections →
+`followup_task`, plus the `multi_agent = true` switch Codex needs. The method is
+unchanged; only names differ.
+
+| *3 — enforcement is Claude Code only*
+| 6
+| Ships Claude Code hooks. The skill and its scripts still work on Codex, but
+the rules it enforces *automatically* become advice. Said plainly in the
+manifest rather than shipping a quietly weaker product.
+|===
+
+Tier 3 is `dev-crew`, `evolving-claude-md`, `memory-hygiene`, `progress-channel`,
+`prompt-coach` and `roles`. Two of those are hooks all the way down:
+`prompt-coach` *is* a `UserPromptSubmit` hook, and `progress-channel`'s live bar
+needs a status line that only Claude Code has. The rest degrade gracefully —
+`evolving-claude-md`'s format contract, for instance, stops being a gate and
+becomes a convention, which is exactly the failure mode that plugin exists to
+document: an unenforced rule is a suggestion.
+
+== What still needs verifying on the Codex side
+
+The packaging mirrors a working example, but these are assumptions until a real
+Codex install confirms them:
+
+* *Marketplace schema* — `.agents/plugins/marketplace.json` field names and the
+`policy` block are copied from a shipped plugin, not from a published spec.
+* *`source.url` shape* — ours points at `./plugins/<name>` (a multi-plugin repo);
+the reference example is a single-plugin repo pointing at `./`.
+* *Skill discovery* — the manifests declare `"skills": "./skills/"`; confirm
+Codex reads `SKILL.md` frontmatter the same way, especially the description field
+that drives triggering.
+* *`references/` loading* — the tier-2 translation only helps if Codex follows a
+relative link out of `SKILL.md` on demand.
+* *Multi-agent tool names* — these have shipped in more than one version; the
+translation files say so and tell the reader to trust their live tool list over
+any table.
+* *`hooks: {}`* — declared empty deliberately. Worth confirming Codex ignores it
+rather than rejecting the key.

@@ -1,0 +1,43 @@
+{
+  "name": "progress-channel",
+  "version": "0.5.0",
+  "description": "One visible channel for every long-running process — local sweeps, backgrounded commands, and work handed to external systems. The server that serves the live progress page IS the tracker: a tiny stdlib Python daemon holds live jobs in memory (auto-spawned by the first producer, single writer, no store locking), persists only the duration history to a size-bounded JSONL (names idle past the retention window are forgotten), and derives liveness — orphans by checking producer pids directly, stalls from each job's own learned cadence — with learned ETAs and pre-start forecasts.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "progress",
+    "jobs",
+    "eta",
+    "monitoring",
+    "long-running",
+    "daemon"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 3,
+    "enforcement": "claude-code",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Progress Channel",
+    "shortDescription": "One visible channel for every long-running process — local sweeps, backgrounded commands, and work handed to external sy",
+    "longDescription": "One visible channel for every long-running process — local sweeps, backgrounded commands, and work handed to external systems. The server that serves the live progress page IS the tracker: a tiny stdlib Python daemon holds live jobs in memory (auto-spawned by the first producer, single writer, no store locking), persists only the duration history to a size-bounded JSONL (names idle past the retention window are forgotten), and derives liveness — orphans by checking producer pids directly, stalls from each job's own learned cadence — with learned ETAs and pre-start forecasts. Ships Claude Code hooks, which have no Codex equivalent. The skill and its scripts work, but the rules it enforces automatically on Claude Code are advisory here.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use progress-channel."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

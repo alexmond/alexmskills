@@ -1,0 +1,43 @@
+{
+  "name": "ticket-triage",
+  "version": "0.4.1",
+  "description": "Backlog-drain loop: rank the open tickets, dispatch the genuinely startable ones in parallel (worktree-isolated, role-briefed, honest width), verify and merge each result, and re-triage on every completion until the queue is empty or everything left needs the user.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/ticket-triage/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "triage",
+    "backlog",
+    "tickets",
+    "parallel",
+    "worktree",
+    "orchestration"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 2,
+    "enforcement": "portable",
+    "needsToolTranslation": true
+  },
+  "interface": {
+    "displayName": "Ticket Triage",
+    "shortDescription": "Backlog-drain loop: rank the open tickets, dispatch the genuinely startable ones in parallel (worktree-isolated, role-br",
+    "longDescription": "Backlog-drain loop: rank the open tickets, dispatch the genuinely startable ones in parallel (worktree-isolated, role-briefed, honest width), verify and merge each result, and re-triage on every completion until the queue is empty or everything left needs the user. Spawns parallel subagents. On Codex this needs `multi_agent = true` in `~/.codex/config.toml`; the skill's references/codex-tools.md maps the tool names.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use ticket-triage."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/ticket-triage/"
+  }
+}

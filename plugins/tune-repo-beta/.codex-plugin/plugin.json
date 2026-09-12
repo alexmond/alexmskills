@@ -1,0 +1,42 @@
+{
+  "name": "tune-repo-beta",
+  "version": "0.1.2",
+  "description": "Audit and tighten a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately in it: verify CLAUDE.md against reality, tighten the verify loop, add missing static guardrails, cut permission friction.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "claude-md",
+    "guardrails",
+    "onboarding",
+    "verification",
+    "accuracy"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 1,
+    "enforcement": "portable",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Tune Repo (beta)",
+    "shortDescription": "Audit and tighten a repo's CLAUDE",
+    "longDescription": "Audit and tighten a repo's CLAUDE.md and guardrails so Claude Code works faster and more accurately in it: verify CLAUDE.md against reality, tighten the verify loop, add missing static guardrails, cut permission friction.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use tune-repo-beta."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

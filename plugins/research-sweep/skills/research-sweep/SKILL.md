@@ -273,3 +273,7 @@ User: "build a catalog of every open-source vector database we can find."
 7. Verification agent spot-checked 20 entries, caught two fabricated `source_url`s and one duplicate across the Go/Rust seam → fixed.
 8. Ran dedup/normalization as separate tickets.
 9. Wrote back to `research.md`: `by-language` paid off (→ probationary, 1 useful run); the Go/Rust seam is the dedup hotspot for this corpus; the registry it pulled `source_url`s from fabricates under load — the verifier's row now flags it.
+
+## Platform adaptation
+
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.

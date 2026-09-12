@@ -97,6 +97,8 @@ Then install what you want — copy-paste any of these:
 /plugin install conductor@alexmskills
 ```
 
+**Codex:** every plugin also ships a Codex manifest (`plugins/<name>/.codex-plugin/plugin.json`) and the repo carries a second marketplace at `.agents/plugins/marketplace.json`, generated with `make codex`. Each plugin declares a portability tier — 10 port as-is, 6 ship a Codex tool-translation, and 6 are Claude Code-only for *enforcement* because they rely on hooks. See [Codex compatibility](https://www.alexmond.org/alexmskills/codex/).
+
 Or browse interactively with `/plugin` (Discover tab). After a maintainer pushes an update, refresh
 with `/plugin marketplace update alexmskills`.
 

@@ -237,3 +237,7 @@ form every example above already takes.
 - **`dev-crew`** runs one relay-worthy ticket through gated phases.
 
 All optional; this skill degrades to generic agents and a single repo.
+
+## Platform adaptation
+
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.

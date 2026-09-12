@@ -348,3 +348,7 @@ per-ticket run dirs distinct.
 See `INSTALL.md` in the bundle. In short: `skills/dev-crew/` -> `~/.claude/skills/`,
 `agents/dc-*.md` -> `~/.claude/agents/`. Roles are then available in every repo;
 each repo grows its own `## Dev crew` block as the crew learns it.
+
+## Platform adaptation
+
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.

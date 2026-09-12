@@ -1,0 +1,272 @@
+{
+  "name": "alexmskills",
+  "interface": {
+    "displayName": "A curated marketplace of reusable, self-improving Claude Cod"
+  },
+  "plugins": [
+    {
+      "name": "evolving-claude-md",
+      "source": {
+        "source": "url",
+        "url": "./plugins/evolving-claude-md"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "memory-hygiene",
+      "source": {
+        "source": "url",
+        "url": "./plugins/memory-hygiene"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "dev-crew",
+      "source": {
+        "source": "url",
+        "url": "./plugins/dev-crew"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "brainstorm-panel",
+      "source": {
+        "source": "url",
+        "url": "./plugins/brainstorm-panel"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "learn-on-failure",
+      "source": {
+        "source": "url",
+        "url": "./plugins/learn-on-failure"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "implement-issue",
+      "source": {
+        "source": "url",
+        "url": "./plugins/implement-issue"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "maven-quality",
+      "source": {
+        "source": "url",
+        "url": "./plugins/maven-quality"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "security-audit",
+      "source": {
+        "source": "url",
+        "url": "./plugins/security-audit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "review-agents",
+      "source": {
+        "source": "url",
+        "url": "./plugins/review-agents"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "research-sweep",
+      "source": {
+        "source": "url",
+        "url": "./plugins/research-sweep"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "roles",
+      "source": {
+        "source": "url",
+        "url": "./plugins/roles"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "screenshot-tour",
+      "source": {
+        "source": "url",
+        "url": "./plugins/screenshot-tour"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "progress-channel",
+      "source": {
+        "source": "url",
+        "url": "./plugins/progress-channel"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "ticket-triage",
+      "source": {
+        "source": "url",
+        "url": "./plugins/ticket-triage"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "prompt-coach",
+      "source": {
+        "source": "url",
+        "url": "./plugins/prompt-coach"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "mindmap-prompt",
+      "source": {
+        "source": "url",
+        "url": "./plugins/mindmap-prompt"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "skill-linter",
+      "source": {
+        "source": "url",
+        "url": "./plugins/skill-linter"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "tune-repo-beta",
+      "source": {
+        "source": "url",
+        "url": "./plugins/tune-repo-beta"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "systemic-fix-beta",
+      "source": {
+        "source": "url",
+        "url": "./plugins/systemic-fix-beta"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "screenshot-sweep",
+      "source": {
+        "source": "url",
+        "url": "./plugins/screenshot-sweep"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "spring-batch",
+      "source": {
+        "source": "url",
+        "url": "./plugins/spring-batch"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "conductor",
+      "source": {
+        "source": "url",
+        "url": "./plugins/conductor"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

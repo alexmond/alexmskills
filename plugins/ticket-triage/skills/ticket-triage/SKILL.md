@@ -315,3 +315,7 @@ plugin is a read-only cache):
 
 Read that file at the start of every run, right after the profile. A learning
 that recurs across repos is a candidate to upstream into this skill.
+
+## Platform adaptation
+
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.
