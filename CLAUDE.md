@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-09-12 — **calibration-over-intuition** — cut the tag-uniqueness check pre-ship: the fleet's healthiest log runs 100% distinct tags, the changelog-shaped one 98%. Why: it measured naming style, not quality.
 - 2026-09-12 — **validator-must-not-short-circuit** — set -e killed validate at the docs summary line when docs failed, so desc-budget never ran; masked twice (spring-batch 09-05, conductor 09-12) before diagnosis. Why: a gate script must surface ALL failures in one run — `|| true` on the conditional note line.
 - 2026-09-11 — **statusline-discovery** — 0.5.0: wired-or-not is measured (statusline_seen = any /jobs?session poll this boot), surfaced as page banner + weekly nudge tip + once-per-upgrade SessionStart notice; tap generalized from venice-vr's gate (maven/git measured bars). Why: settings-sniffing false-positives on custom status lines, and install-time hooks don't exist — the daemon's own traffic is the honest signal.
 - 2026-09-05 — **progress-eta-borrowing** — 0.4.0: eta~ stem-match borrowed estimates (paths/digits stripped, project-first), per-NAME 7d retention, /shutdown version handshake on upgrade. Why: exact-name matching never fired for nudge-generated names, and a stale daemon held the port across every plugin update.

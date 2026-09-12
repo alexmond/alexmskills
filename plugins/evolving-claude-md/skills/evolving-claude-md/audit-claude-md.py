@@ -98,6 +98,9 @@ DEFAULTS: dict[str, object] = {
     "docs_recurrence": True,      # self-counting language in docs/ ("the third time")
     "layout_drift": True,         # git-tracked top-level dir unmentioned in CLAUDE.md
     "drift_min_files": 3,         # ... with at least this many tracked files in it
+    # --- inlet-quality checks: is the log a LEARNING log or a changelog? ---
+    "changelog_mirror": True,     # entries duplicating CHANGELOG.md release notes
+    "changelog_mirror_pct": 40,   # ... flag at this share of entries
 }
 
 
@@ -257,6 +260,30 @@ def _git_lines(args: list[str], root: str = ".") -> list[str]:
         return [ln for ln in r.stdout.splitlines() if ln]
     except Exception:
         return []
+
+
+def changelog_mirror(entries: list[tuple[str, str]], root: str = ".",
+                     cfg: dict | None = None) -> str | None:
+    """Entries naming a version that CHANGELOG.md already documents — the log
+    duplicating a durable artifact the repo already keeps and already reads."""
+    cfg = cfg or DEFAULTS
+    if not cfg.get("changelog_mirror") or len(entries) < 10:
+        return None
+    try:
+        with open(os.path.join(root, "CHANGELOG.md"), encoding="utf-8",
+                  errors="replace") as fh:
+            chlog = fh.read()
+    except OSError:
+        return None
+    hits = sum(1 for _, body in entries
+               if any(v in chlog for v in re.findall(r"\b\d+\.\d+\.\d+\b", body)))
+    pct = 100 * hits // len(entries)
+    if pct < int(cfg["changelog_mirror_pct"]):
+        return None
+    return (f"CHANGELOG MIRROR: {hits}/{len(entries)} entries ({pct}%) name a "
+            f"version CHANGELOG.md already documents. A release is not a "
+            f"learning — keep only what the release TAUGHT (a constraint, a "
+            f"trap, a reversal) and let the changelog carry the rest.")
 
 
 def adoption_candidate(text: str, entry_count: int) -> str | None:
@@ -478,15 +505,18 @@ def main() -> int:
             )
         if drift_new:
             parts.append(
-                f"🔎 Layout drift — tracked top-level dir"
+                f"🔎 MISSING from the layout — tracked top-level dir"
                 f"{'' if len(drift_new) == 1 else 's'} CLAUDE.md never mentions: "
                 + ", ".join(f"`{d}/`" for d in drift_new)
-                + ". Describe or `<!-- audit-skip: layout-drift -->`."
+                + ". Propose the edit now: one line per dir in the layout block "
+                  "saying what it holds, or `<!-- audit-skip: layout-drift -->`."
             )
         if drift_gone:
             parts.append(
-                "🔎 Stale layout — mentioned but gone from the tree: "
-                + ", ".join(f"`{d}`" for d in drift_gone) + " (removal candidates)."
+                "🔎 OBSOLETE in the layout — mentioned here, gone from the tree: "
+                + ", ".join(f"`{d}`" for d in drift_gone)
+                + ". Propose the edit now: strike or rewrite those lines — a "
+                  "path that no longer exists sends every future session looking."
             )
         if file_kb > float(cfg["file_recommend_kb"]):
             parts.append("**Whole-file compaction RECOMMENDED.**")
@@ -596,11 +626,17 @@ def main() -> int:
     drift_new, drift_gone = (
         layout_drift(text, ".", cfg, skipped) if cfg["layout_drift"] else ([], [])
     )
+    # Inlet quality: is this a learning log, or a changelog with dates?
+    # (A tag-uniqueness check was written and CUT here: the fleet's healthiest
+    #  log runs 100% distinct tags and the changelog-shaped one 98% — the ratio
+    #  measures a naming convention, not quality, so it flagged the best repo.)
+    mirror = changelog_mirror(entries, ".", cfg)
 
     if (not level and not mega and not clusters and not stale
             and not stale_pins and not stale_seqs and not gaps and not heavy
             and not adoption and not empty and not recur
-            and not drift_new and not drift_gone):
+            and not drift_new and not drift_gone
+            and not mirror):
         return 0
 
     parts.append(
@@ -659,23 +695,35 @@ def main() -> int:
         parts.append(f"🔎 {adoption}")
     if empty:
         parts.append(f"🔎 {empty}")
+    if mirror:
+        parts.append(f"🔎 {mirror}")
     if recur:
         listed = ", ".join(f"`{p}`" for p in recur[:3])
         parts.append(
             f"🔎 Docs are counting their own recurrences ({listed}) — a rule "
             f"that has proven itself in prose belongs in CLAUDE.md."
         )
+    # Obsolescence pass. Both directions name the EDIT, not just the finding:
+    # a flag a reader has to translate into an action is a flag that gets
+    # skimmed past, and these two are the cheapest edits in the file.
     if drift_new:
+        listed = ", ".join(f"`{d}/`" for d in drift_new)
         parts.append(
-            f"🔎 Layout drift — tracked top-level dir"
+            f"🔎 MISSING from the layout — tracked top-level dir"
             f"{'' if len(drift_new) == 1 else 's'} CLAUDE.md never mentions: "
-            + ", ".join(f"`{d}/`" for d in drift_new)
-            + ". Describe or `<!-- audit-skip: layout-drift -->`."
+            f"{listed}. Propose the edit now: add one line per dir to the "
+            f"layout/structure block saying what it holds (read the dir to "
+            f"say it accurately), or `<!-- audit-skip: layout-drift -->` if it "
+            f"is genuinely not worth a reader's attention."
         )
     if drift_gone:
+        listed = ", ".join(f"`{d}`" for d in drift_gone)
         parts.append(
-            "🔎 Stale layout — mentioned but gone from the tree: "
-            + ", ".join(f"`{d}`" for d in drift_gone) + " (removal candidates)."
+            f"🔎 OBSOLETE in the layout — mentioned here, gone from the tree: "
+            f"{listed}. Propose the edit now: strike or rewrite the line(s) "
+            f"naming {'it' if len(drift_gone) == 1 else 'them'} — a path that "
+            f"no longer exists sends every future session looking for it. If "
+            f"the thing moved rather than died, say where it moved to."
         )
 
     if heavy:

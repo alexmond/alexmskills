@@ -585,6 +585,138 @@ def t_session_end_capture_fires_once():
               p3.stdout.strip() == "", p3.stdout[:120])
 
 
+def _entries(n: int, body: str) -> list[tuple[str, str]]:
+    return [(f"2026-09-{i:02d}", body.format(i=i)) for i in range(1, n + 1)]
+
+
+def t_changelog_mirror_fires_on_duplication():
+    """Entries that re-state releases CHANGELOG.md already documents."""
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "mirror", "# p\n")
+        (r / "CHANGELOG.md").write_text(
+            "".join(f"## 1.{i}.0\n- stuff\n" for i in range(1, 13)))
+        got = audit.changelog_mirror(
+            _entries(12, "**thing-{i}** — shipped 1.{i}.0 with the new bits."),
+            str(r))
+        check("changelog mirror fires when entries restate the changelog",
+              got and "CHANGELOG MIRROR" in got, str(got)[:180])
+
+
+def t_changelog_mirror_needs_a_changelog_and_a_majority():
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        ent = _entries(12, "**thing-{i}** — shipped 1.{i}.0 with the new bits.")
+        bare = repo(tmp, "nochlog", "# p\n")
+        check("no CHANGELOG.md means no mirror claim",
+              audit.changelog_mirror(ent, str(bare)) is None)
+        r2 = repo(tmp, "healthy", "# p\n")
+        (r2 / "CHANGELOG.md").write_text("## 1.1.0\n- stuff\n")
+        real = _entries(12, "**trap-{i}** — the publish plugin ignores the skip "
+                            "flag, so modules still publish. Why: silent.")
+        check("a log of real learnings is not called a mirror",
+              audit.changelog_mirror(real, str(r2)) is None)
+        few = repo(tmp, "young", "# p\n")
+        (few / "CHANGELOG.md").write_text("## 1.1.0\n- stuff\n")
+        check("a young log is never judged",
+              audit.changelog_mirror(_entries(4, "**x** — shipped 1.{i}.0."),
+                                     str(few)) is None)
+
+
+def t_obsolescence_prescribes_the_edit():
+    with tempfile.TemporaryDirectory() as t:
+        r = git_repo(Path(t), "obsolete", "# p\n\n## Layout\nstuff.\n",
+                     tracked={f"newmod/f{i}.py": "x" for i in range(4)})
+        proc = subprocess.run([sys.executable, str(HERE / "audit-claude-md.py")],
+                              cwd=str(r), capture_output=True, text=True, timeout=20)
+        ctx = ""
+        try:
+            ctx = json.loads(proc.stdout)["hookSpecificOutput"]["additionalContext"]
+        except Exception:
+            pass
+        check("missing-from-layout names the edit, not just the finding",
+              "MISSING from the layout" in ctx and "Propose the edit now" in ctx,
+              ctx[:220])
+
+
+def _worktree_lane(r: Path, name: str) -> Path:
+    """A linked worktree — the shape that makes a session a parallel lane."""
+    wt = r.parent / f"{r.name}-{name}"
+    _git(r, "worktree", "add", "-q", "-b", name, str(wt))
+    return wt
+
+
+def _stop_in(cwd: Path, session: str) -> str:
+    transcript = cwd / f"{session}.jsonl"
+    transcript.write_text(
+        '{"name": "Bash", "input": {"command": "git commit -m x"}}\n'
+        '{"name": "Edit", "file_path": "src/a.py"}\n')
+    return subprocess.run(
+        [sys.executable, str(HERE / "capture-triggers.py"), "stop"],
+        input=json.dumps({"session_id": session,
+                          "transcript_path": str(transcript)}),
+        cwd=str(cwd), capture_output=True, text=True, timeout=15).stdout
+
+
+def t_lane_session_is_routed_to_the_spool():
+    with tempfile.TemporaryDirectory() as t:
+        r = git_repo(Path(t), "lanes", "# p\n")
+        cdir = r / ".claude" / "evolving-claude-md"; cdir.mkdir(parents=True)
+        (cdir / "config.json").write_text(
+            json.dumps({"capture_prompt": "session-end"}))
+        _git(r, "add", "-A"); _git(r, "commit", "-qm", "cfg")
+        wt = _worktree_lane(r, "lane-a")
+        out = _stop_in(wt, "s-lane")
+        check("a worktree lane is told to spool, never to edit CLAUDE.md",
+              "incoming/lane-a.md" in out and "do NOT edit CLAUDE.md" in out,
+              out[:240])
+        check("the lane prompt still carries the bar",
+              "true about this repo TOMORROW" in out, out[:160])
+        main_out = _stop_in(r, "s-main")
+        check("the primary worktree keeps writing CLAUDE.md directly",
+              '"decision": "block"' in main_out
+              and "incoming/" not in main_out, main_out[:200])
+
+
+def t_lane_auto_mode_ignores_a_plain_branch():
+    """A feature branch is one writer at a time; diverting it is a false
+    positive. Only a linked worktree (or explicit lane_spool=branch) spools."""
+    with tempfile.TemporaryDirectory() as t:
+        r = git_repo(Path(t), "branchy", "# p\n")
+        cdir = r / ".claude" / "evolving-claude-md"; cdir.mkdir(parents=True)
+        (cdir / "config.json").write_text(
+            json.dumps({"capture_prompt": "session-end"}))
+        _git(r, "checkout", "-q", "-b", "feature-x")
+        out = _stop_in(r, "s-branch")
+        check("auto mode does not treat a plain branch as a lane",
+              '"decision": "block"' in out and "incoming/" not in out, out[:200])
+        (cdir / "config.json").write_text(json.dumps(
+            {"capture_prompt": "session-end", "lane_spool": "branch"}))
+        out2 = _stop_in(r, "s-branch2")
+        check("lane_spool=branch opts a plain branch in",
+              "incoming/feature-x.md" in out2, out2[:200])
+
+
+def t_fold_dedups_across_lanes_only():
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "fold", "# p\n")
+        inc = r / ".claude" / "evolving-claude-md" / "incoming"
+        inc.mkdir(parents=True)
+        (inc / "lane-a.md").write_text(
+            "- lanes must not edit the manifest\n- prefer mvnw over system maven\n")
+        (inc / "lane-b.md").write_text(
+            "- the manifest must never be edited by a lane directly\n")
+        out = subprocess.run(
+            [sys.executable, str(HERE / "capture-triggers.py"), "fold"],
+            cwd=str(r), stdin=subprocess.DEVNULL, capture_output=True,
+            text=True, timeout=10).stdout
+        check("fold flags the same lesson found by two lanes",
+              "near-duplicate pair" in out and "manifest" in out, out[:260])
+        check("fold does not pair unrelated lessons",
+              out.count("[") <= 2, out[:260])
+        check("fold names the single-writer procedure",
+              "ONE writer" in out and "default branch" in out, out[-200:])
+
+
 CHECKS = [
     t_command_gap_is_grounded_in_the_build_file,
     t_command_gap_clears_when_mentioned,
@@ -615,6 +747,12 @@ CHECKS = [
     t_capture_triggers_are_default_off,
     t_commit_mining_fires_on_gotcha_language,
     t_session_end_capture_fires_once,
+    t_changelog_mirror_fires_on_duplication,
+    t_changelog_mirror_needs_a_changelog_and_a_majority,
+    t_obsolescence_prescribes_the_edit,
+    t_lane_session_is_routed_to_the_spool,
+    t_lane_auto_mode_ignores_a_plain_branch,
+    t_fold_dedups_across_lanes_only,
 ]
 
 

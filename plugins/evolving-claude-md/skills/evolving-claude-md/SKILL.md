@@ -40,9 +40,21 @@ Examples:
 - 2026-06-08 — **schema** — `verified` flag added inline on the record. Why: downstream filter needs a trusted-only view. See → docs/decisions/2026-06-08-schema.md.
 ```
 
-## What to log — six triggers
+## What to log — the bar decides, the triggers only nominate
 
-Append to **Decisions & Learnings** below whenever any of these happens — don't wait to be asked:
+**The bar. Write the candidate as a sentence that is true about this repo
+*tomorrow*, then name what a future session does differently knowing it.** If
+the only true sentence is "we did X", there is no entry — git log, the tickets
+and the changelog already hold that, and a log that repeats them stops being
+read. Most sessions produce zero entries, and zero is the right answer to a
+session that merely shipped.
+
+A delivery earns an entry only when it **taught** something a reader can't see
+in the code: a constraint, a trap, a reversal, a rule. "Shipped 0.4.0 with the
+new estimator" is a changelog line. "The publish plugin ignores `deploy.skip`,
+so skipped modules still publish" is an entry.
+
+These six *nominate* — the bar above decides:
 
 1. A non-trivial architectural decision (stack, schema, tradeoff resolved).
 2. Durable user feedback (preferences, things to never do, validated approaches).
@@ -53,6 +65,13 @@ Append to **Decisions & Learnings** below whenever any of these happens — don'
 
 ## What NOT to log
 
+- **A delivery.** Shipping, bumping, adding a feature — the release is not the
+  learning. Measured on one repo: 63% of entries restated a version its own
+  `CHANGELOG.md` already documented, which is what the audit's CHANGELOG-mirror
+  check now reports.
+- **Anything a durable artifact already carries.** If the repo keeps a
+  changelog, ADRs or tickets, the entry is earned only by the part that isn't
+  in them.
 - Routine code changes ("renamed X to Y") — git log has it.
 - Transient task state — the task list has it.
 - Anything obvious from reading the code now.
@@ -127,7 +146,7 @@ Fires once per session. Reads CLAUDE.md, identifies:
 - Any topic tag with 3+ entries → graduation candidate
 - **Staleness** (predicates in `freshness.py`, the shared vendorable core) — entries citing backticked artifacts `git grep` can no longer find; version pins a build file (`pom.xml`, `package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`) now contradicts; and "latest is `V27`"-style sequence facts where the tree holds a higher-numbered file. All grounded in the tree, silent when parsing is uncertain → strike/update candidates
 - **Coverage gaps** — the one check that pushes *up* (see below)
-- **Capture-side states** (issue #37) — `unadopted` (a hand-rolled gotchas/learnings section with bullets but zero parseable D&L entries → offer the migration); `empty log` (20+ commits, docs/ markdown ≥5× CLAUDE.md, no D&L entries — the learning is going somewhere that doesn't load every turn); docs **recurrence** ("the third time…" self-counting language in docs/ — a rule begging to graduate); **layout drift** (a git-tracked top-level dir CLAUDE.md never mentions, and the reverse: a mentioned `dir/` gone from the tree — the plain layout check is one-shot and satisfied forever, this is what keeps prose tracking the tree; foreign paths are filtered by requiring the dir to have existed in this repo's git history)
+- **Capture-side states** (issue #37) — `unadopted` (a hand-rolled gotchas/learnings section with bullets but zero parseable D&L entries → offer the migration); `empty log` (20+ commits, docs/ markdown ≥5× CLAUDE.md, no D&L entries — the learning is going somewhere that doesn't load every turn); docs **recurrence** ("the third time…" self-counting language in docs/ — a rule begging to graduate); **layout drift** (a git-tracked top-level dir CLAUDE.md never mentions, and the reverse: a mentioned `dir/` gone from the tree — the plain layout check is one-shot and satisfied forever, this is what keeps prose tracking the tree; foreign paths are filtered by requiring the dir to have existed in this repo's git history). Both drift directions name the **edit**, not just the finding — add the line, or strike it — because a flag a reader must translate into an action is a flag that gets skimmed past
 
 Silent when healthy. When triggered, emits `hookSpecificOutput.additionalContext` so the assistant sees the recommendation and can propose action.
 
@@ -158,42 +177,40 @@ machine-personal or private → the `learn-on-failure` skill to user memory.
 One capture engine, two destinations — this plugin owns the triggers,
 learn-on-failure owns the memory-side write path.
 
+### Parallel lanes: spool, don't collide
+
+N agents working one repo at once are N writers on one file, and the collision
+is invisible until integration. Measured on one 2,400-commit repo running
+worktree lanes: **86 of 257 non-merge `CLAUDE.md` edits were made on lane
+branches, and all 50 merge commits touching the file were resolving them.**
+
+So a lane never edits `CLAUDE.md`:
+
+- **Lane** (a linked git worktree — the signal that siblings are running; or
+  any non-default branch with `"lane_spool": "branch"`). The session-end prompt
+  routes its nominations to `.claude/evolving-claude-md/incoming/<branch>.md`.
+  One file per lane, so distinct paths merge cleanly and the conflict class
+  disappears rather than being resolved. An ordinary feature branch is *not* a
+  lane by default: one writer at a time merges fine, and diverting it would be
+  a false positive.
+- **Integrator**, once, on the default branch: `capture-triggers.py fold`
+  prints every lane's nominations together and flags near-duplicates across
+  lanes (five lanes on one epic learn the same lesson five times). Apply the
+  bar, write the surviving entries into `CLAUDE.md` as one writer — so the
+  lint hook still gates their format — then delete the folded files.
+
+Folding is deliberately a human/main-session step, not another hook: only a
+reader holding all the lanes at once can dedup them.
+
 ### PostCompact audit
 
 Re-runs `audit-claude-md.py` after Claude Code compacts the conversation context. Same output shape as SessionStart. Keeps the assistant aware of CLAUDE.md state across a compaction without paying to re-read the whole file.
 
 ## Tuning the thresholds per repo
 
-"Concise" is not a universal number. 40 KB is bloat in a library and reasonable
-in a monorepo that genuinely has that much load-bearing context — so the shipped
-defaults are a starting point, not a verdict, and every one is overridable.
-
-Resolution order, later wins:
-
-```
-built-in defaults
-  → ~/.claude/evolving-claude-md/config.json          (all your repos)
-    → <repo>/.claude/evolving-claude-md/config.json   (this repo)
-```
-
-```json
-{
-  "file_warn_kb": 25,        "file_recommend_kb": 40,
-  "lines_warn": 200,         "lines_recommend": 300,
-  "entries_warn": 25,        "entries_recommend": 35,
-  "mega_entry_chars": 800,   "topic_cluster": 3,
-  "layout_min_dirs": 5,
-  "coverage": true,          "nested": true
-}
-```
-
-Name only the keys you want changed; the rest keep their defaults. Unknown keys
-are ignored, and a corrupt config falls back to defaults rather than failing —
-this runs on SessionStart, and a bad config file must never be the reason a
-session starts badly.
-
-Set `coverage: false` to drop the upward check, `nested: false` to stop looking
-at companion files.
+Every threshold and check in this skill is overridable per repo (and globally)
+in `.claude/evolving-claude-md/config.json` — the full key list, defaults and
+resolution order are in [references/setup-and-tuning.md](references/setup-and-tuning.md).
 
 ## Where an entry goes — CLAUDE.md vs `.claude.local.md`
 
@@ -224,53 +241,19 @@ costs the same context whichever file it sits in.
 
 ## Coverage — the one upward check
 
-Every other check pushes content *down*: bloat, staleness, clustering, archiving. A
-file can pass all of them and still be useless — well under every threshold,
-perfectly formatted, and never saying how to run the tests. Coverage is the check
-that asks whether the essentials are there at all.
+Every other check pushes content DOWN; this one asks whether the essentials are
+there at all — a build file on disk with no matching command in CLAUDE.md, or a
+many-directory repo with no layout prose. Grounded in the tree, never a generic
+checklist. Full reasoning: [references/audit-checks.md](references/audit-checks.md).
 
-Two gaps, both **grounded in the tree rather than in a checklist**:
+## Structure review
 
-| Gap | Fires only when |
-|---|---|
-| *no build/test command* | a build file exists (`pom.xml`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, … — 12 supported) **and** CLAUDE.md never mentions its command |
-| *nothing on layout* | the repo has 5+ meaningful top-level directories (generated ones like `target/`, `node_modules/` don't count) **and** CLAUDE.md never describes where anything lives |
-
-Grounding is the whole design. A docs repo has no build command, and a
-three-directory repo needs no layout section — a generic checklist nags both. On a
-29-repo sample these two fired **zero** times, because every one of those repos
-already covers what its tree justifies.
-
-To decline a gap permanently, put the decision in the file itself:
-
-```markdown
-<!-- audit-skip: commands, layout -->
-```
-
-**Deliberately not checked: a "gotchas" section.** Measured on the same 29 repos it
-fired on 17 (59%) — noise, not signal. Worse, those 17 were exactly the repos with
-no D&L log, so it was only re-detecting "hasn't adopted this skill", which the audit
-already says. Gotchas arrive by *graduation* from the log; the topic-cluster check is
-the grounded way to prompt for them. Don't re-add it without data.
-
-## Structure review — evolve the file's shape, not just its entries
-
-The file's *internal structure* rots with the project: sections outlive their
-subject, content sits at the wrong level, layout prose stops matching the
-tree. Run a structure review when the user asks ("review CLAUDE.md
-structure"), when drift/adoption states fire, or during a compaction pass:
-
-1. **Ground in the rulebook** —
-   [references/claude-md-best-practices.md](references/claude-md-best-practices.md),
-   the researched, cited practices. Every recommendation must trace to a rule
-   there or to a tree-provable audit state. No invented taste.
-2. **Inventory the file** — sections, sizes, content classes, current flags.
-3. **Recommend, don't rewrite** — adds / moves / removals as a short list,
-   each with its citation and destination (inline, `docs/`, `.claude/rules/`,
-   a skill, user memory, deletion). The user picks; apply what they accept.
-4. **Respect the measured hierarchy** — presence, brevity, and consistency
-   dominate; reordering is mostly noise (see the rulebook's "what NOT to
-   optimize"). Prefer deletions and relocations over rearrangements.
+The file's shape evolves with the project too: sections that outgrew their
+heading, content in the wrong place, headings the tree no longer justifies.
+Recommend, don't rewrite — and respect the measured hierarchy (presence ≫
+brevity ≫ consistency ≫ structure) in
+[references/claude-md-best-practices.md](references/claude-md-best-practices.md).
+Procedure: [references/audit-checks.md](references/audit-checks.md).
 
 ## Quality bar for entries
 
@@ -279,21 +262,10 @@ Each entry passes all three:
 - **Sourced** — the *why* exists (constraint, incident, preference, tradeoff).
 - **Actionable** — a future contributor can judge whether the entry still applies to a new edge case.
 
-## Setup checklist (manual install)
+## Setup
 
-For a fresh project, when not installing via the marketplace plugin:
-
-1. Append the **How this file evolves** section to CLAUDE.md (a compact version of the rules above).
-2. Seed the Decisions & Learnings split: `### Decisions & Learnings (Recent — last 14 days)` + an empty `### Historic` section.
-3. Copy the four scripts into `.claude/skills/evolving-claude-md/`:
-   - `audit-claude-md.py`
-   - `freshness.py` (the staleness predicates — the audit loads it from its own directory)
-   - `lint-claude-md.py`
-   - `archive-decisions.py`
-4. Add `.claude/settings.json` hooks pointing at them (SessionStart, PreToolUse, PostCompact) — see the plugin's `hooks/hooks.json` for the exact shape; replace `${CLAUDE_PLUGIN_ROOT}/skills/evolving-claude-md` with `.claude/skills/evolving-claude-md`.
-5. Add the first real entry — usually the project goal.
-
-The hooks need a single restart of the Claude Code session to register (settings reload). Installing as a plugin skips steps 3–4 entirely.
+Installed as a plugin the hooks come wired. Manual install, hook JSON and the
+verification steps: [references/setup-and-tuning.md](references/setup-and-tuning.md).
 
 ## The quality gate
 
