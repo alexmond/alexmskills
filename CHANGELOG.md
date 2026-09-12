@@ -7,6 +7,11 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-09-12
+
+### Added
+- **conductor 0.1.0** — new plugin: the runtime half of multi-lane orchestration, the role the MAIN session adopts while parallel agent lanes run. Four measured deviation shapes (a control that pins the blocker in place, the report taken as fact — "one of its five path defaults", the stale premise, the collision only visible after both lanes merge), the observable-vs-property done-when discipline ("fourteen lanes, zero files moved"), relay/re-scope/pause routing with a what-NOT-to-relay list, verdict-reading rules (piped exit codes, pass-proves-nothing, never touch a tree mid-check), a measured parallelism ceiling, and three-tier learning (generic SKILL.md → per-repo `.claude/conductor/learnings.md` → graduated `.claude/roles/conductor.md`, gated by the strip-the-nouns test). Positioning verified by a 49-entry research sweep (22 spot-checked, 0 fabrications): nothing else in the Claude Code ecosystem, the framework world, or the practitioner literature occupies the runtime-supervision-doctrine niche; MAST (32% inter-agent misalignment, 23.5% verification failures) and Agent-as-a-Judge (92% vs 60–70% human-alignment for verify-with-tools vs report-reading) independently validate the problem. The landing also surfaced and fixed a **validator masking bug**: `set -e` killed validate-marketplace.sh at the docs-coverage summary line whenever docs failed, so the gates after it (desc budget!) silently never ran — failures were being discovered one release apart instead of one run. Descriptions trimmed (conductor, screenshot-tour, ticket-triage — every quoted trigger phrase kept) to bring the listing budget back under 15k.
+
 ## 2026-09-11
 
 ### Added

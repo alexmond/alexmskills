@@ -1,0 +1,64 @@
+= Conductor
+:navtitle: conductor
+:description: The runtime half of multi-lane orchestration — detect a lane drifted from its brief, decide relay-vs-re-scope-vs-pause, read verdicts you did not run, hold the machine's measured parallelism ceiling.
+
+Every other role is seated as a subagent and accumulates lessons in its own file. The conductor is the role the *main session* adopts while parallel agent lanes run — and it was seated nowhere, so its learnings existed and nothing loaded them. This skill closes that gap: it is the loading mechanism, and the place new lessons land.
+
+`ticket-triage` schedules *across* tickets; this governs what happens *within* a run: is this lane doing what it was told, and what do you do when it is not.
+
+== The measure problem
+
+A lane will satisfy the done-when you *wrote*, not the one you meant. Measured, one repo, one epic: **fourteen lanes, zero files moved** — every brief said "nothing reads this file any more", every lane achieved that honestly, and the owner's actual measure (the file has moved) was never stated. The discipline: a done-when phrased as a *property* ("it is no longer used") is satisfiable by argument; one phrased as an *observable* ("this path no longer exists", "this command exits non-zero") is not.
+
+== Four measured deviation shapes
+
+Each grounded in a real incident, described by what it looks like *from outside*:
+
+[cols="1,3",options="header"]
+|===
+| Shape | The tell
+
+| The control that pins the blocker
+| A lane asked to remove an obstacle ships a test asserting the obstacle holds. Route: report obstacles as a file and a line, never as a new artifact.
+
+| The report that is evidence, not fact
+| A lane claimed a script repointed — one of its five path defaults was. Verify anything load-bearing before merging: run the artifact, demand red-before-green, diff the branch's file list against the claim.
+
+| The stale premise
+| The lane builds on a "fact" in your brief that is false. Say which facts you measured and which you inherited — a lane that measures will correct you, and that is it doing its job.
+
+| The collision visible only after both merge
+| Two lanes each removed one entry from a shared manifest; git merged both cleanly and the result was wrong. Partition by what will *collide* (shared assertions), not what will be edited.
+|===
+
+== Routing and verdicts
+
+A routing table (relay / re-scope / pause the lane not the round / let it run) with an explicit what-NOT-to-relay list; findings flow lane → conductor → lane, never lane → lane. Verdict-reading rules for results you did not run: never take a piped command's exit code, a pass proves nothing without its coverage report, and never touch a tree while a check runs on it. The parallelism ceiling is a *measurement* (one 24-core box: five concurrent builds sustainable, six put load at 54 and killed three), not a preference.
+
+== Three-tier learning
+
+[cols="1,2,2",options="header"]
+|===
+| Tier | Lives in | Holds
+
+| generic | the plugin's SKILL.md | deviation shapes, routing, verdict reading — portable, no repo nouns
+
+| per-repo | `.claude/conductor/learnings.md` | this machine's numbers, this repo's instruments
+
+| graduated | `.claude/roles/conductor.md` | per-repo lessons that held ~3 runs
+|===
+
+The tier test: strip the repo's proper nouns — a rule that survives is generic; one that evaporates is per-repo. Numbers are almost always per-repo.
+
+== Install
+
+[source,text]
+----
+/plugin install conductor@alexmskills
+----
+
+Composes with `ticket-triage` (its round file logs relays), `roles` (graduation target), and `dev-crew`; all optional.
+
+== Positioning
+
+A 49-entry verified research sweep (2026-09-12) found nothing else occupying this niche: the ecosystem's orchestrators are plan-time artifacts or fan-out mechanics, and the closest sibling gates quality by *refusing* parallelism. Independent validation of the problem: the MAST taxonomy (arXiv 2503.13657) measures 32% of multi-agent failures as inter-agent misalignment and 23.5% as verification failures — the two things this skill manages — and Agent-as-a-Judge (arXiv 2410.10934) measures verify-with-tools at 92% human-alignment versus 60–70% for reading the agent's report, which is this skill's "run the artifact yourself" rule, quantified.

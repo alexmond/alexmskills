@@ -47,8 +47,9 @@ synthesizer are persistent seats, listed here for tier/learnings tracking.
 - charter: practitioner-written practice and failure lore — blogs, HN/Reddit threads, talks, measured studies — about a tool/format's real-world use
 - when-to-cover: the question needs what practitioners say works/fails, distinct from official prescription and from shipped artifacts
 - model: sonnet
-- status: probationary (minted 2026-08-28, CLAUDE.md practices survey)
+- status: probationary (minted 2026-08-28, CLAUDE.md practices survey; 2 useful runs)
 - learnings:
+  - 2026-09-12 — 2nd useful run (14/12, 0 thin, conductor landscape). Again the MEASURED-source magnet (6 studies). One more useful run graduates it stable.
   - 2026-08-28 — 1 useful run (26/15 findings, 0 thin). Best slice for MEASURED sources (arXiv, corpus analyses); mark measured claims explicitly in evidence — they outrank the opinion pool at synthesis time.
 
 ### demo-tooling-scout
@@ -67,6 +68,7 @@ synthesizer are persistent seats, listed here for tier/learnings tracking.
 - status: stable
 - learnings:
   - 2026-08-27 — quote-via-search misattribution is a real FP class: a page can exist and support the gist while lacking the quoted sentence — fetch the cited page before trusting a quote. Reddit scores are un-recheckable by fetch; downgrade them to approximate rather than refuting.
+  - 2026-09-12 — a plausible-looking unfamiliar domain can be REAL official docs (adk.dev) — verify before calling fabrication; and vendor-partitioned framework sweeps produce LINEAGE seams (forks/renames like AutoGen→AG2) — flag with a cross-reference note, don't merge.
   - 2026-08-28 — repo-file claims (sizes, line counts, section names) verify byte-exact via raw.githubusercontent.com — sample them preferentially; they're the cheapest high-confidence checks. Genuine cross-source contradictions (official vs practitioner vs measured) are findings, not defects — verify each side reports its OWN source faithfully.
 
 ### synthesizer

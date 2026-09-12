@@ -129,7 +129,11 @@ validate_docs() {
     grep -q "xref:$page.adoc" "$nav" || err "$page.adoc exists but is not in nav.adoc"
   done
 
-  [ "$fail" -eq 0 ] && note "every plugin has a page, in the nav and on the landing page"
+  # `|| true`, or set -e kills the script here whenever docs failed and the
+  # gates below never run — that masking serialized failures twice (2026-09-05
+  # spring-batch, 2026-09-12 conductor): the desc-budget overrun only surfaced
+  # after the docs fix. Every failure must be visible in ONE run.
+  [ "$fail" -eq 0 ] && note "every plugin has a page, in the nav and on the landing page" || true
 }
 
 validate_docs "$root/.claude-plugin/marketplace.json"

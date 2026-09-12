@@ -52,6 +52,9 @@ Skills that accumulate knowledge about the repo they run in. State lives in the 
 
 | xref:learn-on-failure.adoc[learn-on-failure]
 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle.
+
+| xref:conductor.adoc[conductor]
+| The runtime half of multi-lane orchestration: four measured lane-deviation shapes, relay/re-scope/pause routing, verdict-reading rules, a measured parallelism ceiling — with per-repo learnings that graduate into the role substrate.
 |===
 
 == Workflow

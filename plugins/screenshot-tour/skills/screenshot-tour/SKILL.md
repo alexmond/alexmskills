@@ -1,6 +1,7 @@
 ---
 name: screenshot-tour
-description: Generate a presentation-worthy screenshot deck of the current product — discovers the aspects worth showing (the CLI's `--help`, the web app's routes, the library's quickstart), captures each with the *right tool per surface* (project's existing browser driver for web — Selenium-Java if none / Playwright for Node-Python / VHS for CLI / Freeze for code snippets), and assembles a captioned, narrative-ordered deck under `presentation/` ready to walk through in a meeting, paste into slides, or send to stakeholders. Use when the user asks for "presentation screenshots", "a demo deck", "screenshots for a slide deck", "show what this does", "presentation of the product", or is preparing to demo/pitch the project. Works on CLIs, web apps, libraries, and TUIs.
+description: >
+  Generate a presentation-worthy screenshot deck of the current product — discovers the aspects worth showing, captures each with the right tool per surface (project browser driver / Playwright / VHS / Freeze), and assembles a captioned, narrative-ordered deck under `presentation/`. Use when the user asks for "presentation screenshots", "a demo deck", "screenshots for a slide deck", "show what this does", "presentation of the product", or is preparing to demo/pitch the project. Works on CLIs, web apps, libraries, and TUIs.
 ---
 
 # Screenshot Tour

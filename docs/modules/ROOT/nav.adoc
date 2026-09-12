@@ -19,6 +19,7 @@
 *** xref:prompt-coach-config.adoc[Configuration & dashboard]
 ** xref:screenshot-sweep.adoc[Screenshot Sweep]
 ** xref:skill-linter.adoc[Skill Linter]
+** xref:conductor.adoc[Conductor]
 * Workflow skills
 ** xref:implement-issue.adoc[Implement Issue]
 ** xref:maven-quality.adoc[Maven Quality Gate]

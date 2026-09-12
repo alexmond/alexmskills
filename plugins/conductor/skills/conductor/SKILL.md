@@ -1,6 +1,7 @@
 ---
 name: conductor
-description: Use while running parallel agent lanes — when a lane reports back, when a scheduled check fires, or before merging a lane's branch. Also when the user says "check the lanes", "is that lane on track", "what's running", "did it actually do it", "why did this lane go red", "should I merge this", "start another lane", or "the agent didn't do what I asked". Detects a lane that has drifted from its brief (satisfied the done-when without doing the work, built a control that pins a blocker in place, reported a fix it did not make), decides route-vs-relay-vs-pause, and appends what it learned to the repo so the next run starts ahead.
+description: >
+  Use while running parallel agent lanes — when a lane reports back, when a scheduled check fires, or before merging a lane's branch. Also when the user says "check the lanes", "is that lane on track", "what's running", "did it actually do it", "why did this lane go red", "should I merge this", "start another lane", or "the agent didn't do what I asked". Detects lanes drifted from their brief and decides route-vs-relay-vs-pause.
 ---
 
 # conductor
