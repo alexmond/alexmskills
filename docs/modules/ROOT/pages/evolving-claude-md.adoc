@@ -188,8 +188,32 @@ A *gotchas* check was built and then removed: on the same sample it fired on 17 
 * The quarterly archive is the one operational step nothing automates — set a calendar reminder.
 * Disable a hook by removing its entry; disable all via `disableAllHooks: true`.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 3 — lifecycle hooks on both clients._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Hooks
+| SessionStart audit, PreToolUse format lint, PostToolUse commit mining, Stop capture, PostCompact audit.
+| The same five events through `hooks/codex.json` and the shared adapter. Trust them once with `/hooks`.
+
+| Instructions file
+| `CLAUDE.md`.
+| `AGENTS.override.md`, then `AGENTS.md`, then an existing `CLAUDE.md`. Audit prose names whichever is selected.
+
+| Format lint
+| Gates `Write`/`Edit` of `CLAUDE.md`.
+| Gates `apply_patch` edits — the adapter splits the patch per file, and one malformed file rejects the whole patch.
+
+| Capture
+| Stop and commit detection read the Claude transcript.
+| The same capture reads Codex rollout calls; settings and lane spools stay in `.claude/evolving-claude-md/`.
+
+|===
+
+*The difference that matters:* An instruction file edited from the shell (`sed`, a script) is not a matched tool path, so the lint never sees it. PostCompact findings arrive as a `systemMessage` rather than injected context.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

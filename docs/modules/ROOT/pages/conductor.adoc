@@ -63,8 +63,24 @@ Composes with `ticket-triage` (its round file logs relays), `roles` (graduation 
 
 A 49-entry verified research sweep (2026-09-12) found nothing else occupying this niche: the ecosystem's orchestrators are plan-time artifacts or fan-out mechanics, and the closest sibling gates quality by *refusing* parallelism. Independent validation of the problem: the MAST taxonomy (arXiv 2503.13657) measures 32% of multi-agent failures as inter-agent misalignment and 23.5% as verification failures — the two things this skill manages — and Agent-as-a-Judge (arXiv 2410.10934) measures verify-with-tools at 92% human-alignment versus 60–70% for reading the agent's report, which is this skill's "run the artifact yourself" rule, quantified.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 2 — needs tool translation._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Supervision
+| The main session watches Agent lanes.
+| The client's wait/result mechanism, within its wait limit; keep working locally while lanes run.
+
+| Reconcile and relay
+| Lane reports and messages.
+| After a wait timeout, reconcile with the agent status tools; follow up an existing lane before considering a replacement.
+
+|===
+
+*The difference that matters:* The deviation shapes, verdict-reading and ceiling are about lanes, not tools, so they carry over unchanged.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

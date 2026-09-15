@@ -125,8 +125,24 @@ It does not tell you whether a skill *works*. A clean lint means nothing mechani
 
 Trigger accuracy is the thing that actually matters, and only `skill-creator`'s optimiser measures it, by running queries against the real model. No static check substitutes for that. This tool verifies a description *has* triggers; it can never verify they *work*.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 1 — portable._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Automated rules
+| Cover Claude skill, agent, hook and plugin conventions.
+| Same checks. Claude-only fields are not treated as Codex defects.
+
+| Codex packaging
+| Not checked.
+| Manifests, hook entrypoints and bundled adapters are checked by hand and reported separately.
+
+|===
+
+*The difference that matters:* The automated linter is still Claude-convention first, so a clean run is not a Codex schema validation.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

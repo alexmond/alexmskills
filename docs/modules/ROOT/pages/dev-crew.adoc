@@ -87,8 +87,28 @@ qa's verdict is now explicitly *verify against reality* — the real gate comman
 * Keep `CLAUDE_CODE_SUBAGENT_MODEL` unset — if set, every role collapses onto one model and per-role tiering is lost.
 * Steering modes: `autopilot`, `checkpoint` (default), `co-drive`.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 3 — lifecycle hooks on both clients._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Roles
+| `agents/dc-*.md` register as subagent types with their own tool lists and model tiers.
+| The full role file is passed in each child's brief via `spawn_agent`; Markdown agents are not registered Codex agent types.
+
+| Phase gate
+| PreToolUse hook blocks an out-of-order Agent dispatch.
+| The same gate runs on spawns — the exact `dc-*` role name must appear in the task name and message, or the gate can't identify it.
+
+| Tool limits
+| Enforced by the runtime from agent metadata.
+| Stated in the brief — an instruction, not a sandbox.
+
+|===
+
+*The difference that matters:* On Codex a role told "read-only" is trusted to comply rather than prevented from writing. Model preferences map to models the client actually offers.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

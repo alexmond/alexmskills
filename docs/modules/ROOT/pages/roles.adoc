@@ -77,8 +77,24 @@ Charter and Body edits are *never* made during a run — identity changes are de
 * Learnings are plain *markdown* in the role files (`## Learnings (core)` / `## Learnings (solo)`), not a database — readable, diffable, and committed with the repo.
 * The registry is fully self-sufficient without the consumers: `crew.md` and `panel.md` are optional layers that link to the same cores by name.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 3 — lifecycle hooks on both clients._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Hooks
+| SessionStart registry initialization and audit.
+| The same hook through `hooks/codex.json`.
+
+| Invocation
+| `/roles:as <role>`, `/roles:evolve`.
+| Ask in plain language — these aren't Codex slash commands; the procedure is the same.
+
+|===
+
+*The difference that matters:* Persona files and shared role state live in the repo and are shared by both clients.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

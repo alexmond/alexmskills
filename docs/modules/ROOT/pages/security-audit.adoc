@@ -50,3 +50,21 @@ Outputs a single table ordered by severity (CRITICAL → HIGH → MEDIUM → LOW
 
 * Tool access is scoped to `Read, Glob, Grep, Bash`.
 * Secret-style findings in production code are rated higher severity than those in test fixtures, and reported separately rather than ignored.
+
+== Claude Code vs Codex
+
+_Tier 1 — portable._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Audit
+| Pattern scan and remediation report.
+| Identical.
+
+|===
+
+*The difference that matters:* Nothing client-specific.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

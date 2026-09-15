@@ -42,8 +42,24 @@ A fixed six-step workflow:
 * Git safety rails: never force-push or delete branches without explicit confirmation, and never push directly to `main` — only the feature branch.
 * One issue at a time by design. To drain a whole backlog in parallel — ranked, worktree-isolated, merged as each agent finishes — reach for xref:ticket-triage.adoc[ticket-triage].
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 1 — portable._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Workflow
+| Issue → branch → implement → verify → PR.
+| Identical.
+
+| Attribution
+| Claude generated-by trailers.
+| Attribute to the client actually used — no Claude identity, and no invented Codex co-author email.
+
+|===
+
+*The difference that matters:* Behaviour is the same; only the attribution line changes.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

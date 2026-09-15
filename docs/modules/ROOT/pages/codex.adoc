@@ -22,7 +22,7 @@ and *identical* are different claims, so each plugin declares which one applies.
 
 | instructions file
 | `CLAUDE.md`
-| `AGENTS.md` (a symlink to it — identical bytes, drift impossible)
+| `AGENTS.override.md`, then `AGENTS.md`, then an existing `CLAUDE.md`. In *this* repo `AGENTS.md` is a symlink to `CLAUDE.md`, so both clients read identical bytes.
 |===
 
 The Codex manifests are **generated**, never hand-written:
@@ -69,42 +69,207 @@ and model settings require explicit mapping.
 `hooks/codex.json`; other plugins retain advisory skill instructions.
 |===
 
-Tier 3 includes `dev-crew`, `evolving-claude-md`, `learn-on-failure`,
-`memory-hygiene`, `progress-channel`, `prompt-coach`, and `roles`. Each now
-ships an explicit `hooks/codex.json`. Review and trust the definitions through
-`/hooks` after installing the Codex plugin; copying only skills does not install
-hooks. Claude's hook files and full workflows remain in place.
+Tier 3 is `dev-crew`, `evolving-claude-md`, `learn-on-failure`, `memory-hygiene`,
+`progress-channel`, `prompt-coach` and `roles`. Each ships an explicit
+`hooks/codex.json` alongside its Claude `hooks/hooks.json`.
 
-The shared adapter translates Codex patch additions/updates and shell calls to
-the existing rule handlers. Crew dispatch messages must include the exact role
-name so the handoff gate can identify it. Hooks cover matching exposed tool paths,
-not arbitrary shell edits. PostCompact audit findings use `systemMessage` because
-that event does not accept the SessionStart context shape.
+== Feature comparison
 
-Codex instruction checks select `AGENTS.override.md`, then `AGENTS.md`, then an
-existing `CLAUDE.md`. Claude still targets `CLAUDE.md`. Codex learning uses
-plugin-managed `.codex/memory/` files with a SessionStart index loader, while
-Claude keeps its native project memory. Other `.claude/<plugin>/` workflow state
-remains shared and outside installed plugin caches.
+=== Platform surfaces
 
-The `review-agents` plugin now includes a discoverable skill. Codex dispatches
-the complete shipped specialist definition in the child brief. Markdown agent
-files are not automatically registered Codex agent types, and prose tool limits
-are not equivalent to runtime tool restrictions. Model preferences map to the
-available client models; Anthropic names are not sent to Codex.
+What changes between the two clients for *every* plugin that touches the surface.
+Each plugin page carries its own *Claude Code vs Codex* section with the specifics.
 
-Mindmap's `--ai-client auto|claude|codex` selects an implemented runner, preserving
-the original Claude CLI path. Codex uses its read-only local sandbox and final
-message file. External MCP servers, plugins, and apps are disabled for expansion;
-a failed MCP configuration check stops the runner before a model request. Progress keeps its full tracker, history, notifications, browser and
-terminal watch paths. Claude's command status line remains available on Claude;
-Codex uses a companion terminal/browser for live bars.
+[cols="1,2,2",options="header"]
+|===
+| Surface | Claude Code | Codex
 
-`make test-codex-adapters` tests the shipped adapters, role packaging paths,
-and unchanged Claude paths without model calls. `make test-codex-runtime` verifies
-that the real Codex CLI blocks a malformed instruction patch through the shipped
-hook. `make test-coach-codex` optionally
-exercises the real Codex CLI against a local mock model, without spending tokens.
+| Slash commands
+| `/plugin:skill` and `commands/*.md`.
+| Ask in plain language; the command's procedure runs unchanged.
+
+| Hook registration
+| `hooks/hooks.json` via `${CLAUDE_PLUGIN_ROOT}`; active once the plugin is enabled.
+| `hooks/codex.json` via `${PLUGIN_ROOT}`. Review and trust with `/hooks` after install, and again whenever a definition changes. A skill-only copy registers no hooks.
+
+| Hook events
+| SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, PostCompact.
+| The same events. PostCompact findings arrive as a `systemMessage`, because that event doesn't accept injected context.
+
+| Edits the hooks see
+| `Write` / `Edit` calls.
+| `apply_patch`, split per file by the adapter. One rejected file rejects the whole patch.
+
+| Shell
+| `Bash`.
+| `exec_command` / `shell_command`, mapped to `Bash`. Edits made from the shell are not a matched tool path on either client.
+
+| Instructions file
+| `CLAUDE.md`.
+| `AGENTS.override.md` → `AGENTS.md` → existing `CLAUDE.md`.
+
+| Project memory
+| Claude's native memory, loaded automatically.
+| Plugin-managed `.codex/memory/`, loaded by a SessionStart hook. Not Codex's internal memory.
+
+| Plugin workflow state
+| `.claude/<plugin>/` in the consuming repo.
+| The same directory — shared on purpose, so learning carries across clients.
+
+| Subagents
+| `agents/*.md` register as agent types with runtime tool lists and model tiers.
+| `spawn_agent` with the full role body in the brief. Tool limits become instructions, not sandbox rules; enable multi-agent where supported.
+
+| Models
+| Anthropic model names and tiers.
+| Mapped to the client's available models; Anthropic names are never sent.
+
+| Live progress
+| Status-line bar.
+| Browser dashboard or `progress watch` in a companion terminal.
+
+| Session identity
+| `CLAUDE_CODE_SESSION_ID`.
+| `CODEX_THREAD_ID` / `CODEX_SESSION_ID` (or `PROGRESS_SESSION_ID`).
+
+| Transcripts
+| Claude JSONL.
+| Codex rollout files — not a stable API; unknown formats degrade gracefully.
+|===
+
+=== Plugin by plugin
+
+[cols="2,1,4",options="header"]
+|===
+| Plugin | Tier | What differs on Codex
+
+| xref:evolving-claude-md.adoc#_claude_code_vs_codex[evolving-claude-md]
+| 3
+| Same five hooks through the adapter; instructions file resolves to `AGENTS.*`; patches are linted per file.
+
+| xref:memory-hygiene.adoc#_claude_code_vs_codex[memory-hygiene]
+| 3
+| Guards plugin-managed `.codex/memory/` instead of Claude's native memory.
+
+| xref:dev-crew.adoc#_claude_code_vs_codex[dev-crew]
+| 3
+| Roles travel in the brief rather than registering as agent types; the phase gate needs the exact `dc-*` name.
+
+| xref:brainstorm-panel.adoc#_claude_code_vs_codex[brainstorm-panel]
+| 2
+| Seats spawn via the client's agent tool; without one the panel runs sequentially and says so.
+
+| xref:learn-on-failure.adoc#_claude_code_vs_codex[learn-on-failure]
+| 3
+| Writes `.codex/memory/` topic files; a Codex-only SessionStart hook loads the index.
+
+| xref:implement-issue.adoc#_claude_code_vs_codex[implement-issue]
+| 1
+| Attribution names the client actually used.
+
+| xref:maven-quality.adoc#_claude_code_vs_codex[maven-quality]
+| 1
+| Nothing.
+
+| xref:security-audit.adoc#_claude_code_vs_codex[security-audit]
+| 1
+| Nothing.
+
+| xref:review-agents.adoc#_claude_code_vs_codex[review-agents]
+| 2
+| No-write becomes an instruction, not a runtime guarantee.
+
+| xref:research-sweep.adoc#_claude_code_vs_codex[research-sweep]
+| 2
+| Results are collected from child messages, not transcripts.
+
+| xref:roles.adoc#_claude_code_vs_codex[roles]
+| 3
+| Same SessionStart hook; commands become plain-language requests.
+
+| xref:screenshot-tour.adoc#_claude_code_vs_codex[screenshot-tour]
+| 1
+| Nothing beyond tool names.
+
+| xref:progress-channel.adoc#_claude_code_vs_codex[progress-channel]
+| 3
+| No status-line bar — use the dashboard or `progress watch`; tracker identical.
+
+| xref:ticket-triage.adoc#_claude_code_vs_codex[ticket-triage]
+| 2
+| Lane dispatch uses the client's agent tool.
+
+| xref:prompt-coach.adoc#_claude_code_vs_codex[prompt-coach]
+| 3
+| Native `UserPromptSubmit` hook; state shared with Claude; register once per client.
+
+| xref:mindmap-prompt.adoc#_claude_code_vs_codex[mindmap-prompt]
+| 2
+| `--ai-client codex` runs a sealed read-only Codex with every MCP server disabled.
+
+| xref:skill-linter.adoc#_claude_code_vs_codex[skill-linter]
+| 1
+| Automated rules are Claude-convention first; Codex packaging is checked by hand.
+
+| xref:tune-repo.adoc#_claude_code_vs_codex[tune-repo-beta]
+| 1
+| Tunes `AGENTS.md`; never turns Claude allowlists into sandbox bypasses.
+
+| xref:systemic-fix.adoc#_claude_code_vs_codex[systemic-fix-beta]
+| 1
+| Nothing.
+
+| xref:screenshot-sweep.adoc#_claude_code_vs_codex[screenshot-sweep]
+| 1
+| Nothing (needs a client that can view images).
+
+| xref:spring-batch.adoc#_claude_code_vs_codex[spring-batch]
+| 1
+| Nothing.
+
+| xref:conductor.adoc#_claude_code_vs_codex[conductor]
+| 2
+| Waits and relays use the client's agent status and follow-up tools.
+
+|===
+
+== How Codex support works
+
+=== Hooks and the shared adapter
+
+* Every tier-3 plugin vendors the same `codex-bridge.py`. It sets
+  `SKILL_CLIENT=codex`, turns Codex tool envelopes into the shapes the existing
+  Claude handlers expect, and reshapes their output for Codex. The rules
+  themselves live in one place for both clients.
+* Codex behavior is strictly opt-in: handlers branch only on
+  `SKILL_CLIENT == "codex"`, and only the bridge sets it. Claude's hook files and
+  full workflows are untouched.
+* Hooks cover matching exposed tool paths, not arbitrary shell edits.
+* Crew dispatch messages must include the exact role name so the handoff gate can
+  identify the role.
+
+=== Agents, runners and live progress
+
+* `review-agents` ships a discoverable skill; Codex dispatches the complete
+  shipped specialist definition in the child brief. Markdown agent files are not
+  registered Codex agent types, and prose tool limits are not runtime restrictions.
+* Mindmap's `--ai-client auto|claude|codex` selects an implemented runner,
+  preserving the original Claude CLI path. The Codex runner uses a read-only local
+  sandbox and a final-message file; external MCP servers, plugins and apps are
+  disabled, and a failed MCP configuration check stops it before any model request.
+* Progress keeps its full tracker, history, notifications, browser and terminal
+  watch. Only the status-line bar is Claude-specific.
+
+=== Tests
+
+* `make test-codex-adapters` — shipped adapters, role packaging and the unchanged
+  Claude paths, with no model calls. Runs in CI.
+* `make test-codex-runtime` — the real Codex CLI blocking a malformed instruction
+  patch through the shipped hook.
+* `make test-coach-codex` — the real Codex CLI running the prompt hook against a
+  local mock model, spending no tokens.
+
+The last two need an installed Codex and skip cleanly without one.
 
 Sources: https://learn.chatgpt.com/docs/hooks[Codex hooks] and
 https://learn.chatgpt.com/docs/agent-configuration/subagents[Codex subagents].
@@ -139,6 +304,7 @@ relative link out of `SKILL.md` on demand.
 * *Multi-agent tool names* — these have shipped in more than one version; the
 translation files say so and tell the reader to trust their live tool list over
 any table.
-* *Hook execution* — adapted plugins declare `hooks/codex.json`. Other plugins
-retain `hooks: {}` to suppress automatic discovery. Verify execution and trust
-in the consuming Codex client, beyond analyzer contract tests.
+* *Hook execution beyond the tested paths* — the real Codex CLI is verified for the
+instruction-patch lint and the prompt hook. The remaining events (memory, progress,
+roles, crew gate) are covered by adapter contract tests only. Plugins without
+`hooks/codex.json` keep `hooks: {}` to suppress automatic discovery.

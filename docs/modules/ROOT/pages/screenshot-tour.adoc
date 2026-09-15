@@ -97,8 +97,20 @@ The deck under `presentation/` is the deliverable. These are opt-in consumers �
 
 Built on Charmbracelet *VHS* (https://github.com/charmbracelet/vhs[github.com/charmbracelet/vhs]) and *Freeze* (https://github.com/charmbracelet/freeze[github.com/charmbracelet/freeze]); the web layer is driver-agnostic and reuses whatever the project already uses (Selenium, Selenide, Playwright, Cypress, …). The *tour* layer (discovery → plan → capture → assemble → graduate) is original to this skill.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 1 — portable._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Deck
+| Discover → plan → capture → assemble under `presentation/`.
+| Identical.
+
+|===
+
+*The difference that matters:* Nothing client-specific beyond using the client's own file and shell tools.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

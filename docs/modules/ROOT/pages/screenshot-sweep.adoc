@@ -93,3 +93,21 @@ The Misses log is the most useful part of the skill, because each entry carries 
 == Deliberately not
 
 A linter or an accessibility scanner. Those run against the DOM and catch what is machine-checkable. This runs against an *image* that already exists in the conversation, and its value is the defects a human would see and a rule would not.
+
+== Claude Code vs Codex
+
+_Tier 1 — portable._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Sweep
+| Whole-image defect checklist.
+| Identical — needs a client that can view images.
+
+|===
+
+*The difference that matters:* The misses log lives in the repo's `.claude/screenshot-sweep/`, so both clients tighten the same checklist.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

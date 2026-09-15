@@ -49,9 +49,24 @@ Lists dependencies (`./mvnw dependency:tree`), checks for updates, searches for 
 * All three are read-only on source — their Bash allowlists permit running and inspecting, not editing — so a review step can't silently change what it audits.
 * Checklists and commands assume a Maven/Java project; adapt items to other stacks.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex uses the client
-reference shipped with the skill for instruction files, tools, and learning
-state. See xref:codex.adoc[Codex compatibility] for hook setup and runtime
-limits. Agent roles retain their complete definitions when dispatched on Codex.
+_Tier 2 — needs tool translation._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Reviewers
+| Three registered subagents whose runtime tool list omits Write and Edit.
+| A discoverable skill dispatches each full agent definition in the child brief.
+
+| No-write guarantee
+| Enforced for Write/Edit — those tools are absent (Bash remains).
+| Instructed — the child is told not to write.
+
+|===
+
+*The difference that matters:* The plugin's headline safety property, "no-write by construction", is a runtime guarantee only on Claude Code. On Codex it is a prompt, so treat reviews there as trusted-to-comply.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

@@ -170,8 +170,32 @@ Duration history is keyed by job *shape* — name + kind + order-of-magnitude of
 
 `python3 <plugin>/scripts/test-harness.py` — 123 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers, the shell start/step/finish trio, notify hook, trend detection, MCP handshake, advisory hook, status-line rendering, `eta~` stem matching, retention, the upgrade handshake, the tap's passthrough and Maven/git parsing, `statusline_seen` discovery, the whats-new notice, the wrap script). Runs in CI.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 3 — lifecycle hooks on both clients._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Live bars
+| In the Claude Code status line (`statusLine` + `refreshInterval`).
+| In the browser dashboard or `progress watch` in a companion terminal. Codex has no status line.
+
+| Hooks
+| SessionStart what's-new notice, PreToolUse long-command nudge.
+| The same two, via `hooks/codex.json`. The nudge never approves a command.
+
+| Session scoping
+| `CLAUDE_CODE_SESSION_ID`.
+| `PROGRESS_SESSION_ID`, then Claude's id, then `CODEX_THREAD_ID` / `CODEX_SESSION_ID`.
+
+| Tracker
+| Registration, learned ETAs, history, stall/orphan detection, notifications.
+| All identical — the daemon is client-independent.
+
+|===
+
+*The difference that matters:* Everything but the in-window bar works the same. Don't write status-line config into Codex or promise animation inside Codex chat.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

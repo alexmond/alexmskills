@@ -96,8 +96,20 @@ false-systemic log entries; and a first-run calibration needing no manual correc
 consecutive fresh repos — tracked in a dated run log inside the skill. If it stalls for a
 quarter with no runs, it gets retired instead: an eternal beta is a catalog lie.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 1 — portable._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Discipline
+| Scope → class → prevention report before patching.
+| Identical.
+
+|===
+
+*The difference that matters:* Nothing client-specific; the calibration profile lives in the repo.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

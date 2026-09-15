@@ -56,8 +56,24 @@ Short insights go into a `MEMORY.md` section (kept under 200 lines); detailed le
 * Saves root causes, non-obvious API quirks, version constraints (e.g. BCrypt `$2y$` vs `$2a$`), architectural decisions, and stated user preferences.
 * Does *not* save routine first-pass outcomes, transient task state, anything already in `CLAUDE.md`, or unverified guesses.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 3 — lifecycle hooks on both clients._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Where learnings go
+| Claude's native project memory, which Claude loads automatically.
+| `.codex/memory/MEMORY.md` as an index only, with each learning in a topic file carrying `name`/`description`/`metadata.type` frontmatter.
+
+| Hooks
+| None — Claude already loads its memory.
+| A SessionStart hook loads the index. With a skill-only install, read it explicitly.
+
+|===
+
+*The difference that matters:* This is the one plugin with a Codex hook and no Claude hook: Codex has no auto-loaded project memory to lean on, so the plugin supplies the loader.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

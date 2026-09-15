@@ -138,8 +138,28 @@ python3 <plugin>/scripts/mindmap.py compile  .claude/mindmap/feature.canvas -o p
 
 A chain builder or an agent canvas. Tools like Langflow, Rivet and ChainForge wire up runtime pipelines; this compiles *one prompt* and gets out of the way.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 2 — needs tool translation._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| ✦ expansion
+| `claude -p` in the repo.
+| `--ai-client codex` runs Codex in a read-only sandbox with hooks, plugins, apps, web search and subagents disabled; `auto` picks Codex inside Codex.
+
+| MCP servers
+| The Claude runner's normal configuration.
+| Every configured MCP server is disabled for the call; if the configuration can't be inspected, expansion stops before any model request.
+
+| Commands
+| `/mindmap-prompt:*`.
+| Ask in plain language; start `scripts/serve.py --ai-client codex`.
+
+|===
+
+*The difference that matters:* Codex expansion is deliberately sealed off from project tooling; `--ai-read` opens local read-only exploration when you want it.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

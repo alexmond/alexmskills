@@ -63,3 +63,21 @@ Generates coverage via `./mvnw verify`, then parses `jacoco.xml` with self-conta
 * Default coverage gate is *80%* line coverage (adjust `THRESHOLD` in the snippets); `codestyle` and `precommit` reference the same gate.
 * Examples use the `./mvnw` wrapper — substitute your `mvn` binary if there's no wrapper, and scope multi-module builds with `-pl <module>`.
 * Violations typically fail the build at the `validate` phase; adjust the bound phase if your `pom.xml` differs.
+
+== Claude Code vs Codex
+
+_Tier 1 — portable._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Skills
+| Format, PMD, JaCoCo and pre-commit guidance driving `mvn`.
+| Identical — plain instructions and shell commands.
+
+|===
+
+*The difference that matters:* Nothing client-specific. The skills run the same Maven commands on either client.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

@@ -55,8 +55,28 @@ Writes outside a memory directory are never touched.
 
 Both this plugin and `evolving-claude-md` vendor the same `freshness.py` — stdlib-only, pure functions over `(text, repo_root)` — so "is this fact still true on disk?" has exactly one implementation. The marketplace harness pins the two copies byte-identical.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 3 — lifecycle hooks on both clients._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Memory it guards
+| Claude's native project memory under `~/.claude/projects/<slug>/memory/`.
+| Project-owned `.codex/memory/MEMORY.md` plus topic files — plugin-managed, not Codex's internal memory database.
+
+| Hooks
+| SessionStart audit, PreToolUse format lint on memory writes.
+| The same two events. SessionStart also loads the memory index into context.
+
+| Direct CLI audit
+| Runs as-is.
+| Set `SKILL_CLIENT=codex` so the audit reads `.codex/memory/`.
+
+|===
+
+*The difference that matters:* The Codex memory is files this plugin manages. Anything Codex remembers on its own is outside its reach.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

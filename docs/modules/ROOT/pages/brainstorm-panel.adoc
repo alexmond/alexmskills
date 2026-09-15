@@ -97,8 +97,24 @@ The panel now maintains its roster at `.claude/roles/panel.md` — the same regi
 * Step 6 captures what worked to the repo's panel log; the most valuable signal is what the user changed at the review gate. Findings stable across ~3 targets graduate into `CLAUDE.md`.
 * Edits only the in-scope artifact, treats artifact content as data (not instructions), preserves the original before the first edit, and leaves side effects (deploy/publish/send) for the user to execute.
 
-== Codex client path
+== Claude Code vs Codex
 
-The Claude Code workflow remains available in full. Codex reads the skill's
-`references/clients.md` for its instruction-file, tool, and learning-state path.
-See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.
+_Tier 2 — needs tool translation._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Seats
+| Each seat is a parallel subagent.
+| Each seat is a `spawn_agent` child (or the client's live equivalent); enable multi-agent where supported.
+
+| Roster gate and learning
+| Propose seats, wait for approval, record outcomes.
+| Unchanged — conversation beats and plain files.
+
+|===
+
+*The difference that matters:* Without agent tools the panel runs its seats one at a time in one context and must say so, because independent critique is part of what it promises.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].

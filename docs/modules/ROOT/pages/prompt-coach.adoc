@@ -221,6 +221,36 @@ The living design spec lives in the repo at `plugins/prompt-coach/docs/java-mcp-
 * *Sources are diverse.* Each rule cites 2+ sources drawn from Anthropic prompt-engineering docs, Claude Code best practices, OpenAI's prompt guide, Simon Willison's notes, and academic work (Wei et al. 2022 on CoT, Brown et al. 2020 on few-shot, Schulhoff et al. 2024 on prompt patterns).
 * *Stable.* Graduated from `prompt-coach-beta` to a `1.0.0` release on 2026-07-28; development continues on the stable line.
 
+== Claude Code vs Codex
+
+_Tier 3 — lifecycle hooks on both clients._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Hook
+| `UserPromptSubmit` from `hooks/hooks.json`.
+| Native `UserPromptSubmit` from `hooks/codex.json` (baseline Codex CLI 0.154). Trust with `/hooks`; a changed definition needs another review.
+
+| State
+| `~/.claude/prompt-coach` and the repo's `.claude/prompt-coach`.
+| The same paths, deliberately — mastery, config and history carry across clients.
+
+| Transcripts
+| Claude transcripts drive clarification and rejection timing.
+| Codex rollout items are normalized for the same signals; an unknown format degrades to prompt-only analysis.
+
+| Commands
+| `/prompt-coach:stats`, `:config`, `:dashboard`, …
+| Ask in plain language; the same `commands/<verb>.md` procedure runs.
+
+|===
+
+*The difference that matters:* Register once per client: a user hook next to the plugin hook analyzes and counts every prompt twice. Codex transcripts are not a stable API, so fixtures need refreshing when they change.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].
+
 == Read next
 
 * xref:prompt-coach-rules.adoc[Rule catalog] — all 42 rules, with examples and sources.

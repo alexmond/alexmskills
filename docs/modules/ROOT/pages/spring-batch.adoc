@@ -37,3 +37,21 @@ The skill carries its own learning loop: hard-won corrections append to
 `references/learnings.md`, and `references/reference-map.md` maps each claim to
 the sample module that proves it. When reality disagrees with the file, the
 file gets corrected — the samples are the arbiter.
+
+== Claude Code vs Codex
+
+_Tier 1 — portable._
+
+[cols="1,2,2",options="header"]
+|===
+| | Claude Code | Codex
+
+| Guidance
+| Spring Batch reference grounded in runnable samples.
+| Identical.
+
+|===
+
+*The difference that matters:* Nothing client-specific.
+
+Install, hook trust and verified limits: xref:codex.adoc[Codex compatibility].
