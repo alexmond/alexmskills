@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-bridge.py\" scripts/roles-init-audit.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

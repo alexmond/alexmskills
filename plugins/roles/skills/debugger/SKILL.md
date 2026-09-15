@@ -5,6 +5,9 @@ argument-hint: "[error / failing behavior]"
 disable-model-invocation: true
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Senior production debugging
 
 Target: $ARGUMENTS

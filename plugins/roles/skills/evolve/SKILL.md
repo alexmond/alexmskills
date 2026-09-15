@@ -10,6 +10,9 @@ description: >-
 
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Evolve Roles
 
 > **Try it:** `/roles:evolve` — or say "audit the roles and propose refinements".

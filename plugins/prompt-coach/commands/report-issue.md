@@ -105,7 +105,7 @@ Combine all confirmed candidates into ONE issue body, in this format:
 ```markdown
 # prompt-coach bug report
 
-**Plugin version:** <read from `~/.claude/plugins/cache/alexmskills/prompt-coach/*/.claude-plugin/plugin.json` `.version`>
+**Plugin version:** <read from `<plugin>/.claude-plugin/plugin.json` `.version`>
 **Report date:** <today>
 **Candidate count:** <N>
 

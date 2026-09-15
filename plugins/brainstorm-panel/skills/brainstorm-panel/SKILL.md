@@ -10,6 +10,9 @@ description: >-
 
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Brainstorm Panel
 
 > **Try it:** `/brainstorm-panel:brainstorm-panel make this landing page headline more convincing` — or say "brainstorm a better onboarding flow".
@@ -368,4 +371,4 @@ reliability engineer in another, with nothing duplicated.
 
 ## Platform adaptation
 
-Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) describes agent dispatch, model mapping, and runtime limitations. Preserve the complete workflow above.

@@ -55,3 +55,9 @@ Short insights go into a `MEMORY.md` section (kept under 200 lines); detailed le
 
 * Saves root causes, non-obvious API quirks, version constraints (e.g. BCrypt `$2y$` vs `$2a$`), architectural decisions, and stated user preferences.
 * Does *not* save routine first-pass outcomes, transient task state, anything already in `CLAUDE.md`, or unverified guesses.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

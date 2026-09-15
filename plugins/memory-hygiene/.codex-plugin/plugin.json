@@ -1,6 +1,6 @@
 {
   "name": "memory-hygiene",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes — supersession is strike-through plus a dated correction.",
   "author": {
     "name": "Alex Mondshain",
@@ -18,16 +18,16 @@
     "rot"
   ],
   "skills": "./skills/",
-  "hooks": {},
+  "hooks": "./hooks/codex.json",
   "compatibility": {
     "tier": 3,
-    "enforcement": "claude-code",
+    "enforcement": "claude-code-and-codex",
     "needsToolTranslation": false
   },
   "interface": {
     "displayName": "Memory Hygiene",
     "shortDescription": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, v",
-    "longDescription": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes — supersession is strike-through plus a dated correction. Ships Claude Code hooks, which have no Codex equivalent. The skill and its scripts work, but the rules it enforces automatically on Claude Code are advisory here.",
+    "longDescription": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes — supersession is strike-through plus a dated correction. Includes Codex lifecycle hooks. Review and trust them with /hooks before they run.",
     "developerName": "Alex Mondshain",
     "category": "Developer Tools",
     "capabilities": [

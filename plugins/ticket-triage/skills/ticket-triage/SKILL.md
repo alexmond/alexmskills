@@ -4,6 +4,9 @@ description: >
   Rank the open tickets, work out what is genuinely startable versus blocked, run the startable ones in parallel through to merged — then KEEP GOING: re-triage every time an agent finishes. Use for "what's next", "review tickets", "triage the backlog", "prioritise", "start in parallel", "drain the backlog", or a bare "go". Also takes a TARGET — "triage <target>", "work toward X", "drive the X epic" — re-ranking by what unblocks that goal and coordinating lanes so they converge without colliding.
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # ticket-triage
 
 The recurring instruction is some form of *"review tickets, prioritise, start in
@@ -318,4 +321,4 @@ that recurs across repos is a candidate to upstream into this skill.
 
 ## Platform adaptation
 
-Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) describes agent dispatch, model mapping, and runtime limitations. Preserve the complete workflow above.

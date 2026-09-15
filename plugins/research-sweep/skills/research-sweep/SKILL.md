@@ -11,6 +11,9 @@ description: >-
 argument-hint: "[research or catalog question]"
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Parallel research sweep
 
 > **Try it:** `/research-sweep:research-sweep every open-source vector database` — or say "give me an exhaustive catalog of public datasets for X".
@@ -276,4 +279,4 @@ User: "build a catalog of every open-source vector database we can find."
 
 ## Platform adaptation
 
-Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) describes agent dispatch, model mapping, and runtime limitations. Preserve the complete workflow above.

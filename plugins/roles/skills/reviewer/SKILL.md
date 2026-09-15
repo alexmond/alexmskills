@@ -5,6 +5,9 @@ argument-hint: "[path or area to study]"
 disable-model-invocation: true
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Understand & refactor a codebase
 
 Target: $ARGUMENTS

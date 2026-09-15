@@ -4,6 +4,9 @@ description: >
   Use while running parallel agent lanes — when a lane reports back, when a scheduled check fires, or before merging a lane's branch. Also when the user says "check the lanes", "is that lane on track", "what's running", "did it actually do it", "why did this lane go red", "should I merge this", "start another lane", or "the agent didn't do what I asked". Detects lanes drifted from their brief and decides route-vs-relay-vs-pause.
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # conductor
 
 The conductor is the role the MAIN session adopts. Every other role is seated as a
@@ -240,4 +243,4 @@ All optional; this skill degrades to generic agents and a single repo.
 
 ## Platform adaptation
 
-Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) describes agent dispatch, model mapping, and runtime limitations. Preserve the complete workflow above.

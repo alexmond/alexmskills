@@ -1,7 +1,7 @@
 # alexmskills — marketplace maintenance helpers
 .DEFAULT_GOAL := help
 
-.PHONY: help validate list bump graduate test-mindmap test-canvas test-ai test-linter test-evolve test-progress lint-skills install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
+.PHONY: test-codex-runtime test-codex-adapters codex test-coach-codex help validate list bump graduate test-mindmap test-canvas test-ai test-linter test-evolve test-progress lint-skills install-help docs-build docs-rules library-refresh library-audit dev-link dev-unlink test-coach test-dashboard
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -15,6 +15,16 @@ codex: ## Regenerate the Codex-side manifests from the Claude-side source of tru
 
 test-coach: ## Run the prompt-coach release test harness (run after each release)
 	@python3 plugins/prompt-coach/scripts/test-harness.py
+	@python3 plugins/prompt-coach/scripts/test-client-hooks.py
+
+test-codex-runtime: ## Test real Codex patch hooks with a local mock model (no tokens)
+	@python3 scripts/test-codex-hook-runtime.py
+
+test-codex-adapters: ## Test Codex adapters and unchanged Claude client paths
+	@python3 scripts/test-codex-adapters.py
+
+test-coach-codex: ## Test the real Codex prompt hook with an isolated mock model (no tokens)
+	@python3 plugins/prompt-coach/scripts/test-codex-hook.py
 
 eval-coach: ## Score prompt-coach's rule fast-filter against the labeled golden set (add --gate in CI when corpus matures)
 	@python3 plugins/prompt-coach/scripts/eval_coach.py
@@ -68,13 +78,20 @@ list: ## List catalog: name, version, description
 bump: ## Bump a plugin version: make bump PLUGIN=dev-crew VERSION=1.1.0
 	@test -n "$(PLUGIN)" || { echo "Usage: make bump PLUGIN=<name> VERSION=<x.y.z>"; exit 1; }
 	@test -n "$(VERSION)" || { echo "Usage: make bump PLUGIN=<name> VERSION=<x.y.z>"; exit 1; }
-	@f="plugins/$(PLUGIN)/.claude-plugin/plugin.json"; \
+	@set -e; \
+		f="plugins/$(PLUGIN)/.claude-plugin/plugin.json"; \
+		jq -e --arg n "$(PLUGIN)" '.name == $$n' "$$f" > /dev/null; \
+		jq -e --arg n "$(PLUGIN)" '[.plugins[] | select(.name==$$n)] | length == 1' \
+			.claude-plugin/marketplace.json > /dev/null; \
+		tmp=""; mtmp=""; trap 'rm -f "$$tmp" "$$mtmp"' EXIT HUP INT TERM; \
 		tmp="$$(mktemp)"; \
-		jq --arg v "$(VERSION)" '.version=$$v' "$$f" > "$$tmp" && mv "$$tmp" "$$f"; \
 		mtmp="$$(mktemp)"; \
+		jq --arg v "$(VERSION)" '.version=$$v' "$$f" > "$$tmp"; \
 		jq --arg n "$(PLUGIN)" --arg v "$(VERSION)" \
 			'(.plugins[] | select(.name==$$n) | .version) |= $$v' \
-			.claude-plugin/marketplace.json > "$$mtmp" && mv "$$mtmp" .claude-plugin/marketplace.json; \
+			.claude-plugin/marketplace.json > "$$mtmp"; \
+		mv "$$tmp" "$$f"; \
+		mv "$$mtmp" .claude-plugin/marketplace.json; \
 		echo "Bumped $(PLUGIN) -> $(VERSION) in plugin.json and marketplace.json"
 
 graduate: ## Graduate a -beta plugin to stable: make graduate PLUGIN=prompt-coach

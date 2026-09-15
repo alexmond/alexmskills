@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent|spawn_agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-bridge.py\" scripts/check-handoffs.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

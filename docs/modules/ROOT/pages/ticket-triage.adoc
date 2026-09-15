@@ -81,3 +81,9 @@ All optional — the skill degrades to generic agents and a single repo.
 | `.claude/ticket-triage/snapshot-extra.sh`
 | Optional repo extension to the snapshot script (running instances, roadmap markers).
 |===
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

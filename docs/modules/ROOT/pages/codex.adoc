@@ -52,30 +52,75 @@ manifest under `compatibility`.
 | Tier | Count | What it means
 
 | *1 — portable*
-| 10
+| 9
 | Prose skills. Same behaviour on any harness; nothing to translate.
 
 | *2 — needs tool translation*
 | 6
-| Spawns or defines subagents. The skill ships `references/codex-tools.md`
+| Uses agent dispatch or an external CLI runner. The skill ships `references/codex-tools.md`
 mapping `Agent` → `spawn_agent`, the result wait → `wait_agent`, corrections →
-`followup_task`, plus the `multi_agent = true` switch Codex needs. The method is
-unchanged; only names differ.
+`followup_task`, and client-specific CLI invocation. Multi-agent is needed only
+for workflows that dispatch agents. Role prompts transfer; runtime tool restrictions
+and model settings require explicit mapping.
 
-| *3 — enforcement is Claude Code only*
-| 6
-| Ships Claude Code hooks. The skill and its scripts still work on Codex, but
-the rules it enforces *automatically* become advice. Said plainly in the
-manifest rather than shipping a quietly weaker product.
+| *3 — lifecycle hooks*
+| 7
+| Hook behavior is enabled only for plugins shipping a reviewed
+`hooks/codex.json`; other plugins retain advisory skill instructions.
 |===
 
-Tier 3 is `dev-crew`, `evolving-claude-md`, `memory-hygiene`, `progress-channel`,
-`prompt-coach` and `roles`. Two of those are hooks all the way down:
-`prompt-coach` *is* a `UserPromptSubmit` hook, and `progress-channel`'s live bar
-needs a status line that only Claude Code has. The rest degrade gracefully —
-`evolving-claude-md`'s format contract, for instance, stops being a gate and
-becomes a convention, which is exactly the failure mode that plugin exists to
-document: an unenforced rule is a suggestion.
+Tier 3 includes `dev-crew`, `evolving-claude-md`, `learn-on-failure`,
+`memory-hygiene`, `progress-channel`, `prompt-coach`, and `roles`. Each now
+ships an explicit `hooks/codex.json`. Review and trust the definitions through
+`/hooks` after installing the Codex plugin; copying only skills does not install
+hooks. Claude's hook files and full workflows remain in place.
+
+The shared adapter translates Codex patch additions/updates and shell calls to
+the existing rule handlers. Crew dispatch messages must include the exact role
+name so the handoff gate can identify it. Hooks cover matching exposed tool paths,
+not arbitrary shell edits. PostCompact audit findings use `systemMessage` because
+that event does not accept the SessionStart context shape.
+
+Codex instruction checks select `AGENTS.override.md`, then `AGENTS.md`, then an
+existing `CLAUDE.md`. Claude still targets `CLAUDE.md`. Codex learning uses
+plugin-managed `.codex/memory/` files with a SessionStart index loader, while
+Claude keeps its native project memory. Other `.claude/<plugin>/` workflow state
+remains shared and outside installed plugin caches.
+
+The `review-agents` plugin now includes a discoverable skill. Codex dispatches
+the complete shipped specialist definition in the child brief. Markdown agent
+files are not automatically registered Codex agent types, and prose tool limits
+are not equivalent to runtime tool restrictions. Model preferences map to the
+available client models; Anthropic names are not sent to Codex.
+
+Mindmap's `--ai-client auto|claude|codex` selects an implemented runner, preserving
+the original Claude CLI path. Codex uses its read-only local sandbox and final
+message file. External MCP servers, plugins, and apps are disabled for expansion;
+a failed MCP configuration check stops the runner before a model request. Progress keeps its full tracker, history, notifications, browser and
+terminal watch paths. Claude's command status line remains available on Claude;
+Codex uses a companion terminal/browser for live bars.
+
+`make test-codex-adapters` tests the shipped adapters, role packaging paths,
+and unchanged Claude paths without model calls. `make test-codex-runtime` verifies
+that the real Codex CLI blocks a malformed instruction patch through the shipped
+hook. `make test-coach-codex` optionally
+exercises the real Codex CLI against a local mock model, without spending tokens.
+
+Sources: https://learn.chatgpt.com/docs/hooks[Codex hooks] and
+https://learn.chatgpt.com/docs/agent-configuration/subagents[Codex subagents].
+
+== Verified behavior and remaining limits
+
+[cols="1,2,2",options="header"]
+|===
+| Surface | Evidence | Limit
+| Instruction hooks | Real Codex rejects a malformed patch; adapter regression covers a 751-file patch and nested overrides. | Matches exposed tool paths, not arbitrary shell edits.
+| Mindmap expansion | Real Codex returns parsed ideas with both user and project MCP servers disabled; sentinel servers never start. | Model/provider availability remains local configuration; inspection errors stop expansion.
+| Agent workflows | Complete shipped role definitions remain the dispatch source. | Claude agent metadata is not registered as native Codex agent configuration; prompt restrictions are not runtime enforcement.
+| Memory | Codex index loading and format checks have adapter tests. | Plugin-managed files, not Codex's internal memory database.
+| Progress | Existing 123-check suite and Codex identity/nudge regressions pass. | Live Codex bars use a companion terminal or browser, not Claude's command status line.
+| Installation | All 22 generated manifests validate; each declares its skill directory. | End-to-end marketplace installation and every client's tool surface still need verification.
+|===
 
 == What still needs verifying on the Codex side
 
@@ -94,5 +139,6 @@ relative link out of `SKILL.md` on demand.
 * *Multi-agent tool names* — these have shipped in more than one version; the
 translation files say so and tell the reader to trust their live tool list over
 any table.
-* *`hooks: {}`* — declared empty deliberately. Worth confirming Codex ignores it
-rather than rejecting the key.
+* *Hook execution* — adapted plugins declare `hooks/codex.json`. Other plugins
+retain `hooks: {}` to suppress automatic discovery. Verify execution and trust
+in the consuming Codex client, beyond analyzer contract tests.

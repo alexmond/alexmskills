@@ -90,6 +90,11 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-09-13 — **codex-runtime-probes** — Keep real-CLI mocks for hook payloads and tool isolation. Why: argv mocks passed while actual patches bypassed lint and external MCP servers still started.
+- 2026-09-13 — **codex-patch-envelope** — Codex 0.154 sends apply_patch text in tool_input.command. Why: direct adapter tests passed with input/patch, but a real CLI mock caught the silent lint bypass.
+
+- 2026-09-12 — **codex-hook-opt-in** — Use hooks/codex.json to opt adapted plugins into generation. Why: Codex now supports native hooks, but event parity alone does not port transcript readers or tool names.
+
 - 2026-09-12 — **calibration-over-intuition** — cut the tag-uniqueness check pre-ship: the fleet's healthiest log runs 100% distinct tags, the changelog-shaped one 98%. Why: it measured naming style, not quality.
 - 2026-09-12 — **validator-must-not-short-circuit** — set -e killed validate at the docs summary line when docs failed, so desc-budget never ran; masked twice (spring-batch 09-05, conductor 09-12) before diagnosis. Why: a gate script must surface ALL failures in one run — `|| true` on the conditional note line.
 - 2026-09-11 — **statusline-discovery** — 0.5.0: wired-or-not is measured (statusline_seen = any /jobs?session poll this boot), surfaced as page banner + weekly nudge tip + once-per-upgrade SessionStart notice; tap generalized from venice-vr's gate (maven/git measured bars). Why: settings-sniffing false-positives on custom status lines, and install-time hooks don't exist — the daemon's own traffic is the honest signal.

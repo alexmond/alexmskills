@@ -37,7 +37,7 @@ validate_channel() {
   if [ "$count" -eq 0 ]; then warn "no plugins yet (empty channel)"; return; fi
 
   while read -r name; do
-    local src_type src_inner src_path dir manifest pname ver
+    local src_type src_inner src_path dir manifest pname ver catalog_ver
     src_type="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source | type' "$mp")"
     if [ "$src_type" = "object" ]; then
       src_inner="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .source.source // ""' "$mp")"
@@ -74,6 +74,8 @@ validate_channel() {
 
     ver="$(jq -r '.version // empty' "$manifest")"
     [ -n "$ver" ] || warn "$name: no version in plugin.json (will track commit SHA)"
+    catalog_ver="$(jq -r --arg n "$name" '.plugins[] | select(.name==$n) | .version // empty' "$mp")"
+    [ "$ver" = "$catalog_ver" ] || err "$name: plugin.json version '$ver' != marketplace version '$catalog_ver'"
 
     if [ ! -d "$dir/skills" ] && [ ! -d "$dir/agents" ] && [ ! -d "$dir/commands" ]; then
       warn "$name: no skills/ agents/ commands/ component dir"
@@ -119,6 +121,13 @@ validate_docs() {
         || err "$name: no row in the README catalog table"
       grep -q "/plugin install $name@alexmskills" "$readme" \
         || err "$name: not in the README install list"
+      # The row existing is not the row being right: a pre-release review found
+      # 17 of 22 rows showing stale versions, two of them several releases old.
+      local want got
+      want="$(jq -r '.version' "$root/plugins/$name/.claude-plugin/plugin.json" 2>/dev/null)"
+      got="$(grep -oE "\[\`$name\`\]\(plugins/$name\) *\| *[^|]+\| *[0-9.]+" "$readme" | grep -oE '[0-9.]+$' | head -1)"
+      [ -z "$got" ] || [ "$got" = "$want" ] \
+        || err "$name: README row says $got but plugin.json is $want"
     done < <(jq -r '.plugins[].name' "$mp")
   fi
 

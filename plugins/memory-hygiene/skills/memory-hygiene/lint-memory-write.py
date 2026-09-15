@@ -38,6 +38,8 @@ def memory_part(path: str) -> str | None:
     memory dir, else None."""
     norm = os.path.abspath(path).replace(os.sep, "/")
     m = re.search(r"/\.claude/projects/[^/]+/memory/([^/]+)$", norm)
+    if not m and os.environ.get("SKILL_CLIENT") == "codex":
+        m = re.search(r"/\.codex/memory/([^/]+)$", norm)
     if not m:
         return None
     return "index" if m.group(1) == "MEMORY.md" else "fact"

@@ -86,3 +86,9 @@ qa's verdict is now explicitly *verify against reality* — the real gate comman
 * Run the conductor on *opus* (or sonnet to economize).
 * Keep `CLAUDE_CODE_SUBAGENT_MODEL` unset — if set, every role collapses onto one model and per-role tiering is lost.
 * Steering modes: `autopilot`, `checkpoint` (default), `co-drive`.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

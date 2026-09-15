@@ -174,6 +174,28 @@ def session_activity(transcript_path: str) -> dict:
                 budget -= len(line)
                 if budget < 0:
                     break
+                if os.environ.get("SKILL_CLIENT") == "codex":
+                    try:
+                        entry = json.loads(line)
+                        item = entry.get("payload", {})
+                        if entry.get("type") != "response_item" or item.get("type") not in {"function_call", "custom_tool_call"}:
+                            continue
+                        name = item.get("name", "")
+                        args = item.get("arguments", item.get("input", ""))
+                        if name in {"exec_command", "shell_command"}:
+                            if "git commit" in args:
+                                act["commits"] += 1
+                        elif name == "apply_patch":
+                            act["edits"] += 1
+                            if os.environ.get("SKILL_INSTRUCTIONS_FILE", "AGENTS.md") in args:
+                                act["claude_md_touched"] = True
+                            if SPOOL_MARK in args:
+                                act["spool_touched"] = True
+                            if "docs/decisions/" in args:
+                                act["decisions_added"] = True
+                    except (ValueError, TypeError, AttributeError):
+                        pass
+                    continue
                 if '"name": "Bash"' in line or '"name":"Bash"' in line:
                     if "git commit" in line:
                         act["commits"] += 1
@@ -202,7 +224,7 @@ def run_stop(payload: dict, cfg: dict) -> int:
     marker = os.path.join(STATE_DIR, f".capture-{session_id}")
     if os.path.exists(marker):
         return 0
-    if not os.path.exists("CLAUDE.md"):
+    if not os.path.exists(os.environ.get("SKILL_INSTRUCTIONS_FILE", "CLAUDE.md")):
         return 0
     act = session_activity(transcript)
     if not act["commits"] or not act["edits"]:
@@ -250,7 +272,7 @@ def run_commit(payload: dict, cfg: dict) -> int:
     command = (payload.get("tool_input") or {}).get("command", "")
     if "git commit" not in command:
         return 0
-    if not os.path.exists("CLAUDE.md"):
+    if not os.path.exists(os.environ.get("SKILL_INSTRUCTIONS_FILE", "CLAUDE.md")):
         return 0
     msg = _git(["log", "-1", "--format=%B"])
     if not msg:

@@ -13,6 +13,9 @@ description: >-
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # dev-crew
 
 > **Try it:** `/dev-crew:dev-crew add rate limiting to the login endpoint` — or say "run the crew on this feature".
@@ -351,4 +354,4 @@ each repo grows its own `## Dev crew` block as the crew learns it.
 
 ## Platform adaptation
 
-Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.
+Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) describes agent dispatch, model mapping, and runtime limitations. Preserve the complete workflow above.

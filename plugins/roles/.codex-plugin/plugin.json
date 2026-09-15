@@ -1,6 +1,6 @@
 {
   "name": "roles",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A per-repo repository of evolving roles (.claude/roles/) usable four ways: solo via /roles:as or per-persona skills, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles. Ships seed personas, a reactive init + graduation-audit SessionStart hook, the shared-core convention, and the `/roles:evolve` sub-skill that audits role files on demand (consolidation, staleness, body-drift, solo→core graduation candidates) so role personas keep improving after the first graduation. All proposals user-gated.",
   "author": {
     "name": "Alex Mondshain",
@@ -17,16 +17,16 @@
     "agents"
   ],
   "skills": "./skills/",
-  "hooks": {},
+  "hooks": "./hooks/codex.json",
   "compatibility": {
     "tier": 3,
-    "enforcement": "claude-code",
+    "enforcement": "claude-code-and-codex",
     "needsToolTranslation": false
   },
   "interface": {
     "displayName": "Role Registry",
     "shortDescription": "A per-repo repository of evolving roles (",
-    "longDescription": "A per-repo repository of evolving roles (.claude/roles/) usable four ways: solo via /roles:as or per-persona skills, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles. Ships seed personas, a reactive init + graduation-audit SessionStart hook, the shared-core convention, and the `/roles:evolve` sub-skill that audits role files on demand (consolidation, staleness, body-drift, solo→core graduation candidates) so role personas keep improving after the first graduation. All proposals user-gated. Ships Claude Code hooks, which have no Codex equivalent. The skill and its scripts work, but the rules it enforces automatically on Claude Code are advisory here.",
+    "longDescription": "A per-repo repository of evolving roles (.claude/roles/) usable four ways: solo via /roles:as or per-persona skills, as dev-crew roles, as brainstorm-panel seats, and as research-sweep coverage roles. Ships seed personas, a reactive init + graduation-audit SessionStart hook, the shared-core convention, and the `/roles:evolve` sub-skill that audits role files on demand (consolidation, staleness, body-drift, solo→core graduation candidates) so role personas keep improving after the first graduation. All proposals user-gated. Includes Codex lifecycle hooks. Review and trust them with /hooks before they run.",
     "developerName": "Alex Mondshain",
     "category": "Developer Tools",
     "capabilities": [

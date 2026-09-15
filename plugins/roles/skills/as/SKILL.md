@@ -5,6 +5,9 @@ argument-hint: "[role] [target]"
 disable-model-invocation: true
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Run a role solo
 
 Input: $ARGUMENTS — the **first word** is the role name; the rest is the target.

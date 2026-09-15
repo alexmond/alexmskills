@@ -10,14 +10,8 @@ since-version) so new options are picked up automatically when they're added.
 
 ## What to do
 
-1. Locate the config script. It's shipped in the plugin cache:
-
-   ```bash
-   ls ~/.claude/plugins/cache/alexmskills/prompt-coach/*/scripts/config.py 2>/dev/null | tail -1
-   ```
-
-   If not present, fall back to the source path if the user is in a dev checkout:
-   `~/IdeaProjects/alexmskills/plugins/prompt-coach/scripts/config.py`.
+1. Resolve `scripts/config.py` from this plugin's root (the parent of this
+   `commands/` directory). This works in either client's cache or a dev checkout.
 
 2. Parse the user's input after `/prompt-coach:config`:
 

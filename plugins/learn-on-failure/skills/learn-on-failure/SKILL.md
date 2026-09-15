@@ -1,14 +1,14 @@
 ---
 name: learn-on-failure
 description: >
-  Save a learning to project memory. Invoke automatically (without the user asking) whenever
-  a task required more than one fix cycle to resolve — e.g. a test failed and needed a
-  second attempt, a compile error required a correction, an API behaved unexpectedly, or
-  an assumption proved wrong mid-task. Also invoke when the user explicitly asks to
-  remember something — "remember this", "save this learning", "don't make that mistake
-  again". Do NOT invoke for routine single-pass work.
+  Save project learning after a task needs multiple fix cycles, an unexpected API
+  behavior, or a wrong assumption. Also use for "remember this" or "save this
+  learning". Skip routine single-pass work.
 argument-hint: "[topic] [what you learned]"
 ---
+
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
 
 ## Save a learning to project memory
 

@@ -1,6 +1,6 @@
 ---
 name: prompt-coach
-description: A hook-driven coach that reads every prompt sent to Claude Code and rewrites it toward proven prompting habits — definition-of-done, scoped references, guardrails, verification. Rules graduate as they are demonstrated, so the coaching fades as the user improves. The hook runs on its own, but load this skill when the user says "coach pause 10", "coach off <rule-id>", "coach on <rule-id>", "coach reactivate no-definition-of-done here", "disable praise", "coach ack every 10", "coach that was wrong", "coach false positive", "coach missed this", "bad nudge", or "analyze my last 20 prompts" — and whenever they ask why a nudge fired, what a rule means, how mastery is earned, or how to configure, pause, silence, or tune the coach.
+description: A hook-driven coach that reads prompts sent to Claude Code or Codex and rewrites it toward proven prompting habits — definition-of-done, scoped references, guardrails, verification. Rules graduate as they are demonstrated, so the coaching fades as the user improves. The hook runs on its own, but load this skill when the user says "coach pause 10", "coach off rule-id", "coach on rule-id", "coach reactivate no-definition-of-done here", "disable praise", "coach ack every 10", "coach that was wrong", "coach false positive", "coach missed this", "bad nudge", or "analyze my last 20 prompts" — and whenever they ask why a nudge fired, what a rule means, how mastery is earned, or how to configure, pause, silence, or tune the coach.
 ---
 
 # prompt-coach
@@ -8,6 +8,9 @@ description: A hook-driven coach that reads every prompt sent to Claude Code and
 ## Quick start
 
 ### 60-second setup
+
+For Codex, use [client compatibility](references/clients.md); the commands
+below are for Claude Code.
 
 ```
 /plugin marketplace add alexmond/alexmskills
@@ -44,6 +47,10 @@ Proceeding with this rewrite now — reply "no" to redo from your original, or "
 On a **clean** prompt you instead get a one-line `✓` heartbeat (v0.35). The coach is a suggestion, not a block — Claude answers your prompt normally. By default (v0.43) it **proceeds honestly**: the block says it's proceeding (not "reply yes to proceed") and Claude opens with a **`▸ Working from the rewrite / your original`** line so you always see which prompt drove the answer; silence = accept, and a `no`/`edit` next turn corrects. Prefer a real pause? Set `collaborator_gate: true` and Claude stops after the block and waits for your yes/no/edit (one extra round-trip per fired prompt). Rules graduate to "mastered" once you've **demonstrated** the good technique `min_demonstrations` times (default 3, v0.40 earned-mastery model), then the next dormant rule activates.
 
 ### The slash commands
+
+These slash commands are Claude Code entrypoints. On Codex, handle the same
+requests in natural language using the matching `commands/<verb>.md` file in
+the plugin root (two levels above this skill directory).
 
 | Command | When to use |
 |---|---|
@@ -343,7 +350,7 @@ Three additions on top of v0.18's `:config`:
   example + description. Answers *"what modes exist?"* without needing to already know.
 - `+/prompt-coach:config quick+` — interactive multi-choice picker for the
   ~4 high-value settings (`ack_clean`, `show_source_urls`, `praise_ratio`, `tips_enabled`).
-  Claude walks you through with AskUserQuestion; each answer routes to `:config set`.
+  Use the available question tool (or plain text); each answer routes to `:config set`.
 - `+/prompt-coach:config full+` — same pattern for every schema key. Enum
   keys → picker; numeric/bool → "keep current / type new value / reset to
   default". Longer flow; you can skip categories.
@@ -524,6 +531,10 @@ Full prompts stay in `log.md` locally. You see the exact payload before it's pos
 
 ## State layout
 
+Claude Code and Codex share the paths below, preserving mastery and config.
+For Codex setup and transcript handling, read [client compatibility](references/clients.md).
+Use the current client's question tool when available, otherwise plain text.
+
 ```
 ~/.claude/prompt-coach/
 ├── config.json        # global config (enabled, thresholds, disabled_rules)
@@ -538,12 +549,13 @@ Full prompts stay in `log.md` locally. You see the exact payload before it's pos
 ## Verify it's on
 
 - A rule-firing prompt should produce the inline `💬 prompt-coach` block at the start of
-  Claude's response; a clean prompt produces the one-line `✓` heartbeat. Either way
+  the assistant's response; a clean prompt produces the one-line `✓` heartbeat. Either way
   `.claude/prompt-coach/log.md` keeps growing.
 - Global counter: `jq '.prompt_count' ~/.claude/prompt-coach/state.json` should increment per
   prompt.
 - If neither happens, the hook may not be registered — check `enabledPlugins` in
-  `.claude/settings.json` for `prompt-coach@alexmskills`.
+  `.claude/settings.json` for Claude Code, or review and trust the plugin hook
+  through `/hooks` in Codex.
 
 ## Future — Java MCP server
 

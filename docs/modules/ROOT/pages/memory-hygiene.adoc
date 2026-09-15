@@ -54,3 +54,9 @@ Writes outside a memory directory are never touched.
 == Shared core
 
 Both this plugin and `evolving-claude-md` vendor the same `freshness.py` — stdlib-only, pure functions over `(text, repo_root)` — so "is this fact still true on disk?" has exactly one implementation. The marketplace harness pins the two copies byte-identical.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

@@ -34,7 +34,7 @@ TOPIC_RE = re.compile(r"^\*\*([a-z][a-z0-9-]*)\*\* — (.+)$")
 
 def is_claude_md(path: str) -> bool:
     base = os.path.basename(path)
-    return base == "CLAUDE.md"
+    return base == "CLAUDE.md" or (os.environ.get("SKILL_CLIENT") == "codex" and base in {"AGENTS.md", "AGENTS.override.md"})
 
 
 def extract_added_lines(payload: dict) -> list[str]:

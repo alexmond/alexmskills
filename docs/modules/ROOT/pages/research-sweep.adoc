@@ -89,3 +89,9 @@ What worked is written back to `research.md` as per-repo learning, so reruns in 
 
 * Key anti-patterns: re-outputting the whole catalog via `Write`, reading agent JSONL directly, reusing agent IDs across reruns, skipping the volume target, and skipping the verification half.
 * Agents without web access fabricate plausible-looking URLs and facts — verification is mandatory, not optional.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

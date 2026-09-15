@@ -6,6 +6,9 @@ disable-model-invocation: true
 allowed-tools: Bash(gh *), Bash(git *)
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 ## Implement GitHub issue #$ARGUMENTS
 
 > **Try it:** `/implement-issue:implement-issue 42` — invoke explicitly with the issue number (model auto-invocation is disabled).

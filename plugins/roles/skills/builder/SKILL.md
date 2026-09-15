@@ -5,6 +5,9 @@ argument-hint: "[what to build]"
 disable-model-invocation: true
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Build a complete application from scratch
 
 Target: $ARGUMENTS

@@ -5,6 +5,9 @@ argument-hint: "[module / path to restructure]"
 disable-model-invocation: true
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Clean architecture rebuild
 
 Target: $ARGUMENTS

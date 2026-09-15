@@ -1,6 +1,6 @@
 {
   "name": "research-sweep",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "A self-evolving 'discover' crew: it composes a task-fit team of coverage roles for an information space, fans them out in parallel, dedups, and adversarially verifies their findings into one trustworthy, cited result. The discover counterpart to dev-crew (deliver) and brainstorm-panel (decide).",
   "author": {
     "name": "Alex Mondshain",
@@ -26,7 +26,7 @@
   "interface": {
     "displayName": "Research Sweep",
     "shortDescription": "A self-evolving 'discover' crew: it composes a task-fit team of coverage roles for an information space, fans them out i",
-    "longDescription": "A self-evolving 'discover' crew: it composes a task-fit team of coverage roles for an information space, fans them out in parallel, dedups, and adversarially verifies their findings into one trustworthy, cited result. The discover counterpart to dev-crew (deliver) and brainstorm-panel (decide). Spawns parallel subagents. On Codex this needs `multi_agent = true` in `~/.codex/config.toml`; the skill's references/codex-tools.md maps the tool names.",
+    "longDescription": "A self-evolving 'discover' crew: it composes a task-fit team of coverage roles for an information space, fans them out in parallel, dedups, and adversarially verifies their findings into one trustworthy, cited result. The discover counterpart to dev-crew (deliver) and brainstorm-panel (decide). Uses client-specific agent or CLI tools. Follow the skill's references/codex-tools.md and the live tool schema; enable multi-agent only for workflows that actually dispatch subagents.",
     "developerName": "Alex Mondshain",
     "category": "Productivity",
     "capabilities": [

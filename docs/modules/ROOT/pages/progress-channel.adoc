@@ -169,3 +169,9 @@ Duration history is keyed by job *shape* — name + kind + order-of-magnitude of
 == Verify
 
 `python3 <plugin>/scripts/test-harness.py` — 123 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers, the shell start/step/finish trio, notify hook, trend detection, MCP handshake, advisory hook, status-line rendering, `eta~` stem matching, retention, the upgrade handshake, the tap's passthrough and Maven/git parsing, `statusline_seen` discovery, the whats-new notice, the wrap script). Runs in CI.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

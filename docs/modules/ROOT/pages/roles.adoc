@@ -76,3 +76,9 @@ Charter and Body edits are *never* made during a run — identity changes are de
 * This plugin absorbs the former `senior-prompts` beta plugin and reframes its personas as evolving roles in the shared registry. The persona set was inspired by a public prompt thread from https://x.com/nahidulislam404[@nahidulislam404^] on X — generalized and rewritten here.
 * Learnings are plain *markdown* in the role files (`## Learnings (core)` / `## Learnings (solo)`), not a database — readable, diffable, and committed with the repo.
 * The registry is fully self-sufficient without the consumers: `crew.md` and `panel.md` are optional layers that link to the same cores by name.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

@@ -187,3 +187,9 @@ A *gotchas* check was built and then removed: on the same sample it fired on 17 
 * Manual (non-plugin) install requires copying the three scripts into `.claude/skills/evolving-claude-md/` and adding the hooks to `.claude/settings.json`, then one session restart.
 * The quarterly archive is the one operational step nothing automates — set a calendar reminder.
 * Disable a hook by removing its entry; disable all via `disableAllHooks: true`.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

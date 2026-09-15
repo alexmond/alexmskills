@@ -21,10 +21,8 @@ that gains hooks tomorrow is re-tiered by the next run:
   1 portable   prose skills — behave the same on any harness
   2 subagents  spawns agents; needs the tool-name translation in
                skills/*/references/codex-tools.md (Agent -> spawn_agent etc.)
-  3 enforced   ships Claude Code hooks. Codex has no equivalent hook surface,
-               so the SKILL still loads and its rules become advice rather than
-               a gate. Said plainly in the manifest instead of quietly shipping
-               a weaker product: an unenforced rule is a suggestion.
+  3 hooks      ships lifecycle hooks. A reviewed hooks/codex.json opts into
+               Codex execution; other plugins remain advisory until adapted.
 """
 from __future__ import annotations
 
@@ -47,12 +45,12 @@ CATEGORY = {
 }
 
 TIER_NOTE = {
-    2: ("Spawns parallel subagents. On Codex this needs `multi_agent = true` in "
-        "`~/.codex/config.toml`; the skill's references/codex-tools.md maps the "
-        "tool names."),
-    3: ("Ships Claude Code hooks, which have no Codex equivalent. The skill and "
-        "its scripts work, but the rules it enforces automatically on Claude "
-        "Code are advisory here."),
+    2: ("Uses client-specific agent or CLI tools. Follow the skill's "
+        "references/codex-tools.md and the live tool schema; enable multi-agent "
+        "only for workflows that actually dispatch subagents."),
+    3: ("Ships Claude Code hooks that this plugin has not yet adapted for "
+        "Codex. Automatic hook behavior is disabled here; skill instructions "
+        "remain advisory."),
 }
 
 
@@ -75,7 +73,7 @@ def signals(plugin_dir: Path) -> dict:
     — and the smell only WARNS about a plugin that looks like it should have
     one. Structure is unambiguous; prose is not.
     """
-    hooks = (plugin_dir / "hooks" / "hooks.json").exists()
+    hooks = any((plugin_dir / "hooks" / f).exists() for f in ("hooks.json", "codex.json"))
     agents = (plugin_dir / "agents").is_dir()
     xlat = any(plugin_dir.glob("skills/*/references/codex-tools.md"))
     smell = False
@@ -83,7 +81,8 @@ def signals(plugin_dir: Path) -> dict:
         if SPAWN_SMELL.search(f.read_text(encoding="utf-8", errors="replace")):
             smell = True
             break
-    return {"hooks": hooks, "agents": agents, "xlat": xlat, "smell": smell,
+    return {"hooks": hooks, "codex_hooks": (plugin_dir / "hooks" / "codex.json").is_file(),
+            "agents": agents, "xlat": xlat, "smell": smell,
             "tier": 3 if hooks else 2 if (agents or xlat) else 1}
 
 
@@ -104,6 +103,10 @@ def build(plugin: dict) -> tuple[Path, dict]:
     desc = manifest.get("description", plugin.get("description", ""))
     notes = [TIER_NOTE[n] for n in (3, 2)
              if (n == 3 and sig["hooks"]) or (n == 2 and (sig["agents"] or sig["xlat"]))]
+    if sig["codex_hooks"]:
+        notes = [note for note in notes if note != TIER_NOTE[3]]
+        notes.append("Includes Codex lifecycle hooks. Review and trust them "
+                     "with /hooks before they run.")
     long_desc = " ".join([desc] + notes)
     out = {
         "name": name,
@@ -115,13 +118,12 @@ def build(plugin: dict) -> tuple[Path, dict]:
         "license": manifest.get("license", "MIT"),
         "keywords": manifest.get("keywords", []),
         "skills": "./skills/",
-        # Deliberately empty: Claude Code hook events (SessionStart, PreToolUse,
-        # UserPromptSubmit, Stop, PostCompact) have no Codex counterpart, so no
-        # hook is offered rather than one that silently never fires.
-        "hooks": {},
+        # Opt in per plugin after adapting and testing its runtime behavior.
+        "hooks": "./hooks/codex.json" if sig["codex_hooks"] else {},
         "compatibility": {
             "tier": t,
-            "enforcement": "claude-code" if sig["hooks"] else "portable",
+            "enforcement": "claude-code-and-codex" if sig["codex_hooks"] else
+                           "claude-code" if sig["hooks"] else "portable",
             "needsToolTranslation": bool(sig["agents"] or sig["xlat"]),
         },
         "interface": {
@@ -152,6 +154,15 @@ def main(argv: list[str]) -> int:
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
+        hook_config = ROOT / "plugins" / plugin["name"] / "hooks" / "codex.json"
+        if hook_config.exists() and "codex-bridge.py" in hook_config.read_text():
+            bridge = hook_config.with_name("codex-bridge.py")
+            source = (ROOT / "scripts" / "codex-hook-bridge.py").read_text()
+            if check:
+                if not bridge.exists() or bridge.read_text() != source:
+                    stale.append(str(bridge.relative_to(ROOT)))
+            else:
+                bridge.write_text(source)
         entries.append({
             "name": plugin["name"],
             "source": {"source": "url", "url": f"./plugins/{plugin['name']}"},

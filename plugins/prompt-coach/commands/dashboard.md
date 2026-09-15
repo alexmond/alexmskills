@@ -11,9 +11,8 @@ the same schema validation the CLI uses).
 
 ## What to do
 
-1. Locate the plugin's `scripts/serve.py` (installed cache path
-   `~/.claude/plugins/cache/alexmskills/prompt-coach/*/scripts/serve.py`,
-   else the dev checkout).
+1. Resolve `scripts/serve.py` from this plugin's root (the parent of this
+   `commands/` directory), in either client's cache or a dev checkout.
 2. Launch it **in the background** so this session stays interactive, pointed at
    the current repo (for repo-scoped config):
 

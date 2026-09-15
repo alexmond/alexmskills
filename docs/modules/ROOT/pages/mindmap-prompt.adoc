@@ -137,3 +137,9 @@ python3 <plugin>/scripts/mindmap.py compile  .claude/mindmap/feature.canvas -o p
 == Deliberately not
 
 A chain builder or an agent canvas. Tools like Langflow, Rivet and ChainForge wire up runtime pipelines; this compiles *one prompt* and gets out of the way.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

@@ -10,6 +10,9 @@ description: >-
 
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # systemic-fix
 
 When a bug is found, the default behaviour is to patch the line and stop. That misses two

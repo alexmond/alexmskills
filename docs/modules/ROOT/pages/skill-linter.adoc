@@ -124,3 +124,9 @@ A learned rule is data the checker executes — `scope`, `pattern`, `severity`, 
 It does not tell you whether a skill *works*. A clean lint means nothing mechanical is wrong — not that the skill fires, and not that it is any good.
 
 Trigger accuracy is the thing that actually matters, and only `skill-creator`'s optimiser measures it, by running queries against the real model. No static check substitutes for that. This tool verifies a description *has* triggers; it can never verify they *work*.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

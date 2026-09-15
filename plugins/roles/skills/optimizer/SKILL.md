@@ -5,6 +5,9 @@ argument-hint: "[code / path / hot path]"
 disable-model-invocation: true
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Performance optimization
 
 Target: $ARGUMENTS

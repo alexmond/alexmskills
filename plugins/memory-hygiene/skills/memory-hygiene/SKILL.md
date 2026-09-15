@@ -3,6 +3,9 @@ name: memory-hygiene
 description: Keep agent-written memory files from rotting. Audits ~/.claude/projects/<slug>/memory/ for facts the tree now contradicts — stale version pins, passed sequence facts, vanished paths — plus MEMORY.md index drift, and enforces the memory format contract at write time. Use when the user says "audit my memory", "memory is stale", "clean up agent memory", when a session recalls something that turns out false, or proactively when the SessionStart banner reports rot candidates.
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # memory-hygiene
 
 `CLAUDE.md` has `evolving-claude-md`; this governs the *other* half of the

@@ -3,6 +3,9 @@ name: evolving-claude-md
 description: Set up CLAUDE.md to maintain a living Decisions & Learnings log that stays bounded as the project evolves — a format contract enforced at write time, four pruning pressures, and a coverage check for the essentials. Use when the user says "make CLAUDE.md evolve", "self-updating CLAUDE.md", "add a learning mechanism to CLAUDE.md", "decisions log", "ADR-style notes", "how do we keep CLAUDE.md current", "compact CLAUDE.md", "CLAUDE.md is getting too big" — or when a CLAUDE.md exists with no mechanism for keeping itself current. Complements (does not replace) the built-in `init` skill: `init` bootstraps the description of the codebase, this adds the mechanism that keeps it from bloating.
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Evolving CLAUDE.md
 
 > **Try it:** `/evolving-claude-md:evolving-claude-md` — or say "make CLAUDE.md evolve".

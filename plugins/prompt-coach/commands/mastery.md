@@ -8,14 +8,8 @@ Direct top-level access to the mastery view. Same output as `/prompt-coach:confi
 
 ## What to do
 
-1. Locate the config script (same helper the other commands use):
-
-   ```bash
-   ls ~/.claude/plugins/cache/alexmskills/prompt-coach/*/scripts/config.py 2>/dev/null | tail -1
-   ```
-
-   Fallback for dev checkout:
-   `~/IdeaProjects/alexmskills/plugins/prompt-coach/scripts/config.py`
+1. Resolve `scripts/config.py` from this plugin's root (the parent of this
+   `commands/` directory). This works in either client's cache or a dev checkout.
 
 2. Parse the user's input:
 

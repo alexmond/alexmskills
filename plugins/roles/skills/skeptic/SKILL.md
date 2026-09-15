@@ -5,6 +5,9 @@ argument-hint: "[plan / finding / design to pressure-test]"
 disable-model-invocation: true
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # Skeptic pressure-test
 
 Target: $ARGUMENTS

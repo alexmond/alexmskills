@@ -5,6 +5,9 @@ argument-hint: "[system / feature to design]"
 disable-model-invocation: true
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # System design + implementation
 
 Target: $ARGUMENTS

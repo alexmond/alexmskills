@@ -1,6 +1,6 @@
 {
   "name": "implement-issue",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Drive a GitHub issue from branch to pull request with a language and build-tool agnostic workflow.",
   "author": {
     "name": "Alex Mondshain",

@@ -1,7 +1,7 @@
 = Prompt Coach
 :navtitle: prompt-coach
 
-A `UserPromptSubmit` hook that watches every prompt you send Claude Code and coaches you toward better prompting habits — definition-of-done, scoped references, guardrails, verification, and more. As of v0.34 the coach is a *collaborator*: when a rule fires, Claude reads your prompt in context and rewrites it with the fix baked in, at the top of its response. Rules quietly graduate once you consistently apply them, so the coach fades as your prompts improve.
+A `UserPromptSubmit` hook that watches every prompt you send Claude Code or Codex and coaches you toward better prompting habits — definition-of-done, scoped references, guardrails, verification, and more. As of v0.34 the coach is a *collaborator*: when a rule fires, Claude reads your prompt in context and rewrites it with the fix baked in, at the top of its response. Rules quietly graduate once you consistently apply them, so the coach fades as your prompts improve.
 
 Graduated to a stable `1.0.0` release on 2026-07-28 after clearing its own bar — nightly use across dozens of repos with rules mastered per repo. Development continues on the stable line (next: an eval harness for measured per-rule precision, and a Java MCP server).
 
@@ -15,6 +15,31 @@ Graduated to a stable `1.0.0` release on 2026-07-28 after clearing its own bar �
 ----
 
 That's it. No separate channel, no extra configuration. Restart the session so the `UserPromptSubmit` hook registers. Then just prompt Claude normally — the coach analyzes every prompt in the background and steps in when a rule matches.
+
+=== Codex
+
+Version 1.3.0 adds native Codex `UserPromptSubmit` hooks (baseline CLI 0.154.0).
+Install the plugin through the xref:codex.adoc[Codex marketplace], start a new
+session, then use `/hooks` to review and trust its hook definition. Changed
+hook definitions require another trust review. Do not also register the same
+analyzer as a user hook: both registrations would count each prompt.
+
+The assistant renders coaching from injected context; no custom status bar is
+needed. Both clients intentionally share the existing `~/.claude/prompt-coach`
+and repo `.claude/prompt-coach` state. Claude Code need not be installed.
+Concurrent sessions still share the per-repo acceptance window; use separate
+worktrees for separate local state.
+
+The supplied transcript path takes precedence over legacy Claude discovery.
+Codex assistant messages and question-tool calls are normalized; missing or
+unknown transcript formats fall back to prompt-only analysis, never to another
+client's transcript. Codex transcript formats are not a stable API.
+
+`make test-coach` runs the shared regression suite and client contract tests.
+`make test-coach-codex` additionally runs the installed Codex CLI against a
+local mock model server, verifying that the hook executes and its coaching
+reaches the model request. It uses temporary config/state and no model tokens;
+the test's hook-trust bypass applies only to its isolated, reviewed test hook.
 
 == Quick start
 

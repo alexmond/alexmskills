@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -36,7 +37,8 @@ def main() -> int:
     try:
         p = _progress()
         version = p.plugin_version()
-        marker = p.home() / "last-version"
+        codex = os.environ.get("SKILL_CLIENT") == "codex"
+        marker = p.home() / ("last-version-codex" if codex else "last-version")
         seen = marker.read_text().strip() if marker.exists() else None
         if seen == version:
             return 0
@@ -59,7 +61,9 @@ def main() -> int:
                     "At a natural moment, mention it in one line; changes: "
                     "https://github.com/alexmond/alexmskills/blob/main/"
                     "CHANGELOG.md")
-        if not wired:
+        if codex:
+            lead += " On Codex, use the browser page or progress.py watch in a companion terminal for live bars."
+        elif not wired:
             lead += (" Also: the status-line integration is NOT set up — the "
                      "session's live bars are not visible in the prompt. "
                      "Offer once to wire it (the SKILL.md 'Status line' "

@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/analyze-prompt.py\"",
+            "timeout": 10,
+            "additionalContextLimit": 12000,
+            "statusMessage": "Checking prompt clarity"
+          }
+        ]
+      }
+    ]
+  }
+}

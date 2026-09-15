@@ -3,6 +3,9 @@ name: progress-channel
 description: One visible channel for every long-running process — local sweeps, backgrounded commands, and work handed to external systems (a CI run, a media-server queue, a long download). The server that serves the live progress page IS the tracker — a stdlib Python daemon holding live jobs in memory, auto-spawned by the first producer — with learned ETAs, pre-start duration forecasts, and stall/orphan detection from each job's own history. Use when starting any operation expected to exceed ~10 seconds, when backgrounding a command, when triggering work in another system, or when the user asks "are we there yet", "how long will this take", "what's still running", or "track this progress".
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # progress-channel
 
 Work that takes minutes is usually reported by whatever the agent happens to

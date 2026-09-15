@@ -13,9 +13,8 @@ time.
 
 ## What to do
 
-1. Locate the plugin's `scripts/config.py` (installed cache path
-   `~/.claude/plugins/cache/alexmskills/prompt-coach/*/scripts/config.py`,
-   else the dev checkout).
+1. Resolve `scripts/config.py` from this plugin's root (the parent of this
+   `commands/` directory), in either client's cache or a dev checkout.
 2. Route on the argument:
 
    | User intent | Run |

@@ -9,6 +9,9 @@ description: >-
   pass "audit" to report without changing anything.
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # tune-repo
 
 Make a repository a place where Claude Code performs at its best: an accurate CLAUDE.md, a

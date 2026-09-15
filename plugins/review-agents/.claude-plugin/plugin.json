@@ -1,7 +1,7 @@
 {
   "name": "review-agents",
   "description": "Specialist review subagents for Java/Maven projects — code review, test running, and dependency/CVE auditing on lighter model tiers. No-write by construction: Write and Edit are withheld, so they read, build, and report without touching the working tree.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"

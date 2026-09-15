@@ -17,6 +17,8 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
+import tempfile
 import re
 import shutil
 import subprocess
@@ -185,10 +187,90 @@ def run_claude(prompt: str, root: Path, model: str | None,
     return parsed, ""
 
 
+def ai_client(client: str = "auto") -> str:
+    if client != "auto":
+        return client
+    if os.environ.get("CODEX_THREAD_ID") or os.environ.get("CODEX_SESSION_ID"):
+        return "codex"
+    return "claude" if shutil.which("claude") else "codex"
+
+
+def codex_tool_config(exe: str, root: Path) -> list[str]:
+    """Disable external tools without discarding the user's auth/model provider.
+
+    Query effective config in the same project, not just ~/.codex/config.toml:
+    project and managed layers may add servers. Never log server config/secrets.
+    A failed query stops expansion rather than running with unknown capabilities.
+    """
+    flags = ["--disable", "plugins", "--disable", "apps"]
+    proc = subprocess.run([exe, *flags, "mcp", "list", "--json"], cwd=str(root),
+                          capture_output=True, text=True, stdin=subprocess.DEVNULL,
+                          timeout=15)
+    if proc.returncode:
+        raise ValueError("could not inspect Codex MCP configuration; expansion was not started")
+    try:
+        servers = json.loads(proc.stdout)
+        if not isinstance(servers, list):
+            raise ValueError()
+        disabled = []
+        for server in servers:
+            if not isinstance(server, dict) or not isinstance(server.get("name"), str) or not server["name"]:
+                raise ValueError()
+            # Quote inside the TOML VALUE, not the CLI's dotted key parser.
+            disabled.append(json.dumps(server['name'], ensure_ascii=False) + "={enabled=false}")
+        if disabled:
+            flags += ["-c", "mcp_servers={" + ",".join(disabled) + "}"]
+    except (ValueError, TypeError):
+        raise ValueError("unrecognized Codex MCP configuration; expansion was not started") from None
+    return flags
+
+
+def run_codex(prompt: str, root: Path, model: str | None,
+              read: bool = False) -> tuple[dict | None, str]:
+    """Use Codex's own noninteractive flags, with local writes sandboxed out."""
+    exe = shutil.which("codex")
+    if not exe:
+        return None, "the `codex` CLI is not on PATH"
+    try:
+        tool_config = codex_tool_config(exe, root)
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        return None, str(exc)
+    with tempfile.TemporaryDirectory(prefix="mindmap-ai-") as temp:
+        answer = Path(temp) / "answer.txt"
+        cmd = [exe, "exec", *tool_config, "--sandbox", "read-only", "--ephemeral",
+               "--skip-git-repo-check",
+               "--disable", "hooks", "--disable", "skill_mcp_dependency_install",
+               "-c", 'web_search="disabled"',
+               "--disable", "multi_agent", "--output-last-message", str(answer)]
+        if not read:
+            cmd += ["--disable", "shell_tool"]
+        if model:
+            cmd += ["--model", model]
+        cmd += ["Expand ideas only. Do not modify files or use external service tools.\n" + prompt]
+        try:
+            proc = subprocess.run(cmd, cwd=str(root), capture_output=True,
+                                  stdin=subprocess.DEVNULL, text=True, timeout=AI_TIMEOUT)
+            if proc.returncode:
+                detail = (proc.stderr or proc.stdout or "").strip().splitlines() or ["no output"]
+                return None, f"codex exited {proc.returncode}: {detail[-1]}"
+            parsed = _extract_json(answer.read_text())
+        except subprocess.TimeoutExpired:
+            return None, f"codex took longer than {AI_TIMEOUT}s"
+        except OSError as exc:
+            return None, f"could not run codex: {exc}"
+    return (parsed, "") if parsed is not None else (None, "could not read JSON out of the model's reply")
+
+
+def run_ai(prompt: str, root: Path, model: str | None, read: bool = False,
+           client: str = "auto") -> tuple[dict | None, str]:
+    return (run_codex if ai_client(client) == "codex" else run_claude)(prompt, root, model, read)
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     root: Path = Path.cwd()
     ai_model: str | None = None
+    ai_backend: str = "auto"
     ai_disabled: bool = False
     ai_read: bool = False
 
@@ -228,12 +310,12 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/caps":
             # The page hides the ✦ control when this says no, rather than
             # offering a button that can only ever fail.
-            ok = not self.ai_disabled and shutil.which("claude") is not None
+            ok = not self.ai_disabled and shutil.which(ai_client(self.ai_backend)) is not None
             return self._json({
                 "ai": ok,
                 "reason": "" if ok else
                           "disabled with --no-ai" if self.ai_disabled else
-                          "the `claude` CLI is not on PATH",
+                          f"the `{ai_client(self.ai_backend)}` CLI is not on PATH",
             })
 
         if u.path == "/api/maps":
@@ -302,8 +384,8 @@ class Handler(BaseHTTPRequestHandler):
 
             # An expand on a blank node is legitimate: the repo is still a
             # signal even when the canvas is empty.
-            parsed, err = run_claude(_ai_prompt(mode, text, instruction, ctx, n),
-                                     self.root, self.ai_model, self.ai_read)
+            parsed, err = run_ai(_ai_prompt(mode, text, instruction, ctx, n),
+                                     self.root, self.ai_model, self.ai_read, self.ai_backend)
             if err:
                 return self._err(502, err)
 
@@ -332,7 +414,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cwd", default=".", help="repo whose .claude/mindmap/ holds the maps")
     ap.add_argument("--map", help="open this map on start")
     ap.add_argument("--no-open", action="store_true", help="don't launch a browser")
-    ap.add_argument("--ai-model", help="model for the ✦ expander (default: your claude default)")
+    ap.add_argument("--ai-client", choices=("auto", "claude", "codex"), default="auto",
+                    help="AI backend; auto detects Codex sessions, otherwise prefers Claude")
+    ap.add_argument("--ai-model", help="model for the ✦ expander (default: the selected client default)")
     ap.add_argument("--no-ai", action="store_true", help="disable the ✦ expander")
     ap.add_argument("--ai-read", action="store_true",
                     help="let ✦ read the repo (Read/Glob/Grep) — slower, better grounded "
@@ -341,6 +425,7 @@ def main(argv: list[str] | None = None) -> int:
 
     Handler.root = Path(args.cwd).resolve()
     Handler.ai_model = args.ai_model
+    Handler.ai_backend = args.ai_client
     Handler.ai_read = args.ai_read
     if args.no_ai:
         Handler.ai_disabled = True

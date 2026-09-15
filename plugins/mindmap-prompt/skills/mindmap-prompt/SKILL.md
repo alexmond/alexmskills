@@ -3,6 +3,9 @@ name: mindmap-prompt
 description: Think on a canvas, then compile the map into an organized prompt. Idea nodes connect freely and a deterministic compiler turns the whole map into structured Markdown; ✦ expands any node with `claude -p` running in the repo, so ideas stay grounded in the project. Maps save as JSON Canvas, so they are git-diffable and reworkable later. Use when the user says "mind map", "map this out", "brain dump", "let me sketch this first", "turn my notes into a prompt", "expand this idea", "flesh this out", or when a request is big and tangled enough that thinking visually beats writing one long paragraph.
 ---
 
+**Codex:** Read [the client path](references/clients.md) before applying this workflow.
+
+
 # mindmap-prompt
 
 Some ideas don't arrive in order. You drop them, connect them, and *then* the
@@ -145,4 +148,4 @@ because that's content the user wrote that won't reach the prompt.
 
 ## Platform adaptation
 
-Not on Claude Code? [references/codex-tools.md](references/codex-tools.md) maps the agent tools and the one config switch Codex needs; the method is unchanged.
+On Codex, [references/clients.md](references/clients.md) describes the implemented CLI expansion runner. Mindmap expansion does not require subagent tools.

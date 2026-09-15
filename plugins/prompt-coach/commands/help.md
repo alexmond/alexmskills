@@ -9,8 +9,7 @@ config to fill in the live values.
 
 ## What to do
 
-1. Read `~/.claude/plugins/cache/alexmskills/prompt-coach/*/.claude-plugin/plugin.json`
-   (whichever version exists) for `.version` and `.description`.
+1. Read `../.claude-plugin/plugin.json` relative to this command file for `.version` and `.description`.
 2. Resolve current effective config by merging (in order): built-in defaults →
    `~/.claude/prompt-coach/config.json` → current repo's `.claude/prompt-coach/config.json`
    (if any).
@@ -23,7 +22,7 @@ Render as a fenced block so it presents like a dashboard, under 60 lines.
 ```
 prompt-coach v<VERSION>
 
-A UserPromptSubmit hook that watches every prompt you send Claude Code and nudges
+A UserPromptSubmit hook that watches every prompt you send Claude Code or Codex and nudges
 you toward better prompting habits. 42 rules across 6 tiers, 42 positive detectors,
 typo tolerance, conversational + picker-answer short-circuit. Rules quietly
 graduate as you master them and fade to occasional refreshers.
@@ -31,7 +30,7 @@ graduate as you master them and fade to occasional refreshers.
 New to the coach? See SKILL.md's "Quick start" section — a 60-second setup,
 what a nudge looks like, the slash commands, and the most-used say-it
 phrases. Path:
-  ~/.claude/plugins/cache/alexmskills/prompt-coach/*/skills/prompt-coach/SKILL.md
+  <plugin>/skills/prompt-coach/SKILL.md
 
 ────────────────────────────────────────────────────────────────────
 COMMANDS

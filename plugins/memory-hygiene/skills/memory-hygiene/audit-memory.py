@@ -76,6 +76,8 @@ def project_slug(root: str) -> str:
 
 
 def memory_dir(root: str, home: str | None = None) -> str:
+    if os.environ.get("SKILL_CLIENT") == "codex":
+        return os.path.join(os.path.abspath(root), ".codex", "memory")
     home = home or os.path.expanduser("~")
     return os.path.join(home, ".claude", "projects", project_slug(root), "memory")
 

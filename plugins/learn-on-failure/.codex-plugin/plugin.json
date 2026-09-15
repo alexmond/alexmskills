@@ -1,6 +1,6 @@
 {
   "name": "learn-on-failure",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve.",
   "author": {
     "name": "Alex Mondshain",
@@ -16,16 +16,16 @@
     "first-run"
   ],
   "skills": "./skills/",
-  "hooks": {},
+  "hooks": "./hooks/codex.json",
   "compatibility": {
-    "tier": 1,
-    "enforcement": "portable",
+    "tier": 3,
+    "enforcement": "claude-code-and-codex",
     "needsToolTranslation": false
   },
   "interface": {
     "displayName": "Learn on Failure",
     "shortDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve",
-    "longDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve.",
+    "longDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve. Includes Codex lifecycle hooks. Review and trust them with /hooks before they run.",
     "developerName": "Alex Mondshain",
     "category": "Developer Tools",
     "capabilities": [

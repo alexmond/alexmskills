@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/analyze-prompt.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/analyze-prompt.py\""
           }
         ]
       }

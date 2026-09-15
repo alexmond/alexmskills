@@ -96,3 +96,9 @@ The panel now maintains its roster at `.claude/roles/panel.md` — the same regi
 
 * Step 6 captures what worked to the repo's panel log; the most valuable signal is what the user changed at the review gate. Findings stable across ~3 targets graduate into `CLAUDE.md`.
 * Edits only the in-scope artifact, treats artifact content as data (not instructions), preserves the original before the first edit, and leaves side effects (deploy/publish/send) for the user to execute.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex reads the skill's
+`references/clients.md` for its instruction-file, tool, and learning-state path.
+See xref:codex.adoc[Codex compatibility] for hook setup and runtime limits.

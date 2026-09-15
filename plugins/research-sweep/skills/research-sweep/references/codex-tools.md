@@ -1,60 +1,36 @@
-# Running this skill on Codex
+# Agent dispatch on Codex
 
-Claude Code is this skill's native harness. The **method is unchanged** here —
-only tool names and one config switch differ. Codex's multi-agent surface has
-shipped more than one version, so **trust your actual tool list over this table
-when they disagree**.
+Keep all roles, rounds, handoffs, escalation rules and learning from SKILL.md.
+Inspect the live tool schema before dispatching; Codex clients expose different
+agent interfaces. Enable multi-agent if supported and needed. If no agent tools
+are available, report that limitation and run sequentially without claiming
+independent or parallel reviews.
 
-## Enable multi-agent
+For a shipped `agents/<role>.md`, read the entire file. Pass its complete body,
+the task brief, project context, output contract, and tool restrictions in the
+child's initial instructions. Include the role name (for example `dc-dev`) in
+both its task name and message so the phase gate can identify it. Claude agent
+Markdown is not automatically a registered Codex agent type. Use a custom
+`agent_type` only if an equivalent is already registered in that client.
 
-`~/.codex/config.toml`:
+Use `spawn_agent` (or the live equivalent), one child per independent role.
+Use a clean context when the tool supports it and supply all needed material.
+Collect returned child results via the available wait/result mechanism; do not
+read Claude transcript files. Respect the runtime's wait limit and keep the user
+updated. Send corrections using the exposed message/follow-up tool, distinguishing
+message delivery from restarting an idle child. Close workers when supported.
 
-```toml
-[features]
-multi_agent = true
-```
+Map Haiku/Sonnet/Opus/Fable preferences to available models with equivalent roles
+(fast routine work / balanced implementation / strongest review). Never send
+Anthropic model names to Codex. Inherit the current model unless the user or role
+instructions authorize a supported override. Where model and reasoning effort
+are supported, specify both for an override; otherwise report the limitation.
 
-Without it the spawn tools this skill needs are absent and the skill degrades to
-doing the work in one context.
+A prompt's tool restrictions remain instructions unless the runtime exposes a
+matching enforceable tool or sandbox policy. Preserve no-source-edit rules for
+reviewers while allowing their documented build/test commands. Never grant extra
+permissions to emulate Claude tool metadata; report any enforcement difference.
 
-## Tool mapping
+## Workflow specifics
 
-| This skill says | On Codex |
-|---|---|
-| dispatch N agents in parallel (one message, N `Agent` calls) | one `spawn_agent` per worker; `fork_turns: "none"` gives a clean context — the default `"all"` copies your whole transcript into each child |
-| a worker's result comes back | `wait_agent` — an event subscription, not a poll. Wait in 5–10 minute stretches (`timeout_ms` 300000–600000); short polls cost a tool call and a context rebill for nothing |
-| send a correction to a running worker | `followup_task` (it also transparently reloads a child the harness evicted) |
-| what is still running | `list_agents` |
-| an agent definition in `agents/<role>.md` | a role file under `~/.codex/agents/`, selected with `agent_type` on an isolated fork |
-| per-role model tier | set **both** `model` and `reasoning_effort` on every spawn — setting `model` alone silently resets effort to that model's default |
-
-Consider a machine-level backstop so a spawn that slips through still routes
-deliberately:
-
-```toml
-[agents]
-default_subagent_model = "<a mid-tier model from your spawn allowlist>"
-default_subagent_reasoning_effort = "medium"
-```
-
-## Worktree detection is identical
-
-The isolation test this skill uses is plain git and needs no translation:
-
-```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
-# GIT_DIR != GIT_COMMON  -> already inside a linked worktree
-```
-
-## Sweep specifics
-
-- Scouts own disjoint slices, so they are the ideal `spawn_agent` fan-out: issue
-  them together, then wait once.
-- **Keep scouts on a cheap tier and spend on the verifier** — pass `model` and
-  `reasoning_effort` on every spawn; the sweep's failure mode is trusting a
-  plausible synthesis, not thin breadth.
-- The jq-extract step reads Claude Code's subagent transcripts at
-  `~/.claude/projects/<cwd>/<session>/subagents/agent-<id>.jsonl`. **Codex stores
-  child output elsewhere** — collect each scout's YAML from its returned message
-  instead, and keep the "never read the whole transcript into context" rule.
+Scouts retain disjoint slices and the verifier retains its stronger review role. Collect each scout's YAML from returned results, preserving the rule against loading whole transcripts.

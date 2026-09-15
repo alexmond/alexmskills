@@ -48,3 +48,10 @@ Lists dependencies (`./mvnw dependency:tree`), checks for updates, searches for 
 * Model tiers are chosen per job: cheap *haiku* for the mechanical test-runner and dependency-auditor, *sonnet* for the judgment-heavy pr-reviewer.
 * All three are read-only on source — their Bash allowlists permit running and inspecting, not editing — so a review step can't silently change what it audits.
 * Checklists and commands assume a Maven/Java project; adapt items to other stacks.
+
+== Codex client path
+
+The Claude Code workflow remains available in full. Codex uses the client
+reference shipped with the skill for instruction files, tools, and learning
+state. See xref:codex.adoc[Codex compatibility] for hook setup and runtime
+limits. Agent roles retain their complete definitions when dispatched on Codex.

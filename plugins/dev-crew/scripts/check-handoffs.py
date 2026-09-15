@@ -50,10 +50,15 @@ def main() -> int:
         return 0
     inp = payload.get("tool_input") or {}
     text = " ".join(
-        str(inp.get(k, "")) for k in ("subagent_type", "description", "prompt")
+        str(inp.get(k, "")) for k in ("subagent_type", "description", "prompt", "agent_type", "message", "task_name")
     )
 
-    role = next((r for r in REQUIRES if r in text), None)
+    # Codex briefs include full role definitions and can mention other seats.
+    # Prefer explicit routing metadata over incidental role names in the brief.
+    target = str(inp.get("agent_type") or inp.get("task_name") or "")
+    role = next((r for r in REQUIRES if r == target or target.endswith(":" + r)), None)
+    if role is None:
+        role = next((r for r in REQUIRES if r in text), None)
     if role is None:
         return 0
 

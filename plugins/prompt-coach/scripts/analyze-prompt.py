@@ -796,6 +796,7 @@ def is_conversational(prompt: str) -> bool:
 # heuristically for prefilled option-list continuations.
 
 _CLAUDE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
+_HOOK_PAYLOAD: dict = {}
 
 # Only tail the last N lines of the transcript — the last assistant turn
 # is always in the very recent tail, and transcripts can be 15+ MB.
@@ -835,8 +836,21 @@ def _current_transcript_path(cwd: Path) -> Path | None:
     slash-to-dash slug of the absolute cwd. Handles missing directories
     gracefully so a stale/broken lookup can never block a user prompt."""
     try:
+        # An explicit path (even a missing one) is authoritative. Never borrow
+        # another session's conversation when a client supplies its identity.
+        if "transcript_path" in _HOOK_PAYLOAD:
+            path = _HOOK_PAYLOAD.get("transcript_path")
+            return Path(path) if isinstance(path, str) and path else None
+        if "turn_id" in _HOOK_PAYLOAD:  # Codex; no Claude-directory fallback
+            return None
         slug = str(cwd.resolve()).replace("/", "-")
         d = _CLAUDE_PROJECTS_DIR / slug
+        session = _HOOK_PAYLOAD.get("session_id")
+        if session:
+            # Only a filename, never a caller-supplied path.
+            if Path(str(session)).name != str(session):
+                return None
+            return d / f"{session}.jsonl"
         if not d.exists():
             return None
         transcripts = list(d.glob("*.jsonl"))
@@ -870,6 +884,42 @@ def _tail_lines(path: Path, n: int) -> list[str]:
         return []
 
 
+def _normalize_assistant_entry(entry: dict) -> dict | None:
+    """Normalize Claude transcripts and Codex rollout records for consumers.
+
+    Unknown records are ignored. Codex transcript storage is not a stable API;
+    failure to recognize it must never cause a lookup in Claude's history.
+    """
+    if not isinstance(entry, dict):
+        return None
+    if entry.get("type") == "assistant":
+        return entry
+    payload = entry.get("payload")
+    if not isinstance(payload, dict):
+        return None
+    blocks = []
+    if entry.get("type") == "response_item":
+        if payload.get("type") == "message" and payload.get("role") == "assistant":
+            blocks = [{"type": "text", "text": b.get("text", "")}
+                      for b in payload.get("content", [])
+                      if isinstance(b, dict) and b.get("type") in ("output_text", "text")]
+        elif payload.get("type") == "function_call":
+            name = str(payload.get("name", "")).rsplit(".", 1)[-1]
+            if name in ("request_user_input", "request_user_input_async"):
+                blocks = [{"type": "tool_use", "name": "AskUserQuestion"}]
+            else:
+                # A newer tool call supersedes an older question.
+                blocks = [{"type": "tool_use", "name": name}]
+        else:
+            return None
+    elif entry.get("type") == "event_msg" and payload.get("type") == "agent_message":
+        blocks = [{"type": "text", "text": payload.get("message", "")}]
+    else:
+        return None
+    return {"type": "assistant", "timestamp": entry.get("timestamp"),
+            "message": {"content": blocks}}
+
+
 def _last_assistant_turn(cwd: Path) -> dict | None:
     """Locate the most recent `type: assistant` entry in the current
     transcript. Returns the parsed JSON dict, or None if nothing found."""
@@ -884,8 +934,9 @@ def _last_assistant_turn(cwd: Path) -> dict | None:
             entry = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if entry.get("type") == "assistant":
-            return entry
+        normalized = _normalize_assistant_entry(entry)
+        if normalized is not None:
+            return normalized
     return None
 
 
@@ -5329,6 +5380,7 @@ def append_log(local_dir: Path, entry: dict) -> None:
 
 
 def main() -> int:
+    global _HOOK_PAYLOAD
     try:
         raw = sys.stdin.read()
         payload = json.loads(raw) if raw.strip() else {}
@@ -5336,6 +5388,9 @@ def main() -> int:
         # Bad hook input; don't block the user's prompt.
         return 0
 
+    if not isinstance(payload, dict):
+        return 0
+    _HOOK_PAYLOAD = payload
     prompt_raw = payload.get("prompt") or ""
     cwd = Path(payload.get("cwd") or os.getcwd())
 

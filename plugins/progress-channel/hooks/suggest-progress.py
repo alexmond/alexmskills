@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import statistics
 import sys
@@ -60,6 +61,8 @@ def history_median(progress, shape: str) -> float | None:
 
 
 def statusline_tip(progress) -> str:
+    if os.environ.get("SKILL_CLIENT") == "codex":
+        return " Use the browser dashboard or a companion terminal running progress.py watch."
     """One line, at most once a week, only while a daemon is answering and no
     status-line renderer has ever polled it. The person is registering jobs
     they cannot see — this is the moment the integration matters to them."""

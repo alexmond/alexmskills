@@ -56,7 +56,7 @@ _F_SPEC = importlib.util.spec_from_file_location(
 freshness = importlib.util.module_from_spec(_F_SPEC)
 _F_SPEC.loader.exec_module(freshness)
 
-CLAUDE_MD = "CLAUDE.md"
+CLAUDE_MD = os.environ.get("SKILL_INSTRUCTIONS_FILE", "CLAUDE.md")
 LOCAL_MD = ".claude.local.md"
 SECTION_HEADING = "### Decisions & Learnings"
 
@@ -435,10 +435,17 @@ def companion_files(root: str = ".") -> list[tuple[str, float]]:
         dirnames[:] = [d for d in dirnames if d not in NESTED_SKIP_DIRS and not d.startswith(".")]
         if dirpath == root:
             continue                      # the root file is analysed in full elsewhere
-        if CLAUDE_MD in filenames:
-            p = os.path.join(dirpath, CLAUDE_MD)
-            rel = os.path.relpath(p, root)
-            found.append((rel, os.path.getsize(p) / 1024.0))
+        names = (CLAUDE_MD,)
+        if os.environ.get("SKILL_CLIENT") == "codex":
+            # Each directory selects its own override; a root override does not
+            # hide ordinary AGENTS.md files in descendant directories.
+            names = ("AGENTS.override.md", "AGENTS.md")
+        for name in names:
+            if name in filenames:
+                p = os.path.join(dirpath, name)
+                rel = os.path.relpath(p, root)
+                found.append((rel, os.path.getsize(p) / 1024.0))
+                break
     return found
 
 

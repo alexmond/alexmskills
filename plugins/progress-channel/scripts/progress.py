@@ -301,7 +301,9 @@ def session_identity() -> tuple[str | None, str | None, str | None]:
     Work started outside a session — cron, a bare shell — carries None and
     appears only in the unfiltered view.
     """
-    return (os.environ.get("CLAUDE_CODE_SESSION_ID") or None,
+    return (os.environ.get("PROGRESS_SESSION_ID") or
+            os.environ.get("CLAUDE_CODE_SESSION_ID") or
+            os.environ.get("CODEX_THREAD_ID") or os.environ.get("CODEX_SESSION_ID") or None,
             os.environ.get("CLAUDE_CODE_SESSION_NAME") or None,
             os.environ.get("CLAUDE_CODE_AGENT") or None)
 
