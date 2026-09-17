@@ -90,6 +90,8 @@ bottom. (Schema: see the shipped seed in the research-sweep plugin.)
   - fabrications: 0 (every repo, arXiv id and domain resolved, including risky-looking ones)
   - corrections: 10 — a WRONG-COLUMN read (NoLiMa 32K vs 64K), an unsourced quote, two wrong percentage sets, rule/type counts, an un-sourced parenthetical, an id collision, 5 too-coarse source_urls
   - gaps named: Amazon Q project rules, Kiro steering, Letta memory blocks (per-block char limits), Zep/Graphiti fact invalidation, Claude Code InstructionsLoaded hook, CodeRabbit learnings
+  - gaps CLOSED same day: all 6 added, every field fetched from its primary source (74 -> 80 findings). One verifier caveat corrected in the process: CodeRabbit DOES document per-learning view/edit/delete plus a quarterly review ritual, so it is not a write-only store.
+  - headline after closing: 40 of 80 entries still document no staleness handling at all — the category's defining hole, and Zep's edge-invalidation is the only mechanism that expires a superseded fact automatically
   - verdict: ACCEPT WITH CORRECTIONS (all applied)
 - dedup-hotspots: same-author lineage (roo-code-memory-bank -> ConPort) and wrapper/served-over-MCP pairs; annotate lineage rather than merge
 - source-trust: vendor docs quote-stable and byte-exact; arXiv abstracts reliable, but a blog CITING a study is not — tianpan's "300-350 words" is attributed to a GitHub post that publishes no length figures, and the catalog held both halves without noticing. Rule: a number quoted second-hand must be traced to the primary before use.
