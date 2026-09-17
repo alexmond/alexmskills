@@ -37,6 +37,44 @@ The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the
 * *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
 * *PostCompact* — re-runs the audit so the assistant sees the current state without paying to re-read the whole file.
 
+== What's new in 1.7.0 — evidence and invalidation
+
+1.6.0 gated what gets written. 1.7.0 borrows the two mechanisms an 80-entry
+survey of instruction-file upkeep tools showed were missing here — chosen
+because exactly half of those 80 document *no staleness handling at all*.
+
+*Load evidence.* A new `InstructionsLoaded` hook records which instruction file
+actually loaded, in which session, and why (`session_start`, `nested_traversal`,
+`path_glob_match`, `include`, `compact`), appending to
+`.claude/evolving-claude-md/loads.jsonl`. Every other check in the plugin
+reasons about what the file _says_; this one records what the harness _did_, and
+that makes two failures checkable which no content audit can see:
+
+* a `.claude/rules/*.md` whose `paths:` globs never match anything that gets
+read — the rule is well-written and simply never consulted, so its content is
+not the defect;
+* a `CLAUDE.md` that never loads at all, because Claude Code loads one up to
+4 MiB and silently _skips_ a larger file, and a file in an unread path is
+skipped just as quietly. The repo looks configured and isn't.
+
+Both wait for `load_min_sessions` (default 5) of recorded evidence: "hasn't
+loaded yet" and "never loads" are indistinguishable on day one.
+
+*Supersede links.* An entry may end `Supersedes: YYYY-MM-DD topic-tag`. The
+audit then reports a target that is still unstruck — a replaced rule still
+reading as current — or one that doesn't exist, catching a typo'd date or tag.
+The lint exempts the link from the body cap, because charging bookkeeping
+against the prose budget would price the link out of use. The idea comes from
+temporal knowledge graphs, which record _when_ a fact stopped being true instead
+of leaving both versions standing.
+
+*Also corrected:* the docs claimed in three places that the lint hook enforces a
+200-character body cap. It enforces 500, so entries between the two had been
+passing silently against a documented rule. Both numbers are now stated, with
+the reason they differ — 200 keeps the log scannable, 500 is where an entry is
+provably a design doc. Enforcement was deliberately left at 500; tightening it
+would start rejecting entries in every consuming repo.
+
 == What's new in 1.6.0 — the inlet
 
 1.5.0 gave the log a write path. 1.6.0 asks whether a given write has earned its
@@ -197,8 +235,8 @@ _Tier 3 — lifecycle hooks on both clients._
 | | Claude Code | Codex
 
 | Hooks
-| SessionStart audit, PreToolUse format lint, PostToolUse commit mining, Stop capture, PostCompact audit.
-| The same five events through `hooks/codex.json` and the shared adapter. Trust them once with `/hooks`.
+| Six events: SessionStart audit, InstructionsLoaded load-recording, PreToolUse format lint, PostToolUse commit mining, Stop capture, PostCompact audit.
+| Five of the six, through `hooks/codex.json` and the shared adapter (trust once with `/hooks`). `InstructionsLoaded` is Claude Code-only, so the dead-rule and never-loaded checks have no evidence to read on Codex and stay silent rather than guessing.
 
 | Instructions file
 | `CLAUDE.md`.
