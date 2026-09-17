@@ -43,10 +43,10 @@ findings:
     kind: cli-tool
     origin: retif/claudecode-linter
     source_url: https://github.com/retif/claudecode-linter
-    maintains: CLAUDE.md (10 dedicated rules, e.g. no-todos) plus plugin.json, SKILL.md, agent/command markdown, hooks.json, mcp.json, settings.json, .lsp.json, monitors.json — 90 rules across 8 artifact types
+    maintains: CLAUDE.md (10 dedicated rules, e.g. no-todos) plus plugin.json, SKILL.md, agent/command markdown, hooks.json, mcp.json, settings.json, .lsp.json, monitors.json — 122 rules across 10 artifact types
     write_trigger: CLI/npx, CI workflows and git hooks (`--detect` skips repos with no Claude artifacts); `--fix` writes in place, `--fix-dry-run` previews, `--format` normalizes
     staleness_handling: none documented — validates against schemas auto-extracted from Claude Code's runtime Zod validators, not against repo reality
-    size_control: word-count bounds per artifact (e.g. skill descriptions 500–5000), warning outside range
+    size_control: word-count bounds per artifact (e.g. skill BODY 500-5000 words, not the description), warning outside range
     enforcement: both — reports advisories and gates via exit codes (0 clean / 1 lint errors / 2 fatal)
     confidence: high
   - id: claude-slim
@@ -90,7 +90,7 @@ findings:
     maintains: the whole CLAUDE.md tree — root plus chained sub-files (backend/, frontend/) via @path imports; detects sibling AGENTS.md/.cursorrules/.windsurfrules and chains them rather than overwriting
     write_trigger: slash commands /enhance-claude-md, /sync-claude-md, /sync-claude-md --weekly; plus hooks — PostToolUse(Write|Edit), InstructionsLoaded (all five load_reason values), and Stop for an end-of-session health summary
     staleness_handling: claude-md-drift-audit skill walks the last N days of git history and flags every CLAUDE.md line referencing deleted/renamed paths or removed dependencies; /sync-claude-md prunes them
-    size_control: hard 150-line cap enforced deterministically at load time and write time; overflow is split across chained sub-files with the root acting as a navigation hub
+    size_control: 150-line default cap (`maxLines`, hooks/validate-claude-md.py) enforced deterministically at load time and write time; overflow is split across chained sub-files with the root acting as a navigation hub
     enforcement: mixed — the 150-line cap (hooks/validate-claude-md.py), link validation and dependency scanning are mechanical; quality scoring 0-100 and the read-only guardian agent are advisory (never auto-commits)
     confidence: high
   - id: claude-drift
@@ -203,7 +203,7 @@ findings:
     size_control: AI compression via the agent SDK plus progressive-disclosure retrieval (~50-100 tokens initially, expanded on demand); no retention policy, pruning schedule or hard size limit documented
     enforcement: largely automatic capture rather than rule enforcement; the one mechanical rule is `<private>` tags excluding content from storage
     confidence: high
-  - id: cline-memory-bank
+  - id: cline-memory-bank-prompt
     name: Cline Memory Bank (.clinerules)
     kind: template
     origin: cline/prompts
@@ -339,7 +339,7 @@ findings:
     origin: OpenAI / Codex
     source_url: https://learn.chatgpt.com/docs/agent-configuration/agents-md
     maintains: A chain built per run — ~/.codex/AGENTS.override.md else ~/.codex/AGENTS.md, then each directory from git root down to CWD (override, then AGENTS.md, then configurable fallback filenames), concatenated root-downward with closer files overriding
-    write_trigger: manual — "Codex does not generate AGENTS.md during initialization" and "does not auto-update these files"
+    write_trigger: "manual \u2014 the cited page documents discovery/precedence only; no generation or auto-update mechanism is described (VERIFIER: the previously quoted sentences are not on that page)"
     staleness_handling: none documented; the chain is rebuilt on every run so there is no cache to clear
     size_control: hard byte cap — `project_doc_max_bytes` defaults to 32 KiB; Codex stops adding files once the limit is reached, and skips empty files; remedy is to raise the limit or split across nested directories
     enforcement: the byte cap is mechanically enforced; content and format are advisory. Load order verifiable with `codex --ask-for-approval never "Summarize current instructions"`
@@ -453,7 +453,7 @@ findings:
     enforcement: mechanical only in that every detected rule file gets an individual on/off toggle in the Rules panel, and workspace rules take precedence over global on conflict; content is advisory
     confidence: high
 
-  - id: cline-memory-bank
+  - id: cline-memory-bank-docs
     name: Cline Memory Bank
     kind: convention
     origin: Cline (documented pattern, not built-in)
@@ -610,6 +610,10 @@ findings:
     confidence: high
 
   # === agent ad0bb21ad288d08ee ===
+  # VERIFIER NOTES: tianpan-file-too-long attributes '300-350 words / negative correlation above
+  # 1,000 words' to the GitHub 2,500-repo post, which publishes NO length figures — do not use it.
+  # roo-code-memory-bank and context-portal-conport share an author (ConPort is the SQLite successor):
+  # one lineage, not two independent designs.
 
   - id: chroma-context-rot
     name: "Context Rot: How Increasing Input Tokens Impacts LLM Performance"
@@ -619,7 +623,7 @@ findings:
     maintains: "Shows that an instruction file's cost is not just tokens — everything in context degrades retrieval of everything else, non-uniformly"
     write_trigger: "none documented; implies content should be added only when it survives as a high-similarity signal for the task at hand"
     staleness_handling: "MEASURED: distractors — plausible-but-wrong content semantically near the real answer — degrade performance even at n=1, and more with several; a superseded rule sitting next to its replacement is exactly this shape"
-    size_control: "MEASURED: 18 frontier models (Claude, GPT, Gemini, Qwen) all degrade monotonically as input grows; tasks spanned 8 input lengths to 131,072 tokens, 11 needle positions, repeated-words at 12 lengths (25-10,000 words), and LongMemEval at ~113k-token full prompts vs ~300-token focused versions. Claude models had the lowest hallucination rate under distractors (2-3%), GPT the highest"
+    size_control: "MEASURED: 18 frontier models (Claude, GPT, Gemini, Qwen) all degrade monotonically as input grows; tasks spanned 8 input lengths to 131,072 tokens, 11 needle positions, repeated-words at 12 lengths (25-10,000 words), and LongMemEval at ~113k-token full prompts vs ~300-token focused versions. Claude models had the lowest hallucination rate under distractors, GPT the highest (the source gives no percentages)"
     enforcement: "none documented — frames the answer as context engineering (curation and placement), not enforcement"
     confidence: high
 
@@ -631,7 +635,7 @@ findings:
     maintains: "Quantifies how fast a rule stops being retrievable once it has no literal lexical overlap with the request — the normal case for an abstract convention in CLAUDE.md"
     write_trigger: none documented
     staleness_handling: none documented
-    size_control: "MEASURED: 22 LLMs, 1K-128K contexts. At 32K roughly 83% of models fall below 50% of their short-context baseline. GPT-4o 99.3% base -> 69.7% at 32K; Claude 3.5 Sonnet 87.6% base -> 29.8% at 32K; Llama 3.3 70B 97.3% -> 42.7%. 'Effective length' (>=85% of base score) is 8K for GPT-4o and under 1K for small models"
+    size_control: "MEASURED: 12 LLMs in the paper (22 rows in the repo table), 1K-128K contexts. Quoted: at 32K '10 models drop below 50% of their strong short-length baselines'. GPT-4o 99.3% base -> 69.7% at 32K; Claude 3.5 Sonnet 87.6% base -> 45.7% at 32K; Llama 3.3 70B 97.3% -> 59.5% at 32K (29.8%/42.7% are the 64K column). 'Effective length' (>=85% of base score) is 8K for GPT-4o and under 1K for small models"
     enforcement: none documented
     confidence: high
 
@@ -703,7 +707,7 @@ findings:
     maintains: "The single most on-point measurement for this problem: these files are maintained, but maintenance is almost entirely additive, so they only grow"
     write_trigger: "MEASURED: files behave as evolving configuration — 67.4% of Claude Code context files are modified in multiple commits, with a median interval of ~24.1 hours between modifications (Codex ~22.0h, Copilot ~70.7h)"
     staleness_handling: "MEASURED: change is 'driven by small, incremental additions rather than large-scale deletions' — median additions 57.0 words per commit vs median deletions under 15 words. No pruning discipline is observed in the wild"
-    size_control: "MEASURED: 2,303 context files across 1,925 repos. Median length: Claude Code 485.0 words, GitHub Copilot 535.0, OpenAI Codex 335.5. Flesch Reading Ease: Claude Code 16.6, Copilot 26.6, Codex 39.6 — 'very difficult,' academic/legal register. Content: test procedures 75.9%, implementation details 70.8%, architecture 68.1%; security only 14.8%, performance 14.5%"
+    size_control: "MEASURED: 2,303 context files across 1,925 repos. Median length: Claude Code 485.0 words, GitHub Copilot 535.0, OpenAI Codex 335.5. Flesch Reading Ease: Claude Code 16.6, Copilot 26.6, Codex 39.6 — 'very difficult,' academic/legal register. Content (332 manually labeled Claude Code files, not the full 2,303 corpus): testing 75.0%, implementation details 69.9%, architecture 67.7%; security 14.5%, performance 14.5%"
     enforcement: none documented
     confidence: high
 
@@ -737,9 +741,9 @@ findings:
     origin: arXiv 2602.11988 (AGENTbench)
     source_url: https://arxiv.org/html/2602.11988v1
     maintains: "The strongest measured warning against auto-generated / redundant instruction content — it costs more and helps less than nothing"
-    write_trigger: "MEASURED: developer-written context files improve performance ~4% on average; LLM-generated ones reduce it by 0.5% and 2% across the two datasets. Write from real project knowledge, not generation"
+    write_trigger: "MEASURED: LLM-generated context files reduce performance by 0.5% and 2% across the two datasets; developer-written files outperform them for all four agents (the paper gives no single average - read per-model off Figure 3). Write from real project knowledge, not generation"
     staleness_handling: "MEASURED redundancy signal: when existing repository documentation was removed, LLM-generated context files improved performance by 2.7% on average — i.e. their usual harm comes from duplicating docs that already exist. Content already derivable from the repo is the stale/duplicate class"
-    size_control: "MEASURED: 138 instances from 12 Python repos plus SWE-bench Lite, 4 agents. LLM-generated files raise inference cost 20% and 23% on average and add 2.45-3.92 steps per task; developer-written files cost up to 19% more. Reasoning-token usage rises 10-22%. Context files 'do not meaningfully reduce' the steps needed to locate relevant files"
+    size_control: "MEASURED: 138 instances from 12 Python repos plus SWE-bench Lite, 4 agents. LLM-generated files raise inference cost 20% and 23% on average and add 2.45-3.92 steps per task; developer-written files cost up to 19% more. Reasoning-token usage rises 14-22% for LLM-generated files (2-20% for developer-written). Context files 'do not meaningfully reduce' the steps needed to locate relevant files"
     enforcement: none documented
     confidence: high
 
