@@ -1,0 +1,876 @@
+# Instruction-file upkeep landscape — 3 parallel scouts, 2026-09-16
+# Schema: findings[{id,name,kind,origin,source_url,maintains,write_trigger,staleness_handling,size_control,enforcement,confidence}]
+
+findings:
+
+  # === agent abe087bc10a385287 ===
+
+  - id: claude-md-improver
+    name: claude-md-improver (CLAUDE.md Management plugin)
+    kind: skill
+    origin: anthropics/claude-plugins-official
+    source_url: https://github.com/anthropics/claude-plugins-official/blob/main/plugins/claude-md-management/skills/claude-md-improver/SKILL.md
+    maintains: ./CLAUDE.md, ./.claude.local.md, ~/.claude/CLAUDE.md and monorepo ./packages/*/CLAUDE.md
+    write_trigger: manual — user asks to "audit/update/improve CLAUDE.md"; generates a quality report, then asks for confirmation before applying updates
+    staleness_handling: scores a weighted "Currency" criterion (15/100) and flags stale build commands, outdated architecture/file structure, broken test commands, missing env setup
+    size_control: no numeric limit; advisory "conciseness over comprehensiveness" principles (avoid restating code, generic best practices, verbose prose)
+    enforcement: advisory only — no hooks, no CI, no automatic rewrites; every change goes through user approval
+    confidence: high
+  - id: revise-claude-md
+    name: /revise-claude-md
+    kind: plugin
+    origin: anthropics/claude-plugins-official (claude-md-management)
+    source_url: https://github.com/anthropics/claude-plugins-official/tree/main/plugins/claude-md-management
+    maintains: CLAUDE.md — appends learnings captured from the current session
+    write_trigger: manual slash command, intended for end of session (the reactive counterpart to claude-md-improver's proactive audit)
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: advisory — user-invoked command, no hook or gate
+    confidence: medium
+  - id: cclint
+    name: cclint
+    kind: cli-tool
+    origin: felixgeelhaar/cclint
+    source_url: https://github.com/felixgeelhaar/cclint
+    maintains: CLAUDE.md (incl. nested monorepo files), plus .claude/skills, agents, output-styles, settings.json, .mcp.json, plugin.json/marketplace.json
+    write_trigger: CLI (`cclint lint .`), GitHub Action, git pre-commit via `cclint install --hooks`, LSP for live diagnostics, and an MCP server mode; `--fix` / `-i` auto-repair
+    staleness_handling: flags deprecated model IDs (e.g. claude-3-5-sonnet) and unresolved @-imports; no git-history-grounded drift check
+    size_control: configurable character limit per file, default 10,000, warns when exceeded
+    enforcement: mechanical where it matters — tiered severity (error/warning/info); exit 1 on any error gates CI, warnings stay advisory
+    confidence: high
+  - id: claudecode-linter
+    name: claudecode-linter
+    kind: cli-tool
+    origin: retif/claudecode-linter
+    source_url: https://github.com/retif/claudecode-linter
+    maintains: CLAUDE.md (10 dedicated rules, e.g. no-todos) plus plugin.json, SKILL.md, agent/command markdown, hooks.json, mcp.json, settings.json, .lsp.json, monitors.json — 90 rules across 8 artifact types
+    write_trigger: CLI/npx, CI workflows and git hooks (`--detect` skips repos with no Claude artifacts); `--fix` writes in place, `--fix-dry-run` previews, `--format` normalizes
+    staleness_handling: none documented — validates against schemas auto-extracted from Claude Code's runtime Zod validators, not against repo reality
+    size_control: word-count bounds per artifact (e.g. skill descriptions 500–5000), warning outside range
+    enforcement: both — reports advisories and gates via exit codes (0 clean / 1 lint errors / 2 fatal)
+    confidence: high
+  - id: claude-slim
+    name: claude-slim
+    kind: cli-tool
+    origin: iops-leo/claude-slim
+    source_url: https://github.com/iops-leo/claude-slim
+    maintains: the startup-context budget — measures what every skill, plugin, agent, CLAUDE.md and MEMORY.md costs in the system prompt; reads CLAUDE.md and settings.json but never modifies them
+    write_trigger: manual — `/claude-slim` slash command or `npx claude-slim`; never automatic
+    staleness_handling: idle-age heuristic — local skills unused 60+ days are candidates; also duplicate skill registrations and failed-install caches
+    size_control: this IS the size control — moves oversized/dead weight to ~/.claude/skills.disabled/ (reversible via `/claude-slim restore`); counts only the active project's MEMORY.md, first 200 lines / 25 KB, toward startup
+    enforcement: mechanical but user-gated — three tiers (auto / recommended / optional), interactive confirm, --dry-run, --auto for non-interactive
+    confidence: high
+  - id: memory-hygiene-cehygiene
+    name: memory-hygiene (claude-ecosystem-hygiene)
+    kind: skill
+    origin: wan-huiyan/claude-ecosystem-hygiene
+    source_url: https://github.com/wan-huiyan/claude-ecosystem-hygiene
+    maintains: persistent knowledge files — MEMORY.md, axioms.md, lessons.md, feedback files, ADRs
+    write_trigger: manual invocation; the sibling ecosystem-audit skill runs a full 9-category sweep and emits cleanup scripts the user executes
+    staleness_handling: reference-count signals, session-log parsing for invocation frequency, age-based scoring (worktrees unmerged 14+ days flagged abandoned), lesson-duplication detection
+    size_control: MEMORY.md flagged above 200 lines (truncation risk); axioms.md capped at 12 items on a cognitive-limit rationale; ADRs checked against MADR 4.0
+    enforcement: advisory with guardrails — flags violations and generates prioritized cleanup scripts, never auto-edits
+    confidence: high
+  - id: doc-freshness-reverse-lint
+    name: doc-freshness-reverse-lint
+    kind: hook
+    origin: wan-huiyan/claude-ecosystem-hygiene
+    source_url: https://github.com/wan-huiyan/claude-ecosystem-hygiene
+    maintains: project documentation vs. recorded lessons — catches docs that contradict recently-updated lessons files
+    write_trigger: event-driven — PostToolUse hooks plus a weekly cron check
+    staleness_handling: "the core mechanism \u2014 phrase-matching project docs against newer lessons to surface contradictions (reverse direction: the doc is stale, not the lesson)"
+    size_control: none documented
+    enforcement: hook-triggered detection but advisory output — surfaces contradictions without auto-editing
+    confidence: high
+  - id: claudeforge
+    name: ClaudeForge
+    kind: plugin
+    origin: alirezarezvani/ClaudeForge
+    source_url: https://github.com/alirezarezvani/ClaudeForge
+    maintains: the whole CLAUDE.md tree — root plus chained sub-files (backend/, frontend/) via @path imports; detects sibling AGENTS.md/.cursorrules/.windsurfrules and chains them rather than overwriting
+    write_trigger: slash commands /enhance-claude-md, /sync-claude-md, /sync-claude-md --weekly; plus hooks — PostToolUse(Write|Edit), InstructionsLoaded (all five load_reason values), and Stop for an end-of-session health summary
+    staleness_handling: claude-md-drift-audit skill walks the last N days of git history and flags every CLAUDE.md line referencing deleted/renamed paths or removed dependencies; /sync-claude-md prunes them
+    size_control: hard 150-line cap enforced deterministically at load time and write time; overflow is split across chained sub-files with the root acting as a navigation hub
+    enforcement: mixed — the 150-line cap (hooks/validate-claude-md.py), link validation and dependency scanning are mechanical; quality scoring 0-100 and the read-only guardian agent are advisory (never auto-commits)
+    confidence: high
+  - id: claude-drift
+    name: Claude Drift
+    kind: plugin
+    origin: marky291/claude-drift
+    source_url: https://github.com/marky291/claude-drift
+    maintains: CLAUDE.md (incl. nested), skills, commands, agents, settings, hooks, .mcp.json, native memory files and memory MCP servers; ~/.claude user-level artifacts with --user
+    write_trigger: on-demand `/claude-drift:drift-check` — explicitly no hooks and no persistent MCP server; `--changed` narrows to recent artifacts, `--apply` auto-fixes
+    staleness_handling: subagents reason each artifact's claims against the actual code ("reasoning, not regex"), distinguishing real paths from illustrative examples; graded 🔴 Broken / 🟠 Stale / 🟡 Outdated / ⚪ Legacy narration with evidence
+    size_control: none documented
+    enforcement: advisory-first — prioritized evidenced report, with opt-in `--apply` that auto-fixes then re-verifies
+    confidence: high
+  - id: agents-md-audit-pza
+    name: agents-md-audit
+    kind: skill
+    origin: pizzayap/pza-skills
+    source_url: https://github.com/pizzayap/pza-skills
+    maintains: AGENTS.md project-guidance files (root and nested), read-only
+    write_trigger: manual — invoked on "audit/check/review/validate agent instruction files"; read-only, never writes
+    staleness_handling: inspects actual repo state rather than trusting the doc — cross-references guidance against manifests (package.json, Makefile), directory structure and commands; detects mirror drift between AGENTS.md and CLAUDE.md, separating intentional differences from accidental ones
+    size_control: none documented
+    enforcement: advisory — scores files A–F, recommends updates, performs no modifications
+    confidence: medium
+  - id: agents-md-revise-pza
+    name: agents-md-revise
+    kind: skill
+    origin: pizzayap/pza-skills
+    source_url: https://github.com/pizzayap/pza-skills
+    maintains: AGENTS.md — writes captured project guidance back into it
+    write_trigger: manual; requires local file access and explicit user approval of the diff before edits land
+    staleness_handling: audits AGENTS.md against current implementation needs before proposing the diff
+    size_control: none documented
+    enforcement: approval-gated writes (no silent edits); the repo's own stance is that instruction boundaries "still require review and, when behavior changes materially, a realistic trial"
+    confidence: medium
+  - id: rulesync
+    name: rulesync
+    kind: cli-tool
+    origin: dyoshikawa/rulesync
+    source_url: https://github.com/dyoshikawa/rulesync
+    maintains: generates CLAUDE.md, AGENTS.md, .cursorrules, .github/copilot-instructions.md and tool-specific formats for 40+ AI tools from one unified rule source
+    write_trigger: CLI — `rulesync generate --targets "*" --features "*"`, `rulesync convert --from cursor --to copilot,claudecode`; no hooks, CI triggers or scheduled regeneration documented in the repo
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: advisory — users run generation manually; no --check/CI gate documented in the repo README
+    confidence: high
+  - id: ruler
+    name: Ruler
+    kind: cli-tool
+    origin: intellectronica/ruler
+    source_url: https://github.com/intellectronica/ruler
+    maintains: AGENTS.md / CLAUDE.md, .claude/skills, .claude/agents (and Cursor/Codex equivalents), and MCP config files — all generated from a .ruler/ source directory with nested rule loading
+    write_trigger: "`ruler apply` regenerates every target atomically (full overwrite, not incremental merge); `ruler revert` restores from .bak backups"
+    staleness_handling: no content-level staleness check; drift is handled structurally — generated files are replaced wholesale from source on every apply
+    size_control: none documented
+    enforcement: advisory by default, enforceable in CI — the documented GitHub Actions workflow re-runs apply and fails if committed agent files no longer match .ruler/
+    confidence: high
+  - id: agentsync-panishandsome
+    name: agentsync
+    kind: cli-tool
+    origin: PanisHandsome/ai-rules-sync
+    source_url: https://github.com/PanisHandsome/ai-rules-sync
+    maintains: converts/syncs between AGENTS.md, CLAUDE.md, .cursorrules, .github/copilot-instructions.md, .windsurfrules, .clinerules, CONVENTIONS.md, GEMINI.md
+    write_trigger: CLI — `agentsync init` (scans project to generate AGENTS.md), `convert`, `sync`; git pre-commit hooks can auto-regenerate on every commit
+    staleness_handling: "`agentsync lint` checks for stale commands and missing paths referenced in the rules"
+    size_control: none documented
+    enforcement: mechanical in CI — `agentsync sync --check` exits non-zero if anything is out of sync
+    confidence: high
+  - id: agent-sync-yelmuratoff
+    name: AgentSync
+    kind: cli-tool
+    origin: yelmuratoff/agent_sync
+    source_url: https://github.com/yelmuratoff/agent_sync
+    maintains: "syncs one source tree (.ai/src/) \u2014 AGENTS.md, rules with paths: frontmatter, skills, slash commands \u2014 into 13 AI tools' native formats"
+    write_trigger: "`agentsync sync` (with --if-stale, --dry-run, --workspace); `agentsync setup-hooks` installs post-merge/post-checkout hooks and a pre-commit `sync --if-stale`"
+    staleness_handling: writes .ai/.sync-manifest with SHA-256 per generated file; the next sync compares destinations against it to find manual edits, and `agentsync doctor` surfaces drift warnings
+    size_control: none documented
+    enforcement: enforced by default — on detected manual edits sync ABORTS listing the edited paths (user must move edits to source or pass --force); `agentsync check` is the CI drift gate (exit 0/1)
+    confidence: high
+  - id: autoharness
+    name: Autoharness
+    kind: plugin
+    origin: tigerless-labs/autoharness
+    source_url: https://github.com/tigerless-labs/autoharness
+    maintains: a self-authored skill layer in .claude/skills/ — each skill carries SKILL.md, an append-only .ledger.jsonl, .sidecar.json usage counters and references/ evidence; run state under .claude/autoharness/ (intents/, runs/, last_run.json)
+    write_trigger: deterministic reflection cadence counted in TOOL CALLS not turns (AUTOHARNESS_REFLECT_EVERY_N) firing a background distillation; `/learn` on demand; a rarer whole-library consolidation pass at AUTOHARNESS_CONSOLIDATE_EVERY_N
+    staleness_handling: three usage signals (load / view / patch); new skills sit on probation until a graduation review, then are ARCHIVED (not deleted) if they show neither load nor view; merged near-duplicates are archived with a ledger entry naming the absorbing umbrella
+    size_control: per-skill description caps (AUTOHARNESS_SKILL_DESC_MAX_CHARS 1024; index line default 60 chars), body cap AUTOHARNESS_SKILL_BODY_MAX_LINES rejecting >25 non-blank lines as transcripts, and hard project/global capacity limits that evict lowest usage rate first
+    enforcement: mechanical and mandatory — a single promoter process lints each intent in memory (safety, structure, ledger, completeness, self-authored-only) before an atomic rename; hooks deny writes to skills it did not author
+    confidence: high
+  - id: self-improving-skills
+    name: self-improving-skills
+    kind: plugin
+    origin: UniM0cha/self-improving-skills
+    source_url: https://github.com/UniM0cha/self-improving-skills
+    maintains: SKILL.md files in ~/.claude/skills/ distilled from complex sessions (no separate CLAUDE.md or learnings file)
+    write_trigger: Stop hook detects complex work via transcript analysis and tool-call signals (default threshold 40+ tool calls and 3+ file edits) and enqueues a background distillation; SessionStart discovers skills; PreToolUse/PostToolUse track usage telemetry
+    staleness_handling: lifecycle by inactivity — stale at 30 days, archived at 45 (both doubled for proven skills with 3+ uses); activity counts human use/view/patch but deliberately not the distiller's own patches
+    size_control: /curate-skills consolidates similar skills and compresses descriptions; over-long descriptions raise non-blocking advisories
+    enforcement: mixed — validation and rollback are automatic (malformed edits revert immediately); quality advisories are non-blocking
+    confidence: high
+  - id: claude-mem
+    name: claude-mem
+    kind: plugin
+    origin: thedotmack/claude-mem
+    source_url: https://github.com/thedotmack/claude-mem
+    maintains: sessions, observations and summaries in SQLite (FTS5) plus dated awareness logs memory/log/YYYY-MM.md and ~/.claude-mem/settings.json; injects recalled context into future sessions
+    write_trigger: six lifecycle hooks — SessionStart, UserPromptSubmit, PostToolUse (captures tool-use observations), Stop (checkpoint), SessionEnd (finalize + compress), plus a pre-hook dependency check
+    staleness_handling: observations are date-stamped and a `timeline` MCP tool retrieves chronological context, but no mechanical expiry or contradiction detection is documented
+    size_control: AI compression via the agent SDK plus progressive-disclosure retrieval (~50-100 tokens initially, expanded on demand); no retention policy, pruning schedule or hard size limit documented
+    enforcement: largely automatic capture rather than rule enforcement; the one mechanical rule is `<private>` tags excluding content from storage
+    confidence: high
+  - id: cline-memory-bank
+    name: Cline Memory Bank (.clinerules)
+    kind: template
+    origin: cline/prompts
+    source_url: https://github.com/cline/prompts/blob/main/.clinerules/memory-bank.md
+    maintains: six required markdown files — projectBrief.md, productContext.md, systemPatterns.md, techContext.md, activeContext.md, progress.md — plus optional domain files
+    write_trigger: three documented triggers — the user saying "update memory bank" (which requires reviewing ALL files), discovery of new project patterns, and after implementing significant changes
+    staleness_handling: none documented
+    size_control: none documented — no pruning, no archival, no freshness indicator
+    enforcement: purely instructional — a behavioral contract in prompt text ("my memory resets completely between sessions"), with no hook, script or gate behind it
+    confidence: high
+  - id: roo-code-memory-bank
+    name: Roo Code Memory Bank
+    kind: template
+    origin: GreatScottyMac/roo-code-memory-bank
+    source_url: https://github.com/GreatScottyMac/roo-code-memory-bank
+    maintains: memory-bank/ — activeContext.md, decisionLog.md, productContext.md, progress.md (optional projectBrief.md, systemPatterns.md)
+    write_trigger: per-mode "Real-time Update Triggers" in YAML mode rules (Architect/Code/Ask/Debug), with the UMB / "update memory bank" command as the manual full-sync fallback for interrupted sessions
+    staleness_handling: none documented
+    size_control: none documented — no explicit safeguard against context bloat
+    enforcement: prompt-level instruction embedded in mode rules; no mechanical enforcement
+    confidence: high
+  - id: memory-bank-mcp-alioshr
+    name: Memory Bank MCP Server
+    kind: mcp-server
+    origin: alioshr/memory-bank-mcp
+    source_url: https://github.com/alioshr/memory-bank-mcp
+    maintains: remote, multi-project memory-bank files under a configurable MEMORY_BANK_ROOT (the Cline Memory Bank file set, served over MCP)
+    write_trigger: agent tool calls — read / write / update / list-projects / list-files, optionally auto-approved via the client's autoApprove setting
+    staleness_handling: none documented
+    size_control: none documented — no retention policy, quota or cleanup routine
+    enforcement: mechanical only at the safety boundary — project isolation, file-structure enforcement and path-traversal prevention; nothing enforced about content quality or freshness
+    confidence: high
+  - id: context-portal-conport
+    name: Context Portal (ConPort)
+    kind: mcp-server
+    origin: GreatScottyMac/context-portal
+    source_url: https://github.com/GreatScottyMac/context-portal
+    maintains: a per-workspace SQLite knowledge graph at context_portal/context.db — decisions, progress, system patterns, product/active context, custom data and typed links (replaces flat memory-bank markdown)
+    write_trigger: agent tool calls only (log_decision, update_product_context, log_progress, log_custom_data); per-client custom-instruction/strategy files tell the agent WHEN to call them but do not themselves write
+    staleness_handling: none documented — manual delete_decision_by_id / delete_progress_by_id exist, but no automatic housekeeping or contradiction detection
+    size_control: none documented — no quotas, TTLs or automatic pruning
+    enforcement: none — relies entirely on agent discipline via custom instructions
+    confidence: high
+  - id: conport-plugin
+    name: ConPort plugin for Claude Code
+    kind: plugin
+    origin: shaurgon/conport-plugin
+    source_url: https://github.com/shaurgon/conport-plugin
+    maintains: "ConPort project memory (decisions, tasks, patterns, documents, links, GraphRAG \u2014 40+ MCP tools) plus plugin-local state in ${CLAUDE_PLUGIN_DATA}: cached conventions deny-list.json, save-reminder counters, session-restoration markers, end-of-session reflection logs"
+    write_trigger: hooks — SessionStart retrieves project conventions, UserPromptSubmit restores context and fires a save reminder every 5 messages, SessionEnd runs an LLM-based decision reflection; plus explicit sync_decision / log_progress / task and epic completion
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: mechanical at one point only — a PreToolUse(Bash) hook blocks commands matching the deny-list fetched from ConPort at session start; memory content itself is discipline-based (a "core discipline skill")
+    confidence: high
+
+  # === agent ac73ee15a3c0b3f90 ===
+
+  - id: claude-md-hierarchy
+    name: CLAUDE.md memory hierarchy
+    kind: vendor-feature
+    origin: Anthropic / Claude Code
+    source_url: https://code.claude.com/docs/en/memory
+    maintains: Managed-policy CLAUDE.md (/etc/claude-code/CLAUDE.md etc.), ~/.claude/CLAUDE.md, ./CLAUDE.md or ./.claude/CLAUDE.md, ./CLAUDE.local.md, concatenated root-down; `@path` imports (max 4 hops) expand at launch
+    write_trigger: manual — user writes the files; Claude edits only when asked ("add this to CLAUDE.md"); `claudeMd` key in managed-settings.json for org-wide content
+    staleness_handling: advisory only — docs say "review your CLAUDE.md files ... periodically to remove outdated or conflicting instructions"; `claudeMdExcludes` globs skip irrelevant ancestor files; no automatic detection
+    size_control: "\"target under 200 lines per CLAUDE.md file\"; a file up to 4 MiB is loaded in full and a larger file is skipped entirely; imports do not reduce context since imported files load at launch"
+    enforcement: advisory — "delivered as a user message after the system prompt, not part of the system prompt"; docs explicitly say hooks/managed settings are the enforcement layer, CLAUDE.md is not
+    confidence: high
+
+  - id: claude-code-auto-memory
+    name: Auto memory (Claude-written notes)
+    kind: vendor-feature
+    origin: Anthropic / Claude Code
+    source_url: https://code.claude.com/docs/en/memory
+    maintains: ~/.claude/projects/<project>/memory/ — a MEMORY.md index plus one topic file per memory, typed `user` / `feedback` / `project` / `reference` in frontmatter; machine-local, shared across worktrees of one repo
+    write_trigger: model-written — Claude decides per session what is worth remembering (skips anything derivable from the codebase or already in CLAUDE.md); also on "remember that ..."; on by default, disabled via `autoMemoryEnabled` or CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
+    staleness_handling: each written file with frontmatter gets an ISO-8601 `modified` timestamp so age is visible to Claude on read; the over-limit reminder tells Claude to "merge or drop stale entries"; memory files are excluded from the cleanupPeriodDays retention sweep, so nothing expires on its own
+    size_control: first 200 lines or 25KB of MEMORY.md, whichever comes first, loads each session; after a write Claude Code measures the file and nudges Claude to shorten it, and if over the limit returns an error telling Claude to rewrite the index; topic files load on demand only
+    enforcement: mechanically enforced read limit (the write succeeds but an error is returned and content past the limit is dropped on next load); content itself is advisory
+    confidence: high
+
+  - id: claude-code-rules-dir
+    name: .claude/rules/ path-scoped rules
+    kind: vendor-feature
+    origin: Anthropic / Claude Code
+    source_url: https://code.claude.com/docs/en/memory
+    maintains: Markdown rule files under .claude/rules/ (recursive, symlinks allowed) and ~/.claude/rules/; optional YAML `paths:` frontmatter globs
+    write_trigger: manual — user authors rule files; no automatic generation documented
+    staleness_handling: none documented beyond the general "review periodically" advice
+    size_control: indirect — rules with `paths:` load only when Claude reads a matching file, which is the documented remedy for an oversized CLAUDE.md; a rule's whole `paths` list shares a budget of 1,000 expanded brace patterns and 4 MiB
+    enforcement: the paths/glob budget and invalid-glob handling are mechanical; rule content is advisory
+    confidence: high
+
+  - id: claude-code-init-and-doctor
+    name: /init generation and /doctor CLAUDE.md trim
+    kind: vendor-feature
+    origin: Anthropic / Claude Code
+    source_url: https://code.claude.com/docs/en/memory
+    maintains: Generates/updates the project CLAUDE.md; reads .cursor/rules, .cursorrules and .github/copilot-instructions.md into it, and with CLAUDE_CODE_NEW_INIT=1 also AGENTS.md, .devin/rules/, .windsurf/rules/, .windsurfrules, .clinerules; `/import` appends a one-time copy of another agent's instruction files
+    write_trigger: user command — `/init` (suggests improvements rather than overwriting an existing file); `/doctor` proposes trims; `/import` for a one-time migration
+    staleness_handling: "`/doctor` \"proposes trims for a checked-in CLAUDE.md: it cuts content Claude can derive from the codebase, such as directory layouts, dependency lists, and architecture overviews, and keeps pitfalls, rationale, and conventions\" (requires v2.1.206+)"
+    size_control: the /doctor trim check is the documented size-reduction path; no hard cap applied by /init
+    enforcement: advisory — proposals are reviewed before writing (the new-init flow "presents a reviewable proposal before writing any files")
+    confidence: high
+
+  - id: claude-code-compaction
+    name: Auto-compact / re-injection of instructions
+    kind: vendor-feature
+    origin: Anthropic / Claude Code
+    source_url: https://code.claude.com/docs/en/context-window
+    maintains: The live conversation context — compaction replaces the transcript with a structured summary; startup content (system prompt, CLAUDE.md, auto memory, MCP tools) reloads from disk afterward, plus up to five most-recently-modified files and invoked skill bodies (capped at 5,000 tokens per skill)
+    write_trigger: automatic when context fills, or the `/compact` user command
+    staleness_handling: none documented — compaction summarizes rather than detecting outdated content; conversation-only instructions are lost, which the docs give as the reason to write them into CLAUDE.md
+    size_control: this IS the size-control mechanism for context; the skill listing notably does not reload after compaction
+    enforcement: mechanical (the harness performs it), not a format contract
+    confidence: high
+
+  - id: agents-md-spec
+    name: AGENTS.md open format
+    kind: spec
+    origin: agents.md (cross-vendor, OpenAI-initiated)
+    source_url: https://agents.md/
+    maintains: AGENTS.md at the repository root, plus one per package in a monorepo; plain Markdown, "no required fields"
+    write_trigger: manual — "living documentation" updated by humans; no generation or update mechanism in the spec
+    staleness_handling: none documented
+    size_control: none documented — the spec states no file size limits
+    enforcement: none documented — no schema, no required fields; only the precedence rule "the closest AGENTS.md to the edited file wins; explicit user chat prompts override everything"
+    confidence: high
+
+  - id: codex-agents-md
+    name: Codex AGENTS.md instruction chain
+    kind: vendor-feature
+    origin: OpenAI / Codex
+    source_url: https://learn.chatgpt.com/docs/agent-configuration/agents-md
+    maintains: A chain built per run — ~/.codex/AGENTS.override.md else ~/.codex/AGENTS.md, then each directory from git root down to CWD (override, then AGENTS.md, then configurable fallback filenames), concatenated root-downward with closer files overriding
+    write_trigger: manual — "Codex does not generate AGENTS.md during initialization" and "does not auto-update these files"
+    staleness_handling: none documented; the chain is rebuilt on every run so there is no cache to clear
+    size_control: hard byte cap — `project_doc_max_bytes` defaults to 32 KiB; Codex stops adding files once the limit is reached, and skips empty files; remedy is to raise the limit or split across nested directories
+    enforcement: the byte cap is mechanically enforced; content and format are advisory. Load order verifiable with `codex --ask-for-approval never "Summarize current instructions"`
+    confidence: high
+
+  - id: cursor-project-rules
+    name: Cursor project rules (.cursor/rules MDC)
+    kind: vendor-feature
+    origin: Cursor
+    source_url: https://cursor.com/docs/context/rules
+    maintains: .mdc files in .cursor/rules (frontmatter `description`, `globs`, `alwaysApply`); plus User Rules, Team Rules (dashboard), and nested AGENTS.md as a frontmatter-free alternative
+    write_trigger: user command — `/create-rule` in chat, or Customize → Rules → Add Rule; Team Rules pushed from the dashboard
+    staleness_handling: none documented
+    size_control: advisory — "Keep rules under 500 lines" and "Split large rules into multiple, composable rules"
+    enforcement: partly mechanical — "A plain .md file in .cursor/rules is ignored by the rules system because it has no frontmatter"; Team Rules can be marked Enforced (required for all members) rather than toggleable. The 500-line guidance is advisory
+    confidence: high
+
+  - id: cursor-memories
+    name: Cursor Memories
+    kind: vendor-feature
+    origin: Cursor
+    source_url: https://cursor.com/changelog/1-0
+    maintains: Per-project, per-individual memories — facts Cursor remembers from conversations and references later; surfaced as automatically generated rules alongside .cursor/rules
+    write_trigger: model-written — generated from Chat conversations; shipped as beta, "enable from Settings → Rules"
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: "none documented \u2014 advisory context, not enforced format. Note: the dedicated Memories docs page has been folded into the Rules page, which no longer describes Memories, so details beyond the changelog are unverifiable from primary docs"
+    confidence: medium
+
+  - id: copilot-repository-instructions
+    name: Copilot repository custom instructions
+    kind: vendor-feature
+    origin: GitHub Copilot
+    source_url: https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions
+    maintains: .github/copilot-instructions.md (repo-wide); also honours AGENTS.md anywhere in the tree (nearest wins) or a single root CLAUDE.md / GEMINI.md
+    write_trigger: manual, or model-written on request — GitHub publishes a prompt for a Copilot agent to generate the instructions file
+    staleness_handling: none documented
+    size_control: advisory, in GitHub's own generation prompt — "Instructions must be no longer than 2 pages" and "Instructions must not be task specific"
+    enforcement: advisory — instructions "are automatically added to requests" but nothing validates them; precedence is personal > repository > organization, and all applicable sets are supplied together
+    confidence: high
+
+  - id: copilot-instructions-files
+    name: Path-scoped .instructions.md files
+    kind: vendor-feature
+    origin: GitHub Copilot
+    source_url: https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions
+    maintains: NAME.instructions.md files under .github/instructions/, each with `applyTo:` glob frontmatter; optional `excludeAgent:` (e.g. "code-review", "cloud-agent")
+    write_trigger: manual
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: mechanically scoped by the `applyTo` globs and `excludeAgent` keyword; content advisory. Path-specific instructions combine with, rather than replace, the repo-wide file
+    confidence: high
+
+  - id: vscode-copilot-instructions
+    name: VS Code Copilot instructions and /init
+    kind: vendor-feature
+    origin: Microsoft / VS Code + Copilot
+    source_url: https://code.visualstudio.com/docs/copilot/customization/custom-instructions
+    maintains: .github/copilot-instructions.md, .instructions.md files in .github/instructions/ (workspace, searched recursively) and ~/.copilot/instructions/ (user), plus AGENTS.md gated by the `chat.useAgentsMdFile` setting
+    write_trigger: user command — `/init` "discovers existing AI conventions in your workspace, such as copilot-instructions.md or AGENTS.md files" and generates workspace instructions tailored to the project
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: "advisory; selection is mechanical via `applyTo` globs or semantic matching. Priority: personal (user-level) instructions highest, then repository, then organization"
+    confidence: high
+
+  - id: copilot-custom-agents
+    name: Copilot custom agents (.agent.md)
+    kind: vendor-feature
+    origin: GitHub Copilot
+    source_url: https://docs.github.com/en/copilot/reference/custom-agents-configuration
+    maintains: .agent.md agent-profile files at repository (.github/agents/), organization and enterprise levels; YAML frontmatter `description` (required), `name`, `target`, `tools`, `model`, `disable-model-invocation`, `user-invocable`, `mcp-servers`
+    write_trigger: manual — authored and committed; versioned by the agent profile file's git commit SHA
+    staleness_handling: none documented (git SHA pinning gives consistency within a PR interaction, not freshness detection)
+    size_control: hard cap — "The prompt can be a maximum of 30,000 characters"
+    enforcement: mechanically enforced — required `description` field, the 30k character cap, deduplication by filename with "the lowest level configuration takes precedence" (repository > organization > enterprise)
+    confidence: high
+
+  - id: windsurf-rules
+    name: Windsurf/Cascade rules
+    kind: vendor-feature
+    origin: Cognition / Windsurf (Cascade)
+    source_url: https://docs.devin.ai/desktop/cascade/memories
+    maintains: ~/.codeium/windsurf/memories/global_rules.md (global); workspace rules in .devin/rules/*.md (preferred) or .windsurf/rules/*.md (fallback), legacy .windsurfrules at workspace root; root AGENTS.md
+    write_trigger: manual — user-defined; rules declare a `trigger` frontmatter field
+    staleness_handling: none documented
+    size_control: hard caps — global rules file "Limited to 6,000 characters"; workspace rule files "Limited to 12,000 characters per file"
+    enforcement: mechanically enforced character caps and activation modes — `always_on` (full content in every system prompt), `model_decision` (description first, body on demand), `glob` (matching files), `manual` (@rule-name). Global and root AGENTS.md use no frontmatter and are always enabled
+    confidence: high
+
+  - id: windsurf-memories
+    name: Cascade auto-generated Memories
+    kind: vendor-feature
+    origin: Cognition / Windsurf (Cascade)
+    source_url: https://docs.devin.ai/desktop/cascade/memories
+    maintains: Workspace-scoped memory entries in ~/.codeium/windsurf/memories/ — local only, not version-controlled, not shareable across a team
+    write_trigger: model-written — "Context Cascade auto-generates during conversations"; also user-prompted via "create a memory of ..."
+    staleness_handling: none documented — memories are managed by hand
+    size_control: none documented (the 6k/12k caps apply to rules, not memories)
+    enforcement: none documented — advisory context; auto-generated memories consume no credits
+    confidence: high
+
+  - id: cline-rules
+    name: Cline Rules (.clinerules/)
+    kind: vendor-feature
+    origin: Cline
+    source_url: https://docs.cline.bot/features/cline-rules
+    maintains: All .md and .txt files inside .clinerules/ at the project root, combined into one rule set; global rules in Documents/Cline/Rules; also detects .cursorrules, .windsurfrules and AGENTS.md (or ~/.agents/AGENTS.md)
+    write_trigger: user command — `/newrule` guides Cline to generate a rule interactively; otherwise manual via the Rules menu
+    staleness_handling: none documented
+    size_control: advisory — "Rules consume context tokens. Avoid lengthy explanations or pasting entire style guides. Keep rules concise and link to external documentation"
+    enforcement: mechanical only in that every detected rule file gets an individual on/off toggle in the Rules panel, and workspace rules take precedence over global on conflict; content is advisory
+    confidence: high
+
+  - id: cline-memory-bank
+    name: Cline Memory Bank
+    kind: convention
+    origin: Cline (documented pattern, not built-in)
+    source_url: https://docs.cline.bot/prompting/cline-memory-bank
+    maintains: A memory-bank/ directory of six files — projectbrief.md, productContext.md, activeContext.md ("updates most frequently"), systemPatterns.md, techContext.md, progress.md
+    write_trigger: model-written on explicit command — "initialize memory bank" to create, "update memory bank" to trigger "a full documentation review and update"; also manually at milestones before starting a fresh conversation
+    staleness_handling: the "update memory bank" full documentation review is the only refresh path; no automatic detection of stale content
+    size_control: none documented
+    enforcement: none — explicitly "a documentation methodology" implemented via custom instructions, "not native functionality", so nothing validates the file set or format
+    confidence: high
+
+  - id: roo-code-rules
+    name: Roo Code custom instructions and rules
+    kind: vendor-feature
+    origin: Roo Code
+    source_url: https://roocodeinc.github.io/Roo-Code/features/custom-instructions
+    maintains: ".roo/rules/ and mode-specific .roo/rules-{modeSlug}/ in the workspace (fallback: .roorules / .roorules-{modeSlug}); global ~/.roo/rules/ and ~/.roo/rules-{modeSlug}/; plus AGENTS.md (fallback AGENT.md)"
+    write_trigger: manual
+    staleness_handling: none documented
+    size_control: none documented — no file size or quantity limits stated; symlink resolution capped at depth 5
+    enforcement: "mechanical loading rules \u2014 directories read recursively, files sorted alphabetically case-insensitively, cache files (.DS_Store, *.bak, *.tmp) auto-excluded, empty directories fall back to the single-file form, AGENTS.md loading disabled with `\"roo-cline.useAgentRules\": false`. System-prompt order: language \u2192 global \u2192 mode-specific instructions \u2192 mode rule files \u2192 general rule files; workspace beats global on conflict"
+    confidence: high
+
+  - id: aider-conventions
+    name: Aider CONVENTIONS.md
+    kind: convention
+    origin: Aider
+    source_url: https://aider.chat/docs/usage/conventions.html
+    maintains: A plain-markdown CONVENTIONS.md (or any named file) loaded read-only into the chat
+    write_trigger: manual — user writes it; loaded with `/read CONVENTIONS.md`, `aider --read CONVENTIONS.md`, or a `read:` key in .aider.conf.yml
+    staleness_handling: none documented
+    size_control: none documented; loading via `/read` marks the file read-only "and cached if prompt caching is enabled", which bounds cost rather than size
+    enforcement: read-only marking is mechanical (the file is protected from modification); the conventions themselves are advisory
+    confidence: high
+
+  - id: aider-repo-map
+    name: Aider repository map
+    kind: vendor-feature
+    origin: Aider
+    source_url: https://aider.chat/docs/repomap.html
+    maintains: An auto-derived map of the whole git repo — key classes, functions and signatures — regenerated and sent with each change request; no file on disk for the user to maintain
+    write_trigger: automatic — rebuilt from the repo and resized per request based on chat state
+    staleness_handling: inherent — the map is derived from current source each time, so it cannot go stale the way a hand-written file does
+    size_control: token budget via `--map-tokens`, default 1k; "Aider adjusts the size of the repo map dynamically based on the state of the chat. It will usually stay within that setting's value"; a graph ranking algorithm selects only "the most important identifiers"
+    enforcement: mechanical — the token budget and ranking are applied by the tool, not by the user
+    confidence: high
+
+  - id: amp-agents-md
+    name: Amp AGENTS.md
+    kind: vendor-feature
+    origin: Sourcegraph / Amp
+    source_url: https://ampcode.com/docs/customize/agents-md
+    maintains: AGENTS.md in CWD and parent directories up to $HOME (always included), subtree files (included when the agent reads files there), $HOME/.config/amp/AGENTS.md and $HOME/.config/AGENTS.md, and system-wide /etc/ampcode/AGENTS.md (or the macOS/Windows equivalents); falls back to AGENT.md or CLAUDE.md in a directory with no AGENTS.md
+    write_trigger: model-written on offer/request — "Amp offers to generate an AGENTS.md file for you if none exists", and users can ask it to update the file based on a thread's discussion
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: loading scope is mechanical (always-included vs read-triggered subtree files); content advisory
+    confidence: high
+
+  - id: zed-instructions
+    name: Zed agent instructions
+    kind: vendor-feature
+    origin: Zed Industries
+    source_url: https://zed.dev/docs/ai/instructions
+    maintains: Personal ~/.config/zed/AGENTS.md (%APPDATA%\Zed\AGENTS.md on Windows); project instructions from the first match of .rules, .cursorrules, .windsurfrules, .clinerules, .github/copilot-instructions.md, AGENT.md, AGENTS.md, CLAUDE.md, GEMINI.md
+    write_trigger: "manual; note that as of Zed v1.4.0 the Rules Library was replaced by Skills \u2014 non-default Rules migrate to global skills in ~/.agents/skills/ with `disable-model-invocation: true`, and default Rules are appended to the global AGENTS.md"
+    staleness_handling: none documented
+    size_control: none documented — no hard limits on instruction file size stated
+    enforcement: the filename priority order is mechanical, and "Project instructions override personal AGENTS.md when they conflict"; content advisory. Nested/subdirectory behaviour is not documented
+    confidence: high
+
+  - id: junie-guidelines
+    name: Junie guidelines (.junie/AGENTS.md)
+    kind: vendor-feature
+    origin: JetBrains / Junie
+    source_url: https://junie.jetbrains.com/docs/guidelines-and-memory.html
+    maintains: Discovery order — .junie/AGENTS.md; then AGENTS.md plus .junie/playbook.md and .junie/rules/*.md; then legacy .junie/guidelines.md or .junie/guidelines/; global ~/.junie/AGENTS.md (%USERPROFILE%\.junie\AGENTS.md)
+    write_trigger: model-written on request — you can ask Junie to create a guidelines file capturing the codebase's existing conventions, then edit it
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: mechanical merge behaviour — when both global and project files exist "Junie includes both with clear markers", identical content is automatically deduplicated, and "Project-level guidelines always take precedence over global ones when they conflict". The page is titled "Guidelines and memory" but documents no separate memory store
+    confidence: high
+
+  - id: gemini-md-context
+    name: GEMINI.md hierarchical context files
+    kind: vendor-feature
+    origin: Google / Gemini CLI
+    source_url: https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md
+    maintains: Three tiers — global ~/.gemini/GEMINI.md; workspace directories and their ancestors; just-in-time scanning of a directory and its ancestors up to a trusted root when a tool touches files there. All found files are concatenated and sent with every prompt
+    write_trigger: manual, plus `/memory` commands; filename configurable via settings.json `fileName` (e.g. ["AGENTS.md", "CONTEXT.md", "GEMINI.md"])
+    staleness_handling: "`/memory reload` (documented; `/memory refresh` in older docs) forces a re-scan and reload of all context files \u2014 freshness against disk, not content staleness"
+    size_control: none documented; large files are split with `@file.md` imports (relative and absolute paths), handled by the Memory Import Processor
+    enforcement: advisory — content is concatenated into the prompt with no validation; `/memory show` displays the exact concatenated context
+    confidence: high
+
+  - id: gemini-save-memory
+    name: Gemini CLI memory tool (/memory add, save_memory)
+    kind: vendor-feature
+    origin: Google / Gemini CLI
+    source_url: https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/memory.md
+    maintains: Durable facts, user preferences and project details written into the Markdown memory tiers — repo GEMINI.md, per-project private memory folders, and global ~/.gemini/GEMINI.md; stored facts then flow into the hierarchical context for all future sessions
+    write_trigger: model-written — Gemini CLI "persists durable facts ... by editing Markdown memory files directly", using write_file or replace; also user-driven via /memory add
+    staleness_handling: none documented — no explicit deletion mechanism described; only the guidance to avoid duplicating one fact across tiers
+    size_control: advisory — "keep durable instructions concise and avoids duplicating the same fact across multiple memory tiers"
+    enforcement: none documented — plain Markdown edits, no format contract
+    confidence: high
+
+  - id: continue-rules
+    name: Continue.dev rules
+    kind: vendor-feature
+    origin: Continue.dev
+    source_url: https://docs.continue.dev/customize/deep-dives/rules
+    maintains: Markdown (recommended) or YAML rule files in .continue/rules/, plus rules blocks added from the IDE; properties `name` (required for YAML), `globs`, `regex`, `description`, `alwaysApply`
+    write_trigger: user action — "Add Rules" button in the IDE, or authored files
+    staleness_handling: none documented
+    size_control: none documented
+    enforcement: "mechanical selection \u2014 `alwaysApply: true` always included, globs/regex scope by file, `description` lets the agent decide; files load in lexicographical order so numeric prefixes (01-general.md) control sequence. Rules apply to Agent/Chat/Edit but not autocomplete or apply"
+    confidence: high
+
+  - id: devin-knowledge
+    name: Devin Knowledge
+    kind: vendor-feature
+    origin: Cognition / Devin
+    source_url: https://docs.devin.ai/product-guides/knowledge
+    maintains: Knowledge entries (trigger description + contents), optionally organized into nested folders, with macros like !deploy-checklist; pinned to no repo, one repo, or all repos
+    write_trigger: mixed — manual creation in Settings → Resources → Knowledge; auto-generated from READMEs, file structure and repo contents; auto-pulled and updated from .rules, .mdc, .cursorrules, .windsurf, CLAUDE.md and AGENTS.md in the codebase; and "Devin will automatically suggest Knowledge to remember based on your feedback in chat", editable before saving
+    staleness_handling: advisory — "Devin will read the entire Knowledge contents, so keep it all relevant and up-to-date!"; onboarding step is to review auto-generated Knowledge for completeness and accuracy; entries can be enabled/disabled per user without deletion. No automatic staleness detection documented
+    size_control: none documented
+    enforcement: mechanical retrieval gating only (trigger descriptions, pinning scope, enable/disable, enterprise promotion); content is advisory
+    confidence: high
+
+  - id: factory-droid-agents-md
+    name: Factory Droid AGENTS.md discovery
+    kind: vendor-feature
+    origin: Factory / Droid
+    source_url: https://docs.factory.ai/guides/power-user/memory-management
+    maintains: AGENTS-style instruction files found by walking CWD up to the git root, checking each directory plus .factory/, .agents/, .agent/ context dirs; personal ~/.factory/, ~/.agents/, ~/.agent/
+    write_trigger: manual — no built-in persistent memory store; instructions are files the user maintains
+    staleness_handling: none documented
+    size_control: hard character budgets — "Initial AGENTS-style guideline load 80,000 characters" and "Dynamic Read-path guideline discovery 40,000 characters"; guidance is to "Keep the top of each file dense with the rules Droid most needs" since instruction files count against session context
+    enforcement: the character budgets are mechanical; precedence is documented as user request > nested project files > root project files > personal defaults
+    confidence: high
+
+  - id: claude-app-memory
+    name: Claude app memory (per-project)
+    kind: vendor-feature
+    origin: Anthropic / Claude apps
+    source_url: https://support.claude.com/en/articles/11817273-use-claude-s-chat-search-and-memory-to-build-on-previous-context
+    maintains: A memory summary per user, with each project keeping "its own isolated memory space with a dedicated summary" separate from non-project chats; stores role and professional context, project details and ongoing work, and explicitly "Technical preferences and coding style"
+    write_trigger: model-written automatically from chats, plus explicit "remember this"; users can also tell Claude what to change and "it will update your memory summary without needing to leave the conversation"
+    staleness_handling: user-driven only — view, edit or delete individual entries in Settings > Memory (Settings > Capabilities for legacy users); memory can be paused (keeps entries, stops new ones) or reset (deletes all, including project memories). No automatic expiry documented
+    size_control: none documented
+    enforcement: category exclusions are enforced (government IDs, criminal history, financial account numbers, immigration status are never stored); incognito chats are excluded from memory entirely; memory is unavailable to orgs with HIPAA, public-sector or custom data-retention agreements
+    confidence: high
+
+  # === agent ad0bb21ad288d08ee ===
+
+  - id: chroma-context-rot
+    name: "Context Rot: How Increasing Input Tokens Impacts LLM Performance"
+    kind: study
+    origin: Chroma Research (Hong, Troynikov, Huber)
+    source_url: https://www.trychroma.com/research/context-rot
+    maintains: "Shows that an instruction file's cost is not just tokens — everything in context degrades retrieval of everything else, non-uniformly"
+    write_trigger: "none documented; implies content should be added only when it survives as a high-similarity signal for the task at hand"
+    staleness_handling: "MEASURED: distractors — plausible-but-wrong content semantically near the real answer — degrade performance even at n=1, and more with several; a superseded rule sitting next to its replacement is exactly this shape"
+    size_control: "MEASURED: 18 frontier models (Claude, GPT, Gemini, Qwen) all degrade monotonically as input grows; tasks spanned 8 input lengths to 131,072 tokens, 11 needle positions, repeated-words at 12 lengths (25-10,000 words), and LongMemEval at ~113k-token full prompts vs ~300-token focused versions. Claude models had the lowest hallucination rate under distractors (2-3%), GPT the highest"
+    enforcement: "none documented — frames the answer as context engineering (curation and placement), not enforcement"
+    confidence: high
+
+  - id: nolima-effective-length
+    name: "NoLiMa: Long-Context Evaluation Beyond Literal Matching"
+    kind: study
+    origin: Adobe Research / LMU Munich (Modarressi et al., ICML 2025)
+    source_url: https://github.com/adobe-research/NoLiMa
+    maintains: "Quantifies how fast a rule stops being retrievable once it has no literal lexical overlap with the request — the normal case for an abstract convention in CLAUDE.md"
+    write_trigger: none documented
+    staleness_handling: none documented
+    size_control: "MEASURED: 22 LLMs, 1K-128K contexts. At 32K roughly 83% of models fall below 50% of their short-context baseline. GPT-4o 99.3% base -> 69.7% at 32K; Claude 3.5 Sonnet 87.6% base -> 29.8% at 32K; Llama 3.3 70B 97.3% -> 42.7%. 'Effective length' (>=85% of base score) is 8K for GPT-4o and under 1K for small models"
+    enforcement: none documented
+    confidence: high
+
+  - id: lost-in-the-middle
+    name: "Lost in the Middle: How Language Models Use Long Contexts"
+    kind: study
+    origin: Liu, Lin, Hewitt, Paranjape, Bevilacqua, Petroni, Liang (Stanford; TACL 2024)
+    source_url: https://aclanthology.org/2024.tacl-1.9/
+    maintains: "The positional argument for ordering an instruction file: rules buried mid-file are the least reliably used"
+    write_trigger: none documented
+    staleness_handling: none documented
+    size_control: "U-shaped performance curve — accuracy 'is often highest when relevant information occurs at the beginning or end of the input context, and significantly degrades when models must access relevant information in the middle,' even for explicitly long-context models. The abstract gives no percentages"
+    enforcement: "none documented; explicitly warns that a bigger context window does not ensure robust access across its length"
+    confidence: high
+
+  - id: handbook-md-benchmark
+    name: "HANDBOOK.md: A Benchmark for Long-Context Agentic Instruction Following"
+    kind: study
+    origin: arXiv 2607.25398
+    source_url: https://arxiv.org/abs/2607.25398
+    maintains: "Direct measurement of whether a standing written policy file actually governs an agent across a task — the closest analogue to 'does CLAUDE.md work'"
+    write_trigger: none documented
+    staleness_handling: "MEASURED failure pattern: agents 'lose rule details over long horizons' and 'report compliance they did not achieve' — so self-reported adherence cannot be the staleness signal"
+    size_control: "MEASURED: 65 agentic tasks, 824 programmatic criteria, expert-written policy documents of 20-124 pages. Under strict grading (every criterion must pass) the strongest model passes 36.2% of trials; most frontier models stay below 25%"
+    enforcement: "MEASURED failure patterns argue for enforcement: agents let 'a plausible but unauthorized in-environment request override the standing policy' and 'perform a required check and then act against its result'"
+    confidence: high
+
+  - id: ifscale-instruction-density
+    name: "How Many Instructions Can LLMs Follow at Once? (IFScale)"
+    kind: study
+    origin: Jaroslawicz, Whiting, Shah, Maamari (Distyl AI), arXiv 2507.11538
+    source_url: https://arxiv.org/abs/2507.11538
+    maintains: "The rule-count budget: quantifies compliance decay as the number of simultaneous instructions grows, which is the mechanism behind 'my agent ignores my rules'"
+    write_trigger: "none documented; implies each added rule taxes every other rule"
+    staleness_handling: none documented
+    size_control: "MEASURED: 500 keyword-inclusion instructions, 20 models across 7 providers; 'even the best frontier models only achieve 68% accuracy at the max density of 500 instructions.' Densities tested are 10, 50, 100, 250, 500 (per the project page)"
+    enforcement: "none documented"
+    confidence: high
+
+  - id: ifscale-project-page
+    name: "IFScale leaderboard — primacy bias and three degradation patterns"
+    kind: study
+    origin: Distyl AI
+    source_url: https://distylai.github.io/IFScale/
+    maintains: "Says where in a rule list compliance is lost, not just how much"
+    write_trigger: none documented
+    staleness_handling: none documented
+    size_control: "MEASURED: 20 models, densities 10/50/100/250/500; identifies 3 distinct degradation patterns and a 'bias towards earlier instructions' — later rules in a file are the ones dropped first"
+    enforcement: none documented
+    confidence: high
+
+  - id: claude-md-manifests-empirical
+    name: "On the Use of Agentic Coding Manifests: An Empirical Study of Claude Code"
+    kind: study
+    origin: arXiv 2509.14744
+    source_url: https://arxiv.org/html/2509.14744v1
+    maintains: "Baseline for what real CLAUDE.md files actually contain and how they're structured"
+    write_trigger: "none documented"
+    staleness_handling: "MEASURED gap: the paper provides no data on update frequency or staleness and names it as future work — the maintenance question is unstudied in this corpus"
+    size_control: "MEASURED: 253 CLAUDE.md files from 242 repos (filtered from 838 files / 806 repos), 1,249 commits. Median headings per file: 1 H1, 5 H2, 9 H3; H4 in only 37 files, H5 in 5, H6 once. Content prevalence: Build and Run 77.1%, Implementation Details 71.9%, Architecture 64.8%, Testing 60.5%, System Overview 48.2%, Development Process 37.2%, Config/Environment 26.5%, Maintenance 19.8%, AI Integration 15.4%, Docs/References 13.8%"
+    enforcement: none documented
+    confidence: high
+
+  - id: agent-readmes-growth-asymmetry
+    name: "Agent READMEs: An Empirical Study of Context Files for Agentic Coding"
+    kind: study
+    origin: arXiv 2511.12884
+    source_url: https://arxiv.org/html/2511.12884v1
+    maintains: "The single most on-point measurement for this problem: these files are maintained, but maintenance is almost entirely additive, so they only grow"
+    write_trigger: "MEASURED: files behave as evolving configuration — 67.4% of Claude Code context files are modified in multiple commits, with a median interval of ~24.1 hours between modifications (Codex ~22.0h, Copilot ~70.7h)"
+    staleness_handling: "MEASURED: change is 'driven by small, incremental additions rather than large-scale deletions' — median additions 57.0 words per commit vs median deletions under 15 words. No pruning discipline is observed in the wild"
+    size_control: "MEASURED: 2,303 context files across 1,925 repos. Median length: Claude Code 485.0 words, GitHub Copilot 535.0, OpenAI Codex 335.5. Flesch Reading Ease: Claude Code 16.6, Copilot 26.6, Codex 39.6 — 'very difficult,' academic/legal register. Content: test procedures 75.9%, implementation details 70.8%, architecture 68.1%; security only 14.8%, performance 14.5%"
+    enforcement: none documented
+    confidence: high
+
+  - id: instruction-adherence-factorial
+    name: "Instruction Adherence in Coding Agent Configuration Files: A Factorial Study of Four File-Structure Variables"
+    kind: study
+    origin: arXiv 2605.10039
+    source_url: https://arxiv.org/abs/2605.10039
+    maintains: "Tests directly whether the folk remedies (shorter file, rule near the top, split files, remove contradictions) change adherence"
+    write_trigger: none documented
+    staleness_handling: none documented
+    size_control: "MEASURED and negative: across 1,650 Claude Code CLI sessions (16,050 function-level observations, 2 TypeScript codebases, 3 frontier models, 5 tasks), 'None of the four structural variables or three two-way interactions produces a detectable contrast after multiple-testing correction.' The manipulated variables are file size, instruction position, file architecture, and contradictions in adjacent files"
+    enforcement: "MEASURED decay within a session: 'each additional function the agent generates is associated with approximately 5.6% lower odds of compliance per step (OR = 0.944)' — adherence erodes with session length, not with file structure"
+    confidence: high
+
+  - id: agents-md-efficiency-impact
+    name: "On the Impact of AGENTS.md Files on the Efficiency of AI Coding Agents"
+    kind: study
+    origin: arXiv 2601.20404
+    source_url: https://arxiv.org/abs/2601.20404
+    maintains: "Gives the upside number for having a context file at all — the case for maintaining one rather than deleting it"
+    write_trigger: none documented
+    staleness_handling: none documented
+    size_control: "MEASURED: 10 repositories, 124 pull requests, agents run with and without AGENTS.md. Presence is associated with 28.64% lower median runtime and 16.58% lower output token consumption, with comparable task completion. No finding on whether longer files help or hurt"
+    enforcement: none documented
+    confidence: high
+
+  - id: agentbench-context-files-marginal
+    name: "Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?"
+    kind: study
+    origin: arXiv 2602.11988 (AGENTbench)
+    source_url: https://arxiv.org/html/2602.11988v1
+    maintains: "The strongest measured warning against auto-generated / redundant instruction content — it costs more and helps less than nothing"
+    write_trigger: "MEASURED: developer-written context files improve performance ~4% on average; LLM-generated ones reduce it by 0.5% and 2% across the two datasets. Write from real project knowledge, not generation"
+    staleness_handling: "MEASURED redundancy signal: when existing repository documentation was removed, LLM-generated context files improved performance by 2.7% on average — i.e. their usual harm comes from duplicating docs that already exist. Content already derivable from the repo is the stale/duplicate class"
+    size_control: "MEASURED: 138 instances from 12 Python repos plus SWE-bench Lite, 4 agents. LLM-generated files raise inference cost 20% and 23% on average and add 2.45-3.92 steps per task; developer-written files cost up to 19% more. Reasoning-token usage rises 10-22%. Context files 'do not meaningfully reduce' the steps needed to locate relevant files"
+    enforcement: none documented
+    confidence: high
+
+  - id: anthropic-claude-code-best-practices
+    name: "Best practices for Claude Code — Write an effective CLAUDE.md"
+    kind: guidance
+    origin: Anthropic (Claude Code docs)
+    source_url: https://code.claude.com/docs/en/best-practices
+    maintains: "Vendor's own statement of the bloat failure mode and the include/exclude contract"
+    write_trigger: "Per-line test: 'Would removing this cause Claude to make mistakes?' If not, cut it. Include only what applies broadly — 'CLAUDE.md is loaded every session'; anything only sometimes relevant belongs in a skill. Exclude information that changes frequently"
+    staleness_handling: "Two named symptoms: if Claude keeps violating a rule that exists, 'the file is probably too long and the rule is getting lost'; if Claude asks questions already answered in the file, the phrasing is ambiguous. 'Treat CLAUDE.md like code: review it when things go wrong, prune it regularly, and test changes by observing whether Claude's behavior actually shifts.' `/doctor` proposes cuts for content derivable from the codebase"
+    size_control: "'Keep it short and human-readable' / 'Keep it concise'; named failure pattern 'The over-specified CLAUDE.md — if your CLAUDE.md is too long, Claude ignores half of it because important rules get lost in the noise.' No line number is given on this page; the stated constraint is that performance degrades as context fills"
+    enforcement: "Explicit split: 'Unlike CLAUDE.md instructions which are advisory, hooks are deterministic and guarantee the action happens.' Fix for bloat: 'delete it or convert it to a hook.' Emphasis degrades with reuse — 'If you emphasize many lines, none of them stands out'"
+    confidence: high
+
+  - id: anthropic-context-engineering
+    name: "Effective context engineering for AI agents"
+    kind: guidance
+    origin: Anthropic Engineering
+    source_url: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+    maintains: "The underlying principle a maintenance mechanism should optimize: smallest high-signal set, because attention is a depleting budget"
+    write_trigger: "Target 'the smallest possible set of high-signal tokens that maximize the likelihood of some desired outcome' — every addition must earn utility-per-token"
+    staleness_handling: "Compaction — summarize before the window fills, preserving architectural decisions while discarding redundant outputs; structured note-taking keeps long-horizon memory in external files rather than in-context"
+    size_control: "Cites context rot (links Chroma) and the n² pairwise-relationship argument for a finite 'attention budget'; sub-agents should return condensed summaries of typically 1,000-2,000 tokens rather than raw detail. No file-size number"
+    enforcement: "Names the two ways instruction sets fail: brittle hardcoded logic (high maintenance burden) and vagueness. The target is 'the right altitude' — specific enough to guide, flexible enough to be heuristics rather than rigid rules"
+    confidence: high
+
+  - id: futureagi-instruction-governance
+    name: "CLAUDE.md: Why Long Instruction Files Get Ignored"
+    kind: guidance
+    origin: Future AGI (blog)
+    source_url: https://futureagi.com/blog/claude-md-instruction-governance/
+    maintains: "Frames upkeep as governance: route each rule to the mechanism that matches how badly it must hold"
+    write_trigger: "Keep in CLAUDE.md only rules that are broad, apply to every session, and can tolerate occasional non-compliance (code style, test runners, branch naming). Route the rest: hooks for zero-exception actions, permissions for must-never-happen, skills for sometimes-needed workflows, path-scoped rules for directory conventions"
+    staleness_handling: "Names the gap directly — the file has no tests the way code does. Proposes scoring each rule individually against real session outputs with instruction-adherence evals; 'rules that score identically whether present or absent are paying rent on every session' without governing behavior"
+    size_control: "Cites Anthropic's under-200-lines-per-file target. Presents a joint-adherence table (a model, not a measurement, assuming independent rules): at 99% per-rule compliance, 10 rules = 90.4%, 50 rules = 60.5%, 100 rules = 36.6%; at 95% per-rule, 50 rules = 7.7%. MEASURED (cited, not original): HANDBOOK.md's 36.2% strict pass rate over 20-124 page policy docs"
+    enforcement: "'Unlike CLAUDE.md instructions which are advisory, hooks are deterministic and guarantee the action happens' — if a rule must never be violated it belongs in a hook or permissions, not prose"
+    confidence: high
+
+  - id: humanlayer-writing-good-claude-md
+    name: "Writing a good CLAUDE.md"
+    kind: lore
+    origin: HumanLayer (engineering blog)
+    source_url: https://www.humanlayer.dev/blog/writing-a-good-claude-md
+    maintains: "Practitioner budget for how many rules the model has headroom for, and what should never have been prose"
+    write_trigger: "Structure as WHAT / WHY / HOW — stack, project structure, purpose, build and test commands. Explicitly advises against `/init` or generated boilerplate as a starting point"
+    staleness_handling: "Does not address detection directly; notes that irrelevant, non-universal content causes the model to discount the whole file"
+    size_control: "Recommends under 300 lines; their own root file is under sixty lines. Cites research that frontier thinking models follow roughly 150-200 instructions with reasonable consistency, against a Claude Code system prompt already carrying ~50 instructions — so user headroom is small"
+    enforcement: "Strongly pro-enforcement: 'Never send an LLM to do a linter's job.' Use deterministic linters/formatters and a Stop hook that runs them after generation; point to real code patterns instead of writing style rules in prose"
+    confidence: high
+
+  - id: tianpan-file-too-long
+    name: "Your CLAUDE.md Is Probably Too Long (And That's Why It's Not Working)"
+    kind: lore
+    origin: Tian Pan (blog)
+    source_url: https://tianpan.co/blog/2026-02-14-writing-effective-agent-instruction-files
+    maintains: "A concrete review ritual with a deletion test and a recency test for each rule"
+    write_trigger: "'Start lean, observe where Claude makes mistakes, add rules only when those rules would have prevented real failures'"
+    staleness_handling: "Review question per rule: 'Has Claude violated this rule in the past month? If no, consider whether it's still relevant.' Also cut anything the model would infer from reading the code, and anything task-specific (move it to a scoped file)"
+    size_control: "Recommends a 40-80 line sweet spot, under 100 lines as a ceiling. MEASURED (cited): analysis of over 2,500 AGENTS.md repos; 300-350 words median for high-performing files, with a negative correlation above 1,000 words. Cites ~50 built-in system-prompt instructions against a 150-200 instruction following limit"
+    enforcement: "'Never send an LLM to do a linter's job — if Prettier or ESLint catches it, remove it from the instruction file and run the tool as a hook instead'"
+    confidence: high
+
+  - id: unblocked-bloat-audit
+    name: "How to Audit a Bloated CLAUDE.md File in 7 Steps"
+    kind: lore
+    origin: Unblocked (blog)
+    source_url: https://getunblocked.com/blog/audit-fix-bloated-claude-md/
+    maintains: "The most concrete audit procedure found — half subtraction, half empirical testing of whether rules land"
+    write_trigger: "Implicitly: only after a rule survives a probe test. Step 5 is to probe each rule with a task designed to trigger it in a fresh session"
+    staleness_handling: "Five named stale signals: commands that no longer execute (checked against `git log`), the same correction repeated twice in a week despite a written rule, a file whose last modification predates the convention it encodes, rules that survive audits but never demonstrably change behavior, and contradictions between user-level and project-level scopes. Step 6 is to log corrections for one week — repeated fixes mean the rules aren't landing"
+    size_control: "Measure footprint with `/context` against a 200-line target. Comparison table: Claude Code under 200 lines (official guidance); Cursor up to 500 lines per rule, recommends splitting beyond; OpenAI Codex 32 KiB combined, silently truncating overflow"
+    enforcement: "'Rules files are advisory; hooks, linters, and CI are deterministic.' Step 7 moves hard constraints out of prose into hooks/linters/CI"
+    confidence: high
+
+  - id: alexdunlop-evidence-review
+    name: "CLAUDE.md Best Practices: What the Evidence Supports (2026)"
+    kind: lore
+    origin: Alex Dunlop (blog)
+    source_url: https://www.alexdunlop.com/writing/claude-md-best-practices
+    maintains: "Separates the folklore from the one controlled study; corrects a widely-repeated size myth"
+    write_trigger: "Include what the agent cannot infer from reading the codebase, and state direct constraints with their reasons rather than suggestions"
+    staleness_handling: "No detection mechanism offered; flags the problem quantitatively — '59 to 67% of these files have multiple commits' yet 'still only grow' without pruning discipline"
+    size_control: "MEASURED (reporting arXiv 2605.10039, 1,650 sessions): file length from 25 to 500 lines, rule position, nested architecture, and internal contradictions all showed no measurable adherence difference; adherence was 67.7% with CLAUDE.md vs 0% without (0/524 instances), 71.3% for new code vs 45.1% for editing existing code, and ~5.6% lower odds per additional function written. Also corrects the myth: the 200-line / 25KB hard cap applies to auto-memory MEMORY.md, not CLAUDE.md, which loads in full regardless of length. Empirical median ~485 words"
+    enforcement: "'CLAUDE.md content is delivered as a user message after the system prompt, not as part of the system prompt itself' — so 'NEVER edit .env' is 'a request, not a guarantee. A PreToolUse hook that blocks the edit is enforcement'"
+    confidence: high
+
+  - id: dev-to-200-lines-ignored
+    name: "I Wrote 200 Lines of Rules for Claude Code. It Ignored Them All."
+    kind: lore
+    origin: DEV Community (practitioner post, "David")
+    source_url: https://dev.to/minatoplanb/i-wrote-200-lines-of-rules-for-claude-code-it-ignored-them-all-4639
+    maintains: "First-hand failure account of accumulated protocol rules plus an accumulated memory store that was written to and never read"
+    write_trigger: "Reverses the usual advice — stop adding rules; expect ~80% compliance and put the remaining 20% in code"
+    staleness_handling: "The dead-weight signal is write-without-read: 258 knowledge-base files were written but never accessed by the agent. Named protocols ('Search Before Speaking', 'ATOMIC SAVE PROTOCOL', 'KNOWLEDGE RETRIEVAL PROTOCOL') were ignored despite being explicit"
+    size_control: "200 lines of rules accumulated across sessions, all effectively ignored. Cites Jaroslawicz et al. for 'instruction compliance decreases uniformly as instruction count increases,' describing Claude Sonnet as showing a linear decay — double the instructions, halve the compliance"
+    enforcement: "Moved from prompt-based to code-based enforcement, with the caveat that 'hooks are still reactive: they catch the violation after the agent already made the wrong call' — only pre-commit hooks and CI checks proved reliable. 'Don't expect AI. Control AI.'"
+    confidence: high
+
+  - id: askhn-still-maintaining
+    name: "Ask HN: Do you still spend time maintaining Claude.md / AGENTS.md files?"
+    kind: lore
+    origin: Hacker News thread (id 48160604)
+    source_url: https://news.ycombinator.com/item?id=48160604
+    maintains: "Community answer on whether upkeep is worth it and what distinguishes a rule that works from one that doesn't"
+    write_trigger: "The thread's sharpest line: 'rules work if they are concise, specific, and based on an already existing failure pattern. They don't work if created in anticipation.' Preventive behavior rules go unheeded; constraints tied to an observed failure hold. Positive framing outperformed negative ('Always clarify intent before acting' over 'Never act without getting intent first'), since negatives can prime the behavior"
+    staleness_handling: "none documented explicitly; the implied test is whether the rule still corresponds to a failure that actually occurs"
+    size_control: "Keep behavior rules ideally under 50 lines; use progressive disclosure via nested AGENTS.md files rather than one monolith. One commenter still calls AGENTS.md 'probably the highest leverage thing you can give your agent'"
+    enforcement: "Several report moving reusable patterns into skill vaults and reference directories rather than growing the always-on file; success framed as data-driven iteration, not static rule-writing"
+    confidence: high
+
+  - id: xtrace-memory-bloat
+    name: "Too Many CLAUDE.md and Skill Files? 4 Fixes for Agent Memory Bloat"
+    kind: lore
+    origin: XTrace (blog)
+    source_url: https://xtrace.ai/blog/too-many-claude-skill-files
+    maintains: "Scales the problem past one file to a whole memory corpus, and puts a token price on the standing tax"
+    write_trigger: "Separate persistent global invariants (always-on, page-length budgeted) from on-demand procedures; most teams find 'their global memory is 80% procedures that snuck in'"
+    staleness_handling: "First pass is consolidating near-duplicates into one canonical file and resolving contradiction pairs — teams typically get 30-50% reduction in an afternoon. Warns that a retrieval index must be re-embedded after edits: 'an index that silently drifts from the files is worse than no index.' Recommends a held-out eval set of 50+ query-document pairs tested on every change"
+    size_control: "MEASURED (author's figures): 60 memory files averaging 800 words ≈ 64,000 tokens, roughly a third of a 200k window before any work begins; 200 skill descriptions at ~60 tokens of frontmatter each ≈ 12,000 more. Retrieval instead of front-loading is claimed to be roughly a 50x reduction against loading the corpus every session"
+    enforcement: "Argues against relying on bigger context windows (does not fix attention degradation) and against LLM-based compression, which 'preferentially drops specificity critical to procedures'"
+    confidence: high
+
+  - id: github-agents-md-2500-repos
+    name: "How to write a great agents.md: Lessons from over 2,500 repositories"
+    kind: guidance
+    origin: The GitHub Blog (GitHub Copilot team)
+    source_url: https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/
+    maintains: "Corpus-derived content contract for what actually earns a place in an agent instruction file"
+    write_trigger: "'The best agent files grow through iteration, not upfront planning' — refine from observed agent performance. Six core areas: executable commands (with flags, not just tool names), testing procedures, project structure, code style examples, git workflow, and explicit 'never do' boundaries"
+    staleness_handling: "none documented — the post gives no maintenance schedule and no guidance on outdated content"
+    size_control: "none documented — over 2,500 files analyzed but no word/line counts or length recommendations published. Prefers density over prose: 'One real code snippet showing your style beats three paragraphs describing it'"
+    enforcement: "none documented"
+    confidence: high
