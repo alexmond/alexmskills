@@ -7,6 +7,14 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-09-16
+
+### Added
+- **evolving-claude-md 1.7.0** — two mechanisms borrowed from an 80-entry survey of instruction-file upkeep tools (`.claude/research-sweep/2026-09-16-…`, 37 verified against primary sources). **Load evidence**: a new `InstructionsLoaded` hook (`record-loads.py`) records which instruction file actually loaded, in which session, and why (`session_start`, `nested_traversal`, `path_glob_match`, `include`, `compact`). Every other check in the plugin reasons about what the file *says*; this one records what the harness *did*, which makes two previously invisible failures checkable — a `.claude/rules/*.md` whose globs never match anything read (dead, though its content is perfectly fine, so no content audit could ever flag it) and a `CLAUDE.md` that never loads at all (silently skipped over the 4 MiB cap, or sitting in a path the client doesn't read). Both wait for `load_min_sessions` (default 5) of evidence, because "hasn't loaded yet" and "never loads" are identical on day one. **Supersede links**: an entry may end `Supersedes: YYYY-MM-DD topic-tag`; the audit then reports a target still unstruck (a dead rule still reading as current) or one that doesn't exist (typo'd date or tag), and the lint exempts the link from the body cap so bookkeeping isn't priced out. Borrowed from temporal knowledge graphs, which record *when* a fact stopped being true instead of leaving both versions standing — of 80 tools surveyed, exactly half document no staleness handling at all, and that was the one mechanism worth copying.
+
+### Fixed
+- **evolving-claude-md 1.7.0** — SKILL.md claimed in three places that the lint hook enforces a 200-character body cap; it enforces **500**. Entries between 201 and 500 chars had been passing silently against a documented rule. The docs now state both numbers and why they differ (200 keeps the log scannable, 500 is where an entry is provably a design doc) rather than tightening enforcement, which would have started rejecting entries in every consuming repo. Found by a test asserting the documented number.
+
 ## 2026-09-15
 
 ### Changed

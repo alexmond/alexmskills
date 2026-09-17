@@ -90,6 +90,8 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-09-16 — **load-evidence** — InstructionsLoaded hook records which instruction files actually load; a rule whose globs never match is invisible to every content check. Why: absence of a load event is the only evidence, so it needs 5+ sessions before accusing.
+- 2026-09-16 — **supersede-edge** — entries may name what they replace (`Supersedes: date tag`); audit flags an unstruck or missing target. Why: half of 80 surveyed upkeep tools detect no staleness at all — recording when a rule died beats detecting that its artifact vanished.
 - 2026-09-13 — **codex-runtime-probes** — Keep real-CLI mocks for hook payloads and tool isolation. Why: argv mocks passed while actual patches bypassed lint and external MCP servers still started.
 - 2026-09-13 — **codex-patch-envelope** — Codex 0.154 sends apply_patch text in tool_input.command. Why: direct adapter tests passed with input/patch, but a real CLI mock caught the silent lint bypass.
 

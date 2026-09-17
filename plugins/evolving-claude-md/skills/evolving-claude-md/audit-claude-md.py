@@ -101,6 +101,10 @@ DEFAULTS: dict[str, object] = {
     # --- inlet-quality checks: is the log a LEARNING log or a changelog? ---
     "changelog_mirror": True,     # entries duplicating CHANGELOG.md release notes
     "changelog_mirror_pct": 40,   # ... flag at this share of entries
+    # --- load-evidence checks (need record-loads.py data) ---
+    "load_evidence": True,        # use .claude/evolving-claude-md/loads.jsonl
+    "load_min_sessions": 5,       # ... only once this many sessions were recorded
+    "supersede_check": True,      # entries claiming to supersede an earlier one
 }
 
 
@@ -260,6 +264,103 @@ def _git_lines(args: list[str], root: str = ".") -> list[str]:
         return [ln for ln in r.stdout.splitlines() if ln]
     except Exception:
         return []
+
+
+def load_events(root: str = ".") -> list[dict]:
+    """Recorded InstructionsLoaded events — what actually loaded, not what should."""
+    path = os.path.join(root, ".claude", "evolving-claude-md", "loads.jsonl")
+    out: list[dict] = []
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    try:
+                        rec = json.loads(line)
+                        if isinstance(rec, dict):
+                            out.append(rec)
+                    except ValueError:
+                        continue
+    except OSError:
+        pass
+    return out
+
+
+def load_gaps(root: str = ".", cfg: dict | None = None) -> tuple[str | None, list[str]]:
+    """(never-loaded instruction file, dead rule files) from recorded evidence.
+
+    The content checks in this file cannot see either failure: a rule whose
+    globs never match is perfectly well-written and simply never consulted,
+    and a CLAUDE.md that is skipped (over 4 MiB, or in a path the client does
+    not read) looks exactly like one that works. Absence of a load event is
+    the only signal, so it needs enough sessions behind it to mean anything.
+    """
+    cfg = cfg or DEFAULTS
+    if not cfg.get("load_evidence"):
+        return None, []
+    events = load_events(root)
+    sessions = {e.get("session") for e in events if e.get("session")}
+    if len(sessions) < int(cfg["load_min_sessions"]):
+        return None, []          # too little evidence to accuse anything
+    loaded = {os.path.basename(f) for e in events for f in (e.get("files") or [])}
+    loaded_full = {f for e in events for f in (e.get("files") or [])}
+
+    never = None
+    if os.path.isfile(os.path.join(root, CLAUDE_MD)) and \
+            os.path.basename(CLAUDE_MD) not in loaded:
+        never = (f"`{CLAUDE_MD}` exists but has NOT loaded in any of "
+                 f"{len(sessions)} recorded sessions — the client is skipping "
+                 f"it (over the 4 MiB cap, or not a path it reads). Everything "
+                 f"in it is currently costing maintenance and buying nothing.")
+
+    dead: list[str] = []
+    rules_dir = os.path.join(root, ".claude", "rules")
+    for dirpath, _dirs, files in os.walk(rules_dir):
+        for name in sorted(files):
+            if not name.endswith(".md"):
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, name), root)
+            if name not in loaded and rel not in loaded_full:
+                dead.append(rel)
+    return never, dead[:6]
+
+
+SUPERSEDES_RE = re.compile(r"Supersedes:\s*(\d{4}-\d{2}-\d{2})\s+([a-z0-9][a-z0-9-]*)", re.I)
+
+
+def supersede_gaps(section: str, cfg: dict | None = None) -> list[str]:
+    """Entries that claim to supersede an earlier one which is not struck.
+
+    Borrowed from temporal knowledge graphs, where invalidating a fact records
+    WHEN it stopped being true rather than leaving both versions standing. The
+    plugin already had strike-through as a convention; this makes the link
+    checkable, so a superseded rule cannot quietly keep being read as current.
+    """
+    cfg = cfg or DEFAULTS
+    if not cfg.get("supersede_check"):
+        return []
+    entries = re.findall(
+        r"^- (?P<struck>~~)?(?P<date>\d{4}-\d{2}-\d{2})~?~? — (?P<body>.+?)(?=\n- (?:~~)?\d{4}-\d{2}-\d{2}|\Z)",
+        section, re.M | re.S)
+    by_key = {}
+    for struck, date, body in entries:
+        tag = re.match(r"\*\*([^*]+?)\*\*", body.strip())
+        if tag:
+            by_key[(date, tag.group(1).lower())] = bool(struck)
+    out = []
+    for struck, date, body in entries:
+        m = SUPERSEDES_RE.search(body)
+        if not m:
+            continue
+        key = (m.group(1), m.group(2).lower())
+        if key not in by_key:
+            out.append(f"{date} claims to supersede {m.group(1)} **{m.group(2)}**, "
+                       f"which is not an entry here (check the date and tag)")
+        elif not by_key[key]:
+            out.append(f"{m.group(1)} **{m.group(2)}** was superseded on {date} "
+                       f"but is not struck through — strike it (`~~...~~`) so it "
+                       f"stops reading as current")
+    return out[:5]
 
 
 def changelog_mirror(entries: list[tuple[str, str]], root: str = ".",
@@ -633,6 +734,9 @@ def main() -> int:
     drift_new, drift_gone = (
         layout_drift(text, ".", cfg, skipped) if cfg["layout_drift"] else ([], [])
     )
+    never_loaded, dead_rules = load_gaps(".", cfg)
+    supersedes = supersede_gaps(section, cfg)
+
     # Inlet quality: is this a learning log, or a changelog with dates?
     # (A tag-uniqueness check was written and CUT here: the fleet's healthiest
     #  log runs 100% distinct tags and the changelog-shaped one 98% — the ratio
@@ -643,7 +747,8 @@ def main() -> int:
             and not stale_pins and not stale_seqs and not gaps and not heavy
             and not adoption and not empty and not recur
             and not drift_new and not drift_gone
-            and not mirror):
+            and not mirror and not never_loaded and not dead_rules
+            and not supersedes):
         return 0
 
     parts.append(
@@ -704,6 +809,17 @@ def main() -> int:
         parts.append(f"🔎 {empty}")
     if mirror:
         parts.append(f"🔎 {mirror}")
+    if never_loaded:
+        parts.append(f"🔎 NEVER LOADED: {never_loaded}")
+    if dead_rules:
+        listed = ", ".join(f"`{d}`" for d in dead_rules)
+        parts.append(
+            f"🔎 DEAD RULE{'' if len(dead_rules) == 1 else 'S'} — recorded loads "
+            f"show {listed} never entering context. Either the `paths:` globs "
+            f"match nothing that gets read, or the rule is obsolete: fix the "
+            f"globs or delete it.")
+    if supersedes:
+        parts.append("🔎 SUPERSEDED, still standing: " + "; ".join(supersedes) + ".")
     if recur:
         listed = ", ".join(f"`{p}`" for p in recur[:3])
         parts.append(

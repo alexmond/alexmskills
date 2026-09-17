@@ -11,12 +11,17 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+_lspec = importlib.util.spec_from_file_location("_lint", HERE / "lint-claude-md.py")
+lint = importlib.util.module_from_spec(_lspec)
+_lspec.loader.exec_module(lint)
+
 _spec = importlib.util.spec_from_file_location("_audit", HERE / "audit-claude-md.py")
 audit = importlib.util.module_from_spec(_spec)
 sys.modules["_audit"] = audit
@@ -717,6 +722,101 @@ def t_fold_dedups_across_lanes_only():
               "ONE writer" in out and "default branch" in out, out[-200:])
 
 
+
+def _loads(repo, sessions, files_per_session):
+    d = repo / ".claude" / "evolving-claude-md"; d.mkdir(parents=True, exist_ok=True)
+    with open(d / "loads.jsonl", "w") as fh:
+        for i in range(sessions):
+            for f in files_per_session:
+                fh.write(json.dumps({"ts": "2026-09-16T00:00:00Z", "session": f"s{i}",
+                                     "reason": "session_start", "files": [f]}) + "\n")
+
+
+def t_record_loads_writes_only_real_events():
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "rec", "# p\n")
+        run = lambda payload: subprocess.run(
+            [sys.executable, str(HERE / "record-loads.py")], input=json.dumps(payload),
+            cwd=str(r), capture_output=True, text=True, timeout=10)
+        p1 = run({"hook_event_name": "InstructionsLoaded", "session_id": "s1",
+                  "load_reason": "session_start", "file_path": str(r / "CLAUDE.md")})
+        loads = r / ".claude" / "evolving-claude-md" / "loads.jsonl"
+        check("record-loads writes a load event", p1.returncode == 0 and loads.exists())
+        rec = json.loads(loads.read_text().splitlines()[0])
+        check("the event keeps session, reason and file",
+              rec["session"] == "s1" and rec["reason"] == "session_start"
+              and rec["files"], str(rec))
+        before = loads.read_text()
+        run({"hook_event_name": "InstructionsLoaded", "session_id": "s2"})
+        check("an event naming no file is not recorded", loads.read_text() == before)
+        check("a malformed payload never raises",
+              subprocess.run([sys.executable, str(HERE / "record-loads.py")],
+                             input="not json", cwd=str(r), capture_output=True,
+                             text=True, timeout=10).returncode == 0)
+
+
+def t_load_gaps_need_enough_evidence():
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "eve", "# p\n")
+        (r / ".claude" / "rules").mkdir(parents=True)
+        (r / ".claude" / "rules" / "unused.md").write_text("paths: nothing\n")
+        _loads(r, 2, ["CLAUDE.md"])           # only 2 sessions
+        never, dead = audit.load_gaps(str(r))
+        check("two sessions is not enough evidence to accuse a rule",
+              never is None and dead == [], f"{never} {dead}")
+        _loads(r, 6, ["CLAUDE.md"])
+        never, dead = audit.load_gaps(str(r))
+        check("a rule that never loads across 6 sessions is flagged",
+              never is None and dead == [os.path.join(".claude", "rules", "unused.md")],
+              f"{never} {dead}")
+        _loads(r, 6, ["CLAUDE.md", str(r / ".claude" / "rules" / "unused.md")])
+        never2, dead2 = audit.load_gaps(str(r))
+        check("a rule that does load is silent", dead2 == [], str(dead2))
+
+
+def t_never_loaded_instruction_file():
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "never", "# p\n")
+        _loads(r, 6, [".claude/rules/only.md"])     # CLAUDE.md never among them
+        never, _ = audit.load_gaps(str(r))
+        check("a CLAUDE.md that never loads is reported",
+              never and "NOT loaded" in never, str(never))
+        check("the message says why it matters",
+              never and "4 MiB" in never, str(never))
+
+
+def t_supersede_link_is_checked():
+    dl = ("### Decisions & Learnings\n\n"
+          "- 2026-01-01 — **build** — used system maven. Why: it was there.\n"
+          "- 2026-09-16 — **build** — switched to ./mvnw. Why: pins the version. "
+          "Supersedes: 2026-01-01 build\n")
+    got = audit.supersede_gaps(dl)
+    check("an unstruck superseded entry is flagged",
+          got and "not struck through" in got[0], str(got))
+    struck = dl.replace("- 2026-01-01 — **build**", "- ~~2026-01-01~~ — **build**")
+    check("striking it clears the finding", audit.supersede_gaps(struck) == [],
+          str(audit.supersede_gaps(struck)))
+    dangling = dl.replace("Supersedes: 2026-01-01 build", "Supersedes: 2020-05-05 ghost")
+    got2 = audit.supersede_gaps(dangling)
+    check("a supersede link to a missing entry is flagged",
+          got2 and "not an entry here" in got2[0], str(got2))
+    check("a log with no supersede links is silent",
+          audit.supersede_gaps("### Decisions & Learnings\n\n- 2026-01-01 — **x** — y.\n") == [])
+
+
+def t_lint_prices_the_supersede_link_out_of_the_cap():
+    body = "x" * (lint.MAX_BODY_CHARS - 5)      # just inside the cap
+    line = f"- 2026-09-16 — **build** — {body}. Supersedes: 2026-01-01 build"
+    check("a supersede link does not push a near-cap entry over",
+          lint.lint_line(line) is None, str(lint.lint_line(line)))
+    check("the cap still applies to the body itself",
+          lint.lint_line(f"- 2026-09-16 — **build** — {'x' * (lint.MAX_BODY_CHARS + 60)}") is not None)
+    bad = "- 2026-09-16 — **build** — switched. Why: x. supersedes the old one"
+    check("a prose supersede claim is rejected with the format",
+          (lint.lint_line(bad) or "").startswith("malformed supersede link"),
+          str(lint.lint_line(bad)))
+
+
 CHECKS = [
     t_command_gap_is_grounded_in_the_build_file,
     t_command_gap_clears_when_mentioned,
@@ -753,6 +853,11 @@ CHECKS = [
     t_lane_session_is_routed_to_the_spool,
     t_lane_auto_mode_ignores_a_plain_branch,
     t_fold_dedups_across_lanes_only,
+    t_record_loads_writes_only_real_events,
+    t_load_gaps_need_enough_evidence,
+    t_never_loaded_instruction_file,
+    t_supersede_link_is_checked,
+    t_lint_prices_the_supersede_link_out_of_the_cap,
 ]
 
 

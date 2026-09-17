@@ -58,6 +58,9 @@ def extract_added_lines(payload: dict) -> list[str]:
     return []
 
 
+SUPERSEDES_RE = re.compile(r"Supersedes:\s*\d{4}-\d{2}-\d{2}\s+[a-z0-9][a-z0-9-]*\.?", re.I)
+
+
 def lint_line(line: str) -> str | None:
     """Return an error message if the line is a malformed D&L entry, else None.
     Non-entry lines (anything not starting with `- ` + date) pass silently."""
@@ -74,6 +77,17 @@ def lint_line(line: str) -> str | None:
             f"Expected `- {date} — **topic-tag** — body. Why: reason.`"
         )
     body = tm.group(2)
+    # A supersede link is bookkeeping, not prose: it records WHEN an earlier
+    # rule stopped being true. Charging it against the body cap would price
+    # the link out of existence, which is the opposite of the intent.
+    sup = SUPERSEDES_RE.search(body)
+    if sup:
+        body = (body[:sup.start()] + body[sup.end():]).strip()
+    elif re.search(r"\bsupersedes\b", body, re.I):
+        return (
+            'malformed supersede link: write `Supersedes: YYYY-MM-DD topic-tag` '
+            f'so the audit can check it. Entry: "{line[:80]}…"'
+        )
     if len(body) > MAX_BODY_CHARS:
         return (
             f"entry body is {len(body)} chars (cap {MAX_BODY_CHARS}). "

@@ -52,3 +52,44 @@ structure"), when drift/adoption states fire, or during a compaction pass:
 4. **Respect the measured hierarchy** — presence, brevity, and consistency
    dominate; reordering is mostly noise (see the rulebook's "what NOT to
    optimize"). Prefer deletions and relocations over rearrangements.
+
+## Load evidence — what actually loaded, not what should have
+
+`record-loads.py` runs on `InstructionsLoaded` and appends one line per event
+to `.claude/evolving-claude-md/loads.jsonl` (rolling window, not an archive):
+which instruction file loaded, in which session, and the `load_reason`
+(`session_start`, `nested_traversal`, `path_glob_match`, `include`, `compact`).
+
+Every other check here reasons about what the file *says*. Two failures are
+invisible to all of them, and both show up only as a missing load event:
+
+- **A dead rule.** A `.claude/rules/*.md` whose `paths:` globs never match
+  anything that gets read is perfectly well-written and never consulted. No
+  content audit can flag it, because the content is fine.
+- **An instruction file that never loads.** Claude Code loads a `CLAUDE.md` up
+  to 4 MiB and silently *skips* a larger one; a file in a path the client
+  doesn't read is skipped just as quietly. The repo looks configured and isn't.
+
+Both accusations wait for `load_min_sessions` (default 5) of recorded evidence,
+because "it hasn't loaded yet" and "it never loads" look identical on day one.
+
+## Why supersede links, and where they came from
+
+Borrowed from temporal knowledge graphs, where invalidating a fact records
+*when* it stopped being true instead of leaving both versions standing. Of 80
+instruction-upkeep tools surveyed, half document no staleness handling at all,
+and that was the one mechanism worth copying.
+
+## Merging same-session clusters (full rule)
+
+### 2. Merge same-session clusters (the pre-14-days lever)
+When a single work session lands 4+ entries about one piece of work — phased rollouts (`e2a-web`, `e2b-db`, `e3-consume`), same-feature aspects (`diff` + `diff-absolute`), bursts dated within ~48 hours of one another on the same area — **collapse them into one consolidated entry** with a single broader topic-tag. The compressed body keeps the load-bearing whys; the per-aspect detail moves to `docs/decisions/{date}-{topic}.md` if it's still wanted.
+
+This is the *only* compaction action that works pre-14-days. Graduation requires 14-day stability (so a stable pattern hasn't proven itself yet); archive requires a date cutoff older than entries. When the audit fires "Compaction RECOMMENDED" but every entry is young, merge is what's left.
+
+Triggers for merging:
+- Multiple entries dated within ~48h on the same broad area (the topic-tags read as a numbered sequence, or as facets of one effort)
+- The audit's mega-entry list is empty (no single entry is too big) but the *count* is over threshold
+- Reviewing the cluster, the consolidated version reads at least as well as the spread
+
+Merge does NOT graduate — the result is still in Decisions & Learnings, not Conventions. Reversibility: if a sub-decision later evolves independently, split it back out as a new entry that strikes through the consolidated one with a follow-up.

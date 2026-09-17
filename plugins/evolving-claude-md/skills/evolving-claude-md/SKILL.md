@@ -17,7 +17,7 @@ This skill wires that. Three mechanisms keep it healthy automatically:
 | Hook | When | What it does |
 |---|---|---|
 | **SessionStart** | start of every session | `audit-claude-md.py` — if the D&L section is bloated, injects a recommendation to compact |
-| **PreToolUse** on `Write\|Edit` of `CLAUDE.md` | before each edit | `lint-claude-md.py` — rejects new entries that violate the format (no topic tag, no date, > 200 chars) |
+| **PreToolUse** on `Write\|Edit` of `CLAUDE.md` | before each edit | `lint-claude-md.py` — rejects new entries that violate the format (no topic tag, no date, body over 500 chars) |
 | **PostCompact** | after context compaction | re-runs the audit so the assistant sees the current D&L state without paying for the full file twice |
 
 When installed as a **plugin**, the three hooks ship inside the plugin (`hooks/hooks.json`, pathed via `${CLAUDE_PLUGIN_ROOT}`) and register automatically once enabled — nothing to add to your settings. For a **manual install**, copy the three scripts to `.claude/skills/evolving-claude-md/` and add the hooks to `.claude/settings.json` (see *Setup checklist*). Disable individually by removing the entry; disable all via `disableAllHooks: true` in settings.
@@ -34,7 +34,7 @@ When installed as a **plugin**, the three hooks ship inside the plugin (`hooks/h
 - **YYYY-MM-DD** — calendar date, no relative dates.
 - **`**topic-tag**`** — kebab-case, one or two words, MANDATORY. Reuse existing tags where they fit; the lint hook surfaces the inventory. Pick a stable vocabulary per project (e.g. `auth`, `build`, `schema`, `ci`, `perf`).
 - **One sentence of *what***. The *why* is the load-bearing half — lead with constraint, incident, or preference.
-- **Hard cap: 200 chars in the body, max 3 lines.** Bigger? Move the detail to `docs/decisions/{YYYY-MM-DD}-{topic}.md` and keep the entry as a one-line teaser linking there. The lint hook enforces this.
+- **Aim for 200 chars in the body, max 3 lines; the lint hook rejects anything over 500.** The gap between the two is deliberate: 200 is the target that keeps the log scannable, 500 is where an entry is provably a design doc. Past either, move the detail to `docs/decisions/{YYYY-MM-DD}-{topic}.md` and keep a one-line teaser linking there.
 
 Examples:
 ```
@@ -81,6 +81,32 @@ These six *nominate* — the bar above decides:
 - Duplicates of an existing convention/gotcha — update the existing entry instead.
 - Mega-context dumps. If you find yourself writing >200 chars, you're writing a design doc; put the doc in `docs/decisions/` and link to it.
 
+## Superseding an entry, not just striking it
+
+A reversal used to be recorded by striking the old entry — which works only if
+whoever writes the new one remembers. Name the entry you are replacing and the
+link becomes checkable:
+
+```
+- 2026-09-16 — **build** — switched to `./mvnw`. Why: CI drifted. Supersedes: 2026-01-01 build
+```
+
+The audit then reports any entry whose target is **still unstruck** (so a dead
+rule is still being read as current) or whose target **does not exist** (a
+typo'd date or tag). The link itself is exempt from the body cap — charging
+bookkeeping against the prose budget would just price it out of use.
+
+## Load evidence — what actually loaded, not what should have
+
+`record-loads.py` runs on `InstructionsLoaded` and appends one line per event to
+`.claude/evolving-claude-md/loads.jsonl`: which instruction file loaded, in which
+session, with the `load_reason`. That makes two otherwise invisible failures
+checkable — a `.claude/rules/*.md` whose globs never match anything read (dead,
+though its content is fine) and a `CLAUDE.md` that never loads at all (skipped
+over 4 MiB, or in a path the client doesn't read). Both wait for
+`load_min_sessions` (default 5) of evidence. Detail:
+[references/audit-checks.md](references/audit-checks.md).
+
 ## Recent / Historic split
 
 The D&L section is split into two subsections:
@@ -103,16 +129,13 @@ The Recent section is what Claude actively scans every turn. Historic stays mini
 When a decision is reversed, strike-through with `~~...~~` and add a follow-up explaining the change. Don't silently delete.
 
 ### 2. Merge same-session clusters (the pre-14-days lever)
-When a single work session lands 4+ entries about one piece of work — phased rollouts (`e2a-web`, `e2b-db`, `e3-consume`), same-feature aspects (`diff` + `diff-absolute`), bursts dated within ~48 hours of one another on the same area — **collapse them into one consolidated entry** with a single broader topic-tag. The compressed body keeps the load-bearing whys; the per-aspect detail moves to `docs/decisions/{date}-{topic}.md` if it's still wanted.
-
-This is the *only* compaction action that works pre-14-days. Graduation requires 14-day stability (so a stable pattern hasn't proven itself yet); archive requires a date cutoff older than entries. When the audit fires "Compaction RECOMMENDED" but every entry is young, merge is what's left.
-
-Triggers for merging:
-- Multiple entries dated within ~48h on the same broad area (the topic-tags read as a numbered sequence, or as facets of one effort)
-- The audit's mega-entry list is empty (no single entry is too big) but the *count* is over threshold
-- Reviewing the cluster, the consolidated version reads at least as well as the spread
-
-Merge does NOT graduate — the result is still in Decisions & Learnings, not Conventions. Reversibility: if a sub-decision later evolves independently, split it back out as a new entry that strikes through the consolidated one with a follow-up.
+When one session lands 4+ entries about one piece of work, collapse them into a
+single entry with a broader tag, moving per-aspect detail to
+`docs/decisions/{date}-{topic}.md`. This is the *only* compaction that works
+before the 14-day mark — graduation needs stability, archiving needs age. When
+the audit says "Compaction RECOMMENDED" but every entry is young, merge is what
+is left. Triggers and the reversibility rule:
+[references/audit-checks.md](references/audit-checks.md).
 
 ### 3. Graduation — when a pattern stabilizes
 When the same `**topic-tag**` appears in 3+ entries AND the latest is ≥14 days old without a contradiction, the pattern is stable. **Graduate** it: rewrite as a one-line rule in **Conventions** (or **Gotchas** if it's a trap), strike through the D&L entries, leave a single graduation line `- YYYY-MM-DD — **topic** — graduated → see Conventions § X`.
