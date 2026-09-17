@@ -77,3 +77,22 @@ bottom. (Schema: see the shipped seed in the research-sweep plugin.)
 - steering: roster launched on direct sweep directive (logged precedent); no gate edits
 - outcome: committed-at .claude/research-sweep/2026-09-12-conductor-landscape-findings.yaml; comparison delivered in-conversation (conductor 0.1.0 positioning)
 - graduated: practitioner-scout 2nd useful run (1 more to stable); entity-scout first useful run in this repo; verifier row gains real-domain-not-fabricated (adk.dev) caution
+
+## instruction-file-upkeep-2026-09-16  2026-09-16  alexmskills
+- question: what else keeps an agent instruction file (CLAUDE.md/AGENTS.md/memory) current and bounded, and where does evolving-claude-md 1.6.1 sit?
+- corpus: shipped CC/Codex ecosystem artifacts / vendor-native features + specs / practitioner lore + measured studies
+- roster: container-scout(stable) + entity-scout(stable) + practitioner-scout(probationary, 3rd useful run -> STABLE) + verifier(skeptic) + synthesizer
+- partition: by artifact locus (third-party shipped / vendor-native / practice+measurement), do-NOT-cover fences
+- schema: findings{id,name,kind,origin,source_url,maintains,write_trigger,staleness_handling,size_control,enforcement,confidence}
+- per-role: container 24 (target 14) · entity 30 (target 14) · practitioner 22 (target 12) · thin: none
+- verifier:
+  - sample: 37/74 (50%), plus all 9 named high-stakes numbers traced to source
+  - fabrications: 0 (every repo, arXiv id and domain resolved, including risky-looking ones)
+  - corrections: 10 — a WRONG-COLUMN read (NoLiMa 32K vs 64K), an unsourced quote, two wrong percentage sets, rule/type counts, an un-sourced parenthetical, an id collision, 5 too-coarse source_urls
+  - gaps named: Amazon Q project rules, Kiro steering, Letta memory blocks (per-block char limits), Zep/Graphiti fact invalidation, Claude Code InstructionsLoaded hook, CodeRabbit learnings
+  - verdict: ACCEPT WITH CORRECTIONS (all applied)
+- dedup-hotspots: same-author lineage (roo-code-memory-bank -> ConPort) and wrapper/served-over-MCP pairs; annotate lineage rather than merge
+- source-trust: vendor docs quote-stable and byte-exact; arXiv abstracts reliable, but a blog CITING a study is not — tianpan's "300-350 words" is attributed to a GitHub post that publishes no length figures, and the catalog held both halves without noticing. Rule: a number quoted second-hand must be traced to the primary before use.
+- steering: launched on a direct sweep directive (no gate edits), same as the 09-12 run
+- outcome: committed-at .claude/research-sweep/2026-09-16-instruction-file-upkeep-findings.yaml; comparison delivered in-conversation
+- graduated: practitioner-scout -> STABLE (3 useful runs); verifier row gains the second-hand-citation rule
