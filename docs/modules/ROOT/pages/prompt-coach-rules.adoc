@@ -172,6 +172,22 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 +
 _Refs:_ https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://www.debuggingbook.org/html/Intro_Debugging[Andreas Zeller — Introduction to Debugging (The Debugging Book)^] · https://en.wikipedia.org/wiki/Rubber_duck_debugging[Rubber duck debugging — Wikipedia^] · https://dwheeler.com/essays/debugging-agans.html[David Agans — Debugging: The 9 Indispensable Rules (Wheeler's review)^]
 
+`self-check-request` — *Asking this model to re-check itself*::
+Asking this model to double-check or re-verify its own work — it already does.
++
+✗ `fix the retry logic in client.py and double-check your work` +
+✓ `fix the retry logic in client.py; tell me which tests you ran and what they said`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5[Anthropic — Prompting Claude Opus 5^] · https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#overthinking-and-excessive-thoroughness[Anthropic — Overthinking and excessive thoroughness^]
+
+`severity-filter-recall` — *Review ask pre-filtered by severity*::
+A review ask capped to high-severity findings, which suppresses real ones.
++
+✗ `review auth.py and only report critical issues` +
+✓ `review auth.py; report everything with a severity + confidence label, I'll filter`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5[Anthropic — Prompting Claude Opus 5^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^]
+
 `test-goalseeking` — *Test-passing without correctness*::
 'make the tests pass / CI green' with no correctness intent stated.
 +
@@ -313,6 +329,14 @@ _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering
 ✓ `update the license header across all 60 files — fan out with a Workflow, not a serial loop`
 +
 _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#subagent-orchestration[Anthropic guide: Subagent orchestration^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://www.anthropic.com/engineering/building-effective-agents[Anthropic — Building effective agents (orchestrator-workers pattern)^] · https://research.google.com/archive/mapreduce-osdi04.pdf[Dean & Ghemawat — MapReduce: simplified data processing (OSDI'04)^]
+
+`subagent-for-verification` — *Subagent asked to verify your own work*::
+Spawning a subagent whose job is checking work done in this session.
++
+✗ `implement the migration, then use a subagent to verify your changes` +
+✓ `implement the migration and confirm it inline — run the suite and report the result`
++
+_Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#subagent-orchestration[Anthropic guide: Subagent orchestration^] · https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5[Anthropic — Prompting Claude Opus 5^]
 
 `workflow-fanout-no-verify` — *Fan-out without a verify pass*::
 A fan-out to discover many items with no verify / dedup pass.

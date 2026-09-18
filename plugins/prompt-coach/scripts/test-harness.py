@@ -822,11 +822,15 @@ def t_model_carveout():
     check("carve-out matches suffixed Opus 5 ids", tagged == expected,
           f"got {sorted(tagged)}")
 
-    # Every other model keeps the full catalog.
+    # Every other model keeps the full catalog *of the Opus-5-obsolete rules*.
+    # It may still gate `applies_only_on` rules — that is the other direction
+    # of the same mechanism, not a leak — so assert on the carved three
+    # specifically rather than on an empty set.
     for other in ("claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5",
                   "claude-opus-4-7"):
-        got = m.carved_out_rules(cfg, other)
-        check(f"carve-out does NOT fire on {other}", got == {}, f"got {got}")
+        leaked = expected & set(m.carved_out_rules(cfg, other))
+        check(f"Opus 5 carve-out does NOT leak to {other}", not leaked,
+              f"leaked {sorted(leaked)}")
 
     # Unknown model (no transcript yet / Codex rollout) changes nothing.
     check("unknown model carves nothing", m.carved_out_rules(cfg, "") == {})
@@ -869,6 +873,79 @@ def t_model_carveout():
     missing = [r.id for r in m.RULES if r.obsolete_on and not r.obsolete_why]
     check("every carved rule carries its rationale", not missing,
           f"missing obsolete_why: {missing}")
+
+
+def t_opus5_rules():
+    """v1.5.0 — the three rules drawn from Anthropic's Opus 5 prompting
+    guidance. Half of each block asserts the rule does NOT fire: these all
+    sit next to legitimate asks (verify an artifact, fan out for discovery,
+    scope a review) and a false positive on those is worse than a miss."""
+    m = _load_analyzer("_an_opus5")
+    R = {r.id: r for r in m.RULES}
+
+    fire = {
+        "self-check-request": [
+            "fix the retry logic and double-check your work",
+            "refactor the parser, then re-verify your output before responding",
+            "implement the cache and make sure you're right",
+            "be thorough when you review this module",
+        ],
+        "subagent-for-verification": [
+            "implement the migration, then use a subagent to verify your changes",
+            "spawn an agent to double-check your work",
+            "dispatch a review agent to audit the code you just wrote",
+        ],
+        "severity-filter-recall": [
+            "review auth.py and only report critical issues",
+            "audit the module, just the blockers please",
+            "check this PR but ignore nits",
+            "scan for vulnerabilities and be conservative",
+        ],
+    }
+    quiet = {
+        "self-check-request": [
+            "check that the tests pass after your change",   # acceptance criterion
+            "double-check the config file against the docs",  # an artifact, not itself
+            "verify the user's token is valid before the call",
+            "re-check the CI logs for the failure",
+        ],
+        "subagent-for-verification": [
+            "fan out agents to survey every vector database",  # discovery
+            "use a subagent to verify the vendor's API docs",  # external artifact
+            "run the sweep, then adversarially verify the findings",
+            "spawn 5 agents to each review a different module",
+            # Found by calibration on 1197 real prompts — a question ABOUT a
+            # review agent, which was the rule's only fire on that corpus.
+            "so is the review agent now always on and integrated in to the app",
+        ],
+        "severity-filter-recall": [
+            "review auth.py and label each finding with a severity",
+            "review this and rank by severity",
+            "only report issues in the auth module",          # scope, not severity
+            "check the build logs for errors",
+        ],
+    }
+    for rid, prompts in fire.items():
+        misses = [p for p in prompts if not R[rid].check(p)]
+        check(f"{rid} fires on its cases", not misses, f"missed: {misses}")
+    for rid, prompts in quiet.items():
+        fps = [p for p in prompts if R[rid].check(p)]
+        check(f"{rid} stays quiet on look-alikes", not fps, f"false: {fps}")
+
+    # The two model-specific ones must be inert off Opus 5; the severity one
+    # is unchanged from 4.7 onward per the guidance, so it is NOT gated.
+    cfg = dict(m.DEFAULT_CONFIG)
+    on48 = m.carved_out_rules(cfg, "claude-opus-4-8")
+    check("self-check-request is inert on Opus 4.8",
+          "self-check-request" in on48)
+    check("subagent-for-verification is inert on Opus 4.8",
+          "subagent-for-verification" in on48)
+    check("severity-filter-recall is NOT model-gated",
+          "severity-filter-recall" not in on48
+          and "severity-filter-recall" not in m.carved_out_rules(cfg, "claude-opus-5"))
+    check("the two gated rules ARE live on Opus 5",
+          not ({"self-check-request", "subagent-for-verification"}
+               & set(m.carved_out_rules(cfg, "claude-opus-5"))))
 
 
 def t_model_gate_covers_tips():
@@ -921,7 +998,7 @@ def t_model_switch_config():
     check("model_rules 'off' silences an ungated rule",
           "no-few-shot" in m.carved_out_rules(forced_off, "claude-opus-4-8"))
     check("model_rules for another model does not leak",
-          m.carved_out_rules(forced_off, "claude-sonnet-5") == {})
+          "no-few-shot" not in m.carved_out_rules(forced_off, "claude-sonnet-5"))
 
     longest = dict(cfg, model_rules={
         "claude-opus-5": {"no-verify-loop": "on"},
@@ -1151,6 +1228,7 @@ CHECKS = [
     t_fatigue_cap,
     t_precision_gate,
     t_model_carveout,
+    t_opus5_rules,
     t_model_gate_covers_tips,
     t_model_switch_config,
     t_applies_only_on_is_symmetric,

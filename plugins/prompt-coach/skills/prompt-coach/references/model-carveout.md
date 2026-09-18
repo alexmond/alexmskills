@@ -49,6 +49,27 @@ this model rather than a global rule."
 Local evidence agrees on the first: `no-verify-loop` is the noisiest rule in
 the eval set, 10 rows at 0.00 precision.
 
+## Rules that exist only because of a model (v1.5+)
+
+The gate's other direction. Two rules carry `applies_only_on=OPUS_5` and are
+inert on every other model, because on those models their advice would be
+wrong:
+
+| Rule | What it catches |
+|---|---|
+| `self-check-request` | The user asking the model to double-check or re-verify its own work. Opus 5 guidance calls this an inversion of standard practice: the model already verifies, so the phrasing buys work, not correctness. On Opus 4.8 the same ask is good prompting. |
+| `subagent-for-verification` | The user asking for a subagent whose job is checking work done in this session. *"Do NOT use subagents for … review, verification, or to double check your work. Verification belongs in your main agent loop."* |
+
+A third rule from the same guidance, `severity-filter-recall`, is **not**
+gated: a review ask capped to "only critical issues" depresses measured recall,
+and the guidance notes this is unchanged from 4.7 onward.
+
+`subagent-for-verification` is narrower than it looks. It needs a spawn verb
+*and* an object that is work already done here. A fresh reviewer over a large
+fanned-out result set is the writer-verifier pattern the same guidance
+endorses, and verifying an external artifact is not self-check at all — both
+stay quiet.
+
 ## What is deliberately kept
 
 `no-adversarial-check` and `workflow-fanout-no-verify` look similar and are

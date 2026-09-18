@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-09-18 — **gate-both-directions** — coach 1.5.0: gate gained `applies_only_on` + tip coverage + `model_rules` user switch; 3 Opus-5 rules added, 1 FP found on 1197 real prompts. Why: a gate that stopped the rule but left its mirror tip firing the same advice was not a gate.
 - 2026-09-18 — **model-carveout** — coach 1.4.0: rules carry `obsolete_on` model prefixes; 3 suppressed on Opus 5 (verify-loop, chain-of-thought, agents-for-parallel-lookup). Why: a rule is advice about a model — Anthropic's own Opus 5 guidance asks for a carve-out, not a global rule.
 - 2026-09-16 — **load-evidence** — InstructionsLoaded hook records which instruction files actually load; a rule whose globs never match is invisible to every content check. Why: absence of a load event is the only evidence, so it needs 5+ sessions before accusing.
 - 2026-09-16 — **supersede-edge** — entries may name what they replace (`Supersedes: date tag`); audit flags an unstruck or missing target. Why: half of 80 surveyed upkeep tools detect no staleness at all — recording when a rule died beats detecting that its artifact vanished.

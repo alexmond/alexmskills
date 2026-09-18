@@ -173,6 +173,8 @@ masters, an L2 rule activates in its place, and so on.
 | Rule | Catches |
 |---|---|
 | no-adversarial-check | High-stakes ask (security/migration/prod/delete) with no skeptic |
+| self-check-request *(Opus 5 only)* | Asking this model to double-check / re-verify its own work |
+| severity-filter-recall | Review ask capped to "only critical" — suppresses real findings |
 | retry-without-diagnosis | Short "try again" with no new information |
 | no-few-shot | "Like X" / "in the style of Y" without an example |
 | no-chain-of-thought *(off on Opus 5)* | Reasoning ask (why/debug/trace) without "think first" |
@@ -195,6 +197,7 @@ masters, an L2 rule activates in its place, and so on.
 | no-task-list-for-multi-step | 3+ action verbs without a TaskCreate / checklist ask |
 | no-agents-for-parallel-lookup *(off on Opus 5)* | Multiple independent lookups without parallel agents |
 | no-role-for-critique | "Review my X" without invoking a role (skeptic / security / reviewer) |
+| subagent-for-verification *(Opus 5 only)* | Spawning a subagent to check work done in this session |
 | no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel |
 | no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents |
 | incremental-routing | Multi-step task routed one terse step at a time ("continue" / "one after another" / "do the next one") instead of a batched task list / Workflow |

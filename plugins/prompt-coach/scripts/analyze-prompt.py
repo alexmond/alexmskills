@@ -1846,6 +1846,105 @@ def rule_no_skill_composition(prompt: str) -> bool:
     return not bool(considered)
 
 
+def rule_self_check_request(prompt: str) -> bool:
+    """v1.5.0 — the user explicitly asking the model to re-check its own work.
+
+    Gated to Opus 5, where Anthropic's guidance is blunt that this "inverts a
+    standard prompting best practice": the model verifies unprompted, and the
+    phrasing buys extra work rather than extra correctness. On every other
+    model this is good advice, which is why the rule carries
+    `applies_only_on` rather than shipping for everyone.
+
+    `overthinking-warning` does not cover it: that needs 60+ words AND 3+
+    markers, and none of these phrases are in its marker list, so a short
+    "fix X and double-check it" fires nothing.
+    """
+    pl = prompt.lower()
+    # Asking the model to re-examine its OWN output. "check the tests pass"
+    # is a different thing entirely — a real acceptance criterion — so the
+    # object has to be the work/answer itself.
+    return bool(re.search(
+        r"\b(double[- ]check|triple[- ]check|re-?check|re-?verify|"
+        r"re-?review|sanity[- ]check|second[- ]guess)\s+"
+        r"(your|the)\s+(work|answer|output|response|result|reasoning|"
+        r"changes?|edits?)\b"
+        r"|\b(verify|check|review)\s+your\s+own\s+(work|answer|output)\b"
+        r"|\bmake (?:absolutely )?sure (?:that )?(?:you'?re|you are|it'?s|"
+        r"it is)\s+(?:right|correct)\b"
+        r"|\bbe (?:very |extra )?thorough\b"
+        r"|\bbefore (?:you )?respond(?:ing)?,?\s+(?:double[- ]check|verify|"
+        r"re-?check)\b",
+        pl))
+
+
+def rule_subagent_for_verification(prompt: str) -> bool:
+    """v1.5.0 — the user asking for a subagent whose job is to check the
+    model's own work.
+
+    Opus 5 guidance names this exactly: "Do NOT use subagents for ... Review,
+    verification, or to double check your work. Verification belongs in your
+    main agent loop." Distinct from `workflow-fanout-no-verify`, which asks
+    for a verify pass over a large fanned-out RESULT SET — that is the
+    writer-verifier pattern the same guidance endorses.
+    """
+    pl = prompt.lower()
+    agent = re.search(r"\b(sub-?agents?|agents?|task tool|workflow|"
+                      r"spawn|dispatch|fan[- ]out)\b", pl)
+    if not agent:
+        return False
+    # ...whose stated purpose is checking work already done here.
+    return bool(re.search(
+        r"\b(to|and|that|which)\s+(double[- ]check|re-?check|verify|"
+        r"validate|review|audit|sanity[- ]check)\s+"
+        r"(your|the|my|its|his|her|their)\s+"
+        r"(work|answer|output|result|code|changes?|edits?|fix|"
+        r"implementation|patch)\b"
+        # The bare noun phrase is not enough — "is the review agent always
+        # on?" is a question ABOUT one, not a request for one. Calibration on
+        # 1197 real prompts found exactly that, and it was the only fire.
+        r"|\b(spawn|dispatch|launch|add|use|run|kick off)\s+"
+        r"(?:a|an|another)?\s*(verification|verifier|review|checking)\s+"
+        r"(sub-?agent|agent)\b",
+        pl))
+
+
+def rule_severity_filter_recall(prompt: str) -> bool:
+    """v1.5.0 — a review/audit ask that pre-filters by severity.
+
+    Anthropic's guidance (unchanged from 4.7 through Opus 5, so this rule is
+    NOT model-gated): Claude follows a severity filter literally and measured
+    recall drops. The fix is to ask for everything with a severity label
+    attached, then filter in a second pass.
+    """
+    pl = prompt.lower()
+    review = re.search(r"\b(review|audit|check|analy[sz]e|scan|inspect|"
+                       r"look (?:over|through)|find)\b", pl)
+    if not review:
+        return False
+    filt = re.search(
+        r"\bonly\s+(?:report|tell me about|flag|show|list|surface|mention)\s+"
+        r"(?:the\s+)?(?:most\s+)?"
+        r"(critical|severe|serious|high[- ]severity|high[- ]priority|"
+        r"important|major|blocking|real)\b"
+        r"|\b(?:just|only)\s+(?:the\s+)?"
+        r"(critical|blocking|blocker|high[- ]severity|showstopper)s?\b"
+        r"|\bignore\s+(?:the\s+)?(minor|nit|nits|nitpicks?|small|"
+        r"low[- ]severity|trivial)\b"
+        r"|\bdon'?t\s+(?:report|mention|bother with)\s+(?:the\s+)?"
+        r"(minor|nits?|nitpicks?|small|trivial)\b"
+        r"|\bbe conservative\b",
+        pl)
+    if not filt:
+        return False
+    # Already asking for the two-pass shape — no nudge needed.
+    if re.search(r"\b(severity|confidence)\s+(label|score|rating|level)\b"
+                 r"|\brank(?:ed)? by severity\b"
+                 r"|\bfilter (?:them |it )?(?:in a |on a )?(?:second|"
+                 r"separate) pass\b", pl):
+        return False
+    return True
+
+
 def rule_no_workflow_for_fanout(prompt: str) -> bool:
     pl = prompt.lower()
     fanout = re.search(
@@ -2370,6 +2469,13 @@ SRC_ANTHROPIC_PARALLEL = ("Anthropic — Optimize parallel tool calling",
                           f"{_ANTHROPIC_BEST}#optimize-parallel-tool-calling")
 SRC_ANTHROPIC_SUBAGENT = ("Anthropic — Subagent orchestration",
                           f"{_ANTHROPIC_BEST}#subagent-orchestration")
+# v1.5.0 — the model-specific guide. Cited by the rules whose advice is gated
+# to a model, so a reader can check the claim against the source that makes it
+# rather than against general prompting guidance that does not.
+SRC_ANTHROPIC_OPUS5 = (
+    "Anthropic — Prompting Claude Opus 5",
+    "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/"
+    "prompting-claude-opus-5")
 SRC_ANTHROPIC_AUTONOMY = ("Anthropic — Balancing autonomy and safety",
                           f"{_ANTHROPIC_BEST}#balancing-autonomy-and-safety")
 SRC_ANTHROPIC_CHAINCOMPLEX = ("Anthropic — Chain complex prompts",
@@ -2784,6 +2890,51 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_ANTHROPIC_CHAIN, SRC_PROMPT_REPORT, SRC_CC_BESTPRACTICE],
         check=rule_no_panel_for_contested_design,
+    ),
+    Rule(
+        id="self-check-request",
+        tier=3,
+        name="Asking this model to re-check itself",
+        guidance=(
+            "User asked you to double-check or re-verify your own work. On "
+            "this model that buys extra work, not extra correctness — you "
+            "already verify unprompted. Do the task once, carefully, and "
+            "report what you actually confirmed rather than adding a "
+            "re-check pass."
+        ),
+        sources=[SRC_ANTHROPIC_OPUS5, SRC_ANTHROPIC_OVERTHINK],
+        check=rule_self_check_request,
+        applies_only_on=OPUS_5,
+    ),
+    Rule(
+        id="subagent-for-verification",
+        tier=5,
+        name="Subagent asked to verify your own work",
+        guidance=(
+            "User asked for a subagent to check work done in this session. "
+            "Verification belongs in the main loop on this model — a "
+            "subagent re-establishes context, re-explores, and reports back, "
+            "and you then re-read the report. Verify inline and say what you "
+            "checked. (A fresh reviewer over a large fanned-out result set "
+            "is a different thing and still worth it.)"
+        ),
+        sources=[SRC_ANTHROPIC_OPUS5, SRC_ANTHROPIC_SUBAGENT],
+        check=rule_subagent_for_verification,
+        anthropic_ref="subagent-orchestration",
+        applies_only_on=OPUS_5,
+    ),
+    Rule(
+        id="severity-filter-recall",
+        tier=3,
+        name="Review ask pre-filtered by severity",
+        guidance=(
+            "User capped the review to high-severity findings. Claude takes "
+            "that literally and measured recall drops — real bugs go "
+            "unreported. Report everything you find with a severity and "
+            "confidence label attached, and filter in a separate pass."
+        ),
+        sources=[SRC_ANTHROPIC_OPUS5, SRC_CC_BESTPRACTICE],
+        check=rule_severity_filter_recall,
     ),
     Rule(
         id="no-workflow-for-fanout",
@@ -3806,6 +3957,18 @@ RULE_HELP = {
         "catches": "'which is better / torn between' with no multi-perspective weigh-in.",
         "bad": "REST or gRPC for this?",
         "good": "REST vs gRPC here — weigh client-simplicity, perf, and ops, then recommend one"},
+    "self-check-request": {
+        "catches": "Asking this model to double-check or re-verify its own work — it already does.",
+        "bad": "fix the retry logic in client.py and double-check your work",
+        "good": "fix the retry logic in client.py; tell me which tests you ran and what they said"},
+    "subagent-for-verification": {
+        "catches": "Spawning a subagent whose job is checking work done in this session.",
+        "bad": "implement the migration, then use a subagent to verify your changes",
+        "good": "implement the migration and confirm it inline — run the suite and report the result"},
+    "severity-filter-recall": {
+        "catches": "A review ask capped to high-severity findings, which suppresses real ones.",
+        "bad": "review auth.py and only report critical issues",
+        "good": "review auth.py; report everything with a severity + confidence label, I'll filter"},
     "no-workflow-for-fanout": {
         "catches": "'for each of these 20+ things' with no parallel / Workflow plan.",
         "bad": "update the license header in all 60 files",
