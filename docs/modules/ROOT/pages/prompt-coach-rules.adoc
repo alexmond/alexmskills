@@ -92,6 +92,8 @@ An implementation ask with no 'then run the tests / build'.
 ✗ `implement the retry logic` +
 ✓ `implement the retry logic, then run the unit tests and show the result`
 +
+NOTE: Suppressed on `claude-opus-5`. Opus 5 verifies its own work unprompted; telling it to verify causes over-verification with no capability gain. Anthropic's migration guidance calls this a delete, not a rewrite.
++
 _Refs:_ https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-prompts[Anthropic — Chain complex prompts^] · https://martinfowler.com/bliki/SelfTestingCode.html[Self-Testing Code — Martin Fowler (bliki)^] · https://martinfowler.com/bliki/TestDrivenDevelopment.html[Test-Driven Development (red-green-refactor) — Martin Fowler (bliki)^] · https://arxiv.org/abs/2212.09561[Weng et al. — LLMs are Better Reasoners with Self-Verification (2022)^]
 
 === L3 — classical prompting techniques
@@ -109,6 +111,8 @@ A reasoning ask (why / debug / trace) with no 'think it through first'.
 +
 ✗ `why is this leaking memory?` +
 ✓ `think through the allocation path step by step, then tell me why it leaks`
++
+NOTE: Suppressed on `claude-opus-5`. Extended thinking is on by default on Opus 5, so the reasoning already happens. Asking for it *in the response* only converts silent thinking into narration — and over-narration is already the behaviour this model needs tuned down.
 +
 _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#leverage-thinking-interleaved-thinking-capabilities[Anthropic guide: Leverage thinking interleaved thinking capabilities^] · https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/chain-of-thought[Anthropic — Let Claude think (chain of thought)^] · https://arxiv.org/abs/2201.11903[Wei et al. — Chain-of-Thought prompting elicits reasoning (2022)^] · https://arxiv.org/abs/2406.06608[Schulhoff et al. — The Prompt Report (2024)^] · https://arxiv.org/abs/2205.11916[Kojima et al. — LLMs are Zero-Shot Reasoners ('Let's think step by step', 2022)^] · https://www.promptingguide.ai/techniques/cot[Chain-of-Thought Prompting — Prompt Engineering Guide (DAIR.AI)^]
 
@@ -241,6 +245,8 @@ Several independent lookups done serially instead of in parallel.
 +
 ✗ `check how auth, billing, and search each handle errors` +
 ✓ `in parallel, 3 agents each report the error-handling pattern in auth/, billing/, search/`
++
+NOTE: Suppressed on `claude-opus-5`. Opus 5 reaches for subagents more readily than 4.8 did, which reverses this rule's premise. The two-or-three lookups it fires on are the exact case the guidance names as NOT worth a subagent — work finishable in a handful of tool calls.
 +
 _Refs:_ https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#optimize-parallel-tool-calling[Anthropic guide: Optimize parallel tool calling^] · https://www.anthropic.com/engineering/claude-code-best-practices[Claude Code — Best practices^] · https://docs.anthropic.com/en/docs/claude-code/hooks[Claude Code — Hooks, subagents, and the Task tool^] · https://www.anthropic.com/engineering/built-multi-agent-research-system[Anthropic — How we built our multi-agent research system (parallel subagents)^] · https://platform.openai.com/docs/guides/function-calling[OpenAI — Function calling: parallel (independent) tool calls^]
 

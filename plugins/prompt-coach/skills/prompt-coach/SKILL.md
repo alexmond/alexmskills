@@ -165,7 +165,7 @@ masters, an L2 rule activates in its place, and so on.
 | Rule | Catches |
 |---|---|
 | compound-tasks | Three+ action verbs joined by "and" |
-| no-verify-loop | Implementation ask with no verification step |
+| no-verify-loop *(off on Opus 5)* | Implementation ask with no verification step |
 | missing-context-fetch | "The failing test / the issue" with no identifier |
 | no-format-spec | Ask for summary/list/report with no shape |
 
@@ -175,7 +175,7 @@ masters, an L2 rule activates in its place, and so on.
 | no-adversarial-check | High-stakes ask (security/migration/prod/delete) with no skeptic |
 | retry-without-diagnosis | Short "try again" with no new information |
 | no-few-shot | "Like X" / "in the style of Y" without an example |
-| no-chain-of-thought | Reasoning ask (why/debug/trace) without "think first" |
+| no-chain-of-thought *(off on Opus 5)* | Reasoning ask (why/debug/trace) without "think first" |
 | no-rubric | Judgment ask ("is this good?") without criteria/axes |
 | no-uncertainty-budget | Investigative ask with no "if unsure, say so" |
 | untrusted-content-execution *(v0.46+)* | Paste external content (email/page/issue) + "do what it asks" — prompt-injection vector |
@@ -193,7 +193,7 @@ masters, an L2 rule activates in its place, and so on.
 |---|---|
 | no-plan-mode-for-risky | Migration / delete / rewrite ask with no "plan first" |
 | no-task-list-for-multi-step | 3+ action verbs without a TaskCreate / checklist ask |
-| no-agents-for-parallel-lookup | Multiple independent lookups without parallel agents |
+| no-agents-for-parallel-lookup *(off on Opus 5)* | Multiple independent lookups without parallel agents |
 | no-role-for-critique | "Review my X" without invoking a role (skeptic / security / reviewer) |
 | no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel |
 | no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents |
@@ -315,6 +315,8 @@ Config resolves in order: repo local → user global → default. Run
 - `max_active_rules` — cap on practicing rules active at once (default: 6)
 - `pause_until_prompt` — skip until global `prompt_count` passes this
 - `disabled_rules` — array of rule ids to permanently silence
+- `model_carveout` — suppress rules the running model has made obsolete (default: true; see below)
+- `model_override` — pin the model id the carve-out reasons about instead of reading the transcript
 - `praise_ratio` / `praise_on_mastery` / `praise_on_first_after_fire` / `disable_praise` — encouragement layer
 - `tips_enabled` — proactive advanced-technique tips (default: true)
 - `typo_tolerance` — Levenshtein edit distance for typo normalization (default: 2, `0` disables)
@@ -326,6 +328,34 @@ Config resolves in order: repo local → user global → default. Run
 > so there is no preset to pick and no repeated text to habituate to.
 
 Full source citations behind each rule: [`docs/sources.md`](../../docs/sources.md).
+
+## Model carve-out (v1.4+)
+
+A prompting rule is advice about a *model*, and models move. Three rules teach
+techniques that Claude Opus 5 either already does or actively overdoes, so on
+that model they are suppressed rather than nudged:
+
+| Rule | Why it's off on Opus 5 |
+|---|---|
+| `no-verify-loop` | Opus 5 verifies its own work unprompted. Telling it to verify causes over-verification with no capability gain — Anthropic's guidance calls this a delete, not a rewrite. |
+| `no-chain-of-thought` | Extended thinking is on by default, so the reasoning already happens. Asking for it *in the response* only converts silent thinking into narration. |
+| `no-agents-for-parallel-lookup` | Opus 5 reaches for subagents more readily than 4.8 did, reversing the rule's premise. The two-or-three lookups it fires on are the case the guidance names as *not* worth a subagent. |
+
+This is a per-model gate, not a deletion: on Opus 4.8, Sonnet, Haiku and any
+unrecognized model the full catalog still runs. The model is read from the
+transcript's most recent assistant turn; when it can't be determined the
+carve-out does nothing, so an unknown model can only ever leave behaviour as it
+was. `model_carveout: false` evaluates everything regardless.
+
+Carved rules are suppressed *before* the status machinery, so they neither fire
+nor accrue a clean streak — calling a rule "mastered" that never got to
+evaluate would be a lie. `/prompt-coach:config mastery` lists what's suppressed
+and why.
+
+Two rules that look similar are deliberately **kept**: `no-adversarial-check`
+and `workflow-fanout-no-verify` ask for a *separate reviewer with its own
+context*, which is the writer-verifier split the same guidance endorses — not
+the self-check it warns against.
 
 ## Cross-repo daily review — moved out (v0.23+)
 

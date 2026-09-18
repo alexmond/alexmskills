@@ -794,6 +794,97 @@ def t_precision_gate():
           gated and explored, f"gated={gated} explored={explored}")
 
 
+def _load_analyzer(name: str):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(name, ANALYZER)
+    m = importlib.util.module_from_spec(spec)
+    sys.modules[name] = m          # dataclasses needs the module registered
+    spec.loader.exec_module(m)
+    return m
+
+
+def t_model_carveout():
+    """v1.4.0 — rules whose advice Opus 5 makes obsolete are suppressed on
+    that model and ONLY that model. The negative half matters more than the
+    positive half here: a carve-out that leaks silently strips rules from
+    users on every other model."""
+    m = _load_analyzer("_an_carve")
+    cfg = dict(m.DEFAULT_CONFIG)
+    expected = {"no-verify-loop", "no-chain-of-thought",
+                "no-agents-for-parallel-lookup"}
+
+    on5 = set(m.carved_out_rules(cfg, "claude-opus-5"))
+    check("carve-out fires on Opus 5", on5 == expected,
+          f"got {sorted(on5)}")
+
+    # Prefix match, so a dated or context-tagged id still resolves.
+    tagged = set(m.carved_out_rules(cfg, "claude-opus-5[1m]"))
+    check("carve-out matches suffixed Opus 5 ids", tagged == expected,
+          f"got {sorted(tagged)}")
+
+    # Every other model keeps the full catalog.
+    for other in ("claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5",
+                  "claude-opus-4-7"):
+        got = m.carved_out_rules(cfg, other)
+        check(f"carve-out does NOT fire on {other}", got == {}, f"got {got}")
+
+    # Unknown model (no transcript yet / Codex rollout) changes nothing.
+    check("unknown model carves nothing", m.carved_out_rules(cfg, "") == {})
+
+    # The escape hatch works.
+    off = dict(cfg, model_carveout=False)
+    check("model_carveout=false disables the carve-out",
+          m.carved_out_rules(off, "claude-opus-5") == {})
+
+    # A carved rule is really dropped from selection, and a non-carved rule
+    # in the same tier is not — proving the filter is per-rule, not a blanket.
+    # max_active_rules is lifted so the L1 slots don't mask the result — the
+    # cap, not the carve-out, is what would otherwise exclude these two.
+    wide = dict(cfg, max_active_rules=99)
+    g = {"prompt_count": 0, "rules": {
+        "no-verify-loop": {"status": "practicing"},
+        "compound-tasks": {"status": "practicing"}}}
+    l = {"rules": {}}
+    prac, _ = m.active_rules_split(wide, g, l,
+                                   m.carved_out_rules(wide, "claude-opus-5"))
+    check("carved rule leaves the practicing set",
+          "no-verify-loop" not in prac and "compound-tasks" in prac,
+          f"practicing={prac}")
+
+    prac48, _ = m.active_rules_split(wide, g, l,
+                                     m.carved_out_rules(wide, "claude-opus-4-8"))
+    check("carved rule stays active on Opus 4.8",
+          "no-verify-loop" in prac48, f"practicing={prac48}")
+
+    # Rules we deliberately did NOT carve out. no-workflow-for-fanout needs a
+    # 5+ item count to fire, which is the "genuinely independent and
+    # parallelizable" case Opus 5 guidance still endorses delegating; the
+    # adversarial ones are a separate reviewer, not self-check.
+    kept = {"no-workflow-for-fanout", "no-adversarial-check",
+            "workflow-fanout-no-verify", "no-role-for-critique"}
+    check("adversarial-review + real fan-out rules are NOT carved out",
+          not (kept & on5), f"wrongly carved: {sorted(kept & on5)}")
+
+    # Every carved rule must say why, in prose a user can argue with.
+    missing = [r.id for r in m.RULES if r.obsolete_on and not r.obsolete_why]
+    check("every carved rule carries its rationale", not missing,
+          f"missing obsolete_why: {missing}")
+
+
+def t_model_detection_is_safe():
+    """detect_model must never raise and must return "" when it can't tell —
+    the carve-out's fail-safe depends on it."""
+    m = _load_analyzer("_an_detect")
+    with tempfile.TemporaryDirectory() as td:
+        got = m.detect_model(Path(td))
+        check("detect_model returns '' with no transcript", got == "",
+              f"got {got!r}")
+    cfg = dict(m.DEFAULT_CONFIG, model_override="claude-opus-5")
+    with tempfile.TemporaryDirectory() as td:
+        check("model_override pins the model despite no transcript",
+              m.resolve_model(cfg, Path(td)) == "claude-opus-5")
+
+
 def t_decaying_mastery():
     """v0.41 P3 — an overdue mastery decays to `watch`, then re-graduates on a
     fresh demonstration (with the review interval expanded)."""
@@ -965,6 +1056,8 @@ CHECKS = [
     t_friction_proxy,
     t_fatigue_cap,
     t_precision_gate,
+    t_model_carveout,
+    t_model_detection_is_safe,
     t_decaying_mastery,
     t_grandfather_migration,
     t_eval_harness,

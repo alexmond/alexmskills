@@ -568,6 +568,17 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
           f"{inactive_str} · {t['dormant']} dormant / {t['all']} shipped")
     print()
 
+    _cfg = _analyzer.resolve_config(cwd)
+    carved = _analyzer.carved_out_rules(_cfg, _analyzer.resolve_model(_cfg, cwd))
+    if carved:
+        print("── suppressed by this model ────────────────────────────")
+        for rid, why in sorted(carved.items()):
+            print(f"  ⊘ {rid}")
+            print(f"      {why}")
+        print("    Not counted as mastered — they simply don't apply here.")
+        print("    Set model_carveout=false to evaluate them anyway.")
+        print()
+
     if snap.get("inactive"):
         # Show inactive as its own section — helps users see rules that
         # graduated on clean_streak alone (didn't apply to their patterns)
@@ -1228,6 +1239,8 @@ def build_dashboard(cwd: Path) -> dict:
             "min_demonstrations": min_demos,
             "anthropic_ref": r.anthropic_ref,
             "anthropic_url": anth,
+            "obsolete_on": list(r.obsolete_on),
+            "obsolete_why": r.obsolete_why,
             "sources": [{"title": t, "url": u} for t, u in r.sources],
         })
 

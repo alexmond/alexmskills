@@ -1,6 +1,6 @@
 {
   "name": "prompt-coach",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Analyzes each prompt you submit against a tiered ruleset of prompting best practices; nudges you toward better prompts (definition-of-done, scoped references, guardrails, verification steps) and quietly graduates rules you consistently follow.",
   "author": {
     "name": "Alex Mondshain",

@@ -141,6 +141,16 @@ DEFAULT_CONFIG = {
                                   # with no-answer-shape included)
     "pause_until_prompt": 0,      # user-set: skip nudging until global_prompt_count > this
     "disabled_rules": [],         # user can permanently silence a rule id
+    # v1.4.0 — MODEL CARVE-OUT. Some rules teach a technique that a newer
+    # model already does, or actively overdoes. Those rules carry an
+    # `obsolete_on` model list and are suppressed when the session is running
+    # such a model — a per-model gate, because the advice is still correct
+    # everywhere else. Set false to evaluate every rule regardless of model.
+    # `model_override` pins the model id instead of reading it from the
+    # transcript (useful for tests, and for a harness whose transcript the
+    # coach can't see).
+    "model_carveout": True,
+    "model_override": None,
     # v0.38.0 — the v0.16 anti-habituation config (saturation_threshold,
     # silence_window, silence_duration, disclosure_medium_at,
     # disclosure_short_at) and v0.17 voice config (voice_preset,
@@ -299,6 +309,23 @@ CONFIG_SCHEMA = {
                        "append or 'coach on <rule-id>' to remove.",
         "example": ["no-few-shot"],
         "since": "0.5.0",
+    },
+    "model_carveout": {
+        "category": "rule-activation",
+        "type": "bool",
+        "description": "Suppress rules whose advice the running model makes obsolete "
+                       "(e.g. don't ask Opus 5 to verify — it already does). Set false "
+                       "to evaluate every rule regardless of model.",
+        "example": True,
+        "since": "1.4.0",
+    },
+    "model_override": {
+        "category": "rule-activation",
+        "type": "str",
+        "description": "Pin the model id the carve-out reasons about instead of reading "
+                       "it from the transcript. Leave unset outside tests.",
+        "example": "claude-opus-5",
+        "since": "1.4.0",
     },
     "graduation_threshold": {
         "category": "rule-activation",
@@ -940,6 +967,54 @@ def _last_assistant_turn(cwd: Path) -> dict | None:
     return None
 
 
+_MODEL_CACHE: str | None = None
+
+
+def detect_model(cwd: Path) -> str:
+    """The model id driving this session, or "" when it can't be determined.
+
+    Read from the transcript's most recent assistant turn, which is the only
+    place the running model is stated: the UserPromptSubmit payload doesn't
+    carry it, and an env var would report the CLI's default rather than what
+    this session is actually on (`/model` switches mid-session).
+
+    Returning "" is a normal outcome, not a failure — a first prompt has no
+    assistant turn yet, and Codex rollouts don't record a Claude model id.
+    Every caller must treat "" as "apply nothing", so an unknown model can
+    only ever leave behaviour exactly as it was.
+    """
+    global _MODEL_CACHE
+    if _MODEL_CACHE is not None:
+        return _MODEL_CACHE
+    _MODEL_CACHE = ""
+    entry = _last_assistant_turn(cwd)
+    if entry:
+        model = entry.get("message", {}).get("model")
+        if isinstance(model, str):
+            _MODEL_CACHE = model.strip().lower()
+    return _MODEL_CACHE
+
+
+def carved_out_rules(cfg: dict, model: str) -> dict[str, str]:
+    """rule_id -> why, for rules this model makes obsolete.
+
+    Empty when the carve-out is off or the model is unknown.
+    """
+    if not model or not cfg.get("model_carveout", True):
+        return {}
+    return {r.id: r.obsolete_why for r in RULES
+            if any(model.startswith(p) for p in r.obsolete_on)}
+
+
+def resolve_model(cfg: dict, cwd: Path) -> str:
+    """The model the carve-out should reason about: the pin if one is set,
+    else whatever the transcript says."""
+    pinned = cfg.get("model_override")
+    if isinstance(pinned, str) and pinned.strip():
+        return pinned.strip().lower()
+    return detect_model(cwd)
+
+
 def _picker_reason(entry: dict) -> str | None:
     """Classify an assistant turn as a picker turn:
     'multi-choice-answer' → AskUserQuestion tool_use present (definitive)
@@ -1091,6 +1166,25 @@ class Rule:
     # claude-prompting-best-practices — used by /prompt-coach:config
     # sources <rule-id> to surface a traceable citation.
     anthropic_ref: str | None = None
+    # v1.4.0 — MODEL CARVE-OUT. Model-id prefixes on which this rule's advice
+    # is obsolete or actively counterproductive, so it is suppressed there.
+    # A rule is not wrong in general when it carries this — it is wrong *on
+    # that model*, which is why this is a per-model gate and not a deletion.
+    # Anthropic's Opus 5 guidance is explicit that a uniform rulebook needs
+    # exactly this: "a prompt library that applies it uniformly needs a
+    # carve-out for this model rather than a global rule."
+    obsolete_on: tuple[str, ...] = ()
+    obsolete_why: str = ""
+
+
+# Model-id prefixes for the carve-out above. Matched as a prefix so dated and
+# suffixed ids (`claude-opus-5-20260115`, `claude-opus-5[1m]`) resolve too.
+# Deliberately narrow: every rule carved out here is carved out on evidence
+# from Anthropic's published Opus 5 guidance about *Opus 5*. Do not widen this
+# to the whole Claude 5 generation without equivalent per-model evidence —
+# guessing which sibling models share a behaviour is how a carve-out turns
+# into a blind spot.
+OPUS_5 = ("claude-opus-5",)
 
 
 # ---- L1 fundamentals -------------------------------------------------------
@@ -2351,6 +2445,12 @@ RULES: list[Rule] = [
         ),
         sources=[SRC_CC_BESTPRACTICE, SRC_ANTHROPIC_CHAIN],
         check=rule_no_verify_loop,
+        obsolete_on=OPUS_5,
+        obsolete_why=(
+            "Opus 5 verifies its own work unprompted; telling it to verify "
+            "causes over-verification with no capability gain. Anthropic's "
+            "migration guidance calls this a delete, not a rewrite."
+        ),
     ),
     Rule(
         id="missing-context-fetch",
@@ -2443,6 +2543,13 @@ RULES: list[Rule] = [
         sources=[SRC_ANTHROPIC_COT, SRC_WEI_COT, SRC_PROMPT_REPORT],
         check=rule_no_chain_of_thought,
         anthropic_ref="leverage-thinking-interleaved-thinking-capabilities",
+        obsolete_on=OPUS_5,
+        obsolete_why=(
+            "Extended thinking is on by default on Opus 5, so the reasoning "
+            "already happens. Asking for it *in the response* only converts "
+            "silent thinking into narration — and over-narration is already "
+            "the behaviour this model needs tuned down."
+        ),
     ),
     Rule(
         id="no-rubric",
@@ -2552,6 +2659,13 @@ RULES: list[Rule] = [
         sources=[SRC_CC_BESTPRACTICE, SRC_CC_HOOKS],
         check=rule_no_agents_for_parallel_lookup,
         anthropic_ref="optimize-parallel-tool-calling",
+        obsolete_on=OPUS_5,
+        obsolete_why=(
+            "Opus 5 reaches for subagents more readily than 4.8 did, which "
+            "reverses this rule's premise. The two-or-three lookups it fires "
+            "on are the exact case the guidance names as NOT worth a "
+            "subagent — work finishable in a handful of tool calls."
+        ),
     ),
     Rule(
         id="no-role-for-critique",
@@ -4511,7 +4625,9 @@ def effective_status(rule_id: str, g: dict, l: dict) -> str:
     return entry.get("status", "dormant")
 
 
-def active_rules_split(cfg: dict, g: dict, l: dict) -> tuple[list[str], list[str]]:
+def active_rules_split(cfg: dict, g: dict, l: dict,
+                       carved: dict[str, str] | None = None,
+                       ) -> tuple[list[str], list[str]]:
     """v0.9.0: split into (practicing, mastered). Practicing is capped at
     max_active_rules (the tier that drives daily coaching). Mastered is
     uncapped — they always evaluate, but emit rarely via a longer cooldown.
@@ -4533,8 +4649,14 @@ def active_rules_split(cfg: dict, g: dict, l: dict) -> tuple[list[str], list[str
     floor = float(cfg.get("precision_floor", 0.15))
     gate_on = bool(cfg.get("precision_gating", True))
     dormant: list[str] = []
+    carved = carved or {}
     for rid in RULE_ORDER:
         if rid in cfg.get("disabled_rules", []):
+            continue
+        # Model carve-out. Suppressed before the status machinery runs, so a
+        # carved rule neither fires nor accrues a clean streak toward mastery
+        # — "mastered" would be a lie about a rule that never got to evaluate.
+        if rid in carved:
             continue
         st = effective_status(rid, g, l)
         if st == "mastered":
@@ -5527,9 +5649,12 @@ def main() -> int:
             k = orig.lower()
             top[k] = int(top.get(k, 0)) + 1
 
+    # v1.4.0 — drop rules the running model has made obsolete before anything
+    # else looks at the catalog.
+    carved = carved_out_rules(cfg, resolve_model(cfg, cwd))
     # v0.9.0 — split practicing (capped at max_active) from mastered
     # (uncapped, evaluated on every prompt, longer cooldown).
-    active_practicing, active_mastered = active_rules_split(cfg, g, l)
+    active_practicing, active_mastered = active_rules_split(cfg, g, l, carved)
     active = active_practicing + active_mastered
     fired_practicing = [rid for rid in active_practicing if fires(prompt, rid)]
     fired_mastered = [rid for rid in active_mastered if fires(prompt, rid)]

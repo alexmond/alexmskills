@@ -7,6 +7,11 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-09-18
+
+### Added
+- **prompt-coach 1.4.0** — **model carve-out.** A prompting rule is advice about a *model*, and models move. Three rules now carry an `obsolete_on` model list and are suppressed when the session is running such a model: `no-verify-loop` (Opus 5 verifies its own work unprompted — Anthropic's migration guidance calls removing verification instructions "a delete, not a rewrite"), `no-chain-of-thought` (extended thinking is on by default, so asking for reasoning *in the response* only converts silent thinking into narration, which is already the behaviour that model needs tuned down) and `no-agents-for-parallel-lookup` (Opus 5 reaches for subagents more readily than 4.8 did, reversing the rule's premise; the two-or-three lookups it fires on are the exact case the guidance names as not worth a subagent). The published Opus 5 guidance asks for precisely this shape — "a prompt library that applies it uniformly needs a carve-out for this model rather than a global rule". Independent local evidence agrees on the first one: `no-verify-loop` is the single noisiest rule in the eval set, 10 rows at **0.00 precision**. Carve-outs are matched on a model-id prefix, apply to Opus 5 only, and do nothing at all when the model can't be determined, so an unknown model can only leave behaviour as it was; `model_carveout: false` disables the mechanism and `model_override` pins the id for tests. Suppression happens *before* the status machinery, so a carved rule neither fires nor accrues a clean streak — calling a rule "mastered" that never got to evaluate would be a lie. `/prompt-coach:config mastery` lists what's suppressed and why. Deliberately **not** carved out: `no-adversarial-check` and `workflow-fanout-no-verify`, which ask for a separate reviewer with its own context — the writer-verifier split the same guidance endorses, not the self-check it warns against.
+
 ## 2026-09-16
 
 ### Added

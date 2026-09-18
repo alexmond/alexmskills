@@ -110,6 +110,11 @@ def render(data: dict) -> str:
                 lines.append("+")
                 lines.append(f"✗ `{bad}` +")
                 lines.append(f"✓ `{good}`")
+            if r.get("obsolete_on"):
+                models = ", ".join(r["obsolete_on"])
+                lines.append("+")
+                lines.append(f"NOTE: Suppressed on `{models}`. "
+                             f"{_esc(r.get('obsolete_why', ''))}")
             refs = _refs(r)
             if refs:
                 lines.append("+")
