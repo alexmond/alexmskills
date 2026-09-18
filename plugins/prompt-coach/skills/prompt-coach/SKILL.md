@@ -331,31 +331,18 @@ Full source citations behind each rule: [`docs/sources.md`](../../docs/sources.m
 
 ## Model carve-out (v1.4+)
 
-A prompting rule is advice about a *model*, and models move. Three rules teach
-techniques that Claude Opus 5 either already does or actively overdoes, so on
-that model they are suppressed rather than nudged:
+A prompting rule is advice about a *model*, and models move. Rules carry an
+`obsolete_on` list of model-id prefixes and are suppressed when the session
+runs such a model. Three are off on Claude Opus 5 — `no-verify-loop`,
+`no-chain-of-thought` and `no-agents-for-parallel-lookup` — because that model
+already does, or overdoes, what they teach.
 
-| Rule | Why it's off on Opus 5 |
-|---|---|
-| `no-verify-loop` | Opus 5 verifies its own work unprompted. Telling it to verify causes over-verification with no capability gain — Anthropic's guidance calls this a delete, not a rewrite. |
-| `no-chain-of-thought` | Extended thinking is on by default, so the reasoning already happens. Asking for it *in the response* only converts silent thinking into narration. |
-| `no-agents-for-parallel-lookup` | Opus 5 reaches for subagents more readily than 4.8 did, reversing the rule's premise. The two-or-three lookups it fires on are the case the guidance names as *not* worth a subagent. |
+It is a per-model gate, not a deletion: every other model still gets the full
+catalog, and an unrecognized model changes nothing. `model_carveout: false`
+disables it; `/prompt-coach:config mastery` lists what's suppressed and why.
 
-This is a per-model gate, not a deletion: on Opus 4.8, Sonnet, Haiku and any
-unrecognized model the full catalog still runs. The model is read from the
-transcript's most recent assistant turn; when it can't be determined the
-carve-out does nothing, so an unknown model can only ever leave behaviour as it
-was. `model_carveout: false` evaluates everything regardless.
-
-Carved rules are suppressed *before* the status machinery, so they neither fire
-nor accrue a clean streak — calling a rule "mastered" that never got to
-evaluate would be a lie. `/prompt-coach:config mastery` lists what's suppressed
-and why.
-
-Two rules that look similar are deliberately **kept**: `no-adversarial-check`
-and `workflow-fanout-no-verify` ask for a *separate reviewer with its own
-context*, which is the writer-verifier split the same guidance endorses — not
-the self-check it warns against.
+Which rules, the evidence behind each, the ones deliberately kept, and how to
+add a carve-out: [`references/model-carveout.md`](references/model-carveout.md).
 
 ## Cross-repo daily review — moved out (v0.23+)
 
