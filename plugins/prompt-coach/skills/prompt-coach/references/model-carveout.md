@@ -1,11 +1,35 @@
-# Model carve-out (v1.4+)
+# Per-model gate (v1.4+)
 
 A prompting rule is advice about a *model*, and models move. A rule that was
 sound guidance for one model can become redundant on the next — or worse, can
 teach a habit the newer model already overdoes.
 
-Rules carry an `obsolete_on` list of model-id prefixes. When the session is
-running such a model, the rule is suppressed rather than nudged.
+Rules **and tips** carry model-id prefix lists, and the gate runs both ways:
+
+- `obsolete_on` — advice this model has made redundant or harmful. Suppressed.
+- `applies_only_on` — advice that is *only* correct on certain models. Inert
+  everywhere else.
+
+Both directions are needed because drift runs both ways. A behaviour a model
+grew is as real as one it lost, and "don't ask this model to double-check
+itself" is advice that would be actively wrong to give someone on Opus 4.8.
+
+## Tips are gated too
+
+A tip is the same advice in a friendlier voice, so a gate that stops the rule
+and leaves the tip is not a gate at all. `tip-verify-loop` and
+`tip-chain-of-thought` mirror two of the carved rules and are gated with them.
+
+Tips carry their **own** gate fields rather than inheriting from a paired
+rule. The `_TIP_ON_MASTERY` pairing is a *learning sequence* — master a
+fundamental, unlock an advanced technique — not a claim that the two teach the
+same thing. `tip-verify-loop` is unlocked by `no-definition-of-done`, a rule
+with no verification content at all, so deriving the gate through that map
+would have gated the wrong tip.
+
+Both tip paths are covered: the on-topic matcher and the graduation-unlock
+path, which never consults the tip's own heuristic and so needs the gate
+applied independently.
 
 ## What's carved out, and why
 
@@ -55,11 +79,40 @@ parallelizable" case the guidance still endorses delegating.
 
 ## Config and inspection
 
-- `model_carveout: false` — evaluate every rule regardless of model.
+- `model_rules` — **the per-model switch.** A model-id prefix maps to a table
+  of ids and `"on"` / `"off"`:
+
+  ```json
+  {
+    "model_rules": {
+      "claude-opus-5":      { "no-verify-loop": "on" },
+      "claude-opus-5-2026": { "tip-verify-loop": "off" }
+    }
+  }
+  ```
+
+  `"on"` forces an item back on for that model, overriding a shipped gate;
+  `"off"` silences one the shipped gate leaves on. Longest matching prefix
+  wins, so a pin for one build beats a family-wide entry. This is the escape
+  hatch in both directions — the shipped gates encode what published guidance
+  says, and a user's own measurements on their own workload outrank them.
+- `model_carveout: false` — evaluate everything regardless of model.
 - `model_override: "<model-id>"` — pin the id instead of reading the
   transcript. For tests, and for a harness whose transcript the coach can't
   see.
-- `/prompt-coach:config mastery` lists what is suppressed and why.
+- `/prompt-coach:config mastery` lists what is switched off and why.
+
+## Other clients
+
+The model is read from the transcript's last assistant turn. Codex rollout
+records carry no Claude model id, so `detect_model` returns `""` there and the
+gate is a no-op: **a Codex session gets the full catalog.** That is the right
+outcome — Codex's default model is not Opus 5, so Opus 5 gates shouldn't apply
+— but it is reached by the fail-safe rather than by knowing. The coach cannot
+currently tell "Codex on another vendor's model" from "Claude session, first
+prompt, no transcript yet"; both get everything. Gating rules for a non-Claude
+model would need that model's id plumbed through the Codex normalizer first,
+plus behavioural evidence for it of the kind Anthropic publishes for its own.
 
 ## Adding a carve-out
 

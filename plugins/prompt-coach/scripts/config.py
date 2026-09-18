@@ -569,14 +569,17 @@ def cmd_mastery(cwd: Path, as_json: bool = False) -> int:
     print()
 
     _cfg = _analyzer.resolve_config(cwd)
-    carved = _analyzer.carved_out_rules(_cfg, _analyzer.resolve_model(_cfg, cwd))
-    if carved:
-        print("── suppressed by this model ────────────────────────────")
-        for rid, why in sorted(carved.items()):
+    _model = _analyzer.resolve_model(_cfg, cwd)
+    gated = _analyzer.gated_out(_cfg, _model)
+    if gated:
+        print(f"── switched off for {_model or 'this model'} ──────────────")
+        for rid, why in sorted(gated.items()):
             print(f"  ⊘ {rid}")
             print(f"      {why}")
         print("    Not counted as mastered — they simply don't apply here.")
-        print("    Set model_carveout=false to evaluate them anyway.")
+        print("    Force one back on: model_rules → "
+              f'{{"{_model}": {{"<id>": "on"}}}}')
+        print("    Or set model_carveout=false to evaluate everything.")
         print()
 
     if snap.get("inactive"):

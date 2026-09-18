@@ -151,6 +151,13 @@ DEFAULT_CONFIG = {
     # coach can't see).
     "model_carveout": True,
     "model_override": None,
+    # Per-model switch: {"<model-id-prefix>": {"<rule-or-tip-id>": "on"|"off"}}.
+    # "on" forces an item back on for that model (overriding a shipped gate),
+    # "off" silences one the shipped gate leaves on. Longest matching prefix
+    # wins, so a pin for one build beats a family-wide entry. This is the
+    # user's escape hatch in both directions — the shipped gates encode what
+    # the published guidance says, and a user's own measurements outrank them.
+    "model_rules": {},
     # v0.38.0 — the v0.16 anti-habituation config (saturation_threshold,
     # silence_window, silence_duration, disclosure_medium_at,
     # disclosure_short_at) and v0.17 voice config (voice_preset,
@@ -325,6 +332,15 @@ CONFIG_SCHEMA = {
         "description": "Pin the model id the carve-out reasons about instead of reading "
                        "it from the transcript. Leave unset outside tests.",
         "example": "claude-opus-5",
+        "since": "1.4.0",
+    },
+    "model_rules": {
+        "category": "rule-activation",
+        "type": "dict",
+        "description": "Per-model switch: model-id prefix → {rule or tip id: 'on'|'off'}. "
+                       "'on' forces an item back on for that model despite a shipped "
+                       "gate; 'off' silences one. Longest matching prefix wins.",
+        "example": {"claude-opus-5": {"no-verify-loop": "on"}},
         "since": "1.4.0",
     },
     "graduation_threshold": {
@@ -995,15 +1011,63 @@ def detect_model(cwd: Path) -> str:
     return _MODEL_CACHE
 
 
-def carved_out_rules(cfg: dict, model: str) -> dict[str, str]:
-    """rule_id -> why, for rules this model makes obsolete.
+def _model_switch(cfg: dict, model: str) -> dict[str, str]:
+    """The user's per-model overrides for this model: id -> "on" | "off".
 
-    Empty when the carve-out is off or the model is unknown.
+    `model_rules` maps a model-id prefix to a {rule-or-tip id: "on"|"off"}
+    table, so a user can force a gated item back on for the model they run,
+    or silence one the shipped gate leaves on. Longest matching prefix wins,
+    so a pin for one specific build beats a family-wide entry.
+    """
+    table = cfg.get("model_rules") or {}
+    if not isinstance(table, dict) or not model:
+        return {}
+    keys = sorted((k for k in table if model.startswith(str(k).lower())),
+                  key=len)
+    out: dict[str, str] = {}
+    for k in keys:                      # shortest first; longest overwrites
+        entry = table[k]
+        if isinstance(entry, dict):
+            out.update({str(i): str(v).lower() for i, v in entry.items()})
+    return out
+
+
+def gated_out(cfg: dict, model: str, items=None) -> dict[str, str]:
+    """id -> why, for rules/tips this model switches off.
+
+    Covers both directions: advice the model made obsolete, and advice that
+    only applies to *other* models. Empty when the gate is disabled or the
+    model is unknown, so an unrecognized model always gets the full catalog.
     """
     if not model or not cfg.get("model_carveout", True):
         return {}
-    return {r.id: r.obsolete_why for r in RULES
-            if any(model.startswith(p) for p in r.obsolete_on)}
+    switch = _model_switch(cfg, model)
+    out: dict[str, str] = {}
+    for item in (items if items is not None else list(RULES) + list(TIPS)):
+        forced = switch.get(item.id)
+        if forced == "on":              # user overrides the shipped gate
+            continue
+        if forced == "off":
+            out[item.id] = f"switched off for {model} by model_rules config"
+            continue
+        state = gate_state(item, model)
+        if state == "obsolete":
+            out[item.id] = item.obsolete_why
+        elif state == "not-yet":
+            applies = ", ".join(item.applies_only_on)
+            out[item.id] = f"only applies on {applies}"
+    return out
+
+
+def carved_out_rules(cfg: dict, model: str) -> dict[str, str]:
+    """Rules only — the subset callers that select rules care about."""
+    return gated_out(cfg, model, RULES)
+
+
+def gated_out_tips(cfg: dict, model: str) -> dict[str, str]:
+    """Tips only. A tip is the same advice in a friendlier voice, so a gate
+    that stops the rule and leaves the tip is not a gate at all."""
+    return gated_out(cfg, model, TIPS)
 
 
 def resolve_model(cfg: dict, cwd: Path) -> str:
@@ -1175,16 +1239,43 @@ class Rule:
     # carve-out for this model rather than a global rule."
     obsolete_on: tuple[str, ...] = ()
     obsolete_why: str = ""
+    # The mirror of `obsolete_on`: advice that is only correct on certain
+    # models. A rule carrying this is inert everywhere else. Needed because
+    # model drift runs both ways — a behaviour a model grew is as real as one
+    # it lost, and "don't ask THIS model to double-check itself" is advice
+    # that would be wrong to give a user on Opus 4.8.
+    applies_only_on: tuple[str, ...] = ()
 
 
-# Model-id prefixes for the carve-out above. Matched as a prefix so dated and
+# Model-id prefixes for the gates above. Matched as a prefix so dated and
 # suffixed ids (`claude-opus-5-20260115`, `claude-opus-5[1m]`) resolve too.
-# Deliberately narrow: every rule carved out here is carved out on evidence
-# from Anthropic's published Opus 5 guidance about *Opus 5*. Do not widen this
-# to the whole Claude 5 generation without equivalent per-model evidence —
-# guessing which sibling models share a behaviour is how a carve-out turns
-# into a blind spot.
+# Deliberately narrow: every gate here rests on evidence from Anthropic's
+# published guidance about *that specific model*. Do not widen one to a whole
+# model generation without equivalent per-model evidence — guessing which
+# sibling models share a behaviour is how a gate turns into a blind spot.
 OPUS_5 = ("claude-opus-5",)
+
+
+def model_matches(model: str, prefixes: tuple[str, ...]) -> bool:
+    """Prefix match of a model id against a gate's model list."""
+    return bool(model) and any(model.startswith(p) for p in prefixes)
+
+
+def gate_state(item, model: str) -> str:
+    """How the per-model gate rules on one Rule or Tip: "on", "obsolete", or
+    "not-yet" (declared for models this session isn't running).
+
+    An unknown model (`""`) always answers "on" — the gate can only ever
+    narrow behaviour on evidence, never on a guess.
+    """
+    if not model:
+        return "on"
+    if model_matches(model, getattr(item, "obsolete_on", ())):
+        return "obsolete"
+    applies = getattr(item, "applies_only_on", ())
+    if applies and not model_matches(model, applies):
+        return "not-yet"
+    return "on"
 
 
 # ---- L1 fundamentals -------------------------------------------------------
@@ -3282,6 +3373,16 @@ class Tip:
     guidance: str                        # short hint for Claude's additionalContext
     sources: list[tuple[str, str]]       # (title, url)
     check: Callable[[str], bool]         # heuristic: is this prompt on-topic?
+    # v1.4.0 — same per-model gate the rules carry. Tips need their own copy
+    # rather than inheriting from a paired rule: the pairing in
+    # `_TIP_ON_MASTERY` is a *learning sequence* (master a fundamental, unlock
+    # an advanced technique), not a statement that the two teach the same
+    # thing — `tip-verify-loop` is unlocked by `no-definition-of-done`, a rule
+    # with no verification content at all. Deriving the gate through that map
+    # would have gated the wrong tip.
+    obsolete_on: tuple[str, ...] = ()
+    obsolete_why: str = ""
+    applies_only_on: tuple[str, ...] = ()
 
 
 def _tip_few_shot_check(prompt: str) -> bool:
@@ -3488,6 +3589,12 @@ TIPS: list[Tip] = [
         ),
         sources=[SRC_ANTHROPIC_COT, SRC_WEI_COT],
         check=_tip_chain_of_thought_check,
+        obsolete_on=OPUS_5,
+        obsolete_why=(
+            "Mirrors `no-chain-of-thought`. Thinking is on by default on "
+            "Opus 5, so 'think it through step by step' buys narration, not "
+            "reasoning that wasn't already happening."
+        ),
     ),
     Tip(
         id="tip-verify-loop",
@@ -3504,6 +3611,12 @@ TIPS: list[Tip] = [
         ),
         sources=[SRC_CC_BESTPRACTICE, SRC_ANTHROPIC_BE_CLEAR],
         check=_tip_verify_loop_check,
+        obsolete_on=OPUS_5,
+        obsolete_why=(
+            "Mirrors `no-verify-loop`, and its guidance is the exact "
+            "instruction Opus 5 guidance says to delete: run the tests and "
+            "report the result even if not asked. The model already does."
+        ),
     ),
 ]
 
@@ -3523,7 +3636,8 @@ _TIP_ON_MASTERY: dict[str, str] = {
 }
 
 
-def _pick_matching_tip(prompt: str, cfg: dict, g: dict) -> str | None:
+def _pick_matching_tip(prompt: str, cfg: dict, g: dict,
+                       gated: dict[str, str] | None = None) -> str | None:
     """v0.28.0 — Mode A: standalone matching. Returns the id of a tip whose
     heuristic matches the prompt AND is off cooldown AND wins the variable-
     ratio dice roll. None otherwise.
@@ -3537,7 +3651,10 @@ def _pick_matching_tip(prompt: str, cfg: dict, g: dict) -> str | None:
     ratio = max(1, int(cfg.get("tip_ratio", 5)))
     prompt_count = int(g.get("prompt_count", 0))
     tips_state = g.setdefault("tips", {})
+    gated = gated or {}
     for tip in TIPS:
+        if tip.id in gated:
+            continue
         if not tip.check(prompt):
             continue
         st = tips_state.get(tip.id, {}) or {}
@@ -5963,16 +6080,21 @@ def main() -> int:
     fired_tip_id: str | None = None
     fired_tip_mode: str | None = None
     if cfg.get("tips_enabled", True):
+        # Both tip paths obey the same per-model gate the rules do. The
+        # unlock path needs it independently: it never consults the tip's own
+        # heuristic, so a gated tip would otherwise still reach the user the
+        # moment its paired fundamental mastered.
+        gated_tips = gated_out_tips(cfg, resolve_model(cfg, cwd))
         # Mode B: paired to a mastery event that happened this turn
         for mastered_rid in mastery_events:
             paired = _TIP_ON_MASTERY.get(mastered_rid)
-            if paired and paired in TIPS_BY_ID:
+            if paired and paired in TIPS_BY_ID and paired not in gated_tips:
                 fired_tip_id = paired
                 fired_tip_mode = "graduation-unlock"
                 break
         # Mode A: on-topic heuristic — only if nothing above emitted anything
         if fired_tip_id is None and outcome == "no-emit" and not nudged_this_prompt:
-            candidate = _pick_matching_tip(prompt, cfg, g)
+            candidate = _pick_matching_tip(prompt, cfg, g, gated_tips)
             if candidate:
                 fired_tip_id = candidate
                 fired_tip_mode = "match"

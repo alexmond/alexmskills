@@ -315,8 +315,9 @@ Config resolves in order: repo local → user global → default. Run
 - `max_active_rules` — cap on practicing rules active at once (default: 6)
 - `pause_until_prompt` — skip until global `prompt_count` passes this
 - `disabled_rules` — array of rule ids to permanently silence
-- `model_carveout` — suppress rules the running model has made obsolete (default: true; see below)
-- `model_override` — pin the model id the carve-out reasons about instead of reading the transcript
+- `model_carveout` — apply the per-model gate at all (default: true; see below)
+- `model_rules` — per-model switch: `{"<model-prefix>": {"<rule-or-tip-id>": "on"|"off"}}`
+- `model_override` — pin the model id the gate reasons about instead of reading the transcript
 - `praise_ratio` / `praise_on_mastery` / `praise_on_first_after_fire` / `disable_praise` — encouragement layer
 - `tips_enabled` — proactive advanced-technique tips (default: true)
 - `typo_tolerance` — Levenshtein edit distance for typo normalization (default: 2, `0` disables)
@@ -329,20 +330,24 @@ Config resolves in order: repo local → user global → default. Run
 
 Full source citations behind each rule: [`docs/sources.md`](../../docs/sources.md).
 
-## Model carve-out (v1.4+)
+## Per-model gate (v1.4+)
 
-A prompting rule is advice about a *model*, and models move. Rules carry an
-`obsolete_on` list of model-id prefixes and are suppressed when the session
-runs such a model. Three are off on Claude Opus 5 — `no-verify-loop`,
-`no-chain-of-thought` and `no-agents-for-parallel-lookup` — because that model
-already does, or overdoes, what they teach.
+A prompting rule is advice about a *model*, and models move. Rules and tips
+carry model-id prefix lists and the gate runs both ways: `obsolete_on` (this
+model made the advice redundant) and `applies_only_on` (the advice is correct
+*only* on these models). Three rules and two tips are off on Claude Opus 5 —
+`no-verify-loop`, `no-chain-of-thought`, `no-agents-for-parallel-lookup` and
+their mirror tips — because that model already does, or overdoes, what they
+teach.
 
-It is a per-model gate, not a deletion: every other model still gets the full
-catalog, and an unrecognized model changes nothing. `model_carveout: false`
-disables it; `/prompt-coach:config mastery` lists what's suppressed and why.
+It is a gate, not a deletion: every other model still gets the full catalog,
+and an unrecognized model changes nothing. `model_rules` is the per-model
+switch — force any rule or tip `"on"` or `"off"` for a given model id, longest
+prefix wins. `/prompt-coach:config mastery` lists what's switched off and why.
 
-Which rules, the evidence behind each, the ones deliberately kept, and how to
-add a carve-out: [`references/model-carveout.md`](references/model-carveout.md).
+Which rules, the evidence behind each, the ones deliberately kept, how tips are
+gated, what happens on Codex, and how to add a gate:
+[`references/model-carveout.md`](references/model-carveout.md).
 
 ## Cross-repo daily review — moved out (v0.23+)
 

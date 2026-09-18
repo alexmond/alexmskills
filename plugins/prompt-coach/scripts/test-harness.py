@@ -871,6 +871,100 @@ def t_model_carveout():
           f"missing obsolete_why: {missing}")
 
 
+def t_model_gate_covers_tips():
+    """v1.4.0 — a tip is the same advice in a friendlier voice, so a gate that
+    stops the rule and leaves the tip is not a gate. Both tip paths are
+    covered: the on-topic matcher AND the graduation-unlock path, which never
+    consults the tip's own heuristic."""
+    m = _load_analyzer("_an_tips")
+    cfg = dict(m.DEFAULT_CONFIG)
+
+    gated = m.gated_out_tips(cfg, "claude-opus-5")
+    expected = {"tip-verify-loop", "tip-chain-of-thought"}
+    check("mirror tips are gated on Opus 5", set(gated) == expected,
+          f"got {sorted(gated)}")
+    check("tips are NOT gated on Opus 4.8",
+          m.gated_out_tips(cfg, "claude-opus-4-8") == {})
+    check("tips are NOT gated on an unknown model",
+          m.gated_out_tips(cfg, "") == {})
+
+    # The matcher must skip a gated tip even when its heuristic matches.
+    tip = [t for t in m.TIPS if t.id == "tip-verify-loop"][0]
+    probe = "add a retry to the upload handler in api/upload.py"
+    check("the gated tip's heuristic still matches (gate, not heuristic)",
+          tip.check(probe))
+    g = {"prompt_count": 0, "tips": {}}
+    picked = m._pick_matching_tip(probe, cfg, g, gated)
+    check("matcher does not pick a gated tip", picked != "tip-verify-loop",
+          f"picked {picked}")
+
+    # Every gated tip must carry its rationale, same bar as the rules.
+    missing = [t.id for t in m.TIPS if t.obsolete_on and not t.obsolete_why]
+    check("every gated tip carries its rationale", not missing, f"{missing}")
+
+
+def t_model_switch_config():
+    """v1.4.0 — the per-model switch overrides the shipped gate in BOTH
+    directions, because a user's own measurements outrank published guidance
+    about their workload."""
+    m = _load_analyzer("_an_switch")
+    cfg = dict(m.DEFAULT_CONFIG)
+
+    forced_on = dict(cfg, model_rules={
+        "claude-opus-5": {"no-verify-loop": "on", "tip-verify-loop": "on"}})
+    check("model_rules 'on' re-admits a gated rule",
+          "no-verify-loop" not in m.carved_out_rules(forced_on, "claude-opus-5"))
+    check("model_rules 'on' re-admits a gated tip",
+          "tip-verify-loop" not in m.gated_out_tips(forced_on, "claude-opus-5"))
+
+    forced_off = dict(cfg, model_rules={"claude-opus-4-8": {"no-few-shot": "off"}})
+    check("model_rules 'off' silences an ungated rule",
+          "no-few-shot" in m.carved_out_rules(forced_off, "claude-opus-4-8"))
+    check("model_rules for another model does not leak",
+          m.carved_out_rules(forced_off, "claude-sonnet-5") == {})
+
+    longest = dict(cfg, model_rules={
+        "claude-opus-5": {"no-verify-loop": "on"},
+        "claude-opus-5-2026": {"no-verify-loop": "off"}})
+    check("longest matching model prefix wins",
+          "no-verify-loop" in m.carved_out_rules(longest, "claude-opus-5-20260115"))
+
+    # A malformed table must not take the coach down.
+    for bad in ("nonsense", [], {"claude-opus-5": "not-a-dict"}, {"x": None}):
+        try:
+            m.carved_out_rules(dict(cfg, model_rules=bad), "claude-opus-5")
+            ok = True
+        except Exception as exc:  # noqa: BLE001
+            ok = False
+            detail = f"{type(exc).__name__}: {exc}"
+        check(f"malformed model_rules ({bad!r:.24}) is survivable", ok,
+              detail if not ok else "")
+
+
+def t_applies_only_on_is_symmetric():
+    """v1.4.0 — the gate runs both ways. `applies_only_on` makes a rule inert
+    off its model, which is what advice like 'don't ask THIS model to
+    self-check' needs: it would be wrong to teach on Opus 4.8."""
+    m = _load_analyzer("_an_sym")
+
+    class Fake:
+        id = "fake-rule"
+        obsolete_on = ()
+        obsolete_why = ""
+        applies_only_on = ("claude-opus-5",)
+
+    cfg = dict(m.DEFAULT_CONFIG)
+    check("applies_only_on is ON for its model",
+          m.gate_state(Fake, "claude-opus-5") == "on")
+    check("applies_only_on is inert elsewhere",
+          m.gate_state(Fake, "claude-opus-4-8") == "not-yet")
+    check("applies_only_on is ON for an unknown model (never guess)",
+          m.gate_state(Fake, "") == "on")
+    gated = m.gated_out(cfg, "claude-opus-4-8", [Fake])
+    check("an off-model applies_only_on item is reported with a reason",
+          "only applies on" in gated.get("fake-rule", ""), f"{gated}")
+
+
 def t_model_detection_is_safe():
     """detect_model must never raise and must return "" when it can't tell —
     the carve-out's fail-safe depends on it."""
@@ -1057,6 +1151,9 @@ CHECKS = [
     t_fatigue_cap,
     t_precision_gate,
     t_model_carveout,
+    t_model_gate_covers_tips,
+    t_model_switch_config,
+    t_applies_only_on_is_symmetric,
     t_model_detection_is_safe,
     t_decaying_mastery,
     t_grandfather_migration,

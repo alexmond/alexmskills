@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "database-jpa",
+  "displayName": "Database schema and JPA lifecycle",
+  "description": "Flyway + JPA on Spring Boot 4: who may apply a migration versus who may only validate it, why a shipped migration can never be edited and what to do instead, rehearsing a schema change against every deployment before it ships, and the entity/repository patterns that keep a projection single-writer. Written from migrations that broke three live deployments and the controls added afterwards.",
+  "version": "0.1.0",
+  "author": { "name": "Alex Mondshain", "email": "alexmond@gmail.com" },
+  "keywords": ["flyway", "jpa", "postgres", "spring-boot", "migration", "schema", "database"]
+}
