@@ -1,78 +1,181 @@
+<div align="center">
+
 # alexmskills
+
+### Claude Code plugins that get better at *your* repo every time you use them.
 
 [![Validate Marketplace](https://github.com/alexmond/alexmskills/actions/workflows/validate.yml/badge.svg)](https://github.com/alexmond/alexmskills/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-alexmond.org-informational)](https://www.alexmond.org/alexmskills/)
+[![Plugins](https://img.shields.io/badge/plugins-22-8a63d2)](#the-catalog)
+[![Codex](https://img.shields.io/badge/also%20runs%20in-Codex-555)](https://www.alexmond.org/alexmskills/codex/)
 
-![demo: the progress-channel plugin — a workload registers itself, watch shows live progress with a learned ETA, and forecast answers "how long will this take" before starting](plugins/progress-channel/demo/demo.gif)
+<img src="plugins/progress-channel/demo/demo-claude-hero.gif" alt="A real Claude Code session: Claude starts a Maven build, and the build's live progress bar and learned time-left appear in the session's status line" width="100%">
 
-> The [`progress-channel`](plugins/progress-channel) plugin live, against a [sample workload](https://github.com/alexmond/skillsample) — recorded with [VHS](https://github.com/charmbracelet/vhs) ([view source](plugins/progress-channel/demo/demo.tape)).
+<sub>A real Claude Code session, recorded. The build registers itself — its live bar and learned time-left ride in the status line, where you're already looking.</sub>
 
-A curated **[Claude Code](https://code.claude.com) plugin marketplace** of reusable, self-improving
-skills and agents. Each skill is packaged as an **independently versioned plugin**, so you install and
-update exactly what you need.
+**[Get started in 30 seconds](#get-started-in-30-seconds)** · **[Browse the catalog](#the-catalog)** · **[Read the docs](https://www.alexmond.org/alexmskills/)**
 
-The emphasis is on **self-learning** tooling — skills that get better at *your* repo over time:
-a CLAUDE.md that prunes and graduates its own decisions, a delivery crew that re-tiers its roles from
-run history, a brainstorm panel that learns which experts your work needs, and a learn-on-failure hook
-that captures every multi-cycle debugging detour.
+</div>
 
-📖 **Documentation:** <https://www.alexmond.org/alexmskills/>
+---
 
-## Catalog
+## Why this marketplace
 
-| Plugin | Category | Version | What it does |
-|---|---|---|---|
-| [`evolving-claude-md`](plugins/evolving-claude-md) | self-learning | 1.7.0 | Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via hooks — with a bar at the inlet (a delivery is not a learning), tree-grounded coverage, capture triggers for the never-written-to log, obsolescence findings that name the edit, load evidence that catches a rule whose globs never match and a file that never loads at all, supersede links that stop a replaced rule reading as current, a per-lane spool so parallel agents stop colliding on one file, and a researched structure-review rulebook. |
-| [`memory-hygiene`](plugins/memory-hygiene) | self-learning | 0.1.1 | Keeps agent-written memory (`~/.claude/projects/<slug>/memory/`) from rotting: re-verifies version pins, sequence facts, and cited paths against the tree, flags what became wrong (never deletes), and enforces the memory format contract at write time. |
-| [`dev-crew`](plugins/dev-crew) | self-learning | 1.3.1 | A self-evolving delivery crew that composes a task-fit roster (like a panel, but to *ship* a target) and runs it as a gated relay with machine-enforced phase gates + an escalation ladder; each role a subagent on its own tier. (architect → dev → qa → deployer is one example lineup.) |
-| [`brainstorm-panel`](plugins/brainstorm-panel) | self-learning | 1.3.3 | Assembles a task-fit panel of role-specialized agents (skeptic always seated), picks a coordination style, and runs a generate-critique-refine loop with an evolving seat registry. [▶ demo](plugins/brainstorm-panel/demo/demo.gif) — a real recorded session. |
-| [`learn-on-failure`](plugins/learn-on-failure) | self-learning | 1.1.1 | Auto-saves a durable learning to project memory whenever a task takes more than one fix cycle; logs each fire so under-firing is visible, and routes repo-durable lessons to evolving-claude-md's D&L instead. |
-| [`roles`](plugins/roles) | self-learning | 1.4.1 | A per-repo repository of evolving roles (.claude/roles/) usable solo via /roles:as, as dev-crew roles, brainstorm-panel seats, and research-sweep coverage roles; ships seed personas + a graduation-audit hook. |
-| [`prompt-coach`](plugins/prompt-coach) | self-learning | 1.5.0 | A `UserPromptSubmit` hook that rewrites each prompt you send toward better prompting habits (collaborator mode) — 45 rules across 6 tiers, mastery earned by demonstration, adaptive precision-gating, typo tolerance, per-model carve-outs, and a zero-dependency local web dashboard. |
-| [`screenshot-sweep`](plugins/screenshot-sweep) | self-learning | 1.1.0 | Reads the whole screenshot, not just the bug you came for — sweeps every capture against a defect checklist that tightens each time something slips past it. |
-| [`skill-linter`](plugins/skill-linter) | self-learning | 0.4.3 | Audits `SKILL.md` files against published skill-authoring guidance — frontmatter, whether the description says when to trigger, body size, broken references. Every rule cited; usable as a CI gate. Learns from its own misses and false positives. |
-| [`implement-issue`](plugins/implement-issue) | workflow | 1.0.1 | Drives a GitHub issue from branch → implement → verify → PR with a guided workflow. |
-| [`maven-quality`](plugins/maven-quality) | workflow | 1.1.0 | Format, static-analysis, coverage, and pre-commit skills for Maven/Java projects — `codestyle`, `pmd` (ruleset, triage by priority, CPD, suppression scope), `jacoco`, `precommit`. |
-| [`security-audit`](plugins/security-audit) | workflow | 1.0.0 | Scans a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets). |
-| [`mindmap-prompt`](plugins/mindmap-prompt) | workflow | 0.2.3 | Sketch ideas on a canvas, connect them, and compile the map into an organized Markdown prompt. `✦` expands any node with `claude -p` running in your repo. Saves as JSON Canvas (`.canvas`) so maps are git-diffable, reworkable, and open in Obsidian. |
-| [`screenshot-tour`](plugins/screenshot-tour) | workflow | 1.1.1 | Discovers the aspects worth showing and captures a captioned, narrative-ordered screenshot deck of the current product (CLI/web/library/TUI) under `presentation/`. |
-| [`progress-channel`](plugins/progress-channel) | workflow | 0.6.0 | One visible channel for every long-running process — local sweeps, backgrounded commands, and mirrored external work. The server behind the live page is the in-memory tracker (stdlib daemon, auto-spawned), with nested sub-jobs (a pipeline and its current step, parent bar rolled up), learned ETAs (borrowed from similar jobs when a name is new), measured Maven/git bars via a transparent pipe tap, a status-line integration that offers its own setup, 7-day per-name history retention, self-restart on plugin upgrade, pre-start forecasts, and stall/orphan detection from each job's own history. [▶ CLI demo](plugins/progress-channel/demo/demo.gif) · [▶ Claude demo](plugins/progress-channel/demo/demo-claude.gif) — a real recorded session. |
-| [`conductor`](plugins/conductor) | self-learning | 0.1.1 | The runtime half of multi-lane orchestration — the role the MAIN session adopts while parallel agent lanes run: four measured deviation shapes (the control that pins a blocker, the report taken as fact, the stale premise, the post-merge collision), relay/re-scope/pause routing, verdict-reading rules, and a measured parallelism ceiling. Learnings tier from generic → per-repo → graduated role. |
-| [`spring-batch`](plugins/spring-batch) | development | 0.1.1 | Spring Batch 5/6 development grounded in runnable samples — restart vs a new JobInstance, deciders, tasklet transaction boundaries, partitioning, and the job repository Boot 4 doesn't give you. |
-| [`ticket-triage`](plugins/ticket-triage) | workflow | 0.4.2 | Backlog-drain loop: rank the open tickets, dispatch the startable ones in parallel (worktree-isolated, role-briefed, honest width), verify and merge each result, and re-triage on every completion until the queue is empty or everything left needs the user. |
-| [`review-agents`](plugins/review-agents) | review | 1.1.1 | Specialist review subagents for Java/Maven projects — code review, test running, dependency/CVE auditing. No-write by construction: Write/Edit withheld. |
-| [`research-sweep`](plugins/research-sweep) | research | 1.2.2 | Fans out independent research agents across distinct angles, then synthesizes and adversarially verifies. |
+<table>
+<tr>
+<td width="50%" valign="top">
 
-## The Role System
+**🧠 It learns, and writes it down.**
+Skills keep what they learn in *your* repo, not in a chat that scrolls away. A CLAUDE.md that prunes and archives itself. Roles that accumulate lessons run after run. A coach that stops nagging about habits you've already mastered.
 
-Four of the plugins form **one system**: a shared substrate of **evolving roles** (`.claude/roles/`) and
-three **orchestrators** that compose those roles task-fit and learn over time. One persona — say a
-`skeptic` or an `architect` — behaves the same whether it's run solo, seated in a crew, on a panel, or in
-a sweep, accumulating what it learns along the way.
+</td>
+<td width="50%" valign="top">
 
-| Plugin | Role in the system | Verb |
-|---|---|---|
-| [`roles`](plugins/roles) | the shared substrate — evolving roles + solo invocation (`/roles:as <role>`) | — |
-| [`dev-crew`](plugins/dev-crew) | composes a roster and runs it as a **gated delivery relay** | **deliver** |
-| [`brainstorm-panel`](plugins/brainstorm-panel) | convenes a **multi-perspective panel** that critiques and converges | **decide** |
-| [`research-sweep`](plugins/research-sweep) | fans out **parallel coverage roles** then synthesizes + adversarially verifies | **discover** |
+**👥 Teams, not a single prompt.**
+Three orchestrators compose role-specialized agents to fit the task — one to **discover**, one to **decide**, one to **deliver** — and they share one evolving pool of personas.
 
-The three orchestrators **chain** — research *discovers* the facts, the panel *decides* what to do, the
-crew *delivers* it — and they **share roles** (one `skeptic` is a panel seat, a crew adversarial check,
-and a research verifier). Each is fully usable on its own; co-installed, they share one evolving talent
-pool. Full model: the
-**[Role System architecture](https://www.alexmond.org/alexmskills/role-system/)**.
+</td>
+</tr>
+<tr>
+<td valign="top">
 
-## Install
+**📡 You can watch it work.**
+Live progress in the status line and a local dashboard. Every demo below is a recording of the real tools running — two of them inside real Claude Code sessions — not a mock-up.
 
-Add the marketplace once:
+</td>
+<td valign="top">
+
+**✅ Measured, not asserted.**
+Rule-based plugins cite a source for every rule and calibrate against real prompt corpora and real repos before shipping. The script-backed plugins carry test harnesses, and CI validates the whole catalog on every push.
+
+</td>
+</tr>
+</table>
+
+---
+
+## See it in action
+
+### 📊 Every long job, one glance — `progress-channel`
+
+<img src="plugins/progress-channel/demo/demo-subjobs.gif" alt="A release pipeline runs; each of its four stages appears nested under it with its own bar, while the pipeline's bar and time-left roll up from the running stage" width="100%">
+
+A pipeline and its current step, nested. The parent's bar and time-left **roll up from the step that's running**, so a long stage never reads as a frozen bar. Nest a whole shell pipeline with one line — `export PROGRESS_PARENT=$T` — and every sub-script, even one that knows nothing about pipelines, files itself underneath.
+
+- **Learned ETAs** from each job's own history, borrowed from similar jobs when the name is new.
+- **Measured bars for Maven and git**, read from their own output with a transparent pipe tap.
+- **Stall and orphan detection** from each job's own rhythm, not a fixed timeout.
+
+<p>
+<img src="docs/modules/ROOT/assets/images/progress-page-subjobs.png" alt="The live progress page showing a pipeline with nested steps, three levels deep" width="100%">
+</p>
+
+<sub>▶ Also: <a href="plugins/progress-channel/demo/demo.gif">the terminal view</a> — <code>progress watch</code> and a pre-start forecast.</sub>
+
+---
+
+### 🎯 An expert panel on any problem — `brainstorm-panel`
+
+<img src="plugins/brainstorm-panel/demo/demo-hero.gif" alt="A real Claude Code session: brainstorm-panel proposes a three-seat panel — a demo director, a repo-conventions skeptic and a recording practitioner — then debates to a decision" width="100%">
+
+<sub>A real session. Asked to pick this repo's next demo workload, it seats a director, a skeptic and a practitioner — each with a stated job — and debates to a decision.</sub>
+
+Hand it a problem, a draft, or a half-formed idea. It **picks the experts the work needs** — a skeptic is always seated — chooses how they should argue, and runs generate → critique → refine until they converge. The panel learns which seats earn their place in your repo.
+
+---
+
+### 🔁 Discover → decide → deliver — the Role System
+
+```mermaid
+flowchart LR
+    S["🔍 research-sweep<br/><b>discover</b><br/><sub>parallel scouts + adversarial verify</sub>"]
+    P["🎯 brainstorm-panel<br/><b>decide</b><br/><sub>debate until it converges</sub>"]
+    C["🚚 dev-crew<br/><b>deliver</b><br/><sub>gated relay: architect → dev → qa</sub>"]
+    R[("👥 roles<br/>one shared, evolving<br/>pool of personas")]
+    S --> P --> C
+    R -.-> S
+    R -.-> P
+    R -.-> C
+```
+
+One `skeptic` is a verifier in the sweep, a seat on the panel, and the adversarial check in the crew — and everything it learns in one place goes with it to the others. Each orchestrator works on its own; together they chain. **[How the Role System works →](https://www.alexmond.org/alexmskills/role-system/)**
+
+---
+
+### 🧭 A coach that learns how you prompt — `prompt-coach`
+
+<img src="docs/modules/ROOT/assets/images/dashboard-mastery-dark.png" alt="prompt-coach's local dashboard: rules grouped in six levels, each with a bad and a good example prompt, and a mastery bar that fills as you demonstrate the habit" width="100%">
+
+It reads each prompt as you send it and, when one would go better, **rewrites it with you** — naming the rule and the fix. Mastery is earned by *using* the technique, not by avoiding the mistake. And rules know their model: advice that a newer Claude already follows by itself switches off on that model.
+
+---
+
+### 📝 A CLAUDE.md that keeps itself current — `evolving-claude-md`
+
+```text
+📝 CLAUDE.md audit (23.2 KB total; 49 entries, 56 lines in Decisions & Learnings).
+   Compaction RECOMMENDED.
+🔎 CHANGELOG MIRROR: 28/49 entries (57%) name a version CHANGELOG.md already
+   documents. A release is not a learning — keep only what the release TAUGHT
+   (a constraint, a trap, a reversal) …
+```
+
+<sub>A real audit of this repo's own CLAUDE.md, shown at session start — yes, it's telling us to tidy up.</sub>
+
+Decisions and gotchas land in a log with a format enforced on every edit. The log prunes, graduates stable lessons into conventions, archives the old, and **tells you when an entry has gone stale** — a path that no longer exists, a version that has moved on.
+
+---
+
+## The catalog
+
+<sub>🧠 learns from use · 🔧 workflow · 🔍 research & review · 📚 domain knowledge</sub>
+
+| Plugin | | Version | What it does |
+|---|:-:|---|---|
+| [`evolving-claude-md`](plugins/evolving-claude-md) | 🧠 | 1.7.0 | A CLAUDE.md that prunes, graduates and archives itself. |
+| [`brainstorm-panel`](plugins/brainstorm-panel) | 🧠 | 1.3.3 | A task-fit expert panel that debates until it converges. |
+| [`dev-crew`](plugins/dev-crew) | 🧠 | 1.3.1 | A task-fit delivery crew, run as a gated relay. |
+| [`roles`](plugins/roles) | 🧠 | 1.4.1 | One evolving pool of personas, shared by every orchestrator. |
+| [`prompt-coach`](plugins/prompt-coach) | 🧠 | 1.5.0 | Rewrites your prompts toward better habits; mastery is earned. |
+| [`conductor`](plugins/conductor) | 🧠 | 0.1.1 | The main session's playbook while parallel agent lanes run. |
+| [`learn-on-failure`](plugins/learn-on-failure) | 🧠 | 1.1.1 | Saves a lesson whenever a fix took more than one try. |
+| [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.1.1 | Flags agent memory that the code now contradicts. |
+| [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
+| [`skill-linter`](plugins/skill-linter) | 🧠 | 0.4.3 | Lints `SKILL.md` against published guidance; every rule cited. |
+| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.6.0 | Every long job as a live bar in your status line. |
+| [`ticket-triage`](plugins/ticket-triage) | 🔧 | 0.4.2 | Ranks the backlog and runs startable tickets in parallel. |
+| [`implement-issue`](plugins/implement-issue) | 🔧 | 1.0.1 | GitHub issue → branch → implement → verify → PR. |
+| [`screenshot-tour`](plugins/screenshot-tour) | 🔧 | 1.1.1 | A captioned, narrative-ordered screenshot deck of your product. |
+| [`mindmap-prompt`](plugins/mindmap-prompt) | 🔧 | 0.2.3 | Sketch a mind map; compile it into an organized prompt. |
+| [`maven-quality`](plugins/maven-quality) | 🔧 | 1.1.0 | Codestyle, PMD, JaCoCo and pre-commit for Maven/Java. |
+| [`security-audit`](plugins/security-audit) | 🔧 | 1.0.0 | OWASP-style scan: injection, traversal, deserialization, secrets. |
+| [`research-sweep`](plugins/research-sweep) | 🔍 | 1.2.2 | Parallel research agents, then adversarial verification. |
+| [`review-agents`](plugins/review-agents) | 🔍 | 1.1.1 | Read-only review subagents for Java/Maven. |
+| [`spring-batch`](plugins/spring-batch) | 📚 | 0.1.1 | Spring Batch 5/6, grounded in runnable samples. |
+
+Two plugins in progress ship with a `-beta` suffix: `tune-repo-beta` and `systemic-fix-beta`.
+
+---
+
+## Get started in 30 seconds
 
 ```text
 /plugin marketplace add alexmond/alexmskills
+/plugin install progress-channel@alexmskills
 ```
 
-Then install what you want — copy-paste any of these:
+Then just ask:
+
+| Say this | And you get |
+|---|---|
+| *"make CLAUDE.md evolve"* | `evolving-claude-md` sets up a self-maintaining decisions log, with hooks that register themselves. |
+| *"get a team on this and make it better"* | `brainstorm-panel` proposes a panel for your sign-off, then runs the debate. |
+| *"run the crew on this feature"* | `dev-crew` composes a roster and relays it, stopping at hard gates. |
+| *"set up the progress status line"* | `progress-channel` wires live bars into your Claude Code status line. |
+
+<details>
+<summary><b>Every install command</b></summary>
 
 ```text
 /plugin install evolving-claude-md@alexmskills
@@ -95,96 +198,44 @@ Then install what you want — copy-paste any of these:
 /plugin install research-sweep@alexmskills
 /plugin install spring-batch@alexmskills
 /plugin install conductor@alexmskills
-```
-
-**Codex:** every plugin also ships a Codex manifest (`plugins/<name>/.codex-plugin/plugin.json`) and the repo carries a second marketplace at `.agents/plugins/marketplace.json`, generated with `make codex`. Each plugin declares a portability tier — 10 port as-is, 6 ship a Codex tool-translation, and 6 are Claude Code-only for *enforcement* because they rely on hooks. See [Codex compatibility](https://www.alexmond.org/alexmskills/codex/).
-
-Or browse interactively with `/plugin` (Discover tab). After a maintainer pushes an update, refresh
-with `/plugin marketplace update alexmskills`.
-
-### Try a plugin without installing
-
-```bash
-claude --plugin-dir ./plugins/dev-crew
-```
-
-## Quick start
-
-- **`evolving-claude-md`** — open a repo and say *"make CLAUDE.md evolve"*. The plugin ships its own
-  hooks (audit on session start, lint on every CLAUDE.md edit, re-audit after compaction) — they
-  register automatically once the plugin is enabled.
-- **`dev-crew`** — *"run the crew on this feature"*. It composes a roster for the task; review it,
-  then it relays the roles, stopping at hard gates (QA fail, deploy). architect → dev → qa → deployer
-  is the typical code lineup — a data change or a doc gets a different one.
-- **`brainstorm-panel`** — *"get a team on this and make it better"*. It proposes a panel + a
-  coordination style for your sign-off, then runs the loop.
-- **`learn-on-failure`** — install it and forget it; it captures a learning whenever a task needed
-  more than one attempt.
-
-## Beta plugins
-
-In-progress / unproven plugins live in the same marketplace as stable ones, distinguished by a
-`-beta` suffix in the name (e.g. `tune-repo-beta`). No separate channel, no
-extra marketplace to opt into — you install them the same way as any other plugin:
-
-```
 /plugin install tune-repo-beta@alexmskills
 /plugin install systemic-fix-beta@alexmskills
 ```
 
-The suffix is intentional: it makes it obvious at install time and in the enabled-plugins list
-that this is a beta plugin. When one earns its stable slot, it graduates — the directory is
-renamed, the `-beta` drops from the name and marketplace entry, and the version bumps:
+Or browse with `/plugin` (Discover tab). Pull updates with `/plugin marketplace update alexmskills`.
+Try one without installing: `claude --plugin-dir ./plugins/dev-crew`.
 
-```bash
-make graduate PLUGIN=tune-repo-beta       # renames -> tune-repo, updates marketplace
-make bump     PLUGIN=tune-repo VERSION=1.0.0
-```
+</details>
 
-`prompt-coach` graduated this way from `prompt-coach-beta` to `1.0.0` on 2026-07-28.
+**Using Codex?** Every plugin also ships a Codex manifest, and the repo carries a second marketplace at `.agents/plugins/marketplace.json`. 10 plugins port as-is, 6 ship a Codex tool translation, and 6 depend on Claude Code hooks for enforcement. **[Codex compatibility →](https://www.alexmond.org/alexmskills/codex/)**
 
-## Versioning
+---
 
-Claude Code versions **per plugin**, not per skill. Each plugin carries a semantic `version` in its
-`plugin.json` and a matching entry in [`marketplace.json`](.claude-plugin/marketplace.json):
+## Learn more
 
-- **Bump a version** to ship an update — users on a pinned version only receive it when the number
-  changes (commits alone don't trigger an update).
-- Tightly-coupled skills (e.g. `maven-quality`'s codestyle/precommit/jacoco) share one plugin and
-  version together; everything else is its own plugin so it can move independently.
+📖 **[Full documentation](https://www.alexmond.org/alexmskills/)** — one page per plugin, the Role System, and Codex compatibility · 📜 **[Changelog](CHANGELOG.md)**
 
-```bash
-make bump PLUGIN=dev-crew VERSION=1.1.0   # updates plugin.json + marketplace.json together
-```
+<details>
+<summary><b>For maintainers and contributors</b></summary>
 
-Record every version bump in [`CHANGELOG.md`](CHANGELOG.md).
+**Versioning.** Claude Code versions per *plugin*, not per skill. Each plugin carries a semantic `version` in its `plugin.json` and a matching entry in [`marketplace.json`](.claude-plugin/marketplace.json). Users on a pinned version only receive an update when the number changes. Tightly coupled skills (like `maven-quality`'s) share one plugin; everything else moves independently. Record every bump in [`CHANGELOG.md`](CHANGELOG.md).
 
-## Maintenance
+**Beta plugins.** In-progress plugins live in the same marketplace with a `-beta` suffix, so it's obvious at install time. Graduation renames the directory, drops the suffix and bumps the version — `prompt-coach` graduated this way on 2026-07-28.
 
 | Command | Purpose |
 | --- | --- |
-| `make validate` | Validate the marketplace + every plugin manifest (jq-based, no extra deps). Runs in CI. |
-| `make list` | Print the catalog (name, version, description). |
-| `make bump PLUGIN=<name> VERSION=<x.y.z>` | Bump a plugin's version in both manifests. |
-| `make graduate PLUGIN=<name>-beta` | Graduate a beta plugin (drop the -beta suffix, bump the marketplace entry). |
-| `claude plugin tag --dry-run plugins/<name>` | Validate a plugin's `plugin.json` agrees with its marketplace entry. |
-| `claude plugin tag --push plugins/<name>` | Cut a `<name>--v<version>` release tag. |
+| `make validate` | Validate the marketplace, every manifest, docs coverage and this README's catalog. Runs in CI. |
+| `make list` | Print the catalog. |
+| `make bump PLUGIN=<name> VERSION=<x.y.z>` | Bump a plugin's version in both manifests together. |
+| `make graduate PLUGIN=<name>-beta` | Graduate a beta plugin. |
+| `make codex` | Regenerate the Codex manifests from the Claude-side source. |
+| `claude plugin tag --dry-run plugins/<name>` | Check a plugin's manifest agrees with its marketplace entry. |
 
-CI (`.github/workflows/validate.yml`) validates the marketplace on every push and PR.
+**Contributing a plugin.** Add it under `plugins/<name>/` with a `.claude-plugin/plugin.json` and a `skills/` and/or `agents/` directory, register it in `.claude-plugin/marketplace.json`, add a docs page under `docs/modules/ROOT/pages/` with a `nav.adoc` entry, and run `make validate`.
 
-## Documentation
+Docs are an Antora component under [`docs/`](docs), published by the [alexmond.github.io](https://github.com/alexmond/alexmond.github.io) site build. Demos run against [skillsample](https://github.com/alexmond/skillsample), a small stage repo, and are recorded with [VHS](https://github.com/charmbracelet/vhs); each `.tape` source sits next to its GIF.
 
-Full docs are published at **[alexmond.org/alexmskills](https://www.alexmond.org/alexmskills/)**
-(Antora component under [`docs/`](docs), aggregated by the
-[alexmond.github.io](https://github.com/alexmond/alexmond.github.io) site build).
-
-## Contributing
-
-1. Add a plugin under `plugins/<name>/` with a `.claude-plugin/plugin.json` and a `skills/` and/or
-   `agents/` directory.
-2. Register it in `.claude-plugin/marketplace.json` (under `plugins`).
-3. Run `make validate` — it must pass.
-4. Add a doc page under `docs/modules/ROOT/pages/` and link it in `nav.adoc`.
+</details>
 
 ## Provenance & attribution
 

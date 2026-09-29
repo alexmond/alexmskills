@@ -4,6 +4,14 @@
 # bar with a learned ETA — no narration, no re-polling.
 #
 # Regenerate from this directory: vhs demo-claude.tape
+#
+# demo-claude-hero.gif (the repo README's hero) is this recording with the
+# first 14.5s — the prompt being typed onto a blank screen — cut, so it opens
+# on the Claude Code UI with the bar already registered. After a re-record,
+# re-check the cut point (the first frame showing the Claude Code banner), then:
+#   ffmpeg -ss 14.5 -i demo-claude.gif -filter_complex \
+#     "[0:v]split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=none" \
+#     -loop 0 demo-claude-hero.gif
 # Needs: vhs + ttyd + ffmpeg, the progress-channel plugin installed (its
 # status-line renderer appended to the user's status line), and
 # alexmond/skillsample checked out as a sibling of the alexmskills repo.

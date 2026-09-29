@@ -1,5 +1,13 @@
 # brainstorm-panel demo — a REAL Claude Code session, recorded live with VHS.
 # Regenerate from this directory: vhs demo.tape
+#
+# demo-hero.gif (used by the repo README) is this recording with the first
+# 10.5s — the command being typed onto a blank screen — cut, at 10 fps, so it
+# opens on the proposed panel. After a re-record, re-check the cut point (the
+# first frame of Claude's reply), then:
+#   ffmpeg -ss 10.5 -i demo.gif -filter_complex \
+#     "[0:v]fps=10,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=none" \
+#     -loop 0 demo-hero.gif
 # Needs: vhs + ttyd + ffmpeg, the brainstorm-panel plugin enabled (globally or
 # via --plugin-dir), and alexmond/skillsample checked out as a sibling of the
 # alexmskills repo (the demo stage the session runs in).
