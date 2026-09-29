@@ -795,6 +795,224 @@ with progress.Job("wrap job", total=4) as wj:
           "wrap job" in r.stdout.decode())
 os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
 
+# sub-jobs (0.6.0) -------------------------------------------------------------
+# The first three checks are the defects of the manual pattern this replaces:
+# two top-level jobs with the child's indent baked into its NAME. Each was
+# reproduced on a scratch daemon before any of this code existed.
+os.environ["CLAUDE_CODE_SESSION_ID"] = "sess-TREE"
+
+
+def _tree_rows(q="?session=sess-TREE"):
+    return [r for r in _jobs(q) if r.get("session") == "sess-TREE"]
+
+
+with progress.Job("tree parent", total=34) as tp:
+    tp.step(26); tp._flush()
+    time.sleep(0.05)
+    with tp.child("ground-round", total=619) as tc:
+        tc.step(549); tc._flush()          # the child updated LAST
+        rows = _tree_rows()
+        names = [r["name"] for r in rows]
+        check("tree: parent renders before its child even when the child "
+              "updated last",
+              names.index("tree parent") < names.index("ground-round"),
+              str(names))
+        crow = [r for r in rows if r["name"] == "ground-round"][0]
+        prow = [r for r in rows if r["name"] == "tree parent"][0]
+        check("tree: child carries its parent uid and depth 1",
+              crow.get("parent") == tp.uid and crow.get("depth") == 1
+              and prow.get("depth") == 0, str((crow.get("parent"), crow.get("depth"))))
+        check("tree: child keeps its PLAIN name (exact-name ETA learning is "
+              "shared with standalone runs)", crow["name"] == "ground-round")
+        check("tree: child inherits the parent's session",
+              crow.get("session") == "sess-TREE")
+        # Rolled-up parent bar: (26 + 549/619) / 34, labelled so it is never
+        # mistaken for a plain count.
+        want = (26 + 549 / 619) / 34
+        check("rollup: parent bar includes the running child's fraction",
+              prow["progress_mode"] == "items+sub"
+              and abs(prow["progress"] - want) < 1e-6,
+              f"{prow.get('progress_mode')} {prow.get('progress')} want {want}")
+        out = statusline.render("sess-TREE") or ""
+        lines = out.splitlines()
+        check("statusline: child row is indented under its parent",
+              len(lines) >= 2 and "tree parent" in lines[0]
+              and "↳ ground-round" in lines[1], repr(out)[:200])
+
+# defect 2: parent ends, child must not linger as a dangling ↳ row
+r = [x for x in jobs("ground-round") if x.get("parent") == tp.uid][0]
+check("cascade: exiting the parent closes a still-open child",
+      r["state"] != "running", r["state"])
+
+try:
+    with progress.Job("boom parent", total=3) as bp:
+        with bp.child("boom child", total=5) as bc:
+            bc.step()
+            raise RuntimeError("stage blew up")
+except RuntimeError:
+    pass
+bc_row = jobs("boom child")[0]
+bp_row = jobs("boom parent")[0]
+check("cascade: an exception fails child AND parent",
+      bc_row["state"] == "failed" and bp_row["state"] == "failed",
+      f"{bc_row['state']} {bp_row['state']}")
+
+# A child opened without the context manager and left open when the parent
+# closes is cancelled by the parent, naming why.
+with progress.Job("leaky parent", total=1) as lp:
+    leak = lp.child("leaky child", total=9)
+    leak.__enter__()
+    leak.step(); leak._flush()
+lr = jobs("leaky child")[0]
+check("cascade: parent exit cancels a child left open, with a reason",
+      lr["state"] == "cancelled" and "parent" in (lr.get("error") or ""),
+      f"{lr['state']} {lr.get('error')}")
+
+# Server-side derivation when a producer did NOT cascade (a raw POST client):
+# the orphaned child moves to the top level and is labelled, never hidden.
+puid, cuid = "a" * 32, "b" * 32
+base = {"kind": "local", "session": "sess-TREE", "pid": os.getpid(),
+        "host": os.uname().nodename}
+progress._post_job(dict(base, uid=puid, name="raw parent", total=4, done=1,
+                        status="running"))
+progress._post_job(dict(base, uid=cuid, name="raw child", total=10, done=3,
+                        status="running", parent=puid))
+progress._post_job(dict(base, uid=puid, name="raw parent", total=4, done=1,
+                        status="cancelled"))
+rc = [x for x in _tree_rows() if x["name"] == "raw child"]
+check("detached: child of an ended parent stays visible at depth 0",
+      rc and rc[0]["depth"] == 0, str(rc)[:160])
+check("detached: and says its parent ended",
+      rc and "parent" in (rc[0].get("detached") or ""), str(rc)[:160])
+progress._post_job(dict(base, uid=cuid, name="raw child", total=10, done=3,
+                        status="done"))
+
+# Parent time-left rolls up: the running step's own time-left plus the
+# remaining WHOLE steps at the parent's per-step rate. Synthetic timestamps
+# make it deterministic: parent 10/20 done over 100s (10s/step), child 50/100
+# over 30s (0.6s/item, so 30s left). Rolled up: 30 + (20-10-1)*10 = 120s.
+# The parent alone would claim 100s — the in-flight step counted as untouched.
+_now_dt = datetime.now(timezone.utc)
+_ago = lambda s: (_now_dt - timedelta(seconds=s)).strftime("%Y-%m-%dT%H:%M:%SZ")
+eu_p, eu_c = "c" * 32, "d" * 32
+progress._post_job(dict(base, uid=eu_p, name="eta rollup parent", total=20,
+                        done=10, status="running", started_at=_ago(100)))
+progress._post_job(dict(base, uid=eu_c, name="eta rollup child", total=100,
+                        done=50, status="running", started_at=_ago(30),
+                        parent=eu_p))
+_er = {r["name"]: r for r in _tree_rows()}
+_pe = (_er.get("eta rollup parent") or {}).get("eta_seconds")
+_ce = (_er.get("eta rollup child") or {}).get("eta_seconds")
+check("eta: child's own time-left is unchanged by nesting",
+      _ce is not None and abs(_ce - 30) < 3, str(_ce))
+check("eta: parent time-left = running step's time-left + remaining steps",
+      _pe is not None and abs(_pe - 120) < 4, f"{_pe} (want ~120, alone ~100)")
+# A child with no rate yet must not blank or guess the parent's estimate.
+eu_c2 = "e" * 32
+progress._post_job(dict(base, uid=eu_c, name="eta rollup child", total=100,
+                        done=50, status="done"))
+progress._post_job(dict(base, uid=eu_c2, name="eta rollup fresh child",
+                        total=100, done=0, status="running", parent=eu_p))
+_pe2 = {r["name"]: r for r in _tree_rows()}.get("eta rollup parent", {}) \
+    .get("eta_seconds")
+check("eta: a child with no rate yet leaves the parent's own estimate",
+      _pe2 is not None and abs(_pe2 - 100) < 4, str(_pe2))
+for _u, _n in ((eu_c2, "eta rollup fresh child"), (eu_p, "eta rollup parent")):
+    progress._post_job(dict(base, uid=_u, name=_n, total=20, done=0,
+                            status="done"))
+check("eta: private rate field does not leak into /jobs rows",
+      all("_rate" not in r for r in _jobs("?state=all")))
+
+# defect 3 is structural — the child's plain name — asserted above. The
+# history row still records where it ran.
+hist = [h for h in progress.load_history() if h.get("name") == "ground-round"]
+check("history: child row records its parent's name",
+      hist and hist[-1].get("parent_name") == "tree parent", str(hist[-1:])[:160])
+
+# shell path: --parent, and finish cascades to child tokens
+PY = [sys.executable, str(HERE / "progress.py")]
+envs = dict(os.environ)
+ptok = subprocess.run(PY + ["start", "--name", "sh parent", "--total", "3"],
+                      env=envs, capture_output=True, text=True).stdout.strip()
+ctok = subprocess.run(PY + ["start", "--name", "sh child", "--total", "7",
+                            "--parent", ptok],
+                      env=envs, capture_output=True, text=True).stdout.strip()
+shc = jobs("sh child")
+check("shell: --parent reaches the server (not dropped by the token "
+      "record's field list)", shc and shc[0].get("parent") == ptok,
+      str(shc)[:160])
+subprocess.run(PY + ["finish", ptok, "--cancel"], env=envs, capture_output=True)
+shc = jobs("sh child")
+check("shell: finishing the parent finishes its child tokens",
+      shc and shc[0]["state"] == "cancelled"
+      and not (TMP / "tokens" / f"{ctok}.json").exists(),
+      str(shc)[:160])
+
+# PROGRESS_PARENT: an exported parent nests every sub-script's start, and a
+# Python Job (so `progress run` and the tap too) without writing --parent.
+ptok2 = subprocess.run(PY + ["start", "--name", "env parent", "--total", "2"],
+                       env=envs, capture_output=True, text=True).stdout.strip()
+envp = dict(envs, PROGRESS_PARENT=ptok2)
+ctok2 = subprocess.run(PY + ["start", "--name", "env child", "--total", "4"],
+                       env=envp, capture_output=True, text=True).stdout.strip()
+subprocess.run(PY + ["run", "--name", "env run child", "--", "true"],
+               env=envp, capture_output=True)
+ec = jobs("env child"); er = jobs("env run child")
+check("shell: $PROGRESS_PARENT nests a sub-script's start",
+      ec and ec[0].get("parent") == ptok2, str(ec)[:160])
+check("shell: $PROGRESS_PARENT nests `progress run` too",
+      er and er[0].get("parent") == ptok2, str(er)[:160])
+subprocess.run(PY + ["finish", ptok2], env=envs, capture_output=True)
+
+# mirror: an optional second poll line is the current sub-step
+seq = TMP / "mirror-seq.txt"
+seq.write_text("0\n")
+poll = TMP / "poll.sh"
+poll.write_text(
+    "#!/bin/sh\n"
+    f"n=$(cat {seq}); echo $((n+1)) > {seq}\n"
+    'case $n in\n'
+    '  0) printf "1 3\\n5 10 stage-a\\n" ;;\n'
+    '  1) printf "2 3\\n4 8 stage-b\\n" ;;\n'
+    '  *) printf "3 3\\n" ;;\n'
+    'esac\n')
+poll.chmod(0o755)
+subprocess.run(PY + ["mirror", "--name", "mirrored pipeline", "--source",
+                     "test:mirror:1", "--poll-cmd", str(poll),
+                     "--interval", "0.3", "--idle-after", "1"],
+               env=envs, capture_output=True, timeout=30)
+ma = jobs("stage-a"); mb = jobs("stage-b"); mp = jobs("mirrored pipeline")
+check("mirror: a sub-step line becomes a child job of the mirror",
+      ma and mp and ma[0].get("parent") == mp[0]["uid"], str(ma)[:160])
+check("mirror: a new sub-step name finishes the previous child as done",
+      ma and ma[0]["state"] == "done" and mb and mb[0]["state"] != "running",
+      f"{ma[:1]} {mb[:1]}"[:200])
+
+# status line: never a child without its parent; fold when rows run short
+with progress.Job("fold A", total=10) as fa, \
+        fa.child("fold A1", total=4) as fa1, \
+        progress.Job("fold B", total=10) as fb, \
+        fb.child("fold B1", total=4) as fb1:
+    for j in (fa, fa1, fb, fb1):
+        j.step(); j._flush()
+    out = statusline.render("sess-TREE") or ""
+    lines = out.splitlines()
+    check("statusline: stays within MAX_ROWS with two parents + children",
+          len(lines) <= statusline.MAX_ROWS, repr(out)[:200])
+    orphan_child = any(("↳" in l) and i == 0 for i, l in enumerate(lines))
+    check("statusline: never shows a child row without its parent above it",
+          not orphan_child, repr(out)[:200])
+    check("statusline: a folded child still appears on its parent's line",
+          all(n in out for n in ("fold A", "fold B")) and
+          ("fold A1" in out and "fold B1" in out), repr(out)[:300])
+
+os.environ.pop("CLAUDE_CODE_SESSION_ID", None)
+
+# CLI list indents children
+lst = "\n".join(progress.cmd_list())
+check("cli: list indents a child under its parent",
+      "↳ ground-round" in lst, lst[:200])
+
 # cleanup --------------------------------------------------------------------
 health = progress._get_json("/health")
 if health:

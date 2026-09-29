@@ -394,6 +394,13 @@ class Tracker:
             job = self.jobs.get(uid, {})
             prev_done = job.get("done")
             job.update(rec)
+            # A raw-POST producer may link a parent without naming it. Fill the
+            # name while the parent is still live, so the history row can say
+            # where this ran even after the parent is gone.
+            if job.get("parent") and not job.get("parent_name"):
+                par = self.jobs.get(job["parent"])
+                if par:
+                    job["parent_name"] = par.get("name")
             job["updated_at"] = _now()
             job.setdefault("started_at", job["updated_at"])
             # done_at is when the COUNT last moved, which is not the same as
@@ -426,6 +433,10 @@ class Tracker:
             "project": job.get("project"), "source": job.get("source"),
             "session": job.get("session"), "agent": job.get("agent"),
             "name_stem": name_stem(job.get("name")),
+            # Where a sub-job ran. Recorded for analysis only: matching stays
+            # on the child's own name, so a step learns one duration whether
+            # it ran nested or standalone.
+            "parent_name": job.get("parent_name"),
         }
         self.history.append(rec)
         append_history(rec)
@@ -547,6 +558,28 @@ class Tracker:
         total, done = job.get("total"), job.get("done", 0)
         if not total or done <= 0:
             return None
+        parts = self._rate_parts(job)
+        if parts is None:
+            return None
+        rate, in_flight = parts
+        return max(0.0, max(0, total - done) * rate - in_flight)
+
+    def per_item_rate(self, job: dict) -> float | None:
+        """Seconds per item — what a parent needs to price its remaining whole
+        steps. Before any item has landed the job has no rate of its own, so
+        history alone answers (or nothing does)."""
+        total = job.get("total")
+        if not total:
+            return None
+        if job.get("done", 0) <= 0:
+            return hist_per_item(self.history, job.get("name"), job.get("kind"),
+                                 total_bucket(total))
+        parts = self._rate_parts(job)
+        return parts[0] if parts else None
+
+    def _rate_parts(self, job: dict) -> tuple[float, float] | None:
+        """(seconds per item, seconds already spent on the in-flight item)."""
+        total, done = job.get("total"), job.get("done", 0)
         started = _parse_ts(job.get("started_at"))
         if started is None:
             return None
@@ -582,8 +615,9 @@ class Tracker:
             rate = w * current + (1 - w) * hist
         else:
             rate = current
-
-        return max(0.0, max(0, total - done) * rate - in_flight)
+        if rate is None:
+            return None
+        return rate, in_flight
 
     def progress(self, job: dict) -> tuple[float | None, str]:
         """(ratio 0..1 or None, mode).
@@ -635,20 +669,144 @@ class Tracker:
         return min(0.95, 1 - math.exp(-elapsed / 90.0)), "creep"
 
     def snapshot(self) -> list[dict]:
+        """Every job, ordered as a tree: each parent immediately followed by
+        its children, with a `depth` on every row.
+
+        The tree is built here, once, so the page, the status line and the CLI
+        cannot disagree about which row belongs under which — the same reason
+        progress() lives here. Ordering by bare update time (what this did
+        before sub-jobs) puts a child ABOVE its parent whenever the child
+        stepped last, which for a pipeline step is most of the time.
+        """
         with self.lock:
-            rows = []
-            live = sorted(self.jobs.values(),
-                          key=lambda j: j.get("updated_at", ""), reverse=True)
-            done = sorted(self.finished,
-                          key=lambda j: j.get("finished_at", ""), reverse=True)
+            live = list(self.jobs.values())
+            done = list(self.finished)
+            rows: list[dict] = []
             for job in live + done:
                 out = dict(job)
                 out["state"] = self.classify(job)
                 out["eta_seconds"] = self.eta_seconds(job) \
                     if out["state"] == "running" else None
                 out["progress"], out["progress_mode"] = self.progress(job)
+                # Private: consumed by the tree rollup, stripped before serving.
+                out["_rate"] = self.per_item_rate(job) \
+                    if out["state"] == "running" else None
                 rows.append(out)
-            return rows
+        return _tree_order(rows)
+
+
+_MEASURED = ("items", "items+sub")
+
+
+def _tree_order(rows: list[dict]) -> list[dict]:
+    """Arrange snapshot rows as a forest and roll children up into parents.
+
+    A child attaches under its parent when the parent row is present, except
+    a still-running child of a parent that has ENDED: that one is shown at the
+    top level with `detached` saying why. Hiding it would lose live work;
+    leaving it indented would draw an arrow to a row that is over.
+
+    Rolled-up parent bar: an items-mode parent with running, *measured*
+    children reads (done + Σ child fractions) / total, mode `items+sub`. Only
+    measured children count — a creep or eta child is a guess, and folding a
+    guess into a counted bar would make the count dishonest.
+    """
+    by_uid = {r["uid"]: r for r in rows if r.get("uid")}
+    kids: dict[str, list[dict]] = {}
+    roots: list[dict] = []
+    for r in rows:
+        par = by_uid.get(r.get("parent") or "")
+        if par is not None and par is not r:
+            if r["state"] in LIVE_STATES and par["state"] not in LIVE_STATES:
+                r["detached"] = (f"parent '{par.get('name')}' ended "
+                                 f"{par['state']}")
+                roots.append(r)
+            else:
+                kids.setdefault(par["uid"], []).append(r)
+        else:
+            if r.get("parent") and r["state"] in LIVE_STATES and par is None:
+                # Parent unknown to this daemon (expired, or never registered).
+                r["detached"] = "parent ended"
+            roots.append(r)
+
+    # Rollup, deepest first so a grandchild's fraction reaches the root.
+    def _rollup(r: dict, seen: set) -> None:
+        if r["uid"] in seen:
+            return
+        seen.add(r["uid"])
+        children = kids.get(r["uid"], [])
+        for c in children:
+            _rollup(c, seen)
+        if (r["state"] in LIVE_STATES and r.get("progress_mode") == "items"
+                and r.get("total")):
+            frac = sum(min(1.0, c["progress"]) for c in children
+                       if c["state"] in LIVE_STATES
+                       and c.get("progress_mode") in _MEASURED
+                       and c.get("progress") is not None)
+            if frac > 0:
+                r["progress"] = min(1.0, (r.get("done", 0) + frac) / r["total"])
+                r["progress_mode"] = "items+sub"
+            # Time left rolls up the same way. The parent alone prices its
+            # in-flight step as if untouched; the running child KNOWS how much
+            # of that step is left. So: the slowest in-flight child's
+            # time-left, plus the remaining whole steps at the parent's own
+            # per-step rate. Any in-flight child without an estimate yet means
+            # the parent keeps its own — a partial sum would read as precise.
+            inflight = [c for c in children
+                        if c["state"] in LIVE_STATES
+                        and c.get("progress_mode") in _MEASURED]
+            etas = [c.get("eta_seconds") for c in inflight]
+            if inflight and all(e is not None for e in etas):
+                rest = max(0, r["total"] - r.get("done", 0) - len(inflight))
+                if rest == 0:
+                    r["eta_seconds"] = max(etas)
+                elif r.get("_rate") is not None:
+                    r["eta_seconds"] = max(etas) + rest * r["_rate"]
+
+    seen: set = set()
+    for r in roots:
+        _rollup(r, seen)
+
+    def _latest(r: dict, seen: set) -> str:
+        # A parent's position reflects activity anywhere beneath it, so a
+        # pipeline whose step is busy does not sink below idle jobs.
+        if r["uid"] in seen:
+            return ""
+        seen.add(r["uid"])
+        ts = r.get("updated_at") or ""
+        for c in kids.get(r["uid"], []):
+            ts = max(ts, _latest(c, seen))
+        return ts
+
+    live_roots = [r for r in roots if r["state"] in LIVE_STATES]
+    done_roots = [r for r in roots if r["state"] not in LIVE_STATES]
+    live_roots.sort(key=lambda r: _latest(r, set()), reverse=True)
+    done_roots.sort(key=lambda r: r.get("finished_at") or "", reverse=True)
+
+    out: list[dict] = []
+    placed: set = set()
+
+    def _emit(r: dict, depth: int) -> None:
+        if r["uid"] in placed:          # a parent cycle must not recurse forever
+            return
+        placed.add(r["uid"])
+        r["depth"] = depth
+        out.append(r)
+        for c in sorted(kids.get(r["uid"], []),
+                        key=lambda c: c.get("started_at") or ""):
+            _emit(c, depth + 1)
+
+    for r in live_roots + done_roots:
+        _emit(r, 0)
+    for r in rows:
+        r.pop("_rate", None)
+    # Anything only reachable through a cycle still gets shown, at the top.
+    for r in rows:
+        if r.get("uid") not in placed:
+            placed.add(r.get("uid"))
+            r["depth"] = 0
+            out.append(r)
+    return out
 
 
 PAGE = """<!doctype html><meta charset="utf-8"><title>progress</title>
@@ -663,6 +821,7 @@ PAGE = """<!doctype html><meta charset="utf-8"><title>progress</title>
  /* A time/eta/creep bar is an estimate, not a measurement. Hatching it keeps
     that visible at a glance so an estimated bar is never read as a counted one. */
  .est>div{background:repeating-linear-gradient(90deg,#8ac 0 6px,#4a6a86 6px 12px)}
+ tr.child td{border-bottom-color:#222} .sub{color:#aaa}
  #wire{display:none;background:#2a2312;color:#eb6;border:1px solid #554;
        padding:.4em .8em;margin-bottom:1em}
 </style>
@@ -721,18 +880,28 @@ async function tick(){try{
   (d.statusline_seen===false&&d.jobs.some(j=>j.session))?"block":"none";
  document.getElementById("rows").innerHTML=d.jobs.map(j=>{
   const p=j.progress;
-  const est=j.progress_mode&&j.progress_mode!=="items"&&j.progress_mode!=="done";
+  // items+sub is still a measurement (a count plus measured children), so it
+  // is drawn solid like items; only time/eta/creep are hatched as estimates.
+  const measured=["items","items+sub","done"];
+  const est=j.progress_mode&&!measured.includes(j.progress_mode);
   let bar;
   if(p==null){bar=j.done;}
   else{
    const pct=Math.round(100*p);
    const tail=j.progress_mode==="items"?`${j.done}/${j.total}`
+    :j.progress_mode==="items+sub"
+     ?`${j.done}/${j.total} <span class="mode">+sub ${pct}%</span>`
     :`${pct}% <span class="mode">${esc(j.progress_mode)}</span>`;
    bar=`<div class="bar${est?" est":""}"><div style="width:${pct}%"></div></div>${tail}`;
   }
   const c=j.counters?Object.entries(j.counters).map(([k,v])=>k+"="+v).join(" "):"";
-  const det=esc(j.detail||j.error||"")+(j.tail?` <details><summary>output</summary><pre>${esc(j.tail)}</pre></details>`:"");
-  return `<tr class="${j.state}"><td>${esc(j.name)}</td><td>${sessCell(j)}</td>`+
+  const note=j.detached?` <span class="stalled">(${esc(j.detached)})</span>`:"";
+  const det=esc(j.detail||j.error||"")+note+(j.tail?` <details><summary>output</summary><pre>${esc(j.tail)}</pre></details>`:"");
+  // Sub-jobs: the server already ordered rows as a tree and set depth, so the
+  // page only indents — it never re-derives which row belongs under which.
+  const d=j.depth||0;
+  const nm=d?`<span class="sub" style="padding-left:${d*1.2}em">↳ ${esc(j.name)}</span>`:esc(j.name);
+  return `<tr class="${j.state}${d?" child":""}"><td>${nm}</td><td>${sessCell(j)}</td>`+
    `<td>${j.state}</td>`+
    `<td>${bar}</td><td>${dur(j.eta_seconds)}</td><td>${esc(c)}</td>`+
    `<td>${det}</td></tr>`}).join("");
@@ -950,8 +1119,18 @@ class Job:
     def __init__(self, name: str, total: int | None = None, kind: str = "local",
                  source: str | None = None, detail: str | None = None,
                  project: str | None = None, expect_seconds: float | None = None,
-                 ping_timeout: float | None = None):
+                 ping_timeout: float | None = None, parent: str | None = None,
+                 parent_name: str | None = None):
         self.name, self.total, self.kind = name, total, kind
+        # Sub-job link: the uid of the job this one runs inside. Unset, it is
+        # inherited from $PROGRESS_PARENT, which is how a shell pipeline nests
+        # every step — including a `progress run` or a tap it launches —
+        # without passing tokens down by hand. An empty value means top level.
+        self.parent = parent if parent is not None \
+            else (os.environ.get("PROGRESS_PARENT") or None)
+        self.parent_name = parent_name
+        self._children: list["Job"] = []
+        self._open = False
         self.source, self.detail = source, detail
         self.project = project or os.path.basename(os.getcwd())
         # Time-based work: pass expect_seconds when the job knows roughly how
@@ -990,6 +1169,7 @@ class Job:
             "detail": self.detail, "tail": self.tail,
             "counters": self.counters or None,
             "pid": os.getpid(), "host": os.uname().nodename,
+            "parent": self.parent, "parent_name": self.parent_name,
         }
         if status != "running":
             rec["error"] = error
@@ -1006,15 +1186,51 @@ class Job:
                   file=sys.stderr)
         self._t0 = time.monotonic()
         self._last_flush = self._t0
+        self._open = True
         self._flush()
         return self
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         status = "failed" if exc_type else "done"
         error = f"{exc_type.__name__}: {exc}"[:500] if exc_type else None
+        # Children close BEFORE the parent: a parent that reads done while a
+        # child row still reads running is the dangling-arrow bug this exists
+        # to prevent. A child already exited through its own `with` is left
+        # alone; one opened by hand and never closed is cancelled, naming why.
+        for c in self._children:
+            if c._open:
+                c._close("cancelled",
+                         f"parent '{self.name}' ended {status}")
+        self._close(status, error)
+        return False  # never swallow the exception
+
+    def _close(self, status: str, error: str | None = None) -> None:
+        if not self._open:
+            return
+        self._open = False
         self._flush(status=status, error=error,
                     seconds=time.monotonic() - self._t0)
-        return False  # never swallow the exception
+        # Terminal. A later step() on a closed job must not re-register it as
+        # running — the server would take that as a fresh upsert.
+        self._connected = False
+
+    def child(self, name: str, **kwargs) -> "Job":
+        """A sub-job of this one, as a context manager:
+
+            with Job('pipeline rome', total=34) as p:
+                for step in steps:
+                    with p.child(step.name, total=step.size) as c:
+                        ...
+
+        The child keeps its own plain name, so its duration history is shared
+        with standalone runs of the same step. It inherits this job's kind and
+        project unless overridden; session and pid follow automatically.
+        """
+        kwargs.setdefault("kind", self.kind)
+        kwargs.setdefault("project", self.project)
+        c = Job(name, parent=self.uid, parent_name=self.name, **kwargs)
+        self._children.append(c)
+        return c
 
     def step(self, n: int = 1, detail: str | None = None, **counters: int) -> None:
         now = time.monotonic()
@@ -1072,7 +1288,11 @@ def _fmt_row(j: dict) -> str:
     err = f" · {j['error']}" if j.get("error") else ""
     mark = {"running": "▶", "done": "✓", "failed": "✗", "orphaned": "☠",
             "stalled": "⏸", "cancelled": "∅"}.get(state, "?")
-    return (f"{mark} {j.get('name', '?'):32.32} {state:9} {frac:>13}{eta}"
+    depth = int(j.get("depth") or 0)
+    name = ("  " * (depth - 1) + "↳ " if depth else "") + str(j.get("name", "?"))
+    if j.get("detached"):
+        detail += f" · {j['detached']}"
+    return (f"{mark} {name:32.32} {state:9} {frac:>13}{eta}"
             f"{counters}{detail}{err}")
 
 
@@ -1142,7 +1362,9 @@ def cmd_mirror(argv: list[str]) -> int:
     ap.add_argument("--name", required=True)
     ap.add_argument("--source", required=True)
     ap.add_argument("--poll-cmd", required=True,
-                    help="shell command printing '<done> <total>', '<done>', or 'idle'")
+                    help="shell command printing '<done> <total>', '<done>', or "
+                         "'idle'; an optional SECOND line '<done> <total> <name>' "
+                         "is the current sub-step, shown as a child job")
     ap.add_argument("--interval", type=float, default=30)
     ap.add_argument("--idle-after", type=int, default=2,
                     help="consecutive idle polls before the watcher exits")
@@ -1157,11 +1379,15 @@ def cmd_mirror(argv: list[str]) -> int:
             return 3
 
     idle = 0
+    sub: Job | None = None       # the current sub-step's child job, if any
     with Job(a.name, kind="external", source=a.source) as j:
         while idle < a.idle_after:
             out = subprocess.run(a.poll_cmd, shell=True, capture_output=True,
                                  text=True, timeout=60).stdout.strip()
-            m = re.match(r"^(\d+)(?:\s+(\d+))?", out)
+            lines = out.splitlines() or [""]
+            m = re.match(r"^(\d+)(?:\s+(\d+))?", lines[0])
+            sm = re.match(r"^(\d+)\s+(\d+)\s+(.+?)\s*$", lines[1]) \
+                if len(lines) > 1 else None
             if out.lower().startswith("idle") or not m:
                 idle += 1
             else:
@@ -1171,6 +1397,19 @@ def cmd_mirror(argv: list[str]) -> int:
                     j.total = int(m.group(2))
                 if j.total and j.done >= j.total:
                     idle = a.idle_after
+            # A different sub-step name means the previous one finished: the
+            # source moved on, which is the only completion signal a watcher
+            # of someone else's work ever gets.
+            if sub is not None and (sm is None or sm.group(3) != sub.name):
+                sub.done = sub.total or sub.done
+                sub._close("done")
+                sub = None
+            if sm is not None:
+                if sub is None:
+                    sub = j.child(sm.group(3), total=int(sm.group(2)))
+                    sub.__enter__()
+                sub.done, sub.total = int(sm.group(1)), int(sm.group(2))
+                sub._flush()
             j.step(0)  # heartbeat flush: updates the row without inflating done
             j._flush()
             if idle < a.idle_after:
@@ -1215,7 +1454,11 @@ def _token_record(state: dict, status: str = "running",
            ("uid", "name", "kind", "source", "project", "total", "done",
             "detail", "pid", "host",
             "expect_seconds", "ping_timeout",
-            "session", "session_name", "agent")}
+            "session", "session_name", "agent",
+            # A field missing from this list never reaches the server, however
+            # happily the server would store it — which is exactly how a
+            # --parent would have been dropped without an error.
+            "parent", "parent_name")}
     rec["status"] = status
     rec["counters"] = state.get("counters") or None
     if status != "running":
@@ -1247,7 +1490,20 @@ def cmd_start(argv: list[str]) -> int:
     ap.add_argument("--detail")
     ap.add_argument("--pid", type=int,
                     help="liveness pid (default: the calling script)")
+    ap.add_argument("--parent", metavar="TOKEN",
+                    default=os.environ.get("PROGRESS_PARENT") or None,
+                    help="run as a sub-job of this token (default: "
+                         "$PROGRESS_PARENT, so an exported parent nests every "
+                         "sub-script)")
     a = ap.parse_args(argv)
+    parent_name = None
+    if a.parent:
+        try:
+            parent_name = _token_load(a.parent).get("name")
+        except SystemExit:
+            # The parent may be another host's job or already finished; the
+            # link is still recorded and the server derives what it means.
+            parent_name = None
     state = {
         "uid": uuid.uuid4().hex, "name": a.name, "kind": a.kind,
         "source": a.source, "project": os.path.basename(os.getcwd()),
@@ -1258,6 +1514,7 @@ def cmd_start(argv: list[str]) -> int:
         "counters": {}, "gaps": [], "last_step": None,
         "last_post": 0.0, "started_at": _now(),
         "pid": a.pid or os.getppid(), "host": os.uname().nodename,
+        "parent": a.parent, "parent_name": parent_name,
     }
     _token_save(state["uid"], state)
     if ensure_daemon():
@@ -1355,9 +1612,32 @@ def cmd_finish(argv: list[str]) -> int:
     state = _token_load(a.token)
     status = "failed" if a.fail else "cancelled" if a.cancel else "done"
     ensure_daemon()
+    # Children first, for the same reason Job.__exit__ does it: a finished
+    # parent above a still-running child is a dangling row.
+    _finish_child_tokens(a.token, f"parent '{state.get('name')}' ended {status}")
     _post_job(_token_record(state, status=status, error=a.fail))
     _token_path(a.token).unlink(missing_ok=True)
     return 0
+
+
+def _finish_child_tokens(parent: str, reason: str, _depth: int = 0) -> None:
+    """Cancel every open token whose parent is `parent`, grandchildren first.
+    A child still open when its parent finishes did not finish itself, so
+    `cancelled` — not `done` — is the honest status."""
+    tdir = home() / "tokens"
+    if _depth > 16 or not tdir.is_dir():
+        return
+    for path in tdir.glob("*.json"):
+        try:
+            st = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if st.get("parent") != parent:
+            continue
+        _finish_child_tokens(st["uid"], f"parent '{st.get('name')}' ended "
+                             "cancelled", _depth + 1)
+        _post_job(_token_record(st, status="cancelled", error=reason))
+        path.unlink(missing_ok=True)
 
 
 def cmd_prune() -> int:

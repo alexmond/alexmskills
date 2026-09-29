@@ -44,11 +44,13 @@ TOOLS = [
     {
         "name": "progress_start",
         "description": "Register a new long-running job; returns a token for "
-                       "progress_step/progress_finish.",
+                       "progress_step/progress_finish. Pass parent=<token> to "
+                       "run it as a sub-job, shown nested under that job.",
         "inputSchema": {"type": "object",
                         "properties": {"name": {"type": "string"},
                                        "total": {"type": "integer"},
-                                       "detail": {"type": "string"}},
+                                       "detail": {"type": "string"},
+                                       "parent": {"type": "string"}},
                         "required": ["name"]},
     },
     {
@@ -96,6 +98,8 @@ def call_tool(name: str, args: dict) -> dict:
             argv += ["--total", str(args["total"])]
         if args.get("detail"):
             argv += ["--detail", args["detail"]]
+        if args.get("parent"):
+            argv += ["--parent", args["parent"]]
         import contextlib, io
         out = io.StringIO()
         with contextlib.redirect_stdout(out):

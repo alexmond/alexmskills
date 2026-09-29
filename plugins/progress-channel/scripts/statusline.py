@@ -103,39 +103,90 @@ def render(session_id=None, width: int = WIDTH):
     ANSI colour is supported on the status line (unlike tool output, which is
     stripped), so the rows are coloured: cyan running, yellow stalled.
     """
-    jobs = [j for j in fetch(session_id) if j.get("state") in LIVE]
+    jobs = [j for j in fetch(session_id)
+            if j.get("state") in LIVE and j.get("progress") is not None]
+    units = _units(jobs)
+    if not units:
+        return None
+
+    # Row budget. Every top-level job gets a row before any child does — a
+    # second pipeline must not be pushed off the line by the first one's
+    # step. Leftover rows go to children in order; a child that gets no row
+    # is folded onto its parent's line instead of disappearing. A child row
+    # is only ever emitted directly under its parent's, so an arrow never
+    # points at nothing.
+    units = units[:MAX_ROWS]
+    spare = MAX_ROWS - len(units)
     rows = []
-    for j in jobs[:MAX_ROWS]:
-        ratio = j.get("progress")
-        if ratio is None:
-            continue
-        mode = j.get("progress_mode") or "creep"
-        stalled = j.get("state") == "stalled"
+    for root, kids in units:
+        shown, folded = kids[:spare], kids[spare:]
+        spare -= len(shown)
+        rows.append(_row(root, width, folded=folded))
+        for k in shown:
+            rows.append(_row(k, width, child=True))
+    return "\n".join(rows)
+
+
+def _units(jobs):
+    """[(root, [children…])] in the daemon's tree order.
+
+    The daemon orders rows as a tree and sets `depth`; this only groups them.
+    Direct children get rows; anything deeper is folded into its depth-1
+    ancestor's line by being dropped from the row list (its fraction already
+    reached the parent through the daemon's rollup). A child whose parent is
+    not in this view — filtered out, or ended — is treated as a root rather
+    than drawn under the wrong row.
+    """
+    present = {j.get("uid") for j in jobs}
+    units = []
+    for j in jobs:
+        depth = int(j.get("depth") or 0)
+        if depth == 0 or j.get("parent") not in present or not units:
+            units.append((j, []))
+        elif depth == 1:
+            units[-1][1].append(j)
+    return units
+
+
+def _row(j, width, child=False, folded=()):
+    ratio = j["progress"]
+    mode = j.get("progress_mode") or "creep"
+    stalled = j.get("state") == "stalled"
+    if child:
+        name = "  ↳ " + str(j.get("name") or "job")[:22]
+    else:
         name = str(j.get("name") or "job")[:26]
 
-        # A subagent's job runs under this session and belongs in this line,
-        # but it is not the main loop's work — say whose it is.
-        if j.get("agent"):
-            name = "%s: %s" % (str(j["agent"])[:10], name[:20])
+    # A subagent's job runs under this session and belongs in this line,
+    # but it is not the main loop's work — say whose it is.
+    if j.get("agent") and not child:
+        name = "%s: %s" % (str(j["agent"])[:10], name[:20])
 
-        colour, mark = ("\033[33m", "!") if stalled else ("\033[36m", "⏳")
+    colour, mark = ("\033[33m", "!") if stalled else ("\033[36m", "⏳")
 
-        # items is measured; time/eta/creep are estimates. Name the mode so an
-        # estimated bar is never read as a counted one.
-        if mode == "items":
-            tail = "%s/%s" % (j.get("done", 0), j.get("total"))
-        else:
-            tail = mode
-        if j.get("eta_seconds"):
-            tail += " · ~%s left" % _dur(j["eta_seconds"])
-        if stalled:
-            tail += " · stalled"
+    # items (and items+sub, a count plus measured children) are measured;
+    # time/eta/creep are estimates. Name the mode so an estimated bar is never
+    # read as a counted one.
+    if mode in ("items", "items+sub"):
+        tail = "%s/%s" % (j.get("done", 0), j.get("total"))
+    else:
+        tail = mode
+    if j.get("eta_seconds"):
+        tail += " · ~%s left" % _dur(j["eta_seconds"])
+    if stalled:
+        tail += " · stalled"
+    if j.get("detached"):
+        tail += " · " + str(j["detached"])[:30]
+    if folded:
+        f = folded[0]
+        tail += " · ↳ %s %d%%" % (str(f.get("name") or "")[:18],
+                                   int(round((f.get("progress") or 0) * 100)))
+        if len(folded) > 1:
+            tail += " +%d" % (len(folded) - 1)
 
-        rows.append("%s%s %s\033[0m %s%s\033[0m %3d%% \033[2m%s\033[0m" % (
-            colour, mark, name, colour, bar(ratio, width),
-            int(round(ratio * 100)), tail))
-
-    return "\n".join(rows) if rows else None
+    return "%s%s %s\033[0m %s%s\033[0m %3d%% \033[2m%s\033[0m" % (
+        colour, mark, name, colour, bar(ratio, width),
+        int(round(ratio * 100)), tail)
 
 
 def main() -> int:

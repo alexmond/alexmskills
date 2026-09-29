@@ -132,6 +132,43 @@ progress.py finish $T
 
 `start` prints a token; the cross-invocation state lives in a token file, so `step` is stateless for the script and keeps the library's 1s POST throttle. Liveness anchors to the *calling script's* pid — a script that dies without `finish` is swept as orphaned like any other producer.
 
+== Sub-jobs: a pipeline and its current step (0.6.0)
+
+A job can run inside another, and every surface — the status line, the page, `list` — shows it nested under its parent:
+
+[source,text]
+----
+⏳ pipeline rome (italy) #119 ██████████████▏░░░  79% 26/34
+⏳   ↳ ground-round ███████████████▉░░  89% 549/619
+----
+
+image::progress-page-subjobs.png[The live page with a pipeline, its current step, and that step's own sub-step nested beneath it,width=100%]
+
+[source,python]
+----
+with Job('pipeline rome', total=34) as p:
+    for step in steps:
+        with p.child(step.name, total=step.size) as c:
+            ...
+----
+
+[source,bash]
+----
+T=$(progress start --name 'pipeline rome' --total 34)
+export PROGRESS_PARENT=$T                  # every sub-script below nests itself
+C=$(progress start --name ground-round --total 619)   # or: --parent $T
+progress finish $T                          # also cancels any child still open
+----
+
+* *The parent bar rolls up.* A counted parent with running, counted children reads `(done + child fractions) / total`, labelled `+sub` — 79% above, instead of a bar stuck at 76% for the whole step. Estimated children never move a counted bar.
+* *Time left rolls up too:* the running step's own time-left plus the remaining whole steps at the parent's per-step rate — the parent alone would treat the in-flight step as untouched.
+* *Closing cascades from the producer.* Exiting a parent's `with` block, or `finish` on its token, closes any open child first, as `cancelled` with the reason. A child whose parent ended without cascading stays visible at the top level, labelled — never hidden.
+* *The child keeps its plain name*, so `ground-round` learns one duration whether it ran nested or on its own.
+* *Mirrors* take sub-steps from an optional second `--poll-cmd` line, `<done> <total> <name>`.
+* The status line keeps its 3-row cap: every top-level job gets a row first, and a child left without a row is folded onto its parent's line.
+
+This replaces a manual pattern — two top-level jobs with the child's indent typed into its name — that broke three ways: the child jumped above its parent whenever it stepped last, cancelling the parent left the child dangling, and the arrowed name learned no ETA from standalone runs.
+
 == What makes it more than a table
 
 Duration history is keyed by job *shape* — name + kind + order-of-magnitude of `total` — capped at the last 20 runs per shape, so a sweep over videos and one over thumbnails under the same name never blend into a meaningless median.

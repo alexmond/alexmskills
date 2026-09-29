@@ -112,6 +112,56 @@ Liveness anchors to the **calling script's pid** (`--pid` overrides), so a
 script that dies without `finish` is swept as orphaned like any other
 producer.
 
+## Sub-jobs: a pipeline and its current step
+
+A job can run inside another. Every surface shows it nested under its parent:
+
+```
+⏳ pipeline rome (italy) #119 ██████████████▏░░░  79% 26/34
+⏳   ↳ ground-round ███████████████▉░░  89% 549/619
+```
+
+```python
+with Job('pipeline rome', total=34) as p:
+    for step in steps:
+        with p.child(step.name, total=step.size) as c:
+            ...
+```
+
+```bash
+T=$(progress start --name 'pipeline rome' --total 34)
+export PROGRESS_PARENT=$T              # every sub-script below nests itself
+C=$(progress start --name ground-round --total 619)   # or: --parent $T
+progress finish $T                      # also cancels any child still open
+```
+
+- **Never bake the indent into the name** (`'  ↳ ground-round'`). That was the
+  manual pattern this replaces, and it broke three ways: the child jumped
+  above its parent whenever it stepped last, cancelling the parent left the
+  child behind, and the arrowed name learned no ETA from standalone runs of the
+  same step. A child keeps its **plain** name, so its history is shared.
+- `$PROGRESS_PARENT` reaches Python producers too, so a `progress run` or a
+  tap launched by a pipeline step nests without any flag. Leave it unset (or
+  empty) for top-level work.
+- **The parent bar rolls up.** A counted parent with running, *counted*
+  children reads `(done + child fractions) / total`, mode `items+sub` — 79%
+  above, not a bar stuck at 76% for the whole step. Estimated children
+  (time/eta/creep) never move a counted bar.
+- **Time left rolls up too:** the running step's own time-left plus the
+  remaining whole steps at the parent's per-step rate. The parent alone would
+  price the in-flight step as untouched. A step with no estimate yet leaves
+  the parent's own figure rather than a partial sum that reads as precise.
+- **Closing cascades from the producer.** A parent's `with` block, or
+  `finish` on its token, closes open children first — `cancelled`, naming the
+  parent. A child whose parent ended without cascading (a raw POST client)
+  stays visible at the top level, labelled `parent … ended`, never hidden.
+- **Mirrors** get sub-steps from an optional second `--poll-cmd` line,
+  `<done> <total> <name>`. A new name finishes the previous child as done.
+- The status line keeps its 3-row cap: every top-level job gets a row first,
+  children take what's left, and a child without a row is folded onto its
+  parent's line. Any depth is stored; the status line shows two levels, the
+  page and `list` show all.
+
 ## Scoping: whose job is this?
 
 Every producer records the Claude Code session that owns it, for free —
