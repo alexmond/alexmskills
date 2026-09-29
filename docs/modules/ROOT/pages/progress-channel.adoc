@@ -130,6 +130,8 @@ done
 progress.py finish $T
 ----
 
+If the loop lives inside a shell function, use an `EXIT` trap instead — an `ERR` trap does not fire inside a function without `set -E`, so the job would be left for the orphan sweep.
+
 `start` prints a token; the cross-invocation state lives in a token file, so `step` is stateless for the script and keeps the library's 1s POST throttle. Liveness anchors to the *calling script's* pid — a script that dies without `finish` is swept as orphaned like any other producer.
 
 == Sub-jobs: a pipeline and its current step (0.6.0)

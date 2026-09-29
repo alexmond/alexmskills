@@ -105,6 +105,11 @@ done
 $P finish $T                                   # or: --fail "why" / --cancel
 ```
 
+If the loop lives inside a shell **function**, use an `EXIT` trap instead
+(`trap 'rc=$?; [ $rc -ne 0 ] && $P finish $T --fail "exit $rc"' EXIT`): an
+`ERR` trap does not fire inside a function unless `set -E` is on, so the script
+exits through `set -e` and the job is left for the orphan sweep.
+
 `start` prints a token; the cross-invocation state (count, counters, step
 gaps) lives in a token file under `~/.claude/progress/tokens/`, so `step` is
 stateless for the script and keeps the same 1s POST throttle as the library.
