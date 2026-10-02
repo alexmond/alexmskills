@@ -145,7 +145,7 @@ Each plugin page carries its own *Claude Code vs Codex* section with the specifi
 
 | xref:evolving-claude-md.adoc#_claude_code_vs_codex[evolving-claude-md]
 | 3
-| Same five hooks through the adapter; instructions file resolves to `AGENTS.*`; patches are linted per file.
+| Same five hooks through the adapter; instructions file resolves to `AGENTS.*`; patches are linted per file. No `/compact` slash command — ask for it; the same scripts run.
 
 | xref:memory-hygiene.adoc#_claude_code_vs_codex[memory-hygiene]
 | 3

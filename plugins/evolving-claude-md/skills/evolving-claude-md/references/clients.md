@@ -27,3 +27,7 @@ capture handlers run through the payload adapter. For direct CLI audits set
 `SKILL_INSTRUCTIONS_FILE=AGENTS.md`. PostCompact findings use Codex's common
 `systemMessage` output; other audit events inject context. Capture settings and
 lane spools stay in `.claude/`; commit/stop detection reads Codex rollout calls.
+
+Codex has no plugin slash commands, so `/evolving-claude-md:compact` is a request
+("compact AGENTS.md"): follow `commands/compact.md` step for step. Its scripts —
+`compact-claude-md.py` and `archive-decisions.py` — honour `SKILL_INSTRUCTIONS_FILE`.

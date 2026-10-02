@@ -188,7 +188,7 @@ Silent when healthy. When triggered, emits `hookSpecificOutput.additionalContext
 Fires before any `Write|Edit` of CLAUDE.md. Reads the proposed content, validates that any new D&L entries have:
 - Valid `YYYY-MM-DD` date prefix
 - A `**topic-tag**` (bold, kebab-case)
-- Body ≤200 chars
+- Body ≤500 chars (200 is the target — see Format)
 
 If any entry violates, denies with a `reason` explaining which line + how to fix. The assistant retries with a corrected entry.
 

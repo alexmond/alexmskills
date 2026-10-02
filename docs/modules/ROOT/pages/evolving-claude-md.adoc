@@ -38,13 +38,19 @@ To compact the log on demand, run the dedicated command:
 
 == What it does
 
-=== Three automatic hooks
+=== Automatic hooks
 
 The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the hooks register on enable with nothing to add to settings:
 
 * *SessionStart* — `audit-claude-md.py` checks the D&L section + whole-file size + staleness and injects a recommendation when something needs attention; silent when healthy. Since 1.4.0 staleness covers three rot classes, grounded against the tree rather than reasoned about: a cited artifact `git grep` can no longer find, a version pin every build file now contradicts ("Spring Boot 4.0.5" vs a pom that says 4.0.7 — prefix-compatible pins and examples stay silent), and a sequence fact the tree has moved past ("latest is `V27`" once `V28` exists). The predicates live in a vendorable stdlib core, `freshness.py`, calibrated across 29 real repos to zero false positives.
-* *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
+* *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or whose body runs past 500 characters (200 is the target; past that, the detail belongs in `docs/decisions/`).
+* *InstructionsLoaded* — `record-loads.py` records which instruction files actually loaded, so a rule whose globs never match, or a CLAUDE.md that never loads, becomes visible.
 * *PostCompact* — re-runs the audit so the assistant sees the current state without paying to re-read the whole file.
+* *PostToolUse* and *Stop* — capture triggers that nominate a possible learning from a commit message or a session's end. Off by default.
+
+=== One command
+
+`/evolving-claude-md:compact` acts on what the audit reports — see *What's new in 1.8.0* below.
 
 == What's new in 1.8.0 — compact as a command
 
@@ -266,6 +272,10 @@ _Tier 3 — lifecycle hooks on both clients._
 | Capture
 | Stop and commit detection read the Claude transcript.
 | The same capture reads Codex rollout calls; settings and lane spools stay in `.claude/evolving-claude-md/`.
+
+| Compaction
+| `/evolving-claude-md:compact` — plan, propose, apply on approval.
+| No plugin slash command. Ask to compact the instructions file: the same procedure runs on the same scripts (`compact-claude-md.py`, `archive-decisions.py`), which both honour `SKILL_INSTRUCTIONS_FILE`, so they act on `AGENTS.md` when that is the selected file.
 
 |===
 

@@ -27,7 +27,7 @@ Skills that accumulate knowledge about the repo they run in. State lives in the 
 | Plugin | What it does
 
 | xref:evolving-claude-md.adoc[evolving-claude-md]
-| Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself via three hooks.
+| Turns CLAUDE.md into a living Decisions & Learnings log that prunes, graduates, and archives itself — six hooks keep it honest, and `/evolving-claude-md:compact` cleans it up in one reviewed edit.
 
 | xref:memory-hygiene.adoc[memory-hygiene]
 | Keeps agent-written memory files from rotting — re-verifies version pins, sequence facts, and cited paths against the tree; flags what became wrong, never deletes.
