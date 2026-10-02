@@ -24,9 +24,13 @@ built-in defaults
   "entries_warn": 25,        "entries_recommend": 35,
   "mega_entry_chars": 800,   "topic_cluster": 3,
   "layout_min_dirs": 5,
-  "coverage": true,          "nested": true
+  "coverage": true,          "nested": true,
+  "recent_days": 14,         "merge_cluster": 4
 }
 ```
+
+`recent_days` is how long an entry stays in Recent before `/evolving-claude-md:compact`
+archives it; `merge_cluster` is how many same-day entries it flags as one piece of work.
 
 Name only the keys you want changed; the rest keep their defaults. Unknown keys
 are ignored, and a corrupt config falls back to defaults rather than failing —

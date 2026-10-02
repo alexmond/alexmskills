@@ -105,6 +105,9 @@ DEFAULTS: dict[str, object] = {
     "load_evidence": True,        # use .claude/evolving-claude-md/loads.jsonl
     "load_min_sessions": 5,       # ... only once this many sessions were recorded
     "supersede_check": True,      # entries claiming to supersede an earlier one
+    # --- compaction (/evolving-claude-md:compact) ---
+    "recent_days": 14,            # an entry older than this leaves Recent (archived)
+    "merge_cluster": 4,           # same-day entries that suggest one merged entry
 }
 
 
@@ -363,6 +366,55 @@ def supersede_gaps(section: str, cfg: dict | None = None) -> list[str]:
     return out[:5]
 
 
+def mirror_hits(entries: list[tuple[str, str]], chlog: str
+                ) -> list[tuple[str, str, list[str]]]:
+    """(date, body, versions) for each entry naming a version CHANGELOG.md
+    documents. The per-entry form compaction acts on; changelog_mirror()
+    reports the share."""
+    out = []
+    for date, body in entries:
+        vers = [v for v in dict.fromkeys(re.findall(r"\b\d+\.\d+\.\d+\b", body))
+                if v in chlog]
+        if vers:
+            out.append((date, body, vers))
+    return out
+
+
+def read_changelog(root: str = ".") -> str:
+    try:
+        with open(os.path.join(root, "CHANGELOG.md"), encoding="utf-8",
+                  errors="replace") as fh:
+            return fh.read()
+    except OSError:
+        return ""
+
+
+ENTRY_PAT = re.compile(
+    r"^- (?:~~)?(\d{4}-\d{2}-\d{2})(?:~~)? — (.+?)(?=\n- (?:~~)?\d{4}-\d{2}-\d{2}|\Z)",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def recent_section(text: str) -> str | None:
+    """The D&L (Recent) section body, up to the next ### heading."""
+    idx = text.find(SECTION_HEADING)
+    if idx == -1:
+        return None
+    section = text[idx + len(SECTION_HEADING):]
+    nxt = re.search(r"\n### ", section)
+    return section[: nxt.start()] if nxt else section
+
+
+def entry_topic(body: str) -> str | None:
+    """The entry's **topic-tag**, normalised the way clustering compares it."""
+    m = re.match(r"\*\*([^*]+?)\*\*", body)
+    if not m:
+        return None
+    t = m.group(1).strip().lower()
+    t = re.sub(r"[.,:;!?]+$", "", t)
+    return re.sub(r"\s*\([^)]*\)\s*$", "", t)
+
+
 def changelog_mirror(entries: list[tuple[str, str]], root: str = ".",
                      cfg: dict | None = None) -> str | None:
     """Entries naming a version that CHANGELOG.md already documents — the log
@@ -376,8 +428,7 @@ def changelog_mirror(entries: list[tuple[str, str]], root: str = ".",
             chlog = fh.read()
     except OSError:
         return None
-    hits = sum(1 for _, body in entries
-               if any(v in chlog for v in re.findall(r"\b\d+\.\d+\.\d+\b", body)))
+    hits = len(mirror_hits(entries, chlog))
     pct = 100 * hits // len(entries)
     if pct < int(cfg["changelog_mirror_pct"]):
         return None
@@ -864,8 +915,15 @@ def main() -> int:
             f"`<!-- audit-skip: commands -->` (or the gap's name) to CLAUDE.md so it stops asking."
         )
 
+    # One pointer rather than a recipe: the recipe lives in the command, where
+    # its ORDER is enforced (graduate before archiving — the step an ad-hoc
+    # compaction gets wrong). Clients without plugin slash commands get the
+    # planner script by name.
     parts.append(
-        "When work allows, briefly propose a compaction edit to the user — graduate stable topics to Conventions/Gotchas (per skill), split mega-entries (>200 chars body) into docs/decisions/{date}-{topic}.md teasers, strike-through superseded items, and review the staleness candidates (the cited token isn't in the tree — entry may be wrong now). End-of-quarter? Suggest `scripts/archive-decisions.py --cutoff …`."
+        "When work allows, offer `/evolving-claude-md:compact` (no slash "
+        "commands? run the skill's `compact-claude-md.py` planner) — it orders "
+        "graduation, release-mirror cleanup, merges, splits, stale checks and "
+        "the archive, and proposes every edit for approval before applying."
     )
 
     out = {

@@ -125,6 +125,8 @@ It reads each prompt as you send it and, when one would go better, **rewrites it
 
 Decisions and gotchas land in a log with a format enforced on every edit. The log prunes, graduates stable lessons into conventions, archives the old, and **tells you when an entry has gone stale** — a path that no longer exists, a version that has moved on.
 
+When the audit says it's time, **`/evolving-claude-md:compact`** proposes the whole clean-up as one reviewed edit — lessons graduate into standing rules *before* the rest is archived, so nothing worth keeping leaves the file.
+
 ---
 
 ## The catalog
@@ -133,7 +135,7 @@ Decisions and gotchas land in a log with a format enforced on every edit. The lo
 
 | Plugin | | Version | What it does |
 |---|:-:|---|---|
-| [`evolving-claude-md`](plugins/evolving-claude-md) | 🧠 | 1.7.0 | A CLAUDE.md that prunes, graduates and archives itself. |
+| [`evolving-claude-md`](plugins/evolving-claude-md) | 🧠 | 1.8.0 | A CLAUDE.md that prunes, graduates and archives itself. |
 | [`brainstorm-panel`](plugins/brainstorm-panel) | 🧠 | 1.3.3 | A task-fit expert panel that debates until it converges. |
 | [`dev-crew`](plugins/dev-crew) | 🧠 | 1.3.1 | A task-fit delivery crew, run as a gated relay. |
 | [`roles`](plugins/roles) | 🧠 | 1.4.1 | One evolving pool of personas, shared by every orchestrator. |

@@ -19,6 +19,15 @@ Wires `CLAUDE.md` to maintain a living *Decisions & Learnings* log that the assi
 
 This skill is model-invokable — most often you just ask in natural language: "make CLAUDE.md evolve", "add a self-updating decisions log to CLAUDE.md", or "CLAUDE.md is getting too big, compact it".
 
+To compact the log on demand, run the dedicated command:
+
+[source,text]
+----
+/evolving-claude-md:compact          # plan, propose, apply on approval
+/evolving-claude-md:compact plan     # just show the plan
+/evolving-claude-md:compact yes      # apply without waiting
+----
+
 == When to use it
 
 * "add learning mechanism to CLAUDE.md", "make CLAUDE.md evolve", "self-updating CLAUDE.md"
@@ -36,6 +45,14 @@ The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the
 * *SessionStart* — `audit-claude-md.py` checks the D&L section + whole-file size + staleness and injects a recommendation when something needs attention; silent when healthy. Since 1.4.0 staleness covers three rot classes, grounded against the tree rather than reasoned about: a cited artifact `git grep` can no longer find, a version pin every build file now contradicts ("Spring Boot 4.0.5" vs a pom that says 4.0.7 — prefix-compatible pins and examples stay silent), and a sequence fact the tree has moved past ("latest is `V27`" once `V28` exists). The predicates live in a vendorable stdlib core, `freshness.py`, calibrated across 29 real repos to zero false positives.
 * *PreToolUse* on `Write|Edit` of `CLAUDE.md` — `lint-claude-md.py` rejects new entries that lack a date or `**topic-tag**`, or exceed 200 chars.
 * *PostCompact* — re-runs the audit so the assistant sees the current state without paying to re-read the whole file.
+
+== What's new in 1.8.0 — compact as a command
+
+`/evolving-claude-md:compact` runs the four downward pressures as one reviewed edit, in the order that keeps lessons safe: supersede gaps, release mirrors (keep what a release *taught*, drop what it *shipped*), same-day merges, graduation into Conventions/Gotchas, mega-entry splits, stale checks — and the archive **last**. Archiving first is the mistake an ad-hoc compaction makes: lessons that should be standing rules end up in the quarterly file instead of the always-loaded one.
+
+Every edit is drafted with its exact text and shown before anything is written; `plan` stops there, `yes` skips the wait. The data comes from a read-only planner, `compact-claude-md.py`. Its graduation list finds a tag repeated three or more times — which misses lessons that recur by *theme* under different tags — so it also lists every entry about to age out, for the session to review first.
+
+Fixed along the way: `archive-decisions.py` was unsafe to run twice. Rebuilding the section from dated entries only, it dropped the section's format note, and an entry absorbed any undated line below it — so a second run archived the first run's teaser and left a new one reporting only its own count. It now parses the section line by line, keeps everything it doesn't archive in place, and merges into an existing quarter teaser.
 
 == What's new in 1.7.0 — evidence and invalidation
 

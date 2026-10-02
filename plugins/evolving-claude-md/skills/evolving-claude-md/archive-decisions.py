@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
-"""Quarterly archive: move CLAUDE.md Decisions & Learnings entries older than
-a cutoff date out into docs/decisions/{YYYY-QN}.md, leaving a single
-one-line teaser behind.
+"""Archive: move CLAUDE.md Decisions & Learnings entries older than a cutoff
+date out into docs/decisions/{YYYY-QN}.md, leaving one teaser line per quarter.
 
 Usage:
-    scripts/archive-decisions.py --cutoff 2026-03-31           # dry-run preview
-    scripts/archive-decisions.py --cutoff 2026-03-31 --apply   # do it
+    archive-decisions.py --cutoff 2026-03-31           # dry-run preview
+    archive-decisions.py --cutoff 2026-03-31 --apply   # do it
 
 The cutoff is inclusive — entries with date <= cutoff get archived.
 
 Mechanism:
-  - Parses the D&L section out of CLAUDE.md
-  - Splits entries into "to-archive" (≤ cutoff) and "keep"
-  - Writes `docs/decisions/{YYYY-QN}.md` with the archived entries
-  - Replaces them in CLAUDE.md with a single teaser line:
-        - YYYY-QN — N entries archived → docs/decisions/YYYY-QN.md
+  - Parses the D&L section out of CLAUDE.md, line by line, into blocks
+  - Archives dated entries <= cutoff to `docs/decisions/{YYYY-QN}.md`
+    (appending if the file exists)
+  - Leaves one teaser per quarter, MERGING with a teaser an earlier run left:
+        - YYYY-QN — **archived** — N entries → docs/decisions/YYYY-QN.md.
+  - Everything else in the section stays where it was: the format note, other
+    bullets, earlier teasers
   - Preserves strikethrough / graduation markers in the archive
   - Atomic: tmp file + rename, only on --apply
+
+It is safe to run repeatedly with a moving cutoff, which `/evolving-claude-md:
+compact` does. An earlier version rebuilt the section from dated entries only,
+so it dropped the section's format note, and an entry's block ran on until the
+next DATED bullet — swallowing a teaser below it into the archive, after which
+the new teaser reported only the latest run's count.
 """
 from __future__ import annotations
 
@@ -26,21 +33,95 @@ import os
 import re
 import sys
 
-CLAUDE_MD = "CLAUDE.md"
+CLAUDE_MD = os.environ.get("SKILL_INSTRUCTIONS_FILE", "CLAUDE.md")
 DECISIONS_DIR = "docs/decisions"
 SECTION_RE = re.compile(
     r"(### Decisions & Learnings[^\n]*\n)(.*?)(?=\n### |\Z)",
     re.DOTALL,
 )
-ENTRY_RE = re.compile(
-    r"^- (?:~~)?(\d{4}-\d{2}-\d{2})(?:~~)? — .*?(?=\n- (?:~~)?\d{4}-\d{2}-\d{2}|\Z)",
-    re.MULTILINE | re.DOTALL,
-)
+ENTRY_START = re.compile(r"^- (?:~~)?(\d{4}-\d{2}-\d{2})(?:~~)? — ")
+TEASER_RE = re.compile(
+    r"^- (\d{4}-Q[1-4]) — \*\*archived\*\* — (\d+) entr(?:y|ies) → (\S+?)\.?\s*$")
 
 
 def quarter_for(date: dt.date) -> str:
     q = (date.month - 1) // 3 + 1
     return f"{date.year}-Q{q}"
+
+
+def teaser(quarter: str, n: int) -> str:
+    noun = "entry" if n == 1 else "entries"
+    return f"- {quarter} — **archived** — {n} {noun} → {DECISIONS_DIR}/{quarter}.md."
+
+
+def parse_blocks(body: str) -> list[dict]:
+    """Split a section body into ordered blocks.
+
+    kind: "entry" (dated bullet + its indented continuation lines), "teaser",
+    or "other" (any other line, kept verbatim: the format note, blank lines,
+    undated bullets). A block ends at the next top-level bullet or a blank
+    line, so an entry can never absorb the line below it.
+    """
+    blocks: list[dict] = []
+    cur: dict | None = None
+    for line in body.split("\n"):
+        m_entry = ENTRY_START.match(line)
+        m_teaser = TEASER_RE.match(line)
+        if m_entry:
+            cur = {"kind": "entry", "date": m_entry.group(1), "lines": [line]}
+            blocks.append(cur)
+        elif m_teaser:
+            cur = None
+            blocks.append({"kind": "teaser", "quarter": m_teaser.group(1),
+                           "n": int(m_teaser.group(2)), "lines": [line]})
+        elif cur is not None and line.strip() and not line.startswith("- "):
+            cur["lines"].append(line)          # continuation of the entry
+        else:
+            cur = None
+            blocks.append({"kind": "other", "lines": [line]})
+    return blocks
+
+
+def plan(text: str, cutoff: dt.date):
+    """Pure: returns (new_text, by_quarter{q: [entry blocks]}, kept_count) or
+    None when there is no D&L section."""
+    m = SECTION_RE.search(text)
+    if not m:
+        return None
+    blocks = parse_blocks(m.group(2))
+    by_quarter: dict[str, list[str]] = {}
+    kept: list[dict] = []
+    for b in blocks:
+        if b["kind"] == "entry" and dt.date.fromisoformat(b["date"]) <= cutoff:
+            by_quarter.setdefault(quarter_for(dt.date.fromisoformat(b["date"])),
+                                  []).append("\n".join(b["lines"]).rstrip())
+        else:
+            kept.append(b)
+
+    # Merge into teasers an earlier run left; add new ones after the last
+    # kept entry, so they read as the tail of the Recent list.
+    seen: set[str] = set()
+    for b in kept:
+        if b["kind"] == "teaser" and b["quarter"] in by_quarter:
+            b["lines"] = [teaser(b["quarter"],
+                                 b["n"] + len(by_quarter[b["quarter"]]))]
+            seen.add(b["quarter"])
+    new = [teaser(q, len(v)) for q, v in sorted(by_quarter.items(), reverse=True)
+           if q not in seen]
+    if new:
+        last = max((i for i, b in enumerate(kept)
+                    if b["kind"] in ("entry", "teaser")), default=None)
+        if last is None:
+            # Nothing dated left: put teasers after the leading prose/note.
+            last = max((i for i, b in enumerate(kept)
+                        if any(l.strip() for l in b["lines"])), default=-1)
+        for j, t in enumerate(new):
+            kept.insert(last + 1 + j, {"kind": "teaser", "lines": [t]})
+
+    body = "\n".join(l for b in kept for l in b["lines"])
+    new_text = text[: m.start()] + m.group(1) + body + text[m.end():]
+    n_kept = sum(1 for b in kept if b["kind"] == "entry")
+    return new_text, by_quarter, n_kept
 
 
 def main() -> int:
@@ -62,82 +143,42 @@ def main() -> int:
     with open(CLAUDE_MD) as f:
         text = f.read()
 
-    m = SECTION_RE.search(text)
-    if not m:
+    result = plan(text, cutoff)
+    if result is None:
         print("no Decisions & Learnings section found", file=sys.stderr)
         return 2
-    section_heading = m.group(1)
-    section_body = m.group(2)
+    new_text, by_quarter, n_kept = result
 
-    entries = ENTRY_RE.findall(section_body)
-    if not entries:
-        print("no entries to archive")
-        return 0
-
-    # Split each match back into (date, full-block).
-    matches = list(ENTRY_RE.finditer(section_body))
-    to_archive: list[str] = []
-    to_keep: list[str] = []
-    for mm in matches:
-        date = dt.date.fromisoformat(mm.group(1))
-        block = mm.group(0).rstrip()
-        if date <= cutoff:
-            to_archive.append(block)
-        else:
-            to_keep.append(block)
-
-    if not to_archive:
+    if not by_quarter:
         print(f"nothing to archive (cutoff {cutoff})")
         return 0
 
-    # Group archived entries by quarter (most archives target one quarter, but
-    # if the cutoff straddles a quarter boundary we split cleanly).
-    by_quarter: dict[str, list[str]] = {}
-    for block in to_archive:
-        d = dt.date.fromisoformat(ENTRY_RE.match(block).group(1))
-        q = quarter_for(d)
-        by_quarter.setdefault(q, []).append(block)
-
     print(f"archive plan (cutoff {cutoff}):")
-    for q, blocks in by_quarter.items():
+    for q, blocks in sorted(by_quarter.items()):
         print(f"  {q}: {len(blocks)} entries → {DECISIONS_DIR}/{q}.md")
-    print(f"  keep in CLAUDE.md: {len(to_keep)} entries")
+    print(f"  keep in CLAUDE.md: {n_kept} entries")
 
     if not args.apply:
         print("\n(dry-run; pass --apply to write)")
         return 0
 
     os.makedirs(DECISIONS_DIR, exist_ok=True)
-
-    # Write per-quarter archive files (append-mode if file exists; preserves
-    # entries from earlier archive runs).
-    for q, blocks in by_quarter.items():
+    for q, blocks in sorted(by_quarter.items()):
         archive_path = os.path.join(DECISIONS_DIR, f"{q}.md")
         existed = os.path.exists(archive_path)
         with open(archive_path, "a") as f:
             if not existed:
                 f.write(f"# Archived Decisions & Learnings — {q}\n\n")
-                f.write(f"Entries moved out of CLAUDE.md during quarterly archive.\n\n")
+                f.write("Entries moved out of CLAUDE.md by archive-decisions.py.\n\n")
             for block in blocks:
                 f.write(block + "\n")
         print(f"  wrote {len(blocks)} entries to {archive_path}")
-
-    # Rebuild the D&L section: kept entries + teaser per archived quarter.
-    new_body_lines: list[str] = []
-    if to_keep:
-        new_body_lines.extend(b + "\n" for b in to_keep)
-    for q, blocks in by_quarter.items():
-        teaser = f"- {q} — **archived** — {len(blocks)} entries → {DECISIONS_DIR}/{q}.md.\n"
-        new_body_lines.append(teaser)
-
-    new_section_body = "\n" + "".join(new_body_lines)
-    new_text = text[: m.start()] + section_heading + new_section_body + text[m.end():]
 
     tmp = CLAUDE_MD + ".tmp"
     with open(tmp, "w") as f:
         f.write(new_text)
     os.replace(tmp, CLAUDE_MD)
-    print(f"  rewrote {CLAUDE_MD} (kept {len(to_keep)}, teasers {len(by_quarter)})")
+    print(f"  rewrote {CLAUDE_MD} (kept {n_kept})")
     return 0
 
 

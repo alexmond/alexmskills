@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-10-02 — **cadence-change-retest** — archive-decisions.py was fine quarterly but broke once compact ran it repeatedly: dropped the format note, swallowed its own teaser. Why: a new call frequency is a new requirement — re-test idempotency.
 - 2026-09-28 — **producer-field-whitelist** — progress 0.6.0: the server stores any record field, but `_token_record` copies a fixed list — a new field (`parent`) is silently dropped on the shell path unless added there too. Why: "the server accepts it" proved nothing about the producers.
 - 2026-09-18 — **gate-both-directions** — coach 1.5.0: gate gained `applies_only_on` + tip coverage + `model_rules` user switch; 3 Opus-5 rules added, 1 FP found on 1197 real prompts. Why: a gate that stopped the rule but left its mirror tip firing the same advice was not a gate.
 - 2026-09-18 — **model-carveout** — coach 1.4.0: rules carry `obsolete_on` model prefixes; 3 suppressed on Opus 5 (verify-loop, chain-of-thought, agents-for-parallel-lookup). Why: a rule is advice about a model — Anthropic's own Opus 5 guidance asks for a carve-out, not a global rule.

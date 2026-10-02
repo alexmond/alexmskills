@@ -150,6 +150,13 @@ Run `archive-decisions.py --cutoff YYYY-MM-DD --apply` at the end of each quarte
 
 CLAUDE.md never grows monotonically — quarter ends, entries move out.
 
+## `/evolving-claude-md:compact` — the pressures as one reviewed edit
+
+Runs the pressures in order — graduation **before** the archive, so a lesson
+that should be a standing rule never lands in the quarterly file — drafting
+every edit for approval (`plan` / `yes`). Data: `compact-claude-md.py`
+(read-only). The full procedure lives in the command itself.
+
 ## Nested CLAUDE.md
 
 A monorepo can carry `packages/api/CLAUDE.md` beside the root file, and Claude

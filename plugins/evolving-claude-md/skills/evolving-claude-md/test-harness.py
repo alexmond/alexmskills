@@ -627,6 +627,149 @@ def t_changelog_mirror_needs_a_changelog_and_a_majority():
                                      str(few)) is None)
 
 
+_aspec = importlib.util.spec_from_file_location("_archive", HERE / "archive-decisions.py")
+archive = importlib.util.module_from_spec(_aspec)
+_aspec.loader.exec_module(archive)
+_cspec = importlib.util.spec_from_file_location("_compact", HERE / "compact-claude-md.py")
+compact = importlib.util.module_from_spec(_cspec)
+_cspec.loader.exec_module(compact)
+
+ARCH_MD = (
+    "# p\n\n### Decisions & Learnings (Recent — last 14 days)\n\n"
+    "> Format: `- YYYY-MM-DD — **topic-tag** — body.` Enforced by lint.\n\n"
+    "- 2026-09-28 — **new** — recent thing. Why: x.\n"
+    "- 2026-08-10 — **old-a** — old thing a,\n  wrapped onto a second line. Why: y.\n"
+    "- 2026-08-05 — **old-b** — old thing b. Why: z.\n\n"
+    "### Historic (older than 14 days)\n\n- 2026-06-11 — **goal** — keep me.\n"
+)
+
+
+def t_archive_is_safe_to_run_repeatedly():
+    """compact runs the archive with a moving cutoff, so a second run must not
+    undo the first. The old rebuild failed three ways, all reproduced first."""
+    import datetime as dt
+    out1, _, _ = archive.plan(ARCH_MD, dt.date(2026, 8, 7))
+    check("archive keeps the section's format note",
+          "> Format:" in out1, out1[:300])
+    out2, by_q, kept = archive.plan(out1, dt.date(2026, 8, 31))
+    teasers = [l for l in out2.splitlines() if "**archived**" in l]
+    check("a second run merges into the first run's teaser (count 2, one line)",
+          teasers == ["- 2026-Q3 — **archived** — 2 entries → docs/decisions/2026-Q3.md."],
+          str(teasers))
+    check("an entry never swallows the teaser below it",
+          all("archived" not in b for blocks in by_q.values() for b in blocks),
+          str(by_q))
+    check("a wrapped entry is archived whole, continuation included",
+          any("wrapped onto a second line" in b for b in by_q.get("2026-Q3", [])))
+    check("the Historic section is left alone",
+          out2.rstrip().endswith("- 2026-06-11 — **goal** — keep me."))
+    check("singular teaser says 'entry'",
+          archive.teaser("2026-Q3", 1).endswith("1 entry → docs/decisions/2026-Q3.md."))
+
+
+def t_archive_dry_run_writes_nothing():
+    with tempfile.TemporaryDirectory() as t:
+        r = repo(Path(t), "dry", ARCH_MD)
+        subprocess.run([sys.executable, str(HERE / "archive-decisions.py"),
+                        "--cutoff", "2026-08-31"], cwd=r, capture_output=True)
+        check("archive without --apply changes nothing",
+              (r / "CLAUDE.md").read_text() == ARCH_MD
+              and not (r / "docs").exists())
+
+
+def _compact_repo(tmp: Path) -> Path:
+    body = [
+        "- 2026-09-30 — **young** — fresh lesson. Why: a.",
+        "- 2026-09-29 — **young** — fresh lesson again. Why: b.",
+        "- 2026-09-28 — **young** — fresh lesson thrice. Why: c.",
+        "- 2026-09-20 — **coach** — shipped 1.2.0 with new rules. Why: d.",
+        "- 2026-09-20 — **trap-one** — the tool skips X silently. Why: e.",
+        "- 2026-09-20 — **trap-two** — Y needs Z first. Why: f.",
+        "- 2026-09-20 — **trap-three** — W lies about V. Why: g.",
+        "- 2026-08-03 — **build** — use the wrapper. Why: h.",
+        "- 2026-08-02 — **build** — wrapper pins the JDK. Why: i.",
+        "- 2026-08-01 — **build** — wrapper needs exec bit. Why: j.",
+        "- 2026-07-15 — **big** — " + ("long detail " * 80) + "Why: k.",
+        "- ~~2026-07-10~~ — **coach** — ~~struck 1.2.0 note~~.",
+    ]
+    md = ("# p\n\n### Decisions & Learnings (Recent — last 14 days)\n\n"
+          + "\n".join(body) + "\n\n### Historic\n\n- 2026-06-01 — **old** — x.\n")
+    r = repo(tmp, "compact", md)
+    (r / "CHANGELOG.md").write_text("## 1.2.0\n- new rules\n")
+    return r
+
+
+def t_compact_plan_finds_each_pressure():
+    import datetime as dt
+    with tempfile.TemporaryDirectory() as t:
+        r = _compact_repo(Path(t))
+        p = compact.build_plan((r / "CLAUDE.md").read_text(), str(r),
+                               today=dt.date(2026, 10, 2))
+        check("mirror: an entry naming a CHANGELOG version is listed",
+              [m["topic"] for m in p["mirror"]] == ["coach"], str(p["mirror"]))
+        check("mirror: a struck entry is not re-listed",
+              all(m["date"] != "2026-07-10" for m in p["mirror"]))
+        check("merge: four entries on one day are a cluster candidate",
+              [m["date"] for m in p["merge"]] == ["2026-09-20"], str(p["merge"]))
+        check("graduate: a stable tag x3 is a candidate",
+              [g["topic"] for g in p["graduate"]] == ["build"], str(p["graduate"]))
+        check("graduate: a YOUNG tag x3 is not (stability needs age)",
+              all(g["topic"] != "young" for g in p["graduate"]))
+        check("split: an entry over the mega cap is listed",
+              [s["topic"] for s in p["split"]] == ["big"], str(p["split"]))
+        a = p["age_out"]
+        check("age-out cutoff is today minus recent_days",
+              a["cutoff"] == "2026-09-18", a["cutoff"])
+        check("age-out names topics to graduate BEFORE archiving",
+              a["graduate_first"] == ["build"], str(a["graduate_first"]))
+        check("age-out lists every aging entry for the theme review",
+              len(a["entries"]) == a["count"] == 5, str(a))
+
+
+def t_compact_plan_is_read_only_and_degrades():
+    with tempfile.TemporaryDirectory() as t:
+        r = _compact_repo(Path(t))
+        before = (r / "CLAUDE.md").read_text()
+        res = subprocess.run([sys.executable, str(HERE / "compact-claude-md.py")],
+                             cwd=r, capture_output=True, text=True)
+        check("planner runs and prints the ordered plan",
+              res.returncode == 0 and "7. age-out" in res.stdout
+              and res.stdout.index("4. graduation") < res.stdout.index("7. age-out"),
+              res.stderr[-300:])
+        check("planner never writes CLAUDE.md",
+              (r / "CLAUDE.md").read_text() == before)
+        bare = repo(Path(t), "bare", "# p\n\nno log here\n")
+        res2 = subprocess.run([sys.executable, str(HERE / "compact-claude-md.py")],
+                              cwd=bare, capture_output=True, text=True)
+        check("no D&L section: says so instead of crashing",
+              res2.returncode == 0 and "nothing to compact" in res2.stdout,
+              res2.stdout + res2.stderr)
+
+
+def t_compact_command_orders_graduation_before_archive():
+    cmd = HERE.parent.parent / "commands" / "compact.md"
+    text = cmd.read_text(encoding="utf-8") if cmd.exists() else ""
+    check("commands/compact.md exists with a description",
+          text.startswith("---") and "description:" in text.split("---")[1])
+    check("the command graduates before it archives",
+          text and text.index("**Graduation**") < text.index("**Age-out**"))
+    check("the command waits for approval unless told 'yes'",
+          "stop and wait" in text.lower())
+
+
+def t_audit_points_at_compact():
+    with tempfile.TemporaryDirectory() as t:
+        many = "".join(f"- 2026-09-{(i % 28) + 1:02d} — **t{i}** — thing {i}. Why: x.\n"
+                       for i in range(40))
+        r = repo(Path(t), "big", "# p\n\n### Decisions & Learnings\n\n" + many)
+        res = subprocess.run([sys.executable, str(HERE / "audit-claude-md.py")],
+                             cwd=r, capture_output=True, text=True)
+        ctx = json.loads(res.stdout or "{}").get("hookSpecificOutput", {}) \
+            .get("additionalContext", "")
+        check("a bloated log is pointed at /evolving-claude-md:compact",
+              "/evolving-claude-md:compact" in ctx, ctx[-200:])
+
+
 def t_obsolescence_prescribes_the_edit():
     with tempfile.TemporaryDirectory() as t:
         r = git_repo(Path(t), "obsolete", "# p\n\n## Layout\nstuff.\n",
@@ -858,6 +1001,12 @@ CHECKS = [
     t_never_loaded_instruction_file,
     t_supersede_link_is_checked,
     t_lint_prices_the_supersede_link_out_of_the_cap,
+    t_archive_is_safe_to_run_repeatedly,
+    t_archive_dry_run_writes_nothing,
+    t_compact_plan_finds_each_pressure,
+    t_compact_plan_is_read_only_and_degrades,
+    t_compact_command_orders_graduation_before_archive,
+    t_audit_points_at_compact,
 ]
 
 

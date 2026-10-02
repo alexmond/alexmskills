@@ -7,6 +7,14 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-10-02
+
+### Added
+- **evolving-claude-md 1.8.0** — **`/evolving-claude-md:compact`**, the plugin's first slash command. It runs the four downward pressures as one reviewed edit, in the order that keeps lessons safe: supersede gaps, release mirrors (keep what a release *taught* — a constraint, a trap, a reversal — and drop what it *shipped*), same-day merges, graduation into Conventions/Gotchas, mega-entry splits, stale checks, and the archive **last**. Archiving first is the mistake an ad-hoc compaction makes: lessons that should be standing rules end up in the quarterly file instead of the always-loaded one. Every edit is drafted with its exact text and shown before anything is written; `plan` stops at the plan, `yes` skips the wait. The data comes from a new read-only planner, `compact-claude-md.py` (`--json` for tooling), built on the audit's own helpers — per-entry mirror detection, section/entry parsing and topic normalisation were factored out of `audit-claude-md.py` with no behaviour change. Its tag-based graduation list misses lessons that recur by *theme* under different tags, and a log that tags every entry uniquely (this repo's does) never trips it at all — so the planner also lists every entry about to age out, for the session to review before archiving. The SessionStart audit now points at the command instead of embedding a prose recipe, which also removes its stale ">200 chars" mega-entry figure (the configured cap is 800). New config keys: `recent_days` (14) and `merge_cluster` (4).
+
+### Fixed
+- **evolving-claude-md 1.8.0** — `archive-decisions.py` was unsafe to run more than once, which mattered as soon as `compact` started running it with a moving cutoff. It rebuilt the section from dated entries only, so it dropped the section's format note; and an entry's block ran on until the next *dated* bullet, so it swallowed the quarter teaser below it — a second run archived the first run's teaser and left a new one reporting only its own count ("1 entries" while the file held 2). All three reproduced on a scratch copy first. It now parses the section line by line, archives only dated entries on or before the cutoff, keeps everything else in place, and merges into an existing quarter teaser with the correct (and singular-aware) count.
+
 ## 2026-09-28
 
 ### Added
