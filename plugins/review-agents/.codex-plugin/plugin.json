@@ -1,6 +1,6 @@
 {
   "name": "review-agents",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Specialist review subagents for any stack — code review, test running, and dependency/CVE auditing on lighter model tiers. Each finds the project's own build, lint and audit commands (Maven, Gradle, npm, Python, Go, Rust, .NET, Ruby and more) instead of assuming one. No-write by construction: Write and Edit are withheld, so they read, build, and report without touching the working tree.",
   "author": {
     "name": "Alex Mondshain",

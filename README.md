@@ -191,7 +191,7 @@ Install both and both draw: each adds its rows and then lets the next mod draw i
 | [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.2.0 | Flags agent memory that the code now contradicts. |
 | [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
 | [`skill-linter`](plugins/skill-linter) | 🧠 | 0.5.0 | Lints `SKILL.md` against published guidance, and checks `npx skills` will find it; every rule cited. |
-| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.8.0 | Every long job as a live bar above your prompt or in your status line. |
+| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.8.1 | Every long job as a live bar above your prompt or in your status line. |
 | [`ticket-triage`](plugins/ticket-triage) | 🔧 | 0.4.2 | Ranks the backlog and runs startable tickets in parallel. |
 | [`implement-issue`](plugins/implement-issue) | 🔧 | 1.0.1 | GitHub issue → branch → implement → verify → PR. |
 | [`screenshot-tour`](plugins/screenshot-tour) | 🔧 | 1.1.1 | A captioned, narrative-ordered screenshot deck of your product. |
@@ -199,7 +199,7 @@ Install both and both draw: each adds its rows and then lets the next mod draw i
 | [`maven-quality`](plugins/maven-quality) | 🔧 | 1.1.0 | Codestyle, PMD, JaCoCo and pre-commit for Maven/Java. |
 | [`security-audit`](plugins/security-audit) | 🔧 | 1.1.0 | OWASP-style scan: injection, traversal, deserialization, secrets. |
 | [`research-sweep`](plugins/research-sweep) | 🔍 | 1.2.2 | Parallel research agents, then adversarial verification. |
-| [`review-agents`](plugins/review-agents) | 🔍 | 1.2.0 | Read-only review subagents for any stack: tests, PR review, dependency audit. |
+| [`review-agents`](plugins/review-agents) | 🔍 | 1.2.1 | Read-only review subagents for any stack: tests, PR review, dependency audit. |
 | [`spring-batch`](plugins/spring-batch) | 📚 | 0.1.1 | Spring Batch 5/6, grounded in runnable samples. |
 
 Two plugins in progress ship with a `-beta` suffix: `tune-repo-beta` and `systemic-fix-beta`.

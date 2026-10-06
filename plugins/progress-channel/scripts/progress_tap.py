@@ -118,6 +118,36 @@ PATTERNS = {
 POST_MIN_INTERVAL = 1.0
 
 
+# A progress line is short. Anything longer is a minified bundle or a base64
+# blob on one line; matching a backtracking regex against megabytes of it is
+# how a pipe filter stalls a build.
+MAX_LINE = 2000
+# Counts beyond this are not counts. It also keeps int() far below Python's
+# digit limit, past which it raises.
+MAX_DIGITS = 12
+
+
+def _position(rx, line: str):
+    """One line → its position groups, or None when it carries none.
+
+    Returns a dict where `done`/`total`, if present, are digit strings short
+    enough to be real counts."""
+    m = rx.search(line)
+    if not m:
+        return None
+    g = {k: v for k, v in m.groupdict().items() if v is not None}
+    if "pct" in g:
+        # A stated percentage is done-of-100. Above 100 it is not a progress
+        # figure ("250% of quota").
+        if not g["pct"].isdigit() or int(g["pct"]) > 100:
+            return None
+        g["done"], g["total"] = g["pct"], "100"
+    for k in ("done", "total"):
+        if k in g and not (g[k].isdigit() and len(g[k]) <= MAX_DIGITS):
+            return None
+    return g
+
+
 def parse_args(argv):
     name = "build"
     if argv and not argv[0].startswith("--"):
@@ -212,16 +242,17 @@ def main() -> int:
             parts = re.split(r"[\r\n]", carry)
             carry = parts.pop()[-4096:]
             for line in parts:
-                m = rx.search(line)
-                if not m:
+                # The pipe has already been forwarded above. Nothing a line
+                # contains may stop the next chunk from being forwarded too:
+                # a count too long for int(), a user regex that names a group
+                # `done` and captures text, a pathological match. Reading
+                # position is optional; being a pipe is not.
+                try:
+                    g = _position(rx, line[:MAX_LINE])
+                except Exception:
+                    g = None
+                if g is None:
                     continue
-                g = m.groupdict()
-                if g.get("pct"):
-                    # A stated percentage is done-of-100. Anything above 100
-                    # is not a progress figure — ignore the line.
-                    if int(g["pct"]) > 100:
-                        continue
-                    g["done"], g["total"] = g["pct"], "100"
                 detail = (g.get("name") or line.strip())[:60]
                 if g.get("done") and g.get("total"):
                     # SET, don't increment: a resumed or -T reactor does not

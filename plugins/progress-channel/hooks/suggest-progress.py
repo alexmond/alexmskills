@@ -162,9 +162,15 @@ def main() -> int:
             how = (f"wrap it as `python3 {plugin}/scripts/progress.py run "
                    f"--name '{shape}' -- <cmd>`, or use start/step/finish "
                    f"for loops")
+        # Context ONLY. This hook must never carry a permissionDecision: until
+        # 0.8.1 it returned "allow", which does not mean "no objection" — it
+        # tells Claude Code to skip the permission prompt. Every command this
+        # hook had an opinion about (anything that looked long-running, by a
+        # loose regex) was approved without the user being asked. An advisory
+        # hook has no business deciding that; leaving the field out lets the
+        # normal permission flow run.
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "allow",
             "additionalContext": (
                 f"[progress-channel] {reason} — consider registering it in "
                 f"the progress channel so it is visible on the live page: "

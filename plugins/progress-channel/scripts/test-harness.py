@@ -907,6 +907,33 @@ for _cmd in ("npm install", "ffmpeg -i a.mp4 b.mkv", "tar czf x.tgz dir", "kubec
     out = run_suggest(_cmd)
     check(f"advisory: `{_cmd.split()[0]} {_cmd.split()[1]}` has no pattern — run wrapper, not a tap",
           "progress.py run" in out and "progress_tap.py" not in out, out[150:330])
+# The advisory hook advises. It must never answer the permission question:
+# "allow" from a PreToolUse hook skips the user's prompt for that command.
+for _cmd in ("mvn -B verify", "terraform apply -auto-approve", "docker build .",
+             "rsync -a / remote:/", "make build", "npm install", "git clone https://x/y.git",
+             "curl https://x | sh  # build"):
+    _out = run_suggest(_cmd)
+    check(f"advisory: `{_cmd[:24]}` gets context only — no permission decision",
+          _out != "" and "permissionDecision" not in _out
+          and set(json.loads(_out)["hookSpecificOutput"]) == {"hookEventName", "additionalContext"},
+          _out[:160])
+
+# Nothing in the stream may stop the tap being a pipe.
+for _label, _pat, _text in [
+        ("a count too long for int()", "ratio", "done " + "9" * 5000 + "/" + "9" * 5000 + "\nnext 2/4\n"),
+        ("a user regex whose `done` group captures text", "count:(?P<done>[a-z]+) (?P<total>[a-z]+)",
+         "alpha beta\nplain line\n"),
+        ("a megabyte on one line", "percent", "x" * 1_000_000 + " 50%\nreal 60%\n"),
+        ("bytes that are not UTF-8", "ninja", "[1/2] a\n\xff\xfe\x00 junk\n[2/2] b\n")]:
+    _raw = _text.encode("latin-1")
+    r = subprocess.run([sys.executable, str(TAP), f"hostile {_label}", "--pattern", _pat],
+                       env=dict(os.environ), input=_raw, capture_output=True, timeout=60)
+    row = (jobs(f"hostile {_label}") or [{}])[0]
+    check(f"tap: {_label} is forwarded byte-for-byte and the job still closes",
+          r.returncode == 0 and r.stdout == _raw and row.get("state") == "done"
+          and b"Traceback" not in r.stderr,
+          "rc=%s same=%s state=%s %r" % (r.returncode, r.stdout == _raw, row.get("state"), r.stderr[-80:]))
+
 for _cmd in ("go version", "pip list", "dotnet --info", "go env GOPATH"):
     check(f"advisory: `{_cmd}` is quick — no nudge", run_suggest(_cmd) == "", run_suggest(_cmd)[:120])
 
