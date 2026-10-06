@@ -187,7 +187,7 @@ Install both and both draw: each adds its rows and then lets the next mod draw i
 | [`roles`](plugins/roles) | 🧠 | 1.4.1 | One evolving pool of personas, shared by every orchestrator. |
 | [`prompt-coach`](plugins/prompt-coach) | 🧠 | 1.5.1 | Rewrites your prompts toward better habits; mastery is earned. |
 | [`conductor`](plugins/conductor) | 🧠 | 0.1.1 | The main session's playbook while parallel agent lanes run. |
-| [`learn-on-failure`](plugins/learn-on-failure) | 🧠 | 1.2.0 | Saves a lesson whenever a fix took more than one try. |
+| [`learn-on-failure`](plugins/learn-on-failure) | 🧠 | 1.2.1 | Saves a lesson whenever a fix took more than one try. |
 | [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.2.0 | Flags agent memory that the code now contradicts. |
 | [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
 | [`skill-linter`](plugins/skill-linter) | 🧠 | 0.5.0 | Lints `SKILL.md` against published guidance, and checks `npx skills` will find it; every rule cited. |

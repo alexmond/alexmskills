@@ -1,6 +1,6 @@
 {
   "name": "learn-on-failure",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve, and nudges toward a change of approach when the same command fails three times in a row.",
   "author": {
     "name": "Alex Mondshain",

@@ -119,6 +119,42 @@ for plain in ("for f in *.txt; do wc -l \"$f\"; done; echo finished",
               "for i in 1 2 3; do echo $i; done", "ls; done; x", "make build"):
     check(f"an ordinary command is left alone: {plain[:28]}", fs.unwrap(plain) == plain)
 
+# State must never be written through a link someone else planted.
+if hasattr(os, "symlink"):
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as elsewhere:
+        victim = Path(elsewhere, "victim.txt")
+        victim.write_text("untouched")
+        os.symlink(victim, Path(d, "streak-s1.json"))
+        for _ in range(3):
+            run(d, FAIL, "x")
+        check("a link planted at the state file's name is not followed",
+              victim.read_text() == "untouched", victim.read_text()[:60])
+        check("...and the link is replaced by a real file, so counting still works",
+              not Path(d, "streak-s1.json").is_symlink()
+              and "failed 3 times" in run(d, FAIL, "y") + run(d, FAIL, "y") + run(d, FAIL, "y"))
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as elsewhere:
+        link = Path(d, "state")
+        os.symlink(elsewhere, link)
+        outs = [run(str(link), FAIL, "x") for _ in range(4)]
+        check("a link where the state directory should be: no state is kept, nothing is written there",
+              outs == ["", "", "", ""] and list(Path(elsewhere).iterdir()) == [], str(outs))
+    with tempfile.TemporaryDirectory() as d:
+        for _ in range(3):
+            run(d, FAIL, "x")
+        modes = {oct(p.stat().st_mode & 0o777) for p in Path(d).iterdir()}
+        check("state files are readable by their owner only, and no temp file is left behind",
+              modes == {"0o600"} and not [p for p in Path(d).iterdir() if p.name.endswith(".tmp")], str(modes))
+    with tempfile.TemporaryDirectory() as d:
+        old = Path(d, "streak-old.json")
+        old.write_text('{"key": "", "n": 0}')
+        os.utime(old, (1, 1))
+        run(d, FAIL, "x", session="fresh")
+        check("streak files from long-ended sessions are pruned",
+              not old.exists() and Path(d, "streak-fresh.json").exists())
+check("the default state directory is under the user's home, not the shared temp directory",
+      str(fs._root()).startswith(str(Path.home())) or "LEARN_ON_FAILURE_STATE" in os.environ,
+      str(fs._root()))
+
 long_cmd = "echo " + "a" * 500 + "\x1b[2J\nsecond line"
 text = fs.note(long_cmd, 3)
 check("a long command is cut and stripped of control characters in the note",

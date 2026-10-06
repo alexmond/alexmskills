@@ -73,7 +73,7 @@
       "displayName": "Learn on Failure",
       "source": "./plugins/learn-on-failure",
       "description": "Auto-save a durable learning to project memory whenever a task takes more than one fix cycle to resolve. Also nudges toward a change of approach when the same command fails three times in a row.",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "category": "self-learning",
       "keywords": [
         "memory",

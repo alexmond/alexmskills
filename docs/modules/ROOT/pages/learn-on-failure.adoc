@@ -53,7 +53,7 @@ The same command has now failed 3 times in a row: `npm test`. Running it again i
 * It speaks at three, then stays quiet until six, then nine — a reminder, not a nag.
 * Runs that differ only in whitespace are the same command. A command you interrupted is your decision, not a failure.
 * It is context only. It never approves, blocks or changes a command.
-* The count lives in a small per-session file under the system temp directory; nothing is written to the plugin or the repo.
+* The count lives in a small per-session file under `~/.claude/learn-on-failure/streaks`, readable only by you and pruned after a week; nothing is written to the plugin or the repo.
 
 It reads the failure from the hook event itself (`PostToolUseFailure`), not by parsing output, and was checked in a real session: the note reached the model on the third failure. If another plugin rewrites commands with a launcher prefix, the prefix is stripped so the note quotes what you actually ran.
 
