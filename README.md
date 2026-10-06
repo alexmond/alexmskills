@@ -153,7 +153,7 @@ When the audit says it's time, **`/evolving-claude-md:compact`** proposes the wh
 
 | Mod | | Version | What it draws |
 |---|:-:|---|---|
-| [`context-bar`](plugins/context-bar) | 🧩 | 0.1.2 | Your context window as a stacked bar, a colour per `/context` category. |
+| [`context-bar`](plugins/context-bar) | 🧩 | 0.2.0 | Your context window as a stacked bar, and a nudge to compact before auto-compact cuts in. |
 | [`usage-bar`](plugins/usage-bar) | 🧩 | 0.2.2 | Your 5-hour and 7-day limits as bars: green, yellow, then red. |
 
 **`context-bar`** answers "what is filling my window?" without you asking: one segment per category, with a token legend, refreshed after every turn from a local estimate. Toggle it with `/context-bar`.

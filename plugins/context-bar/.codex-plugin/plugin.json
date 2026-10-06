@@ -1,7 +1,7 @@
 {
   "name": "context-bar",
-  "version": "0.1.2",
-  "description": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests.",
+  "version": "0.2.0",
+  "description": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend — and says when to compact: a hint, then a warning, then what will be lost, as auto-compact gets close. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests.",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"
@@ -25,7 +25,7 @@
   "interface": {
     "displayName": "Context Bar",
     "shortDescription": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, wit",
-    "longDescription": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests. Ships Claude Code hooks that this plugin has not yet adapted for Codex. Automatic hook behavior is disabled here; skill instructions remain advisory.",
+    "longDescription": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend — and says when to compact: a hint, then a warning, then what will be lost, as auto-compact gets close. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests. Ships Claude Code hooks that this plugin has not yet adapted for Codex. Automatic hook behavior is disabled here; skill instructions remain advisory.",
     "developerName": "Alex Mondshain",
     "category": "Developer Tools",
     "capabilities": [

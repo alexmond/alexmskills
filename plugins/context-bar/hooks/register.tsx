@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Slice, Snapshot } from '../types'
+import { advise, track } from './advice'
 import { cells, short } from './layout'
 
 const isOn = atom({ plugin: 'context-bar', key: 'isOn' } as const, true)
@@ -25,9 +26,22 @@ async function refresh($: EngineInterface): Promise<void> {
     }
   }
 
-  const next: Snapshot = { slices, total: b.totalTokens, max: b.rawMaxTokens }
+  const prev = await read($, snapshot)
+  const next: Snapshot = {
+    slices,
+    total: b.totalTokens,
+    max: b.rawMaxTokens,
+    // Absent when auto-compaction is off: then the limit is the window itself.
+    ...(b.isAutoCompactEnabled && b.autoCompactThreshold ? { threshold: b.autoCompactThreshold } : {}),
+    growth: prev === null ? [] : track(prev.growth, prev.total, b.totalTokens),
+    compactions: prev?.compactions ?? 0,
+  }
   await update($, snapshot, () => next)
 }
+
+// The advice row's colour per level. A hint is dim on purpose: it is a
+// suggestion, and it should not pull the eye from the work.
+const TONE = { hint: undefined, warn: 'warning', danger: 'error' } as const
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -63,6 +77,9 @@ export const register: Register = on => {
 
   on('session.compact', async ($, e, next) => {
     const done = await next(e)
+    // Count it, and forget the pace: the window just shrank, and the turns
+    // before a compaction say nothing about the turns after it.
+    await update($, snapshot, s => (s === null ? s : { ...s, growth: [], compactions: s.compactions + 1 }))
     void refresh($)
 
     return done
@@ -82,6 +99,7 @@ export const register: Register = on => {
     const width = Math.max(10, e.props.bodyColumns)
     const widths = cells(snap.slices, snap.max, width)
     const percent = Math.round((snap.total / snap.max) * 100)
+    const advice = advise(snap)
 
     // The band holds ONE tree, so a mod that returns only its own hides every mod beneath it.
     // Draw ours, then whatever the rest of the chain draws.
@@ -114,6 +132,12 @@ export const register: Register = on => {
               </Box>
             ))}
           </Box>
+          {advice === null ? null : (
+            <Text color={TONE[advice.level]} dimColor={advice.level === 'hint'}>
+              {advice.level === 'danger' ? '⚠ ' : advice.level === 'warn' ? '! ' : '· '}
+              {advice.text}
+            </Text>
+          )}
         </Box>
         {below}
       </Box>

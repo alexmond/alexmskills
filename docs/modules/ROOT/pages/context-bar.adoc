@@ -47,6 +47,47 @@ image::{raw}/context-bar/demo/demo.gif[Recording: Claude answers a prompt, the c
 
 *What is left out.* Deferred tool schemas are not drawn, because they sit outside the window until a tool is loaded.
 
+== When to compact (0.2.0)
+
+Compaction replaces the conversation with a summary. Done by hand at a stopping point, you pick the moment and can say what must be kept. Done automatically, it happens wherever the window happens to fill — often mid-task — and anything that lived only in the conversation survives as whatever the summary made of it.
+
+The bar watches the distance to that point and adds one row when there is something worth saying. Below 70% of the way it says nothing: a bar that always has an opinion is one nobody reads.
+
+image::mod-context-bar-advice.png[The four advice rows: a dim hint at 71 percent, a yellow warning with tokens and turns left, a red warning that auto-compact will keep only a summary, and a note after a second compaction,width=100%]
+
+_Rendered by the mod's own `advise()` over sample readings; a live recording would need a session that is really 70%, 85% and 95% full._
+
+[cols="1,2,3",options="header"]
+|===
+| Level | When | What it says
+
+| hint (dim)
+| 70% of the way to auto-compact
+| Between tasks is the cheap time to `/compact`.
+
+| warning (yellow)
+| 85% of the way, *or* about six turns left
+| How many tokens and turns are left, and to compact at your next stopping point — with `/compact keep <decisions, open tasks>`, which tells the summary what to preserve.
+
+| danger (red)
+| 95% of the way, *or* two turns left
+| Auto-compact is close, will cut in mid-task, and will keep only a summary. Compact now and say what to keep.
+
+| note (dim)
+| after a second compaction, at any fill
+| Early detail is now a summary of a summary — the point where it is worth re-stating a decision you still depend on.
+|===
+
+Three things about how it decides:
+
+* *It measures to where auto-compact actually runs*, not to the size of the model's window. The engine reports that threshold; on a 1M window it sits some way below the top, and 70% of the way there can be 63% of the window.
+* *Turns left comes from your own pace* — the median of what the last five turns added, so one huge file read does not set it. A short runway raises the level on its own, because three big tool results can cover the last 30% in one go. The pace is only trusted once the window is half used: two large reads at the start of a session are not a trend.
+* *With auto-compact off* the limit is the window itself, and the wording changes to say so: compact or clear before a request fails.
+
+It recommends; it never compacts for you. The row has no button, and nothing here runs `/compact`. It also makes no claim about answer quality at a given fill — that is not something a bar can measure.
+
+The idea of nudging toward compaction before the window forces it comes from https://github.com/alexgreensh/token-optimizer[token-optimizer], which does a great deal more (checkpoints, restore, quality scoring). This is an independent, much smaller take: one row, arithmetic on figures the engine already reports, nothing stored.
+
 == When it updates
 
 * at session start,
