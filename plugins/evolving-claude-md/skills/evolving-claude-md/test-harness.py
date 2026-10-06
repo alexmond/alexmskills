@@ -223,6 +223,96 @@ def t_version_pin_stays_silent_when_uncertain():
               F.stale_version_pins("uses left-pad 1.0.0 heavily.", str(r)) == [])
 
 
+def t_version_pins_cover_more_than_four_ecosystems():
+    """R2 read Maven, npm, Go, Cargo and Python. A Gradle, .NET, Ruby or PHP
+    repo had no ground truth at all, so a stale pin there could never fire —
+    and neither could a pin contradicted by .nvmrc or .tool-versions."""
+    F = audit.freshness
+
+    def pins(files: dict, text: str) -> list:
+        with tempfile.TemporaryDirectory() as t:
+            r = Path(t)
+            for name, body in files.items():
+                (r / name).parent.mkdir(parents=True, exist_ok=True)
+                (r / name).write_text(body)
+            return [(p["name"], p["stated"], p["source"])
+                    for p in F.stale_version_pins(text, str(r))]
+
+    gradle = {
+        "gradle/libs.versions.toml": '[versions]\nkotlin = "2.0.21"\nspringBoot = "3.5.1"\n'
+                                     '[libraries]\nfoo = { module = "a:b", version.ref = "kotlin" }\n',
+        "build.gradle.kts": 'plugins { id("org.springframework.boot") version "3.5.1" }\n'
+                            'java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }\n'
+                            'dependencies { implementation("com.squareup.okhttp3:okhttp:4.12.0") }\n',
+        "gradle.properties": "junitVersion=5.11.0\norg.gradle.jvmargs=-Xmx2g\n",
+    }
+    check("gradle: a version-catalog pin the docs contradict fires",
+          ("kotlin", "1.9", "gradle/libs.versions.toml") in pins(gradle, "we are on Kotlin 1.9 here."))
+    check("gradle: the toolchain is the Java version",
+          any(n == "java" and st == "17" for n, st, _ in pins(gradle, "builds with Java 17.")))
+    check("gradle: a group:artifact:version coordinate is ground truth",
+          any(n == "okhttp" for n, _, _ in pins(gradle, "pinned okhttp 3.14 for now.")))
+    check("gradle: camelCase catalog and property names read like prose",
+          any(n in ("spring-Boot", "spring-boot") for n, _, _ in pins(gradle, "on Spring Boot 3.4."))
+          and any(st == "5.9" for _, st, _ in pins(gradle, "tests use JUnit 5.9.")))
+    check("gradle: matching pins are silent",
+          pins(gradle, "Kotlin 2.0, Java 21, Spring Boot 3.5, okhttp 4.12, JUnit 5.11.") == [])
+
+    dotnet = {"App.csproj": '<Project><PropertyGroup><TargetFramework>net8.0</TargetFramework>'
+                            '</PropertyGroup><ItemGroup>'
+                            '<PackageReference Include="Serilog" Version="4.0.1" /></ItemGroup></Project>',
+              "global.json": '{"sdk": {"version": "8.0.303"}}'}
+    check("dotnet: a stale target framework fires, written either way",
+          any(st == "6.0" for _, st, _ in pins(dotnet, "targets .NET 6.0 for now."))
+          and any(st == "6" for _, st, _ in pins(dotnet, "we build with dotnet 6.")))
+    check("dotnet: a stale PackageReference fires",
+          ("Serilog", "3.1", "App.csproj") in pins(dotnet, "logging is Serilog 3.1."))
+    check("dotnet: matching pins are silent",
+          pins(dotnet, "dotnet 8, .NET 8.0, Serilog 4.0.") == [])
+
+    ruby = {"Gemfile": 'ruby "3.3.4"\ngem "rails", "~> 7.1.0"\ngem "puma", ">= 5", "< 7"\n'
+                       'gem "rake"\n'}
+    check("ruby: a stale Ruby or gem pin fires",
+          any(n == "ruby" for n, _, _ in pins(ruby, "runs on Ruby 3.1."))
+          and any(n == "rails" and st == "6.1" for n, st, _ in pins(ruby, "this is Rails 6.1.")))
+    check("ruby: a two-sided constraint is a range — uncertain, silent",
+          pins(ruby, "puma 4.0 in production.") == [])
+    check("ruby: a gem with no version claims nothing",
+          pins(ruby, "rake 12.0 tasks.") == [])
+
+    php = {"composer.json": '{"require": {"php": ">=8.2", "symfony/console": "^7.0", "ext-json": "*"}}'}
+    check("php: a pin below the floor fires; one above could be installed — silent",
+          any(n == "php" and st == "7.4" for n, st, _ in pins(php, "needs PHP 7.4."))
+          and pins(php, "PHP 8.3 on the server.") == [])
+
+    check("toolchain files: .nvmrc contradicts a stated Node version",
+          ("node", "18", ".nvmrc") in pins({".nvmrc": "v20.11.0\n"}, "use node 18 locally."))
+    check("toolchain files: .tool-versions aliases nodejs/golang to how people write them",
+          any(n == "node" for n, _, _ in pins({".tool-versions": "nodejs 20.11.0\ngolang 1.22.1\n"},
+                                              "node 18 and go 1.22."))
+          and not any(n == "go" for n, _, _ in pins({".tool-versions": "golang 1.22.1\n"}, "go 1.22.")))
+    check("toolchain files: a channel name (stable, lts/iron) is not a version — silent",
+          pins({"rust-toolchain.toml": '[toolchain]\nchannel = "stable"\n', ".nvmrc": "lts/iron\n"},
+               "rust 1.60 and node 18.") == [])
+    check("toolchain files: a matching pin is silent",
+          pins({".python-version": "3.12.4\n", ".ruby-version": "ruby-3.3.4\n"},
+               "python 3.12 and ruby 3.3.") == [])
+    check("maven: the compiler release is the Java version",
+          any(n == "java" and st == "17" for n, st, _ in pins(
+              {"pom.xml": "<project><properties><maven.compiler.release>21</maven.compiler.release>"
+                          "</properties></project>"}, "compiled for Java 17.")))
+    javapom = {"pom.xml": "<project><properties><maven.compiler.release>17"
+                          "</maven.compiler.release></properties></project>",
+               "go.mod": "module x\n\ngo 1.22\n"}
+    check("a file extension before a line number is not a version",
+          pins(javapom, "COMPILE core/src/main/java/org/acme/OrderService.java:88:17\n"
+                        "see cmd/main.go:12 and src/java/21/x") == [])
+    check("...and the same names as real pins still fire",
+          len(pins(javapom, "we compile for Java 11 with go 1.19.")) == 2)
+    check("an ecosystem's files being absent changes nothing",
+          pins({"README.md": "x"}, "Kotlin 1.9, dotnet 6, Rails 6.1, node 18.") == [])
+
+
 def t_sequence_fact_is_grounded_in_the_tree():
     """R3: 'latest is `V27`' fires only when V27 itself resolves to a file
     (the scheme is proven) AND a higher-numbered sibling exists."""
@@ -971,6 +1061,7 @@ CHECKS = [
     t_no_regression_on_real_repos,
     t_version_pin_is_grounded_in_the_build_file,
     t_version_pin_stays_silent_when_uncertain,
+    t_version_pins_cover_more_than_four_ecosystems,
     t_sequence_fact_is_grounded_in_the_tree,
     t_sequence_fact_stays_silent_when_uncertain,
     t_vanished_artifact_predicate_moved_to_freshness,

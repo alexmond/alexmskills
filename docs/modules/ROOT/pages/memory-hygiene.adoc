@@ -27,7 +27,7 @@ Every check is grounded against the actual tree — nothing is flagged by patter
 | A backticked path/class/flag `git grep` can no longer find and that isn't on disk. Memory-specific filters run first: `--flags`, `<placeholders>`, `...`-abbreviated paths, and paths rooted outside this tree are pointers, not rot here — never checked.
 
 | Stale version pin
-| Memory states `jhelm 1.3.1` and *every* parseable build-file spec now contradicts it. Release lines (`4.1.x`), examples, and struck-through lines stay silent.
+| Memory states `jhelm 1.3.1` and *every* parseable build-file spec now contradicts it. Reads Maven, Gradle, npm, Go, Cargo, Python, .NET, Bundler and Composer manifests, and the toolchain pin files (`.nvmrc`, `.python-version`, `.tool-versions`, `rust-toolchain.toml`, …). Release lines (`4.1.x`), examples, and struck-through lines stay silent.
 
 | Stale sequence fact
 | "latest is `V27`" once `V28__*.sql` exists on disk, or "next is `V28`" once V28 already happened.

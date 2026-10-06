@@ -24,7 +24,16 @@ from pathlib import Path
 THRESHOLD_S = 10.0
 LONG_RUNNERS = re.compile(
     r"^(mvn|mvnw|gradle|gradlew|make|cargo|npm|pnpm|yarn|docker|podman|"
-    r"rsync|ffmpeg|tar|zstd|pytest|tox|helm|kubectl|terraform|ansible)\b"
+    r"rsync|ffmpeg|tar|zstd|pytest|tox|helm|kubectl|terraform|ansible|"
+    r"ansible-playbook|ninja|cmake|meson|bazel|jest|vitest|xcodebuild)\b"
+    # Tools with quick subcommands too (`go version`, `pip list`): only the
+    # slow ones count, or the nudge fires on every other command.
+    r"|^go\s+(test|build|install|generate|vet)\b"
+    r"|^dotnet\s+(build|test|publish|restore|pack)\b"
+    r"|^(pip3?|uv\s+pip)\s+install\b|^uv\s+sync\b|^poetry\s+install\b"
+    r"|^bundle\s+install\b|^composer\s+(install|update)\b"
+    r"|^mix\s+(test|compile|deps\.get)\b|^swift\s+(build|test)\b"
+    r"|^bun\s+(install|test)\b"
     r"|^git\s+(clone|fetch|pull|lfs|submodule)\b"
     r"|(\bbuild\b|\bcompile\b|\bmigrate\b|\bbackup\b)")
 # git is short-safe EXCEPT the network/worktree ops that can run for minutes
@@ -32,9 +41,37 @@ LONG_RUNNERS = re.compile(
 SHORT_SAFE = re.compile(
     r"^git\b(?!\s+(clone|fetch|pull|lfs|submodule)\b)"
     r"|^(ls|cat|grep|rg|find|echo|which|head|tail|jq)\b")
-# Tools whose own output carries [done/total] position — the tap turns that
-# into a MEASURED bar, which beats the run wrapper's time estimate.
-TAPPABLE = re.compile(r"^(mvn|mvnw|\S*gradlew?|make)\b|^git\s+(clone|fetch|pull)\b")
+# Which tap pattern reads which tool, and the flag (if any) the tool needs to
+# print its position into a pipe at all. First match wins, so the specific
+# subcommands come before the bare tool. A tool that is not here has no
+# pattern, and is offered the run wrapper instead of a tap that would match
+# nothing — `make` and Gradle were listed as tappable with no pattern behind
+# them until 0.8.0.
+TAPS = [
+    (r"^(\./)?mvnw?\b", "maven", ""),
+    (r"^git\s+(clone|fetch|pull)\b", "git", "add --progress"),
+    (r"^(\./)?gradlew?\b", "gradle", "add --console=plain"),
+    (r"^cargo\s+(build|check|test|clippy|install|run)\b", "cargo", ""),
+    (r"^go\s+test\b", "go", ""),
+    (r"^(python3?\s+-m\s+)?pytest\b|^tox\b|^(uv|poetry)\s+run\s+pytest\b", "pytest", ""),
+    (r"^(npx\s+)?(jest|vitest)\b|^(npm|pnpm|yarn|bun)\s+(run\s+)?test\b", "jest", ""),
+    (r"^(docker|podman)\s+(buildx\s+)?build\b|^docker\s+compose\s+build\b",
+     "docker", "add --progress=plain"),
+    (r"^ninja\b|^meson\s+compile\b|^bazel\s+(build|test)\b", "ninja", ""),
+    (r"^cmake\s+--build\b|^make\b", "cmake", ""),
+    (r"^dotnet\s+(build|publish|pack)\b", "dotnet", ""),
+    (r"^rsync\b", "rsync", "add --info=progress2"),
+    (r"^terraform\s+(apply|destroy)\b", "terraform", ""),
+    (r"^ansible-playbook\b", "ansible", ""),
+]
+
+
+def tap_for(command: str):
+    """(pattern, flag hint) for a command the tap can read, else None."""
+    for rx, pattern, hint in TAPS:
+        if re.search(rx, command):
+            return pattern, hint
+    return None
 STATUSLINE_TIP_DAYS = 7.0
 
 
@@ -80,7 +117,7 @@ def statusline_tip(progress) -> str:
         marker.touch()
         return (" Tip: these bars can render live in the Claude Code status "
                 "line, which is not set up — offer the user the setup "
-                "(SKILL.md 'Status line' section; they can say \"set up the "
+                "(the skill's references/in-the-window.md; they can say \"set up the "
                 "progress status line\").")
     except Exception:
         return ""
@@ -109,14 +146,18 @@ def main() -> int:
 
     if reason:
         plugin = Path(__file__).resolve().parent.parent
-        if TAPPABLE.search(command):
-            # The tool's own output carries [done/total]; the tap reads it
-            # in passing and the bar is measured, not estimated. git needs
-            # --progress when piped, or it prints no position at all.
-            how = (f"pipe it through the tap for a measured bar: `<cmd> 2>&1 "
-                   f"| python3 {plugin}/scripts/progress_tap.py '{shape}'` "
-                   f"(git: add --progress and use --pattern git; read "
-                   f"`${{PIPESTATUS[0]}}`, not `$?`)")
+        tap = tap_for(command)
+        if tap:
+            # The tool's own output carries its position; the tap reads it in
+            # passing, so the bar is the tool's own count rather than a guess.
+            # Some tools print nothing into a pipe without a flag.
+            pattern, hint = tap
+            flag = "" if pattern == "maven" else f" --pattern {pattern}"
+            how = (f"pipe it through the tap so the bar comes from the tool's "
+                   f"own output: `<cmd> 2>&1 | python3 {plugin}/scripts/"
+                   f"progress_tap.py '{shape}'{flag}`"
+                   + (f" ({hint} so it prints position in a pipe)" if hint else "")
+                   + "; read `${PIPESTATUS[0]}`, not `$?`")
         else:
             how = (f"wrap it as `python3 {plugin}/scripts/progress.py run "
                    f"--name '{shape}' -- <cmd>`, or use start/step/finish "

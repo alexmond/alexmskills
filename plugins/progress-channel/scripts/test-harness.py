@@ -823,6 +823,93 @@ check("tap: git phases parse through carriage returns (deltas 40/40)",
       row.get("done") == 40 and row.get("total") == 40
       and row.get("state") == "done", str(row)[:120])
 
+# Patterns beyond Maven and git (0.8.0). Each case is the tool's real piped
+# output shape, and what the tap must make of it: (pattern, stdin, done, total).
+TAP_CASES = {
+    "docker": ("#5 [build 1/4] FROM alpine\n#6 [build 2/4] RUN apk add make\n"
+               "#7 [build 4/4] RUN make\n#8 DONE 1.2s\n", 4, 4),
+    "ninja": ("[1/3] Building CXX object a.o\n[2/3] Building CXX object b.o\n"
+              "[3/3] Linking CXX executable app\n", 3, 3),
+    "ratio": ("processed 10/40 files\nprocessed 40/40 files\nat 12.5/s, see a/b/c\n", 40, 40),
+    "pytest": ("collected 12 items\n\ntests/test_a.py ....   [ 33%]\n"
+               "tests/test_b.py ........ [100%]\n\n12 passed in 0.4s\n", 100, 100),
+    "cmake": ("[ 25%] Building C object a.o\n[ 50%] Building C object b.o\n"
+              "[100%] Linking C executable app\n[100%] Built target app\n", 100, 100),
+    "rsync": ("      1,234,567  42%    1.23MB/s    0:00:12\r"
+              "      2,939,444 100%    1.50MB/s    0:00:01 (xfr#3, to-chk=0/3)\n", 100, 100),
+    "percent": ("downloading... 30%\ndownloading... 100% done, 250% of quota\n", 100, 100),
+    "gradle": ("> Task :app:compileJava\n> Task :app:processResources NO-SOURCE\n"
+               "> Task :app:classes\n\nBUILD SUCCESSFUL in 2s\n", 3, None),
+    "cargo": ("   Compiling serde v1.0.203\n   Compiling app v0.1.0 (/x)\n"
+              "    Finished dev [unoptimized] target(s) in 3.1s\n", 2, None),
+    "go": ("ok  \texample.com/a\t0.41s\n--- FAIL: TestX (0.00s)\nFAIL\texample.com/b\t0.02s\n"
+           "?   \texample.com/c\t[no test files]\n", 3, None),
+    "jest": ("PASS src/a.test.ts\nFAIL src/b.test.tsx\n \u2713 src/c.spec.js (3)\n"
+             "Tests: 1 failed, 5 passed\n", 3, None),
+    "dotnet": ("  Determining projects to restore...\n  App.Core -> /src/bin/App.Core.dll\n"
+               "  App -> /src/bin/App.dll\nBuild succeeded.\n", 2, None),
+    "terraform": ("aws_s3_bucket.a: Creating...\naws_s3_bucket.a: Creation complete after 2s\n"
+                  "aws_iam_role.b: Modifications complete after 1s\nApply complete!\n", 2, None),
+    "ansible": ("PLAY [all] ***\nTASK [Gathering Facts] ***\nok: [h1]\n"
+                "TASK [install packages] ***\nchanged: [h1]\n", 2, None),
+}
+for _pat, (_text, _done, _total) in TAP_CASES.items():
+    r = subprocess.run([sys.executable, str(TAP), f"tap {_pat}", "--pattern", _pat],
+                       env=dict(os.environ), input=_text.encode(), capture_output=True)
+    row = (jobs(f"tap {_pat}") or [{}])[0]
+    check(f"tap: {_pat} output is forwarded unchanged and read as {_done}"
+          + (f"/{_total}" if _total else " counted"),
+          r.stdout == _text.encode() and row.get("done") == _done
+          and row.get("total") == _total and row.get("state") == "done",
+          "done=%s total=%s state=%s" % (row.get("done"), row.get("total"), row.get("state")))
+
+# Half the job is NOT matching: build noise must not move a bar.
+for _pat, _noise in {
+        "ninja": "ninja: Entering directory `build'\nwarning: 3/4 of the cache is stale\n",
+        "pytest": "coverage: 87%\nplatform linux -- Python 3.12\n",
+        "docker": "#3 [internal] load metadata\n#4 DONE 0.1s\nsee step 2/3 of the guide\n",
+        "gradle": "Task :app:test FAILED\n1 actionable task: 1 executed\n",
+        "go": "go: downloading example.com/x v1.2.3\nPASS\n",
+        "ratio": "version 1.2/3.4, path a/b, date 2026/10/06, 3.5/4 stars\n",
+        "percent": "took 1.5% longer, 250% of baseline\n"}.items():
+    subprocess.run([sys.executable, str(TAP), f"noise {_pat}", "--pattern", _pat],
+                   env=dict(os.environ), input=_noise.encode(), capture_output=True)
+    row = (jobs(f"noise {_pat}") or [{}])[0]
+    check(f"tap: {_pat} ignores lines that only look like progress",
+          not row.get("done") and row.get("state") == "done",
+          "done=%s total=%s" % (row.get("done"), row.get("total")))
+
+r = subprocess.run([sys.executable, str(TAP), "tap typo", "--pattern", "gradel"],
+                   env=dict(os.environ), input=MAVEN_OUT.encode(), capture_output=True)
+row = (jobs("tap typo") or [{}])[0]
+check("tap: an unknown pattern says so on stderr, forwards stdout, and does not fake Maven",
+      r.stdout == MAVEN_OUT.encode() and b"unknown pattern" in r.stderr
+      and b"gradle" in r.stderr and not row.get("done") and row.get("state") == "done",
+      "%r done=%s" % (r.stderr[:60], row.get("done")))
+
+for _cmd, _want, _hint in [
+        ("./gradlew build", "--pattern gradle", "--console=plain"),
+        ("cargo build --release", "--pattern cargo", ""),
+        ("go test ./...", "--pattern go", ""),
+        ("pytest -q tests", "--pattern pytest", ""),
+        ("npm test", "--pattern jest", ""),
+        ("docker build -t app .", "--pattern docker", "--progress=plain"),
+        ("ninja -C build", "--pattern ninja", ""),
+        ("cmake --build build", "--pattern cmake", ""),
+        ("dotnet build", "--pattern dotnet", ""),
+        ("rsync -a src/ dst/", "--pattern rsync", "--info=progress2"),
+        ("terraform apply -auto-approve", "--pattern terraform", ""),
+        ("ansible-playbook site.yml", "--pattern ansible", "")]:
+    out = run_suggest(_cmd)
+    check(f"advisory: `{_cmd.split()[0]}` is offered the tap with its own pattern",
+          "progress_tap.py" in out and _want in out and _hint in out, out[150:420])
+for _cmd in ("npm install", "ffmpeg -i a.mp4 b.mkv", "tar czf x.tgz dir", "kubectl apply -f x.yml"):
+    out = run_suggest(_cmd)
+    check(f"advisory: `{_cmd.split()[0]} {_cmd.split()[1]}` has no pattern — run wrapper, not a tap",
+          "progress.py run" in out and "progress_tap.py" not in out, out[150:330])
+for _cmd in ("go version", "pip list", "dotnet --info", "go env GOPATH"):
+    check(f"advisory: `{_cmd}` is quick — no nudge", run_suggest(_cmd) == "", run_suggest(_cmd)[:120])
+
 r = subprocess.run([sys.executable, str(TAP), "quiet job", "--quiet"],
                    env=dict(os.environ), input=b"hello\n", capture_output=True)
 check("tap: --quiet is a pure cat, registers nothing",
@@ -833,6 +920,100 @@ r = subprocess.run([sys.executable, str(TAP), "dead daemon"], env=env_dead,
                    input=MAVEN_OUT.encode(), capture_output=True, timeout=30)
 check("tap: dead daemon degrades to cat, still exit 0",
       r.stdout == MAVEN_OUT.encode() and r.returncode == 0)
+
+# examples/ (0.8.0) — every shipped example must actually run, tracked and not -
+import shutil
+EX = HERE.parent / "examples"
+_ex_env = dict(os.environ, PROGRESS_CLI=f"{sys.executable} {HERE / 'progress.py'}",
+               PROGRESS_LIB=str(HERE), DELAY="0.01", CLAUDE_CODE_SESSION_ID="sess-EX")
+_ex_env.pop("PROGRESS_PARENT", None)
+_bare = {k: v for k, v in _ex_env.items() if k not in ("PROGRESS_CLI", "PROGRESS_LIB")}
+
+
+def _ex(cmd, env, cwd=None):
+    return subprocess.run(cmd, env=env, cwd=cwd, capture_output=True, text=True, timeout=120)
+
+
+def _job(name, state=None):
+    """A sess-EX job by name — and by state, when a name has run twice."""
+    rows = [j for j in (progress._get_json("/jobs?state=all") or {}).get("jobs", [])
+            if j.get("name") == name and j.get("session") == "sess-EX"
+            and (state is None or j.get("state") == state)]
+    return rows[-1] if rows else {}
+
+
+for _file, _cmd, _name, _want in [
+        ("bash-loop.sh", ["bash", str(EX / "bash-loop.sh")], "bash loop", (20, 20)),
+        ("python_job.py", [sys.executable, str(EX / "python_job.py")], "python transcode", (8, 8)),
+        ("node-job.mjs", ["node", str(EX / "node-job.mjs")], "node render", (40, 40)),
+        ("go-job", ["go", "run", "."], "go reindex", (24, 24))]:
+    if not shutil.which(_cmd[0]):
+        check(f"example {_file}: runs and reports itself", True, f"{_cmd[0]} absent — skipped")
+        continue
+    _cwd = str(EX / "go-job") if _file == "go-job" else None
+    r = _ex(_cmd, _ex_env, _cwd)
+    row = _job(_name)
+    check(f"example {_file}: runs and reports itself to completion",
+          r.returncode == 0 and (row.get("done"), row.get("total")) == _want
+          and row.get("state") == "done",
+          "rc=%s done=%s/%s state=%s %s" % (r.returncode, row.get("done"), row.get("total"),
+                                            row.get("state"), r.stderr[-120:]))
+    check(f"example {_file}: runs the same with no channel at all",
+          _ex(_cmd, _bare, _cwd).returncode == 0)
+
+r = _ex(["bash", str(EX / "bash-pipeline.sh")], _ex_env)
+_p = _job("example pipeline", "done")
+_kids = [j for j in (progress._get_json("/jobs?state=all") or {}).get("jobs", [])
+         if j.get("parent") == _p.get("uid")]
+check("example bash-pipeline.sh: three stages nest under the pipeline, all done",
+      r.returncode == 0 and _p.get("state") == "done" and _p.get("done") == 3
+      and sorted(k.get("name") for k in _kids) == ["bash loop", "stage: fetch", "stage: package"]
+      and all(k.get("state") == "done" for k in _kids),
+      "pipeline=%s kids=%s" % (_p.get("state"), [(k.get("name"), k.get("state")) for k in _kids]))
+check("example bash-pipeline.sh: the unmodified sub-script nested itself",
+      any(k.get("name") == "bash loop" and k.get("total") == 6 for k in _kids))
+r = _ex(["bash", str(EX / "bash-loop.sh")], dict(_ex_env, FAIL_AT="3"))
+row = _job("bash loop", "failed")
+check("example bash-loop.sh: a failure is reported as failed, with where it stopped",
+      r.returncode == 3 and row.get("state") == "failed" and "item 3" in str(row.get("error")),
+      "rc=%s state=%s error=%s" % (r.returncode, row.get("state"), row.get("error")))
+r = _ex(["bash", str(EX / "bash-pipeline.sh")], dict(_ex_env, FAIL_AT="4"))
+_p = _job("example pipeline", "failed")
+check("example bash-pipeline.sh: a failed stage fails the pipeline and leaves no open row",
+      r.returncode != 0 and _p.get("state") == "failed"
+      and not [j for j in (progress._get_json("/jobs") or {}).get("jobs", [])
+               if j.get("session") == "sess-EX" and j.get("state") == "running"],
+      "rc=%s pipeline=%s" % (r.returncode, _p.get("state")))
+if shutil.which("make"):
+    r = _ex(["make", "-s", "-f", str(EX / "Makefile"), "all"], _ex_env)
+    check("example Makefile: targets run as timed jobs",
+          r.returncode == 0 and _job("example build").get("state") == "done"
+          and _job("example lint").get("state") == "done", r.stderr[-160:])
+    check("example Makefile: runs the same with no channel at all",
+          _ex(["make", "-s", "-f", str(EX / "Makefile"), "all"], _bare).returncode == 0)
+_taps_doc = (EX / "taps.md").read_text()
+_tap_mod = importlib.util.spec_from_file_location("pctap", HERE / "progress_tap.py")
+_tapm = importlib.util.module_from_spec(_tap_mod)
+_tap_mod.loader.exec_module(_tapm)
+_named = set(_re.findall(r"--pattern (?:'count:|)([a-z]+)", _taps_doc)) - {"count"}
+check("examples/taps.md: every pattern it names exists, and every pattern is documented",
+      _named <= set(_tapm.PATTERNS) and set(_tapm.PATTERNS) - _named <= {"maven"},
+      "unknown=%s undocumented=%s" % (sorted(_named - set(_tapm.PATTERNS)),
+                                      sorted(set(_tapm.PATTERNS) - _named)))
+
+big = urllib.request.Request(progress.base_url() + "/jobs", data=b"x" * (300 * 1024),
+                             headers={"Content-Type": "application/json"}, method="POST")
+try:
+    urllib.request.urlopen(big, timeout=5)
+    _code = 200
+except urllib.error.HTTPError as e:
+    _code = e.code
+except Exception as e:                      # the daemon may close before the body is sent
+    _code = type(e).__name__
+check("daemon: an oversized POST body is refused, not read",
+      _code in (413, "ConnectionResetError", "BrokenPipeError", "URLError"), str(_code))
+check("daemon: still answering after the refusal",
+      (progress._get_json("/health") or {}).get("ok") is True)
 
 # statusline_wrap (0.5.0) ------------------------------------------------------
 WRAP = HERE / "statusline_wrap.py"

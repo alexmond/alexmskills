@@ -1,7 +1,7 @@
 = Review Agents
 :navtitle: review-agents
 
-Three focused, read-only review subagents for a Java/Maven project — a test runner, a PR reviewer, and a dependency auditor. Each carries its own model tier and a tightly scoped tool allowlist, so verification steps report findings without being able to rewrite the code they're checking. Designed to be invoked after writing code, before opening a PR, or ahead of a release.
+Three focused, read-only review subagents for any stack — a test runner, a PR reviewer, and a dependency auditor. Each finds the project's own commands instead of assuming a build tool. Each carries its own model tier and a tightly scoped tool allowlist, so verification steps report findings without being able to rewrite the code they're checking. Designed to be invoked after writing code, before opening a PR, or ahead of a release.
 
 == Install
 
@@ -33,21 +33,72 @@ These are subagents, not slash commands — ask Claude to delegate to them:
 
 === test-runner (haiku)
 
-Runs the requested tests at the right scope (all / single class / single method) and reports total run/passed/failed/skipped, with assertion messages and key stack-trace lines for failures. It only reports — never fixes code. Tools: `Bash(./mvnw *)`, `Bash(cat *)`, Read, Glob, Grep.
+Finds the project's test command, runs the requested tests at the right scope (all / one file or class / one test) and reports total run/passed/failed/skipped, with assertion messages and key stack-trace lines for failures. It only reports — never fixes code. A build that fails before any test runs is reported as a build failure, not as "0 tests failed".
 
 === pr-reviewer (sonnet)
 
-Reviews the `git diff main...HEAD` against a checklist spanning code quality (imports, logging, modern Java, descriptive exceptions, no OWASP top-10), style (formatter, PMD/Checkstyle clean via `./mvnw validate`, file/method size limits), and testing (new tests, consistent assertions, parameterized where useful). Reports findings grouped as *Blocker* / *Warning* / *Suggestion*. Tools: `Bash(git *)`, `Bash(./mvnw *)`, `Bash(python3 *)`, Read, Glob, Grep.
+Learns the project's standards first — its stated conventions and whatever lint, format and analysis config is checked in — then reviews the diff against the base branch. The checklist is stack-neutral: code quality (imports, logging, resource handling, errors with their cause, no injection or hardcoded secrets), style (the project's own formatter and linters, in their read-only check modes) and testing (new behaviour has tests, a fix has a test that fails without it). Reports findings grouped as *Blocker* / *Warning* / *Suggestion*, and says which checks ran and which could not.
 
 === dependency-auditor (haiku)
 
-Lists dependencies (`./mvnw dependency:tree`), checks for updates, searches for CVEs (prioritizing direct deps and anything handling untrusted input), and checks Maven Central for latest versions. Reports a table of current/latest/CVEs/action and flags critical/high CVEs. Tools: `Bash(./mvnw *)`, `Bash(cat *)`, Read, Glob, Grep, WebSearch, WebFetch.
+Audits every ecosystem it finds in the repo — a JVM service with a Node front end gets both. Lists what is actually resolved (from the lockfile where there is one), checks for updates, and looks for known vulnerabilities with the ecosystem's own scanner when one is already installed, or by hand against OSV and the GitHub Advisory Database when not. Reports current / latest / advisories / action per dependency, says whether each vulnerable package is direct or transitive, and flags critical and high findings.
+
+== Any stack
+
+None of the three assumes a build tool. Each looks for what the repo documents first (`CLAUDE.md`, `README`, a `Makefile` target, the CI workflow), and falls back to the manifest:
+
+[cols="2,2,2,2"]
+|===
+| Found in the repo | Tests | Checks | Dependency audit
+
+| `pom.xml`
+| `./mvnw test`
+| `./mvnw validate`
+| `dependency:tree`, `versions:display-dependency-updates`
+
+| `build.gradle(.kts)`
+| `./gradlew test`
+| `./gradlew check`
+| `dependencies`, `dependencyUpdates`
+
+| `package.json`
+| the `test` script
+| `lint` / `typecheck` scripts, `tsc --noEmit`, `prettier --check`
+| `npm outdated`, `npm audit`
+
+| `pyproject.toml`
+| `pytest`
+| `ruff check`, `ruff format --check`, `mypy`
+| `pip list --outdated`, `pip-audit`
+
+| `go.mod`
+| `go test ./...`
+| `gofmt -l`, `go vet`, `golangci-lint`
+| `go list -m -u all`, `govulncheck`
+
+| `Cargo.toml`
+| `cargo test`
+| `cargo fmt --check`, `cargo clippy`
+| `cargo outdated`, `cargo audit`
+
+| `*.csproj`
+| `dotnet test`
+| `dotnet format --verify-no-changes`
+| `dotnet list package --outdated` / `--vulnerable`
+
+| `Gemfile`
+| `bundle exec rspec`
+| `rubocop`
+| `bundle outdated`, `bundle audit`
+|===
+
+PHP (Composer) and Elixir (Mix) are covered for tests and audits too. Two rules hold on every stack: a tool is run only if the repo already configures or has it — a linter with no config is a preference, not the project's standard, and a missing scanner is never installed — and every command is the read-only form, never one that fixes or upgrades.
 
 == Notes
 
 * Model tiers are chosen per job: cheap *haiku* for the mechanical test-runner and dependency-auditor, *sonnet* for the judgment-heavy pr-reviewer.
-* All three are read-only on source — their Bash allowlists permit running and inspecting, not editing — so a review step can't silently change what it audits.
-* Checklists and commands assume a Maven/Java project; adapt items to other stacks.
+* All three are read-only on source: `Write` and `Edit` are withheld (`tools: Read, Glob, Grep, Bash`, plus web lookup for the auditor), so a review step can't silently change what it audits.
+* Until 1.2.0 the agents were written for Java/Maven only. Maven projects behave as before.
 
 == Claude Code vs Codex
 

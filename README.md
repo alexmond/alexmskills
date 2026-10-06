@@ -65,7 +65,8 @@ A pipeline and its current step, nested. The parent's bar and time-left **roll u
 
 - **No setup in Claude Code** — a built-in mod draws the bars above your prompt, and steps aside if you wire the status line instead.
 - **Learned ETAs** from each job's own history, borrowed from similar jobs when the name is new.
-- **Measured bars for Maven and git**, read from their own output with a transparent pipe tap.
+- **Bars from the tool's own output** — Maven, Gradle, Cargo, Go, pytest, Jest, Docker, Ninja, CMake, .NET and more, read in passing by a transparent pipe tap.
+- **Runnable integration examples** for shell, Python, Node, Go and Make in [`examples/`](plugins/progress-channel/examples).
 - **Stall and orphan detection** from each job's own rhythm, not a fixed timeout.
 
 <p>
@@ -180,25 +181,25 @@ Install both and both draw: each adds its rows and then lets the next mod draw i
 
 | Plugin | | Version | What it does |
 |---|:-:|---|---|
-| [`evolving-claude-md`](plugins/evolving-claude-md) | 🧠 | 1.8.1 | A CLAUDE.md that prunes, graduates and archives itself. |
+| [`evolving-claude-md`](plugins/evolving-claude-md) | 🧠 | 1.9.0 | A CLAUDE.md that prunes, graduates and archives itself. |
 | [`brainstorm-panel`](plugins/brainstorm-panel) | 🧠 | 1.3.3 | A task-fit expert panel that debates until it converges. |
 | [`dev-crew`](plugins/dev-crew) | 🧠 | 1.3.1 | A task-fit delivery crew, run as a gated relay. |
 | [`roles`](plugins/roles) | 🧠 | 1.4.1 | One evolving pool of personas, shared by every orchestrator. |
 | [`prompt-coach`](plugins/prompt-coach) | 🧠 | 1.5.1 | Rewrites your prompts toward better habits; mastery is earned. |
 | [`conductor`](plugins/conductor) | 🧠 | 0.1.1 | The main session's playbook while parallel agent lanes run. |
 | [`learn-on-failure`](plugins/learn-on-failure) | 🧠 | 1.1.1 | Saves a lesson whenever a fix took more than one try. |
-| [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.1.1 | Flags agent memory that the code now contradicts. |
+| [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.2.0 | Flags agent memory that the code now contradicts. |
 | [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
 | [`skill-linter`](plugins/skill-linter) | 🧠 | 0.5.0 | Lints `SKILL.md` against published guidance, and checks `npx skills` will find it; every rule cited. |
-| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.7.1 | Every long job as a live bar above your prompt or in your status line. |
+| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.8.0 | Every long job as a live bar above your prompt or in your status line. |
 | [`ticket-triage`](plugins/ticket-triage) | 🔧 | 0.4.2 | Ranks the backlog and runs startable tickets in parallel. |
 | [`implement-issue`](plugins/implement-issue) | 🔧 | 1.0.1 | GitHub issue → branch → implement → verify → PR. |
 | [`screenshot-tour`](plugins/screenshot-tour) | 🔧 | 1.1.1 | A captioned, narrative-ordered screenshot deck of your product. |
 | [`mindmap-prompt`](plugins/mindmap-prompt) | 🔧 | 0.2.4 | Sketch a mind map; compile it into an organized prompt. |
 | [`maven-quality`](plugins/maven-quality) | 🔧 | 1.1.0 | Codestyle, PMD, JaCoCo and pre-commit for Maven/Java. |
-| [`security-audit`](plugins/security-audit) | 🔧 | 1.0.0 | OWASP-style scan: injection, traversal, deserialization, secrets. |
+| [`security-audit`](plugins/security-audit) | 🔧 | 1.1.0 | OWASP-style scan: injection, traversal, deserialization, secrets. |
 | [`research-sweep`](plugins/research-sweep) | 🔍 | 1.2.2 | Parallel research agents, then adversarial verification. |
-| [`review-agents`](plugins/review-agents) | 🔍 | 1.1.1 | Read-only review subagents for Java/Maven. |
+| [`review-agents`](plugins/review-agents) | 🔍 | 1.2.0 | Read-only review subagents for any stack: tests, PR review, dependency audit. |
 | [`spring-batch`](plugins/spring-batch) | 📚 | 0.1.1 | Spring Batch 5/6, grounded in runnable samples. |
 
 Two plugins in progress ship with a `-beta` suffix: `tune-repo-beta` and `systemic-fix-beta`.

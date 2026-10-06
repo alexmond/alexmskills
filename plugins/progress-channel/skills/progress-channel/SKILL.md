@@ -117,6 +117,20 @@ Liveness anchors to the **calling script's pid** (`--pid` overrides), so a
 script that dies without `finish` is swept as orphaned like any other
 producer.
 
+If you wrap the CLI in a shell **function** and call it inside `$( )`, add
+`--pid $$` to `start`. The CLI's parent is then a short-lived subshell, not
+your script, and without the flag the job is swept as orphaned within seconds
+while the script is still running.
+
+## Integration examples
+
+`examples/` (beside `scripts/`) holds small runnable producers — copy one and
+replace the `sleep` with the work. Each runs the same with or without the
+channel. Read [examples/README.md](../../examples/README.md) and point the user
+at the one that matches what they have: a shell loop, a nested shell pipeline,
+Python, Node, Go, a Makefile, or a build tool (`taps.md`). Any other language
+uses the same three CLI calls: `start` prints a token, `step`, `finish`.
+
 ## Sub-jobs: a pipeline and its current step
 
 A job can run inside another. Every surface shows it nested under its parent:
@@ -249,106 +263,52 @@ whose pid says nothing useful — a remote job, a shell that forks, anything
 polled rather than owned. It outranks the learned `stalled` heuristic, which
 stays advisory and self-resolving.
 
-## Status line (per-session, in the Claude Code window)
+## In the Claude Code window
 
-`scripts/statusline.py` ships with the plugin and puts this session's live work
-in the Claude Code prompt:
+Two surfaces show this session's live jobs, and they never both draw the same
+job. Read [references/in-the-window.md](references/in-the-window.md) before
+setting either up or explaining one.
 
-```
-⏳ research sweep      █████▌░░░░░░░░░░░░  31% 11/36 · ~7s left
-⏳ remote build        ░░░░░░░░░░░░░░░░░░   0% time
-⏳ explorer: scan repo █████████████▌░░░░  75% 6/8
-```
+- **The band above the prompt** (0.7.0, Claude Code only) — a mod that ships
+  with the plugin. No setup; up to six rows. `/progress-bar` toggles it, and
+  `on|off|auto` sets the mode. `auto`, the default, hides the band while a
+  status line is polling the daemon.
+- **The status line** — `scripts/statusline.py`, wired in
+  `~/.claude/settings.json` with `refreshInterval: 1`. Works on any client with
+  a status line. When the user says "set up the progress status line", make the
+  edit for them, following the reference.
 
-The status line is the only surface in the Claude Code window a user *script*
-can drive on its own schedule: `statusLine.refreshInterval` re-runs the command
-on a timer (minimum 1 s). Tool stdout is a sanitised pipe with no terminal —
-carriage returns, cursor control and even colour are stripped.
-
-### Or with no setup: the band above the prompt (0.7.0, Claude Code only)
-
-The plugin also ships a **mod** (`hooks/register.tsx`) that draws the same rows
-above the prompt. It needs no `settings.json` edit — it loads with the plugin —
-and has room for six rows, with the bars in one column.
-
-- `/progress-bar` toggles it; `/progress-bar on|off|auto` sets the mode, and the
-  choice is remembered across sessions.
-- **`auto` is the default**: the band draws only while no status line is polling
-  the daemon. Wire the status line and the band steps aside, so the same job is
-  never drawn twice.
-- It only reads: one local `GET /jobs?session=…&view=mod` a second while a job
-  is live, every two seconds otherwise. It never starts the daemon.
-
-When the user asks for progress "in the window" and has no status line, point
-them at the band first — it is already on. Offer the status line when they want
-the rows somewhere a mod cannot draw, or are on Codex.
-
-Use it as the whole status line, in `~/.claude/settings.json`:
-
-```json
-{"statusLine": {"type": "command",
-                "command": "python3 <plugin>/scripts/statusline.py",
-                "refreshInterval": 1}}
-```
-
-**`refreshInterval` is what makes it animate.** Without it the line repaints
-only on events (a new assistant message, `/compact` finishing) and a running
-job looks frozen.
-
-Or append it to a status line you already have:
-
-```python
-spec = importlib.util.spec_from_file_location("pc", "<plugin>/scripts/statusline.py")
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-rows = m.render(payload.get("session_id"))     # None when idle
-if rows:
-    lines.append(rows)
-```
-
-Rows are scoped to the session (server-side), capped at 3, and label subagent
-work with the agent's name. Colour works here even though it is stripped from
-tool output.
-
-Two rules any replacement must keep:
-
-- **never spawn the daemon** — producers do that; a status line that did would
-  start daemons because somebody looked at their prompt
-- **never block** — a 250 ms timeout and a silent failure, because a missing
-  progress row is a far smaller problem than a frozen status line, which is
-  usually carrying other information too
-
-### Set it up on request
-
-When the user asks to wire this up ("set up the progress status line", "show
-progress in my status line"), do the edit for them — `~/.claude/settings.json`:
-
-1. **No `statusLine` configured** → set it to `scripts/statusline.py` (absolute
-   plugin path) with `"refreshInterval": 1`, as above.
-2. **A status line already exists** → keep it and wrap it:
-   `"command": "python3 <plugin>/scripts/statusline_wrap.py -- <their command>"`
-   — runs their command unchanged and appends the progress rows.
-
-Then tell the user to restart the session (settings load at startup). Whether a
-renderer is actually wired is knowable without guessing: `/health` reports
-`statusline_seen` — true once any status line has polled this daemon boot. The
-live page shows a setup banner while it is false, the advisory nudge adds a
-weekly tip, and the once-per-upgrade notice offers this setup — so if the user
-seems unaware of the integration, offer it once.
+With neither wired, point the user at the band first: it is already on.
 
 ## Tap: a measured bar from a build's own output
 
 `scripts/progress_tap.py` is a transparent pipe filter: stdin is forwarded
-byte-for-byte, and position lines the tool already prints become a **measured**
-`items` bar — no estimate needed. Maven's reactor prints `[3/15]`; git prints
-`Receiving objects: 42% (12345/29292)`:
+byte-for-byte, and position lines the tool already prints become the bar — no
+estimate needed. Maven's reactor prints `[3/15]`; git prints
+`Receiving objects: 42% (12345/29292)`; pytest prints `[ 42%]`:
 
 ```bash
 mvn -B verify 2>&1              | progress_tap.py 'gate: full' > build.log
 git clone --progress <url> 2>&1 | progress_tap.py 'clone linux' --pattern git
+pytest 2>&1                     | progress_tap.py 'tests' --pattern pytest
+cargo build 2>&1                | progress_tap.py 'build' --pattern cargo
 tool 2>&1 | progress_tap.py migrate --pattern 'count:^migrated' --total 800
 ```
 
-Patterns: `maven` (default) · `git` · `batch` · `count:<regex>`. Two caveats
+Patterns, by what the tool prints:
+
+- **measured** (done and total): `maven` (default) · `git` · `docker` · `ninja` · `ratio`
+- **percent**: `pytest` · `cmake` · `rsync` · `percent`
+- **counted** (one line per unit; pass `--total` if you can compute it):
+  `gradle` · `cargo` · `go` · `jest` · `dotnet` · `terraform` · `ansible` ·
+  `batch` · `count:<regex>`
+
+`ratio` and `percent` are generic, for a tool with no preset. The command per
+tool, the flag some need to print position into a pipe, and how to compute a
+total are in [examples/taps.md](../../examples/taps.md). A tool with no position
+output (`npm install`, `ffmpeg`) cannot be tapped — use `run`.
+
+Two caveats
 the callers must own: a pipeline's `$?` is the **tap's** — read
 `${PIPESTATUS[0]}` for the build's verdict — and git prints no position in a
 pipe unless `--progress` is passed. If the channel is down the tap degrades to

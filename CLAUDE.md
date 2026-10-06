@@ -91,6 +91,8 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > lint hook; audit runs on SessionStart + PostCompact.
 
 - 2026-10-06 — **record-to-verify** — recording real sessions for the docs found 2 defects that validate + green unit tests had passed: context-bar wrapped a row, mindmap dropped Shift+Enter breaks. Why: tests cover the arithmetic, not what the engine or browser actually draws.
+- 2026-10-06 — **stack-neutral-sweep** — 4 general plugins assumed Java/Maven (review-agents, security-audit, freshness, tap); each now detects the stack. Why: "language-agnostic" in a description is a claim, not a property.
+- 2026-10-06 — **examples-are-tests** — progress 0.8.0 ships runnable examples and the harness runs each one; writing them found the subshell-ownership orphan bug. Why: an example nobody runs is documentation that rots.
 - 2026-10-06 — **second-output-yields** — progress 0.7.0: band mod defaults to `auto` and hides when a status line polls; it asks with `view=mod` so its own polls don't count. Why: two outputs of one channel must not draw a job twice.
 - 2026-10-06 — **port-the-walk** — linter 0.5.0 (#47): discovery rules are a port of the skills CLI's directory walk, diffed against the real CLI on 5 layouts. Why: the ticket's README-derived premise (skills arrays) was wrong.
 - 2026-10-02 — **cadence-change-retest** — archive-decisions.py was fine quarterly but broke once compact ran it repeatedly: dropped the format note, swallowed its own teaser. Why: a new call frequency is a new requirement — re-test idempotency.

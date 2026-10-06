@@ -66,8 +66,9 @@ def main() -> int:
         elif not wired:
             lead += (" Also: the status-line integration is NOT set up — the "
                      "session's live bars are not visible in the prompt. "
-                     "Offer once to wire it (the SKILL.md 'Status line' "
-                     "section has the exact settings.json edit; user can "
+                     "Offer once to wire it (the skill's "
+                     "references/in-the-window.md has the exact "
+                     "settings.json edit, and the no-setup band; user can "
                      "just say \"set up the progress status line\").")
 
         print(json.dumps({"hookSpecificOutput": {

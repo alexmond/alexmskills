@@ -67,6 +67,7 @@ FINISHED_KEEP_HOURS = 24     # removal: done/failed rows are dropped after this
 DONE_LINGER_SECONDS = 20     # visibility: finished rows stay in the live view
 ORPHAN_KEEP_MINUTES = 30     # orphans are already dead — a much shorter leash
 FINISHED_KEEP_MAX = 60       # hard cap, so a busy day cannot grow the view
+MAX_POST_BYTES = 256 * 1024
 LIVE_STATES = ("running", "stalled")   # what /jobs returns when no state is asked for
 ETA_CUTOVER_FRACTION = 0.10  # current-run rate fully trusted past this progress
 STALL_GAP_FACTOR = 3.0       # stalled when silent > factor * learned p95 gap
@@ -1023,7 +1024,16 @@ def run_daemon(bind_port: int | None = None,
             if self.path != "/jobs":
                 self._json({"error": "not found"}, 404)
                 return
-            length = int(self.headers.get("Content-Length", 0))
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+            except ValueError:
+                length = -1
+            # A job record is a few hundred bytes. Refuse to read a body
+            # whose declared size is absurd, rather than read it and then
+            # decide — any local process can post here.
+            if not 0 <= length <= MAX_POST_BYTES:
+                self._json({"error": "body too large"}, 413)
+                return
             try:
                 rec = json.loads(self.rfile.read(length))
                 if not isinstance(rec, dict) or "uid" not in rec:

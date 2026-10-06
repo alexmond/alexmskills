@@ -13,7 +13,7 @@
       "displayName": "Evolving CLAUDE.md",
       "source": "./plugins/evolving-claude-md",
       "description": "Turn CLAUDE.md into a living Decisions & Learnings log that stays bounded: a format contract enforced at write time by a PreToolUse lint, four downward pressures (strike-through, merge, graduation, quarterly archive), staleness detection against the tree, and a tree-grounded coverage check for the essentials a file can pass every size threshold and still be missing.",
-      "version": "1.8.1",
+      "version": "1.9.0",
       "category": "self-learning",
       "keywords": [
         "claude-md",
@@ -28,7 +28,7 @@
       "displayName": "Memory Hygiene",
       "source": "./plugins/memory-hygiene",
       "description": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes — supersession is strike-through plus a dated correction.",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "category": "self-learning",
       "keywords": [
         "memory",
@@ -118,7 +118,7 @@
       "displayName": "Security Audit",
       "source": "./plugins/security-audit",
       "description": "Scan a codebase for OWASP-style vulnerabilities (injection, path traversal, unsafe reflection/deserialization, secrets).",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "workflow",
       "keywords": [
         "security",
@@ -131,8 +131,8 @@
       "name": "review-agents",
       "displayName": "Review Agents",
       "source": "./plugins/review-agents",
-      "description": "Specialist review subagents for Java/Maven projects — code review, test running, and dependency/CVE auditing on lighter model tiers. No-write by construction: Write and Edit are withheld, so they read, build, and report without touching the working tree.",
-      "version": "1.1.1",
+      "description": "Specialist review subagents for any stack — code review, test running, and dependency/CVE auditing on lighter model tiers. Each finds the project's own build, lint and audit commands (Maven, Gradle, npm, Python, Go, Rust, .NET, Ruby and more) instead of assuming one. No-write by construction: Write and Edit are withheld, so they read, build, and report without touching the working tree.",
+      "version": "1.2.0",
       "category": "review",
       "keywords": [
         "agents",
@@ -192,7 +192,7 @@
       "displayName": "Progress Channel",
       "source": "./plugins/progress-channel",
       "description": "One visible channel for every long-running process — local sweeps, backgrounded commands, and work handed to external systems. The server that serves the live progress page IS the tracker: a tiny stdlib Python daemon holds live jobs in memory (auto-spawned by the first producer, single writer, no store locking), persists only the duration history to an append-only JSONL, and derives liveness — orphans by checking producer pids directly, stalls from each job's own learned cadence — with learned ETAs and pre-start forecasts.",
-      "version": "0.7.1",
+      "version": "0.8.0",
       "category": "workflow",
       "keywords": [
         "progress",

@@ -36,7 +36,9 @@ memory dir. Silent when healthy; otherwise a `📇` banner lists rot candidates:
   outside this tree (`infra/secrets.md` cited from another repo is a pointer,
   not rot *here*) are never checked. Flagged at ≥2 missing tokens per file
   (`min_missing_artifacts`).
-- **Stale version pin** — memory states `jhelm 1.3.1`, `pom.xml` now says
+- **Stale version pin** — memory states `jhelm 1.3.1`, the build file (Maven,
+  Gradle, npm, Go, Cargo, Python, .NET, Bundler, Composer, or a toolchain pin
+  file such as `.nvmrc`) now says
   `1.5.0`. Fires only when *every* parseable build-file spec contradicts the
   claim; release lines (`4.1.x`), examples, and struck-through lines stay
   silent.

@@ -1,6 +1,6 @@
 {
   "name": "memory-hygiene",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Keep agent-written memory files from rotting: re-verifies pinned facts against the tree (version pins, sequence facts, vanished paths) and flags what has become wrong, checks MEMORY.md index drift both ways, and enforces the memory format contract at write time. Flags, never deletes — supersession is strike-through plus a dated correction.",
   "author": {
     "name": "Alex Mondshain",

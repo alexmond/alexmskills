@@ -1,6 +1,6 @@
 {
   "name": "security-audit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Scan a codebase for OWASP-style vulnerabilities and report findings with file:line locations and remediation guidance.",
   "author": {
     "name": "Alex Mondshain",

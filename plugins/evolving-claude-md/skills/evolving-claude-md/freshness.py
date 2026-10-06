@@ -14,9 +14,11 @@ a way a stored fact becomes wrong rather than merely old:
   R1  vanished artifact   — the fact cites a backticked path/class/flag that
                             `git grep` can no longer find anywhere in the tree.
   R2  stale version pin   — the fact states a version for a dependency/tool
-                            that a build file in the tree now contradicts
-                            (pom.xml, package.json, Cargo.toml, go.mod,
-                            pyproject.toml — parsed loosely, stdlib only).
+                            that a build file in the tree now contradicts.
+                            Maven, Gradle, npm, Go, Cargo, Python, .NET,
+                            Bundler, Composer and the toolchain pin files
+                            (.nvmrc, .python-version, .tool-versions, …) —
+                            parsed loosely, stdlib only.
   R3  stale sequence fact — the fact claims "latest/current is `V27`" (any
                             <prefix><N> file-naming scheme) while the tree now
                             contains a higher-numbered sibling.
@@ -111,7 +113,8 @@ def missing_artifacts(tokens: list[str], repo_root: str = ".",
 # Names for which a dotless single-number claim ("Java 21", "node 20") is
 # still a version. For every other name the claim must contain a dot, or it
 # is more likely prose ("next 3 steps") than a pin.
-_SINGLE_NUMBER_OK = {"java", "jdk", "node", "nodejs", "go", "python"}
+_SINGLE_NUMBER_OK = {"java", "jdk", "node", "nodejs", "go", "python",
+                     "ruby", "php", "dotnet"}
 
 
 def _norm(name: str) -> str:
@@ -182,6 +185,9 @@ def build_versions(repo_root: str = ".") -> dict[str, dict]:
                     add("spring-boot", v.group(1), "pom.xml")
         for m in re.finditer(r"<([A-Za-z][\w-]*(?:\.[\w-]+)*?)\.version>([^<]+)</\1\.version>", txt):
             add(m.group(1), m.group(2), "pom.xml")
+        # The compiler level is the Java version when no <java.version> says so.
+        for m in re.finditer(r"<maven\.compiler\.(?:release|source|target)>(\d+)<", txt):
+            add("java", m.group(1), "pom.xml")
 
     # package.json — real JSON, so parse it as JSON.
     txt = read("package.json")
@@ -230,7 +236,142 @@ def build_versions(repo_root: str = ".") -> dict[str, dict]:
                 add("python", m.group(1), fname)
             for m in re.finditer(r'"([A-Za-z][A-Za-z0-9_.-]*)\s*(==|>=|~=)\s*([\w.]+)[^"]*"', txt):
                 add(m.group(1), m.group(2) + m.group(3), fname)
+
+    _more_build_versions(repo_root, add, read)
     return out
+
+
+def _camel(name: str) -> str:
+    """springBootVersion-style names → `spring-Boot`, so they normalize like prose."""
+    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "-", name)
+
+
+# Files that pin exactly one tool's version, by convention.
+_TOOLCHAIN_FILES = {
+    ".nvmrc": "node", ".node-version": "node", ".python-version": "python",
+    ".java-version": "java", ".ruby-version": "ruby", ".go-version": "go",
+    "rust-toolchain": "rust",
+}
+# asdf / mise spell some tools differently from how people write them.
+_TOOL_ALIASES = {"nodejs": "node", "golang": "go", "dotnet-core": "dotnet"}
+
+
+def _more_build_versions(repo_root: str, add, read) -> None:
+    """The ecosystems beyond the original four. Same contract: loose, stdlib
+    only, and silent on anything it does not recognise. Split out so the
+    reader list can grow without build_versions becoming one long scroll."""
+
+    # --- Gradle ------------------------------------------------------------
+    # Version catalog: the [versions] table is the single source of truth.
+    txt = read(os.path.join("gradle", "libs.versions.toml"))
+    if txt:
+        section = ""
+        for line in txt.splitlines():
+            s = line.strip()
+            if s.startswith("["):
+                section = s.strip("[]").lower()
+            elif section == "versions":
+                m = re.match(r'([A-Za-z0-9_.-]+)\s*=\s*"([^"]+)"', s)
+                if m:
+                    add(_camel(m.group(1)), m.group(2), "gradle/libs.versions.toml")
+    txt = read("gradle.properties")
+    if txt:
+        for m in re.finditer(r"(?m)^\s*([A-Za-z][\w.]*?)[._]?[vV]ersion\s*=\s*(\S+)\s*$", txt):
+            add(_camel(m.group(1)), m.group(2), "gradle.properties")
+    for fname in ("build.gradle", "build.gradle.kts"):
+        txt = read(fname)
+        if not txt:
+            continue
+        for m in re.finditer(
+                r"(?:JavaLanguageVersion\.of|jvmToolchain)\s*\(\s*(\d+)\s*\)"
+                r"|(?:source|target)Compatibility\s*=\s*(?:JavaVersion\.VERSION_)?[\"']?(\d+)\b", txt):
+            add("java", m.group(1) or m.group(2), fname)
+        for m in re.finditer(
+                r"id\s*\(?\s*[\"']([\w.-]+)[\"']\s*\)?\s*version\s*\(?\s*[\"']([^\"'$]+)[\"']", txt):
+            add(m.group(1), m.group(2), fname)
+            if m.group(1) == "org.springframework.boot":
+                add("spring-boot", m.group(2), fname)
+        m = re.search(r"kotlin\s*\(\s*[\"']jvm[\"']\s*\)\s*version\s*[\"']([^\"'$]+)[\"']", txt)
+        if m:
+            add("kotlin", m.group(1), fname)
+        # "group:artifact:version" coordinates.
+        for m in re.finditer(r"[\"']([\w.-]+):([\w.-]+):(\d[\w.+-]*)[\"']", txt):
+            add(m.group(2), m.group(3), fname)
+
+    # --- .NET --------------------------------------------------------------
+    txt = read("global.json")
+    if txt:
+        try:
+            sdk = (json.loads(txt).get("sdk") or {}).get("version")
+        except (ValueError, AttributeError):
+            sdk = None
+        if isinstance(sdk, str):
+            add("dotnet", sdk, "global.json")
+    try:
+        root_files = sorted(os.listdir(repo_root))
+    except OSError:
+        root_files = []
+    for fname in root_files:
+        if not (fname.endswith((".csproj", ".fsproj", ".vbproj"))
+                or fname in ("Directory.Build.props", "Directory.Packages.props")):
+            continue
+        txt = read(fname)
+        if not txt:
+            continue
+        m = re.search(r"<TargetFramework>\s*net(\d+\.\d+)", txt)
+        if m:
+            add("dotnet", m.group(1), fname)
+            add(".NET", m.group(1), fname)
+        for m in re.finditer(
+                r"<Package(?:Reference|Version)\s+Include=\"([^\"]+)\"\s+Version=\"([^\"]+)\"", txt):
+            add(m.group(1), m.group(2), fname)
+
+    # --- Ruby --------------------------------------------------------------
+    txt = read("Gemfile")
+    if txt:
+        m = re.search(r"(?m)^\s*ruby\s+[\"']([^\"']+)[\"']", txt)
+        if m:
+            add("ruby", m.group(1), "Gemfile")
+        # One constraint only. A second one makes it a range, and a range is
+        # uncertain — _parse_spec turns the comma into silence.
+        for m in re.finditer(
+                r"(?m)^\s*gem\s+[\"']([\w-]+)[\"']\s*,\s*[\"']([^\"']+)[\"']"
+                r"(\s*,\s*[\"'][^\"']*\d[^\"']*[\"'])?", txt):
+            spec = m.group(2).replace("~>", "~").strip()
+            add(m.group(1), spec + ("," if m.group(3) else ""), "Gemfile")
+
+    # --- PHP ---------------------------------------------------------------
+    txt = read("composer.json")
+    if txt:
+        try:
+            data = json.loads(txt)
+        except ValueError:
+            data = {}
+        if isinstance(data, dict):
+            for sect in ("require", "require-dev"):
+                d = data.get(sect)
+                if isinstance(d, dict):
+                    for k, v in d.items():
+                        if isinstance(v, str) and not k.startswith(("ext-", "lib-")):
+                            add(k.rsplit("/", 1)[-1], v, "composer.json")
+
+    # --- Toolchain pin files -------------------------------------------------
+    for fname, tool in _TOOLCHAIN_FILES.items():
+        txt = read(fname)
+        if txt:
+            first = txt.strip().splitlines()[0].strip() if txt.strip() else ""
+            add(tool, re.sub(r"^(?:ruby-|v)", "", first), fname)
+    txt = read("rust-toolchain.toml")
+    if txt:
+        m = re.search(r'channel\s*=\s*"([^"]+)"', txt)
+        if m:
+            add("rust", m.group(1), "rust-toolchain.toml")
+    for fname in (".tool-versions", "mise.toml", ".mise.toml"):
+        txt = read(fname)
+        if not txt:
+            continue
+        for m in re.finditer(r'(?m)^\s*([A-Za-z][\w-]*)\s*(?:=\s*"?|\s)\s*v?(\d[\w.]*)"?\s*$', txt):
+            add(_TOOL_ALIASES.get(m.group(1).lower(), m.group(1)), m.group(2), fname)
 
 
 def _contradicts(claim: str, raw_spec: str):
@@ -274,8 +415,11 @@ def stale_version_pins(text: str, repo_root: str = ".",
     for norm_name, slot in versions.items():
         if deadline is not None and time.monotonic() > deadline:
             break
+        # Not as the tail of a file name or path: `OrderService.java:88:17` is
+        # a file and a line number, not Java 88 (found calibrating on 71
+        # repos, 2026-10). A bare leading dot is fine — that is `.NET 8.0`.
         name_rx = re.compile(
-            r"\b" + r"[\s._/-]?".join(re.escape(p) for p in norm_name.split())
+            r"(?<!\w[./\\-])\b" + r"[\s._/-]?".join(re.escape(p) for p in norm_name.split())
             + r"\b[\s:=@]{1,3}v?(\d+(?:\.\d+)*)(?!\.?\d)",
             re.I,
         )

@@ -140,17 +140,39 @@ progress.py daemon                       # foreground (debug); auto-spawned othe
 
 `mirror`'s live job doubles as a lease: a second watcher for the same `--source` refuses to start while the first is alive.
 
-=== Tap: measured bars for Maven and git (0.5.0)
+=== Tap: a bar from the tool's own output (0.5.0, 14 more tools in 0.8.0)
 
-`progress_tap.py` is a transparent pipe filter (generalized from the production tap in a large multi-module project's build gate): stdin passes through byte-for-byte, and the position lines the tool already prints — Maven's reactor `[3/15]`, git's `Receiving objects: 42% (12345/29292)` — become a *measured* `items` bar rather than a time estimate:
+`progress_tap.py` is a transparent pipe filter (generalized from the production tap in a large multi-module project's build gate): stdin passes through byte-for-byte, and the position lines the tool already prints become the bar — the tool's own count, not a time estimate:
 
 [source,bash]
 ----
 mvn -B verify 2>&1              | progress_tap.py 'gate: full' > build.log
 git clone --progress <url> 2>&1 | progress_tap.py 'clone linux' --pattern git
+pytest 2>&1                     | progress_tap.py 'tests' --pattern pytest
+cargo build 2>&1                | progress_tap.py 'build' --pattern cargo
+docker build --progress=plain . 2>&1 | progress_tap.py 'image' --pattern docker
 ----
 
-Patterns: `maven` (default), `git`, `batch`, `count:<regex>` with `--total`. Read `${PIPESTATUS[0]}` for the build's verdict (a pipeline's `$?` is the tap's), and pass `--progress` to git in a pipe. Daemon down? It degrades to `cat`, silently — a bar is never worth a broken build. The advisory nudge suggests the tap automatically for Maven/Gradle/make and long git operations (`clone`, `fetch`, `pull`, `lfs`, `submodule`).
+[cols="1,3,3"]
+|===
+| Kind | Patterns | What the tool prints
+
+| Measured
+| `maven` (default), `git`, `docker`, `ninja` (also Meson and Bazel), and the generic `ratio`
+| Done *and* total on the line — `[3/15]`, `(12345/29292)`, `[build 3/9]`. The bar is exact.
+
+| Percent
+| `pytest`, `cmake`, `rsync`, and the generic `percent`
+| Its own percentage — `[ 42%]`. The bar is the tool's number.
+
+| Counted
+| `gradle`, `cargo`, `go`, `jest` (and Vitest), `dotnet`, `terraform`, `ansible`, `batch`, and your own `count:<regex>`
+| One line per finished unit, with no denominator. The bar shows a count, and from the second run an estimate learned from the first. Pass `--total` when you can compute it.
+|===
+
+`ratio` and `percent` cover a tool with no preset. Some tools print nothing into a pipe without a flag — Gradle needs `--console=plain`, Docker `--progress=plain`, rsync `--info=progress2`, git `--progress`; https://github.com/alexmond/alexmskills/blob/main/plugins/progress-channel/examples/taps.md[`examples/taps.md`] has the full command for each tool and how to compute a total. A tool with no position output at all (`npm install`, `ffmpeg`) cannot be tapped: wrap it with `run` and the channel learns its duration instead.
+
+Read `${PIPESTATUS[0]}` for the build's verdict (a pipeline's `$?` is the tap's). Daemon down? The tap degrades to `cat`, silently — a bar is never worth a broken build. An unknown pattern name is reported once on stderr instead of quietly matching nothing. The advisory nudge now suggests the tap with the right pattern and flag for each of these tools, and suggests `run` where no pattern exists.
 
 == From any script
 
@@ -170,6 +192,61 @@ progress.py finish $T
 If the loop lives inside a shell function, use an `EXIT` trap instead — an `ERR` trap does not fire inside a function without `set -E`, so the job would be left for the orphan sweep.
 
 `start` prints a token; the cross-invocation state lives in a token file, so `step` is stateless for the script and keeps the library's 1s POST throttle. Liveness anchors to the *calling script's* pid — a script that dies without `finish` is swept as orphaned like any other producer.
+
+== Integration examples (0.8.0)
+
+The plugin ships small runnable producers in https://github.com/alexmond/alexmskills/tree/main/plugins/progress-channel/examples[`examples/`]. Each is a complete program: copy it, replace the `sleep` with your work, and it reports itself. Each also runs the same with *no* channel — unset `PROGRESS_CLI` and it is a plain script — which is the pattern worth copying.
+
+[cols="1,2,3"]
+|===
+| You have | Start from | It shows
+
+| a shell loop
+| `bash-loop.sh`
+| start / step / finish, counters, a failure reported with where it stopped
+
+| a multi-stage script
+| `bash-pipeline.sh`
+| stages nested under a parent with one `export`, and an unmodified sub-script nesting itself
+
+| Python
+| `python_job.py`
+| the `Job` context manager, sub-jobs, an untracked fallback
+
+| Node / TypeScript
+| `node-job.mjs`
+| calling the CLI from another language, batching steps
+
+| Go
+| `go-job/main.go`
+| the same three calls, and a deferred finish that reports a panic
+
+| a Makefile
+| `Makefile`
+| wrapping targets as timed jobs
+
+| a build or test tool
+| `taps.md`
+| one pipe per tool
+|===
+
+No library is needed in any language. The contract is three CLI calls:
+
+[source,text]
+----
+start  --name <text> [--total N] [--pid PID]      -> prints a token
+step   <token> [-n N | --done N] [--detail text] [--count key=N]
+finish <token> [--fail "why" | --cancel]
+----
+
+Four habits the examples share:
+
+* *Close the job on every way out* — `trap … EXIT` in shell, a context manager in Python, `try/catch` in Node, `defer` in Go.
+* *Say who owns the job when you are not the direct caller.* The channel watches the process that started a job. From Node or Go, and from a shell function called inside `$( )`, that is a short-lived child, so pass `--pid` with the long-lived process's pid. Without it the job is swept as orphaned while the work is still running.
+* *Batch steps in a hot loop.* Each CLI call is a process; `step -n 50` every fifty items costs one.
+* *Never let the tracker fail the work.* Every helper swallows its own errors and returns an empty token.
+
+Every example is run by the plugin's test harness, with the channel and without it.
 
 == Sub-jobs: a pipeline and its current step (0.6.0)
 
@@ -246,7 +323,7 @@ Duration history is keyed by job *shape* — name + kind + order-of-magnitude of
 
 == Verify
 
-`python3 <plugin>/scripts/test-harness.py` — 123 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers, the shell start/step/finish trio, notify hook, trend detection, MCP handshake, advisory hook, status-line rendering, `eta~` stem matching, retention, the upgrade handshake, the tap's passthrough and Maven/git parsing, `statusline_seen` discovery, the whats-new notice, the wrap script). Runs in CI.
+`python3 <plugin>/scripts/test-harness.py` — 217 checks against a real daemon on an ephemeral port (auto-spawn, crash semantics, SIGKILL orphan sweep, throttling, shape-keyed history, ETA cutover, restart re-registration, lease refusal, degraded mode, concurrent producers, the shell start/step/finish trio, notify hook, trend detection, MCP handshake, advisory hook, status-line rendering, `eta~` stem matching, retention, the upgrade handshake, the tap's passthrough and Maven/git parsing, `statusline_seen` discovery, the whats-new notice, the wrap script). Runs in CI.
 
 == Claude Code vs Codex
 
