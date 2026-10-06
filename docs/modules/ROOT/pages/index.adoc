@@ -10,6 +10,10 @@ The emphasis is on **self-learning** tooling — skills that get better at _your
 A `CLAUDE.md` that prunes and graduates its own decisions. A delivery crew that re-tiers its roles from
 run history. A screenshot audit whose checklist tightens every time a defect slips past it.
 
+image::https://raw.githubusercontent.com/alexmond/alexmskills/main/plugins/progress-channel/demo/demo-claude-hero.gif[Recording of a real Claude Code session: Claude starts a Maven build, and the build's live progress bar and learned time-left appear in the session's status line,width=100%]
+
+_A real Claude Code session, recorded: xref:progress-channel.adoc[progress-channel] showing a build's live bar in the status line._
+
 [source,text]
 ----
 /plugin marketplace add alexmond/alexmskills
@@ -77,11 +81,6 @@ Guided procedures for a specific job, start to finish.
 | xref:progress-channel.adoc[progress-channel]
 | One visible channel for every long-running process — nested sub-jobs with rolled-up bars and time-left, learned per-job ETAs, pre-start forecasts, and stall/orphan detection derived from each job's own history.
 
-| xref:context-bar.adoc[context-bar]
-| A mod: the context window as a stacked bar above the prompt, one colour per `/context` category, toggled with `/context-bar`.
-| xref:usage-bar.adoc[usage-bar]
-| A mod: the 5-hour and 7-day rate-limit windows as bars above the prompt, with percent used and reset time, toggled with `/usage-bar`.
-
 | xref:ticket-triage.adoc[ticket-triage]
 | Backlog-drain loop: rank the open tickets, dispatch the startable ones in parallel (worktree-isolated, role-briefed, honest width), verify, merge, and re-triage on every completion.
 
@@ -90,6 +89,23 @@ Guided procedures for a specific job, start to finish.
 
 | xref:security-audit.adoc[security-audit]
 | Scans a codebase for OWASP-style vulnerabilities and reports them with remediation.
+|===
+
+== Mods
+
+Not skills: code that draws inside Claude Code itself. A mod has no instructions for the model to read and costs no tokens. xref:mods.adoc[What a mod is, and how these work together].
+
+image::mods-stacked.png[Both mods in one real Claude Code session: the context window as a stacked bar with a token legend, and the 5-hour and 7-day rate-limit bars beneath it,width=100%]
+
+[cols="1,3",options="header"]
+|===
+| Mod | What it draws
+
+| xref:context-bar.adoc[context-bar]
+| The context window as a stacked bar above the prompt, one colour per `/context` category, with a token legend. Toggled with `/context-bar`.
+
+| xref:usage-bar.adoc[usage-bar]
+| The 5-hour and 7-day rate-limit windows as bars above the prompt, green, then yellow from 70%, then red from 90%, with percent used and reset time. Toggled with `/usage-bar`.
 |===
 
 == Development reference

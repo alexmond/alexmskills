@@ -5,6 +5,10 @@ A `UserPromptSubmit` hook that watches every prompt you send Claude Code or Code
 
 Graduated to a stable `1.0.0` release on 2026-07-28 after clearing its own bar — nightly use across dozens of repos with rules mastered per repo. Development continues on the stable line (next: an eval harness for measured per-rule precision, and a Java MCP server).
 
+image::dashboard-mastery-dark.png[prompt-coach's local dashboard on the Mastery tab: rules grouped in six levels, each with its status, a mastery bar, and a bad and a good example prompt,width=100%]
+
+_The local dashboard. Every rule shows the mistake it catches, the fix, and how far you are from having mastered it. More views: xref:prompt-coach-config.adoc[Configuration & dashboard]._
+
 == Install
 
 [source,text]

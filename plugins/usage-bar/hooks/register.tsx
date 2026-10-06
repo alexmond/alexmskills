@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Reading } from '../types'
-import { LABELS, filled, tail } from './format'
+import { LABELS, filled, percent, resets, tone } from './format'
 
 const WIDTH = 10
 const isOn = atom({ plugin: 'usage-bar', key: 'isOn' } as const, true)
@@ -57,22 +57,33 @@ export const register: Register = on => {
     }
 
     const { Box, Text } = $.ui.resolve(e)
+    // The band holds ONE tree, so a mod that returns only its own hides every mod beneath it.
+    // Draw ours, then whatever the rest of the chain draws.
+    const below = await next(e)
+    const bars = now.windows.map(w => {
+      const n = filled(w.percentUsed, WIDTH)
+      // Green with room to spare, yellow from 70%, red from 90% (format.ts).
+      // Bar and figure share the colour, so the state reads from either: near
+      // the limit the bar is nearly full and the number is what still moves.
+      const color = tone(w.percentUsed)
+
+      return (
+        <Box>
+          <Text>{LABELS[w.kind] ?? w.kind} </Text>
+          <Text color={color}>{'█'.repeat(n)}</Text>
+          <Text dimColor>{'░'.repeat(WIDTH - n)}</Text>
+          <Text color={color}> {percent(w)}</Text>
+          <Text dimColor> {resets(w, now.at)}</Text>
+        </Box>
+      )
+    })
 
     return (
-      <Box columnGap={3} flexWrap="wrap">
-        {now.windows.map(w => {
-          const n = filled(w.percentUsed, WIDTH)
-          const color = w.percentUsed >= 90 ? 'error' : w.percentUsed >= 70 ? 'warning' : 'success'
-
-          return (
-            <Box>
-              <Text>{LABELS[w.kind] ?? w.kind} </Text>
-              <Text color={color}>{'█'.repeat(n)}</Text>
-              <Text dimColor>{'░'.repeat(WIDTH - n)}</Text>
-              <Text dimColor> {tail(w, now.at)}</Text>
-            </Box>
-          )
-        })}
+      <Box flexDirection="column">
+        <Box columnGap={3} flexWrap="wrap">
+          {bars}
+        </Box>
+        {below}
       </Box>
     )
   })

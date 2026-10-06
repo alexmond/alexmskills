@@ -13,6 +13,16 @@ unreleased/rolling (no global version).
 - **context-bar 0.1.0** — new plugin, and the marketplace's first Claude Code **mod** (a hooks module, no skill). Draws the context window as a stacked bar above the prompt, one colour per `/context` category, with a token legend; `/context-bar` toggles it. It reads the local `summary` breakdown, so a refresh after every turn sends no token-count requests.
 - **usage-bar 0.2.0** — new plugin, a mod. Draws the 5-hour and 7-day rate-limit windows as bars above the prompt with percent used, time left and the local reset time; `/usage-bar` toggles it. Refreshes every minute from what the last API response reported.
 
+### Fixed
+- **context-bar 0.1.1** — it hid every other mod drawing above the prompt. The band holds one tree, and the render hook returned only its own without calling `next(e)`. It now draws its bar and then whatever the rest of the chain draws (#48).
+- **usage-bar 0.2.1** — the same defect and the same fix: its bars and the mod beneath are drawn in one column (#49).
+- **context-bar 0.1.1** — the bar was a few cells too wide and wrapped a stub onto a second row. It was sized to `viewport.columns`; the engine keeps five cells at the right end of the band for its own `[-]` control, and exposes the usable width as `bodyColumns`, which the bar now uses. Validation and every unit test passed with the defect in place — it was found by the first recording of the mod in a real session.
+- **mindmap-prompt 0.2.4** — a line break typed with Shift+Enter was lost on commit, so a node could never have a description under its title: the goal's "Done = …" criterion merged into the title on the canvas and into the heading of the compiled prompt. `endEdit` read `innerText` after removing the `editing` class, the class that supplies `white-space: pre-wrap`, and `innerText` follows layout. It now reads the text first. The plugin's own older test screenshot shows the merged text; the UI test now asserts the title and description stay separate.
+
+### Changed
+- **usage-bar 0.2.1** — the percentage is drawn in the bar's colour as well as the bar, so the state reads from either; near a limit the bar is almost full regardless and the number is what still moves. The thresholds (green below 70%, yellow from 70%, red from 90%) moved out of the render code into a named, tested `tone()` with the boundaries pinned.
+- **docs** — mods get their own section: a new *Mods* overview page (what a mod is, cost, running several, trying one from a checkout, the file layout, Claude Code only), a *Mods* group in the navigation and on the landing page, a *Mods* section and table in the README, and both mod pages rewritten in full. Screenshots and recordings added where a plugin has something to see: both mods (live sessions, plus usage-bar's three colour states rendered by its own functions), mindmap-prompt (canvas and compiled prompt, from a map built through the UI), skill-linter and the evolving-claude-md compact plan (real terminal runs), and the existing recordings now embedded in the brainstorm-panel, progress-channel, prompt-coach and landing pages rather than only linked. Each new recording's `.tape` sits beside what it demos.
+
 ## 2026-10-02
 
 ### Added

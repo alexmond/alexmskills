@@ -6,11 +6,9 @@ Hand this skill a piece of targeted work and it decides who should be in the roo
 See xref:role-system.adoc[The Role System] for how panel seats are shared with the crew and evolve, and
 xref:role-system-usage.adoc#usage-sequence[Choosing & chaining] for how to chain it with research and crew.
 
-TIP: Watch it live: the repo ships a
-https://github.com/alexmond/alexmskills/blob/main/plugins/brainstorm-panel/demo/demo.gif[26-second demo GIF]
-of a real recorded session — roster gate, `go`, parallel seats, verdict — with its
-https://github.com/alexmond/alexmskills/blob/main/plugins/brainstorm-panel/demo/demo.tape[VHS tape source]
-committed alongside.
+image::https://raw.githubusercontent.com/alexmond/alexmskills/main/plugins/brainstorm-panel/demo/demo-hero.gif[Recording of a real Claude Code session: brainstorm-panel proposes a three-seat panel — a demo director, a repo-conventions skeptic and a recording practitioner — waits for go, then debates to a decision,width=100%]
+
+_A real recorded session. Asked to pick this repo's next demo workload, the skill proposes a three-seat panel and a coordination style, waits for `go`, runs the seats, and reports the decision. The https://github.com/alexmond/alexmskills/blob/main/plugins/brainstorm-panel/demo/demo.tape[VHS tape source] is committed alongside, with the https://github.com/alexmond/alexmskills/blob/main/plugins/brainstorm-panel/demo/demo.gif[full recording] including the typed request._
 
 == Install
 

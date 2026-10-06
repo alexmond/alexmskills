@@ -27,6 +27,10 @@ real recorded session runs a simulated Maven reactor build: the build registers
 itself, Claude answers and moves on, and the bar fills with a live ETA — nobody
 re-polls, nobody narrates:
 
+image::https://raw.githubusercontent.com/alexmond/alexmskills/main/plugins/progress-channel/demo/demo-claude-hero.gif[Recording of a real Claude Code session: Claude starts a Maven build and the build's live bar and time-left fill in the status line,width=100%]
+
+_The recording._ A still from it:
+
 image::progress-claude-statusline.png[A Claude Code session — the maven build's live bar and ETA in the status line,width=100%]
 
 Wiring it up is one edit to `~/.claude/settings.json` — or just ask Claude to *"set up the progress status line"* and it makes the edit for you (0.5.0):
@@ -43,6 +47,8 @@ Already have a status line? Wrap it instead — `statusline_wrap.py -- <your com
 If you installed the plugin and never found this integration, 0.5.0 finds *you*: the daemon knows whether any status line has ever polled it (`statusline_seen` on `/health` — no settings are parsed), and while none has, the live page shows a one-line setup banner, the advisory nudge adds an at-most-weekly tip, and a once-per-install/upgrade session notice offers the setup.
 
 === In the terminal — list, forecast, watch
+
+image::https://raw.githubusercontent.com/alexmond/alexmskills/main/plugins/progress-channel/demo/demo.gif[Recording: a workload registers itself, progress watch shows it live with a learned ETA, and progress forecast answers how long it will take before starting,width=100%]
 
 image::progress-cli-forecast.png[progress list shows live and finished jobs; forecast answers before starting,width=100%]
 
@@ -143,6 +149,8 @@ A job can run inside another, and every surface — the status line, the page, `
 ⏳ pipeline rome (italy) #119 ██████████████▏░░░  79% 26/34
 ⏳   ↳ ground-round ███████████████▉░░  89% 549/619
 ----
+
+image::https://raw.githubusercontent.com/alexmond/alexmskills/main/plugins/progress-channel/demo/demo-subjobs.gif[Recording: a release pipeline runs and each of its four stages appears nested under it with its own bar while the pipeline's bar and time-left roll up from the running stage,width=100%]
 
 image::progress-page-subjobs.png[The live page with a pipeline, its current step, and that step's own sub-step nested beneath it,width=100%]
 

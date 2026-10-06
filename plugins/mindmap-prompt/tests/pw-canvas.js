@@ -71,6 +71,15 @@ function check(name, ok, detail = "") {
     await page.keyboard.type("Done = every page passes contrast checks.");
     await page.keyboard.press("Escape");
 
+    // Shift+Enter must survive the commit: the title stays the title and the
+    // rest becomes the description under it. endEdit used to read innerText
+    // after dropping the `editing` class (the one supplying pre-wrap), which
+    // collapsed the break into a space and merged both into the heading.
+    check("Shift+Enter keeps a description line under the title",
+      (await page.locator(".node.d0 .cap").innerText()).trim() === "Ship dark mode" &&
+      /Done = every page/.test(await page.locator(".node.d0 .body").innerText()),
+      await page.locator(".node.d0 .txt").innerText());
+
     // --- a stray click on empty canvas must NOT make a node ----------------
     await page.mouse.click(1100, 700);
     await page.waitForTimeout(150);

@@ -76,33 +76,43 @@ export const register: Register = on => {
     }
 
     const { Box, Text } = $.ui.resolve(e)
-    const width = Math.max(10, (e.viewport?.columns ?? 80) - 2)
+    // bodyColumns, not viewport.columns: the engine keeps five cells at the
+    // right end of the band for its own `[-]`, and a bar sized to the whole
+    // terminal wraps a stub onto a second row.
+    const width = Math.max(10, e.props.bodyColumns)
     const widths = cells(snap.slices, snap.max, width)
     const percent = Math.round((snap.total / snap.max) * 100)
 
+    // The band holds ONE tree, so a mod that returns only its own hides every mod beneath it.
+    // Draw ours, then whatever the rest of the chain draws.
+    const below = await next(e)
+
     return (
       <Box flexDirection="column">
-        <Box>
-          {snap.slices.map((s, i) => (
-            <Text color={s.color} dimColor={s.kind !== 'used'}>
-              {(s.kind === 'used' ? '█' : s.kind === 'buffer' ? '▒' : '░').repeat(widths[i])}
-            </Text>
-          ))}
-        </Box>
-        <Box columnGap={2} flexWrap="wrap">
-          <Text dimColor>
-            {short(snap.total)}/{short(snap.max)} ({percent}%)
-          </Text>
-          {snap.slices.map(s => (
-            <Box>
-              <Text color={s.color}>{s.kind === 'used' ? '█' : s.kind === 'buffer' ? '▒' : '░'}</Text>
-              <Text dimColor>
-                {' '}
-                {s.name} {short(s.tokens)}
+        <Box flexDirection="column">
+          <Box>
+            {snap.slices.map((s, i) => (
+              <Text color={s.color} dimColor={s.kind !== 'used'}>
+                {(s.kind === 'used' ? '█' : s.kind === 'buffer' ? '▒' : '░').repeat(widths[i])}
               </Text>
-            </Box>
-          ))}
+            ))}
+          </Box>
+          <Box columnGap={2} flexWrap="wrap">
+            <Text dimColor>
+              {short(snap.total)}/{short(snap.max)} ({percent}%)
+            </Text>
+            {snap.slices.map(s => (
+              <Box>
+                <Text color={s.color}>{s.kind === 'used' ? '█' : s.kind === 'buffer' ? '▒' : '░'}</Text>
+                <Text dimColor>
+                  {' '}
+                  {s.name} {short(s.tokens)}
+                </Text>
+              </Box>
+            ))}
+          </Box>
         </Box>
+        {below}
       </Box>
     )
   })

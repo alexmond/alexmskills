@@ -56,6 +56,10 @@ The plugin ships `hooks/hooks.json` (pathed via `${CLAUDE_PLUGIN_ROOT}`), so the
 
 `/evolving-claude-md:compact` runs the four downward pressures as one reviewed edit, in the order that keeps lessons safe: supersede gaps, release mirrors (keep what a release *taught*, drop what it *shipped*), same-day merges, graduation into Conventions/Gotchas, mega-entry splits, stale checks — and the archive **last**. Archiving first is the mistake an ad-hoc compaction makes: lessons that should be standing rules end up in the quarterly file instead of the always-loaded one.
 
+image::evolving-compact-plan.png[The compaction plan for this repository's own CLAUDE.md: 51 entries, no supersede gaps, 29 release mirrors listed with the version each names, and 4 same-day clusters,width=100%]
+
+_The plan for this repository's own CLAUDE.md — a real run of the planner the command reads._
+
 Every edit is drafted with its exact text and shown before anything is written; `plan` stops there, `yes` skips the wait. The data comes from a read-only planner, `compact-claude-md.py`. Its graduation list finds a tag repeated three or more times — which misses lessons that recur by *theme* under different tags — so it also lists every entry about to age out, for the session to review first.
 
 Fixed along the way: `archive-decisions.py` was unsafe to run twice. Rebuilding the section from dated entries only, it dropped the section's format note, and an entry absorbed any undated line below it — so a second run archived the first run's teaser and left a new one reporting only its own count. It now parses the section line by line, keeps everything it doesn't archive in place, and merges into an existing quarter teaser.

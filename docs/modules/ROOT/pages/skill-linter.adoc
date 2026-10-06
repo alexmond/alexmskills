@@ -4,6 +4,10 @@
 
 A skill is only ever loaded on the strength of its description, and only ever *found* if its frontmatter is intact. Those are cheap to check and expensive to get wrong. `skill-linter` checks them, so the costly part of skill development — testing whether the thing actually works — is never spent on a typo.
 
+image::skill-linter-run.png[A real skill-linter run over four plugins: each skill is shown with its detected type, its findings with the reason and the fix, and a summary line reading 4 skills, 2 clean, 0 errors, 1 warning, 2 info,width=100%]
+
+_A real run over four of this marketplace's own plugins. Each finding names the rule, says why it matters, and says what to do._
+
 == Install
 
 [source,text]

@@ -40,16 +40,43 @@ export function line(windows: readonly Window[], nowMs: number): string | undefi
   return parts.length > 0 ? parts.join('  ·  ') : undefined
 }
 
-/** What follows a window's bar: `1% (resets in 4h45m · 6:00)`. */
-export function tail(w: Window, nowMs: number): string {
-  const head = `${Math.round(w.percentUsed)}%`
+/** `1%`: the figure beside a bar, drawn in the bar's own colour. */
+export function percent(w: Window): string {
+  return `${Math.round(w.percentUsed)}%`
+}
+
+/** `(resets in 4h45m · 6:00)`, or nothing when the window reports no reset. */
+export function resets(w: Window, nowMs: number): string {
   const at = w.resetsAt ? new Date(w.resetsAt) : undefined
 
   if (!at || Number.isNaN(at.getTime())) {
-    return head
+    return ''
   }
 
-  return `${head} (resets in ${left(at.getTime() - nowMs)} · ${clock(at, new Date(nowMs))})`
+  return `(resets in ${left(at.getTime() - nowMs)} · ${clock(at, new Date(nowMs))})`
+}
+
+/** What follows a window's bar: `1% (resets in 4h45m · 6:00)`. */
+export function tail(w: Window, nowMs: number): string {
+  const rest = resets(w, nowMs)
+
+  return rest ? `${percent(w)} ${rest}` : percent(w)
+}
+
+export const WARN_AT = 70
+export const DANGER_AT = 90
+
+/**
+ * The colour a window is drawn in: green with room to spare, yellow from
+ * `WARN_AT`, red from `DANGER_AT`. Theme names, so each terminal theme picks
+ * its own green, yellow and red.
+ */
+export function tone(percentUsed: number): 'success' | 'warning' | 'error' {
+  if (percentUsed >= DANGER_AT) {
+    return 'error'
+  }
+
+  return percentUsed >= WARN_AT ? 'warning' : 'success'
 }
 
 /** Filled cells of a `width`-cell bar; any use at all shows one cell. */

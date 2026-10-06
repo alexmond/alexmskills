@@ -650,11 +650,16 @@ function endEdit(id) {
   const el = document.getElementById(id);
   if (!el || !el.classList.contains("editing")) return;
   const txt = el.querySelector(".txt");
+  // Read BEFORE leaving edit mode. innerText follows layout, and `.editing`
+  // is what gives this element `white-space: pre-wrap` — drop the class first
+  // and a Shift+Enter line break collapses to a space, so a title could never
+  // get a description line under it.
+  const raw = txt.innerText;
   txt.contentEditable = "false";
   el.classList.remove("editing");
   const n = nodeOf(id);
   if (n) {
-    const v = txt.innerText.replace(/ /g, " ").replace(/\n{3,}/g, "\n\n").trim();
+    const v = raw.replace(/ /g, " ").replace(/\n{3,}/g, "\n\n").trim();
     if (v !== n.text) { n.text = v; markDirty(); }
   }
   render();

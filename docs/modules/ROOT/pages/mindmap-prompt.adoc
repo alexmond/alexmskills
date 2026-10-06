@@ -6,6 +6,14 @@ Some ideas don't arrive in order. You drop them, connect them, and *then* the sh
 
 The compile step is plain Python — no LLM, no network. The same map always produces the same prompt.
 
+image::mindmap-canvas.png[The mindmap canvas with a real map: the goal 'Add dark mode to the dashboard' in the centre with its Done criterion beneath, two features and their ideas branching right, and two constraints in red on the left,width=100%]
+
+_A map built on the canvas: the goal and its definition of done in the middle, features and ideas to the right, constraints — the things that must not change — in red on the left._
+
+image::mindmap-panel.png[The compiled prompt panel: the goal as the heading, the Done line, a section per feature with its ideas beneath, and a Constraints list,width=60%]
+
+_Press *Compile* and the map becomes an organized prompt: the goal as the heading, a section per branch, and the constraints gathered into their own list._
+
 == Install
 
 [source,text]

@@ -1,6 +1,25 @@
 import { expect, test } from 'claude-code/testing'
 
-import { filled, left, line, tail } from './format'
+import { DANGER_AT, WARN_AT, filled, left, line, percent, resets, tail, tone } from './format'
+
+test('tone is green with room, yellow from 70, red from 90', () => {
+  expect(tone(0)).toBe('success')
+  expect(tone(69.9)).toBe('success')
+  expect(tone(WARN_AT)).toBe('warning')
+  expect(tone(89.9)).toBe('warning')
+  expect(tone(DANGER_AT)).toBe('error')
+  expect(tone(140)).toBe('error')
+})
+
+test('the figure and the reset text are separate, so each takes its own colour', () => {
+  const now = new Date(2026, 9, 6, 1, 15).getTime()
+  const at = new Date(2026, 9, 6, 6, 0).toISOString()
+  const w = { kind: 'five_hour', percentUsed: 91.4, resetsAt: at }
+
+  expect(percent(w)).toBe('91%')
+  expect(resets(w, now)).toBe('(resets in 4h45m · 6:00)')
+  expect(resets({ kind: 'spend_limit', percentUsed: 5 }, now)).toBe('')
+})
 
 test('left keeps the two largest units', () => {
   expect(left((4 * 60 + 45) * 60_000)).toBe('4h45m')

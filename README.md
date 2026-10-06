@@ -7,7 +7,7 @@
 [![Validate Marketplace](https://github.com/alexmond/alexmskills/actions/workflows/validate.yml/badge.svg)](https://github.com/alexmond/alexmskills/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-alexmond.org-informational)](https://www.alexmond.org/alexmskills/)
-[![Plugins](https://img.shields.io/badge/plugins-22-8a63d2)](#the-catalog)
+[![Plugins](https://img.shields.io/badge/plugins-24-8a63d2)](#the-catalog)
 [![Codex](https://img.shields.io/badge/also%20runs%20in-Codex-555)](https://www.alexmond.org/alexmskills/codex/)
 
 <img src="plugins/progress-channel/demo/demo-claude-hero.gif" alt="A real Claude Code session: Claude starts a Maven build, and the build's live progress bar and learned time-left appear in the session's status line" width="100%">
@@ -111,6 +111,18 @@ It reads each prompt as you send it and, when one would go better, **rewrites it
 
 ---
 
+### 🗺️ Think in a map, ship a prompt — `mindmap-prompt`
+
+<img src="docs/modules/ROOT/assets/images/mindmap-map.png" alt="A mind map built on the canvas: the goal 'Add dark mode to the dashboard' with its definition of done beneath, two features and their ideas branching right, and two constraints in red on the left" width="100%">
+
+<p align="center"><sub>↓ &nbsp;<b>Compile</b></sub></p>
+
+<p align="center"><img src="docs/modules/ROOT/assets/images/mindmap-panel.png" alt="The compiled prompt: the goal as the heading, the Done line, a section per feature with its ideas beneath, and the constraints gathered into their own list" width="52%"></p>
+
+Some ideas don't arrive in order. Drop them on a canvas, connect them, mark what must not change — then press **Compile** and the map becomes an organized prompt. The compiler is plain code, not a model: the same map always gives the same prompt.
+
+---
+
 ### 📝 A CLAUDE.md that keeps itself current — `evolving-claude-md`
 
 ```text
@@ -126,6 +138,36 @@ It reads each prompt as you send it and, when one would go better, **rewrites it
 Decisions and gotchas land in a log with a format enforced on every edit. The log prunes, graduates stable lessons into conventions, archives the old, and **tells you when an entry has gone stale** — a path that no longer exists, a version that has moved on.
 
 When the audit says it's time, **`/evolving-claude-md:compact`** proposes the whole clean-up as one reviewed edit — lessons graduate into standing rules *before* the rest is archived, so nothing worth keeping leaves the file.
+
+---
+
+## Mods
+
+**Not skills — code that draws inside Claude Code itself.** A mod has no instructions for the model to read, costs no tokens, and makes no extra API requests. These two put what you'd otherwise have to ask for right above your prompt.
+
+<img src="docs/modules/ROOT/assets/images/mods-stacked.png" alt="Both mods in one real Claude Code session: the context window as a stacked bar with a token legend, and beneath it the 5-hour and 7-day rate-limit bars" width="100%">
+
+<sub>Both mods in one real session, recorded: your context window on top, your rate limits beneath.</sub>
+
+| Mod | | Version | What it draws |
+|---|:-:|---|---|
+| [`context-bar`](plugins/context-bar) | 🧩 | 0.1.1 | Your context window as a stacked bar, a colour per `/context` category. |
+| [`usage-bar`](plugins/usage-bar) | 🧩 | 0.2.1 | Your 5-hour and 7-day limits as bars: green, yellow, then red. |
+
+**`context-bar`** answers "what is filling my window?" without you asking: one segment per category, with a token legend, refreshed after every turn from a local estimate. Toggle it with `/context-bar`.
+
+**`usage-bar`** keeps your rate limits in view, and changes colour before they bite — green with room to spare, yellow from 70%, red from 90%:
+
+<img src="docs/modules/ROOT/assets/images/mod-usage-bar-states.png" alt="The three colour states of usage-bar: green at 34% and 12%, yellow at 78% and 71%, red at 94% and 91%" width="100%">
+
+<sub>The three states, drawn by the mod's own functions at sample percentages — a live recording can only show the state an account is really in.</sub>
+
+```text
+/plugin install context-bar@alexmskills
+/plugin install usage-bar@alexmskills
+```
+
+Install both and both draw: each adds its rows and then lets the next mod draw its own. Mods need a Claude Code build that loads hooks modules, and are Claude Code only. **[How mods work →](https://www.alexmond.org/alexmskills/mods/)**
 
 ---
 
@@ -146,12 +188,10 @@ When the audit says it's time, **`/evolving-claude-md:compact`** proposes the wh
 | [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
 | [`skill-linter`](plugins/skill-linter) | 🧠 | 0.4.3 | Lints `SKILL.md` against published guidance; every rule cited. |
 | [`progress-channel`](plugins/progress-channel) | 🔧 | 0.6.0 | Every long job as a live bar in your status line. |
-| [`context-bar`](plugins/context-bar) | 🔧 | 0.1.0 | Your context window as a stacked bar above the prompt. |
-| [`usage-bar`](plugins/usage-bar) | 🔧 | 0.2.0 | 5-hour and 7-day rate limits as bars above the prompt. |
 | [`ticket-triage`](plugins/ticket-triage) | 🔧 | 0.4.2 | Ranks the backlog and runs startable tickets in parallel. |
 | [`implement-issue`](plugins/implement-issue) | 🔧 | 1.0.1 | GitHub issue → branch → implement → verify → PR. |
 | [`screenshot-tour`](plugins/screenshot-tour) | 🔧 | 1.1.1 | A captioned, narrative-ordered screenshot deck of your product. |
-| [`mindmap-prompt`](plugins/mindmap-prompt) | 🔧 | 0.2.3 | Sketch a mind map; compile it into an organized prompt. |
+| [`mindmap-prompt`](plugins/mindmap-prompt) | 🔧 | 0.2.4 | Sketch a mind map; compile it into an organized prompt. |
 | [`maven-quality`](plugins/maven-quality) | 🔧 | 1.1.0 | Codestyle, PMD, JaCoCo and pre-commit for Maven/Java. |
 | [`security-audit`](plugins/security-audit) | 🔧 | 1.0.0 | OWASP-style scan: injection, traversal, deserialization, secrets. |
 | [`research-sweep`](plugins/research-sweep) | 🔍 | 1.2.2 | Parallel research agents, then adversarial verification. |
@@ -213,7 +253,7 @@ Try one without installing: `claude --plugin-dir ./plugins/dev-crew`.
 
 </details>
 
-**Using Codex?** Every plugin also ships a Codex manifest, and the repo carries a second marketplace at `.agents/plugins/marketplace.json`. 10 plugins port as-is, 6 ship a Codex tool translation, and 6 depend on Claude Code hooks for enforcement. **[Codex compatibility →](https://www.alexmond.org/alexmskills/codex/)**
+**Using Codex?** Every plugin also ships a Codex manifest, and the repo carries a second marketplace at `.agents/plugins/marketplace.json`. 9 plugins port as-is, 6 ship a Codex tool translation, and 9 depend on Claude Code hooks — the two mods among them, which are Claude Code only. **[Codex compatibility →](https://www.alexmond.org/alexmskills/codex/)**
 
 ---
 

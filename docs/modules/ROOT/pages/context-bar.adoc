@@ -1,8 +1,15 @@
 = Context Bar
 :navtitle: context-bar
 :description: Your context window as a stacked bar above the prompt.
+:raw: https://raw.githubusercontent.com/alexmond/alexmskills/main/plugins
 
 `/context` answers "what is filling my window" only when you ask. `context-bar` keeps the answer on screen: one stacked bar above the prompt, in the same colours `/context` uses.
+
+image::mod-context-bar.png[A real Claude Code session with context-bar: a stacked bar above the prompt with one coloured segment per category, and a legend reading 50.6k of 1.0m, with tokens for system prompt, system tools, custom agents, memory files, skills, messages, the autocompact buffer and free space,width=100%]
+
+_A real session, recorded. After one small turn the window is at 50.6k of 1.0m (5%); the legend names each segment._
+
+It is a xref:mods.adoc[mod]: code that draws inside Claude Code, with no skill and nothing for the model to read.
 
 == Install
 
@@ -11,7 +18,7 @@
 /plugin install context-bar@alexmskills
 ----
 
-It is a *mod*: a hooks module that draws inside Claude Code, with no skill and nothing for the model to read. It needs a Claude Code build that loads function-hook plugins.
+It needs a Claude Code build that loads hooks modules; see xref:mods.adoc#_install[Mods → Install].
 
 == Use it
 
@@ -20,18 +27,51 @@ It is a *mod*: a hooks module that draws inside Claude Code, with no skill and n
 /context-bar
 ----
 
-The command toggles the bar. It starts on.
+The command turns the bar off and on. It starts on, and replies `Context bar off.` or `Context bar on.` so you can see which way it went.
+
+image::{raw}/context-bar/demo/demo.gif[Recording: Claude answers a prompt, the context bar appears above the prompt, then /context-bar turns it off and on again,width=100%]
 
 == What it draws
 
-* One bar the width of the terminal. Each category gets cells in proportion to its tokens, and any non-empty category gets at least one cell.
-* Used categories are solid; free space is `░` and the autocompact buffer is `▒`.
-* A second line gives the total (`943.1k/1.0m (94%)`) and a legend with each category's tokens.
-* Deferred tool schemas are left out, because they sit outside the window.
+*The bar.* One row across the band above the prompt. Each category gets cells in proportion to its tokens, and any non-empty category gets at least one cell, so a small one never vanishes. The largest category absorbs the rounding, so the cells always add up to the full width.
+
+[cols="1,1,3",options="header"]
+|===
+| Cell | Drawn as | Meaning
+| `█` | solid, in the category's colour | tokens in use: system prompt, tools, agents, memory files, skills, messages
+| `▒` | dimmed | the autocompact buffer, held back so a compaction has room to run
+| `░` | dimmed | free space
+|===
+
+*The legend.* A second line gives the total — `50.6k/1.0m (5%)` — then each category with its colour swatch and token count, written the way `/context` writes them (`611`, `9.9k`, `1.0m`). On a narrow terminal the legend wraps onto more rows.
+
+*What is left out.* Deferred tool schemas are not drawn, because they sit outside the window until a tool is loaded.
+
+== When it updates
+
+* at session start,
+* after every turn,
+* after a compaction — the moment the picture changes most,
+* and when you switch it back on.
 
 == How it reads the numbers
 
-It asks the session for the `summary` breakdown after every turn and after a compaction. `summary` is a local estimate and sends no token-count requests, so the figures can differ slightly from `/context`, which counts exactly.
+It asks the session for the `summary` breakdown. `summary` is a local estimate: it sends *no* token-count requests, which is why a refresh after every turn is free. The cost is precision — the figures can differ slightly from `/context`, which counts exactly. Use the bar to see the shape of the window at a glance and `/context` when you need the exact number.
+
+== With other mods
+
+The band above the prompt holds one tree, so `context-bar` draws its two rows and then whatever the other mods there draw. With xref:usage-bar.adoc[usage-bar] installed too, the rate-limit bars appear directly beneath the legend:
+
+image::mods-stacked.png[context-bar and usage-bar in one session: the stacked context bar and its legend, with the 5-hour and 7-day rate-limit bars on the row beneath,width=100%]
+
+Version 0.1.0 returned only its own rows and hid every other mod in the band. That is fixed in 0.1.1.
+
+== Try it from a checkout
+
+[source,bash]
+----
+claude --plugin-dir ./plugins/context-bar
+----
 
 == Check it
 
@@ -40,3 +80,9 @@ It asks the session for the `summary` breakdown after every turn and after a com
 claude plugin validate plugins/context-bar
 claude plugin test plugins/context-bar
 ----
+
+The tests cover the layout arithmetic: cells per category, the one-cell minimum, and the token formatting. They cannot cover the width the engine really gives the band — the first live recording showed the bar a few cells too wide, wrapping a stub onto a second row, because it was sized to the terminal rather than to the band (the engine keeps five cells at the right for its own `[-]` control). It is now sized to the band's own width.
+
+== Claude Code vs Codex
+
+Claude Code only. A mod is written against Claude Code's hooks-module API; Codex has no surface for it. See xref:mods.adoc#_claude_code_vs_codex[Mods → Claude Code vs Codex].
