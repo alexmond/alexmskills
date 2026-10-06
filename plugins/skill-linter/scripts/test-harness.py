@@ -132,6 +132,26 @@ def t_matches_real_yaml():
         ('name: a\ndescription: Use when the user says "go".', True),
         ('name: a\ndescription: Use when asked.\n  Learns: a thing happens here.', False),
         ('name: a\ndescription: >\n  Use when asked. Folded body: still fine.', True),
+        # the colon does not have to open a continuation line to be fatal
+        ('name: a\ndescription: the `init` skill: `init` bootstraps', False),
+        ('name: a\ndescription: ends with a colon:', False),
+        ('name: a\ndescription: first\n  some mid: line', False),
+        ('name: a\ndescription: Use when the user says "go": then stop', False),
+        # ...and every colon YAML tolerates must stay legal
+        ('name: a\ndescription: see https://x.y/z, a 3:1 ratio, 10:30 and a:b', True),
+        ('name: a\ndescription: "quoted: fine"', True),
+        ('name: a\ndescription: "quoted\n  Multi: line is fine"', True),
+        ("name: a\ndescription: 'single: fine # not a comment'", True),
+        ('name: a\ndescription: |\n  literal: fine\n  two', True),
+        ('name: a\ndescription: x\nallowed-tools: Bash(git:*), Read', True),
+        ('name: a\ndescription: x\nmetadata: {internal: true, author: me}', True),
+        ('name: a\ndescription: x\nmetadata:\n  tags:\n    - a\n  internal: true', True),
+        # comments: cutting a value is legal, text AFTER the cut is not
+        ('name: a\ndescription: cut here #12 gone: yes', True),
+        ('name: a\ndescription: x\n# a comment line\nlicense: MIT', True),
+        ('name: a\ndescription: first\n  second #x\n  third', False),
+        # a scalar may start on the line after its key
+        ('name: a\ndescription:\n  starts on the next line\n  and continues', True),
     ]
     mism = []
     for block, want_ok in cases:
@@ -144,6 +164,266 @@ def t_matches_real_yaml():
             mism.append(f"{block[:40]!r} lint_ok={not err} yaml_ok={yaml_ok}")
     check("hand-rolled parser agrees with real YAML on valid/invalid", not mism,
           " | ".join(mism))
+
+
+def t_colon_on_the_keys_own_line():
+    """The second miss, and the reason #47 exists. The first guard looked only at
+    the START of a CONTINUATION line. `evolving-claude-md` kept its description
+    on one line — "…the built-in `init` skill: `init` bootstraps…" — so it
+    passed, shipped five releases, and was the one skill of 33 the skills CLI
+    refused to list. Calibration: 6 real skills caught, 0 false in 475."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        bad = skill(tmp, "oneline", "name: oneline\n" + GOOD +
+                    " Complements the `init` skill: `init` bootstraps the file.", BODY)
+        got = rules_for(bad)
+        check("a `word: ` on the key's own line is invalid frontmatter",
+              got == {"frontmatter-invalid"}, f"got {sorted(got)}")
+        tail = skill(tmp, "tail", "name: tail\n" + GOOD + " It covers these:", BODY)
+        check("a value ending in a bare colon is invalid frontmatter",
+              rules_for(tail) == {"frontmatter-invalid"}, str(sorted(rules_for(tail))))
+        for i, (why, front) in enumerate([
+                ("quoted", 'description: "Use when the user says \\"go\\". Note: quoted."'),
+                ("folded", "description: >\n  Use when the user says \"go\". Note: folded."),
+                ("URL / ratio / time", GOOD + " See https://e.x/a, the 3:1 ratio, 10:30."),
+                ("tool pattern", GOOD + "\nallowed-tools: Bash(git:*), Read"),
+                # Claude Code's own docs write hints this way; real YAML rejects
+                # it and Claude Code loads it anyway. Not ours to call broken.
+                ("bracketed hint", GOOD + "\nargument-hint: [module] [Test#method]")]):
+            ok = skill(tmp, f"ok{i}", f"name: ok{i}\n{front}", BODY)
+            check(f"a tolerated colon is not flagged ({why})",
+                  "frontmatter-invalid" not in rules_for(ok), str(sorted(rules_for(ok))))
+
+
+def t_strict_reader_rules():
+    """What a string-only parser hides and a real one acts on (skills.ts:
+    `typeof data.name !== 'string'` → skipped; `metadata.internal` → hidden)."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)
+        num = skill(tmp, "2048", f"name: 2048\n{GOOD}", BODY)
+        check("an all-digit name is a number to YAML, not a string",
+              "frontmatter-not-string" in rules_for(num), str(sorted(rules_for(num))))
+        yes = skill(tmp, "true", f"name: true\n{GOOD}", BODY)
+        check("`name: true` is a boolean", "frontmatter-not-string" in rules_for(yes))
+        quoted = skill(tmp, "1337", f'name: "1337"\n{GOOD}', BODY)
+        check("the same name quoted is a string and stays quiet",
+              "frontmatter-not-string" not in rules_for(quoted), str(sorted(rules_for(quoted))))
+        word = skill(tmp, "v2-tools", f"name: v2-tools\n{GOOD}", BODY)
+        check("a name that merely contains digits is not a number",
+              "frontmatter-not-string" not in rules_for(word))
+
+        cut = skill(tmp, "cut", "name: cut\n" + GOOD + " Closes issue #12 for good.", BODY)
+        check("a ` #` in an unquoted description is reported as a silent cut",
+              "frontmatter-comment-cut" in rules_for(cut), str(sorted(rules_for(cut))))
+        check("...and the description is what YAML keeps, not the full line",
+              lint.load_skill(cut).description.endswith("Closes issue"),
+              lint.load_skill(cut).description[-30:])
+        for why, front in [("no space before #", GOOD + " Closes issue#12 and C#."),
+                           ("quoted", 'description: "Use when the user says \\"go\\". See #12."'),
+                           ("folded", "description: >\n  Use when the user says \"go\". See #12.")]:
+            ok = skill(tmp, "nocut", f"name: nocut\n{front}", BODY)
+            check(f"a `#` that is not a comment is left alone ({why})",
+                  "frontmatter-comment-cut" not in rules_for(ok), str(sorted(rules_for(ok))))
+
+        hid = skill(tmp, "hid", f"name: hid\n{GOOD}\nmetadata:\n  internal: true", BODY)
+        check("metadata.internal is surfaced, as info — it is a choice, not a defect",
+              "metadata-internal" in rules_for(hid)
+              and all(f.level == lint.INFO for f in lint.check(lint.load_skill(hid))),
+              str(sorted(rules_for(hid))))
+        shown = skill(tmp, "shown", f"name: shown\n{GOOD}\nmetadata:\n  internal: false\n"
+                                    "  author: someone", BODY)
+        check("metadata.internal: false, and other metadata, say nothing",
+              rules_for(shown) == set(), str(sorted(rules_for(shown))))
+
+        late = skill(tmp, "late", "name: late\ndescription:\n  Use when the user says \"go\".\n"
+                                  "  Audits skill files against published guidance.", BODY)
+        check("a description that starts on the line after its key is not `missing`",
+              "description-missing" not in rules_for(late)
+              and "go" in lint.load_skill(late).description, str(sorted(rules_for(late))))
+
+
+def _catalog(tmp: Path, entries: str, plugins: dict[str, list[str]]) -> Path:
+    """A marketplace repo: plugins/<p>/skills/<path> for each listed path."""
+    root = tmp / "repo"
+    (root / ".claude-plugin").mkdir(parents=True)
+    (root / ".claude-plugin" / "marketplace.json").write_text(
+        '{"name": "m", "plugins": [' + entries + "]}", encoding="utf-8")
+    for plug, paths in plugins.items():
+        (root / "plugins" / plug / ".claude-plugin").mkdir(parents=True)
+        (root / "plugins" / plug / ".claude-plugin" / "plugin.json").write_text(
+            f'{{"name": "{plug}"}}', encoding="utf-8")
+        for rel in paths:
+            name = rel.split("=")[-1] if "=" in rel else rel.split("/")[-1]
+            d = root / "plugins" / plug / "skills" / rel.split("=")[0]
+            skill(d.parent, d.name, f"name: {name}\n{GOOD}", BODY)
+    return root
+
+
+def _lint_json(*argv: str) -> dict:
+    import contextlib, io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        lint.main([*argv, "--json", "--rules", "/nonexistent/learned.json"])
+    return json.loads(buf.getvalue())
+
+
+def t_discovery_matches_the_skills_cli():
+    """`npx skills add` finds skills by walking fixed directories, and every miss
+    is silent. cli_discover is a port of that walk (vercel-labs/skills v1.7.0),
+    checked against the real CLI on this layout: it listed exactly
+    alpha, declared, local — and so must the port."""
+    with tempfile.TemporaryDirectory() as t:
+        root = _catalog(Path(t), """
+            {"name": "p1", "source": "./plugins/p1"},
+            {"name": "p3", "source": "plugins/p3"},
+            {"name": "p4", "source": {"source": "github", "repo": "x/y"}},
+            {"name": "p5", "source": "./plugins/p5", "skills": ["./skills/group/declared"]}""",
+            {"p1": ["alpha", "alpha/inner", "group/deep"], "p2": ["unlisted"],
+             "p3": ["badsrc"], "p5": ["group/declared", "beta=alpha"]})
+        skill(root / "plugins" / "p1" / "skills", "hidden",
+              f"name: hidden\n{GOOD}\nmetadata:\n  internal: true", BODY)
+        skill(root / ".claude" / "skills", "local", f"name: local\n{GOOD}", BODY)
+        skill(root / "examples" / "ex", "demo", f"name: demo\n{GOOD}", BODY)
+        skill(root / "plugins" / "p1" / "tests" / "fixtures", "fix", f"name: fix\n{GOOD}", BODY)
+
+        ok = lambda d: not lint.cli_skip_reason(lint.load_skill(d / "SKILL.md"))
+        reached = lint.cli_discover(root, ok)
+        names = sorted({lint.load_skill(d / "SKILL.md").name for d in reached if ok(d)})
+        check("the port reaches exactly what the real CLI listed",
+              names == ["alpha", "declared", "local"], str(names))
+
+        out = _lint_json(str(root))
+        by = {}
+        for f in out["findings"]:
+            by.setdefault(f["rule"], []).append(f)
+        gone = {f["skill"]: f["message"] for f in by.get("skill-undiscoverable", [])}
+        check("an unlisted plugin's skill is undiscoverable, and the reason names the manifest",
+              "no entry in .claude-plugin/marketplace.json" in gone.get("p2/unlisted", ""),
+              str(gone))
+        check("a `source` without `./` is undiscoverable, and the reason quotes it",
+              "does not start with `./`" in gone.get("p3/badsrc", ""), str(gone.get("p3/badsrc")))
+        check("a skill inside another skill is undiscoverable",
+              "inside another skill" in gone.get("inner", ""), str(gone.get("inner")))
+        check("a skill two levels below a plugin's skills/ is undiscoverable",
+              "2 levels below" in gone.get("deep", ""), str(gone.get("deep")))
+        check("...unless the manifest declares it, which the CLI honours",
+              "declared" not in gone and "p5/declared" not in gone, str(sorted(gone)))
+        check("fixtures and examples are not shipped skills — never flagged",
+              not any(k in gone for k in ("fix", "demo", "ex/demo")), str(sorted(gone)))
+        check("an internal skill is reported as internal, not as undiscoverable",
+              "p1/hidden" not in gone and "metadata-internal" in by, str(sorted(gone)))
+        dup = " ".join(f["message"] for f in by.get("duplicate-skill-name", []))
+        check("two reachable skills with one name are reported once, with both paths",
+              len(by.get("duplicate-skill-name", [])) == 1 and "skills/alpha" in dup
+              and "skills/beta" in dup, dup)
+        check("a repo-local skill the CLI would publish is surfaced as info",
+              [f["level"] for f in by.get("agent-dir-skill-listed", [])] == [lint.INFO],
+              str(by.get("agent-dir-skill-listed")))
+
+        # A repo's own skills/ is walked three levels deep, never below a skill,
+        # never into node_modules. Real CLI on this layout: one, three, two.
+        plain = Path(t) / "plain"
+        for rel in ("one", "one/below", "c1/two", "c1/c2/three", "c1/c2/c3/four",
+                    "node_modules/pkg/nm"):
+            skill((plain / "skills" / rel).parent, rel.split("/")[-1],
+                  f"name: {rel.split('/')[-1]}\n{GOOD}", BODY)
+        got = sorted(d.name for d in lint.cli_discover(plain, ok))
+        check("the skills/ container walk stops at depth 3, at a skill, and at node_modules",
+              got == ["one", "three", "two"], str(got))
+
+        one = _lint_json(str(root / "plugins" / "p2" / "skills" / "unlisted"))
+        check("linting ONE skill does not audit the whole catalog",
+              not any(f["rule"] in ("skill-undiscoverable", "duplicate-skill-name")
+                      for f in one["findings"]), str([f["rule"] for f in one["findings"]]))
+
+
+def t_discovery_is_quiet_when_there_is_nothing_to_say():
+    """Half of this rule set's job is not firing."""
+    quiet = {"skill-undiscoverable", "duplicate-skill-name", "root-skill-shadows",
+             "agent-dir-skill-listed", "skills-sh-invalid", "skills-sh-unknown-skill"}
+    with tempfile.TemporaryDirectory() as t:
+        root = _catalog(Path(t), """
+            {"name": "p1", "source": "./plugins/p1"},
+            {"name": "p2", "source": "./plugins/p2"},
+            {"name": "far", "source": {"source": "github", "repo": "x/y"}}""",
+            {"p1": ["alpha", "beta"], "p2": ["gamma"]})
+        got = {f["rule"] for f in _lint_json(str(root / "plugins"))["findings"]} & quiet
+        check("a conventional marketplace layout is silent", not got, str(sorted(got)))
+
+    with tempfile.TemporaryDirectory() as t:
+        tmp = Path(t)                  # a project that keeps skills for itself: no catalog
+        (tmp / ".git").mkdir()
+        skill(tmp / ".claude" / "skills", "mine", f"name: mine\n{GOOD}", BODY)
+        skill(tmp / "docs" / "deep" / "er" / "still", "odd", f"name: odd\n{GOOD}", BODY)
+        skill(tmp / "vendor" / "x", "mine", f"name: mine\n{GOOD}", BODY)
+        got = {f["rule"] for f in _lint_json(str(tmp))["findings"]} & quiet
+        check("a repo that publishes nothing is not held to a catalog's rules",
+              not got, str(sorted(got)))
+
+    with tempfile.TemporaryDirectory() as t:
+        root = _catalog(Path(t), '{"name": "p1", "source": "./plugins/p1"}',
+                        {"p1": ["alpha", "beta"]})
+        skill(root.parent, "repo", f"name: repo\n{GOOD}", BODY)      # a root SKILL.md
+        fs = _lint_json(str(root / "plugins"))["findings"]
+        check("a root SKILL.md that hides the catalog is ONE finding, not one per skill",
+              [f["rule"] for f in fs if f["rule"] in quiet] == ["root-skill-shadows"]
+              and "2 other" in next(f["message"] for f in fs if f["rule"] == "root-skill-shadows"),
+              str([f["rule"] for f in fs]))
+
+
+def t_install_name_is_the_clis():
+    """sanitizeName (installer.ts): lowercase, every other run → `-`, trim."""
+    cases = {"My Skill": "my-skill", "a__b": "a__b", "../../etc": "etc", "v1.2": "v1.2",
+             "Foo/Bar Baz": "foo-bar-baz", "...": "unnamed-skill", "x" * 300: "x" * 255}
+    bad = {k[:20]: lint.cli_install_name(k) for k, v in cases.items()
+           if lint.cli_install_name(k) != v}
+    check("install directory names match the CLI's sanitizer", not bad, str(bad))
+    with tempfile.TemporaryDirectory() as t:
+        root = _catalog(Path(t), '{"name": "p1", "source": "./plugins/p1"}',
+                        {"p1": ["a=My Skill", "b=my-skill"]})
+        msgs = [f["message"] for f in _lint_json(str(root / "plugins"))["findings"]
+                if f["rule"] == "duplicate-skill-name"]
+        check("different names that install into one directory are reported",
+              len(msgs) == 1 and "`my-skill`" in msgs[0] and "`My Skill`" in msgs[0], str(msgs))
+
+
+def t_skills_sh_json():
+    """skills.sh ignores an invalid skills.sh.json and shows the default list
+    (skills.sh/docs/customize + its published JSON schema)."""
+    def run(cfg: str) -> dict[str, list[str]]:
+        with tempfile.TemporaryDirectory() as t:
+            root = _catalog(Path(t), '{"name": "p1", "source": "./plugins/p1"}',
+                            {"p1": ["alpha", "beta-two"]})
+            (root / "skills.sh.json").write_text(cfg, encoding="utf-8")
+            by: dict[str, list[str]] = {}
+            for f in _lint_json(str(root / "plugins"))["findings"]:
+                if f["rule"].startswith("skills-sh"):
+                    by.setdefault(f["rule"], []).append(f["message"])
+            return by
+
+    good = run('{"$schema": "https://skills.sh/schemas/skills.sh.schema.json", '
+               '"notGrouped": "top", "groupings": [{"title": "Core", "description": "d", '
+               '"skills": ["alpha", "Beta Two"]}]}')
+    check("a valid file is silent — matching ignores case, spaces and underscores",
+          good == {}, str(good))
+    check("broken JSON is reported", "skills-sh-invalid" in run('{"groupings": ['))
+    for why, cfg in [
+            ("missing groupings", '{"notGrouped": "top"}'),
+            ("empty groupings", '{"groupings": []}'),
+            ("unknown top-level key", '{"groupings": [{"title": "A", "skills": ["alpha"]}], "x": 1}'),
+            ("unknown group key", '{"groupings": [{"title": "A", "skills": ["alpha"], "icon": "x"}]}'),
+            ("empty title", '{"groupings": [{"title": "", "skills": ["alpha"]}]}'),
+            ("title over 120", '{"groupings": [{"title": "%s", "skills": ["alpha"]}]}' % ("t" * 121)),
+            ("empty skills", '{"groupings": [{"title": "A", "skills": []}]}'),
+            ("bad notGrouped", '{"notGrouped": "middle", "groupings": [{"title": "A", "skills": ["alpha"]}]}')]:
+        check(f"the schema is enforced ({why})", "skills-sh-invalid" in run(cfg), str(run(cfg)))
+    ghost = run('{"groupings": [{"title": "A", "skills": ["alpha", "renamed-away"]}]}')
+    check("a grouped name that matches no listable skill is reported by name",
+          any("`renamed-away`" in m for m in ghost.get("skills-sh-unknown-skill", [])), str(ghost))
+    twice = run('{"groupings": [{"title": "A", "skills": ["alpha"]}, '
+                '{"title": "B", "skills": ["alpha", "beta-two"]}]}')
+    check("a skill named in two groups is noted (first group wins)",
+          "skills-sh-duplicate" in twice and "skills-sh-invalid" not in twice, str(twice))
 
 
 def t_name_must_match_directory():
@@ -572,6 +852,12 @@ CHECKS = [
     t_colon_in_unquoted_value_is_an_error,
     t_nested_mapping_with_empty_value_is_valid,
     t_matches_real_yaml,
+    t_colon_on_the_keys_own_line,
+    t_strict_reader_rules,
+    t_discovery_matches_the_skills_cli,
+    t_discovery_is_quiet_when_there_is_nothing_to_say,
+    t_install_name_is_the_clis,
+    t_skills_sh_json,
     t_name_must_match_directory,
     t_description_rules,
     t_clean_skill_is_silent,

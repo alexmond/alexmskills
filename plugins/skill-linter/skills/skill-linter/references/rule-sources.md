@@ -13,6 +13,7 @@ their authority too.
 - [The three sources](#the-three-sources)
 - [Where the sources conflict](#where-the-sources-conflict)
 - [Rule provenance](#rule-provenance)
+  - [Discovery rules (0.5.0)](#discovery-rules-050) — what `npx skills add` will and will not list
 - [Guidance deliberately not enforced](#guidance-deliberately-not-enforced)
 
 ## The three sources
@@ -188,6 +189,67 @@ table from the same page.
 | `agent-wrong-tools-field` | error | Claude Code subagent docs; miss on 2026-08-18 | Agent definitions restrict tools via `tools:`; `allowed-tools:` is the slash-command field and is silently ignored — the agent then runs with the full tool set. Graduated straight to shipped because the damage class is a false safety claim. |
 | `agent-unknown-tool` | warn | same | A misspelled tool name grants nothing and fails silently at delegation time. |
 | agent `name-mismatch` / `description-no-trigger` | error / warn | same reasoning as the skill rules | Delegation addresses agents by name and selects them by description. |
+
+### Discovery rules (0.5.0)
+
+A skill reaches every agent that is not Claude Code through one installer:
+`npx skills add <owner>/<repo>`. Its install telemetry is also the only way onto
+[skills.sh](https://skills.sh) — there is no submission form. It finds skills by
+walking a fixed set of directories, and **every way of missing one is silent**:
+no error, the skill is just absent from the list.
+
+These rules are read out of the installer's source, not out of its README:
+
+| Short name | What it is |
+|---|---|
+| **skills-cli** | [vercel-labs/skills](https://github.com/vercel-labs/skills) v1.7.0 — `src/skills.ts` (`parseSkillMd`, `discoverSkills`), `src/plugin-manifest.ts` (`getPluginSkillPaths`), `src/installer.ts` (`sanitizeName`), `src/frontmatter.ts` (the `yaml` package, so YAML 1.2 core schema). |
+| **skills-sh** | [skills.sh/docs](https://skills.sh/docs) and its published [JSON schema](https://skills.sh/schemas/skills.sh.schema.json) for `skills.sh.json`. |
+
+`cli_discover` in the linter is a **port of the walk itself**, so the two cannot
+disagree about what is reachable. It was checked against the real CLI on five
+layouts (a 33-skill marketplace and four synthetic repos): identical lists every
+time. The harness pins two of those layouts.
+
+| Rule id | Level | Source | What the source does |
+|---|---|---|---|
+| `frontmatter-invalid` (widened) | error | skills-cli `parseSkillMd` | A YAML parse error is caught, a warning is printed, and the skill is skipped. The first version of this rule only looked for `word: ` at the start of a *continuation* line; a colon on the key's own line or mid-line is the same error. Found live: a description ending "…the built-in `init` skill: `init` bootstraps…" was the one skill of 33 the CLI would not list. |
+| `frontmatter-not-string` | warn | skills-cli `parseSkillMd` | "Ensure name and description are strings (YAML can parse numbers, booleans, etc.)" — `name: 2048` is a number and the skill is skipped. |
+| `frontmatter-comment-cut` | warn | YAML 1.2 §6.6 | ` #` opens a comment inside an unquoted scalar. "Closes issue #12 for good" is the description "Closes issue". No error anywhere. |
+| `metadata-internal` | info | skills-cli `parseSkillMd` | `metadata.internal === true` hides the skill unless `INSTALL_INTERNAL_SKILLS=1` or it is asked for by name. Info, not a warning: it is a choice. |
+| `skill-undiscoverable` | warn | skills-cli `discoverSkills`, `getPluginSkillPaths` | The walk visits: the repo root's children; `skills/` and 30 agent dirs, three levels deep; and `<source>/skills`, **one** level deep, for each marketplace plugin whose `source` is a string starting `./`. It never looks below a SKILL.md. The finding names which of these the skill failed. |
+| `root-skill-shadows` | warn | skills-cli `discoverSkills` | A SKILL.md at the repo root is returned alone — "If pointing directly at a skill, add it (and return early unless fullDepth is set)". |
+| `duplicate-skill-name` | warn | skills-cli `discoverSkills`, `sanitizeName` | `seenNames` keeps the first skill with a name and drops the rest. Separately, names that differ only in case or punctuation install into one directory, and the later overwrites the earlier. Claude Code namespaces by plugin, so neither shows up until someone installs. |
+| `agent-dir-skill-listed` | info | skills-cli `AGENT_PROJECT_SKILL_DIRS` | `.claude/skills`, `.agents/skills` and 28 more are searched in every repo, so a marketplace's own dev skills are published beside its catalog. |
+| `skills-sh-invalid` | warn | skills-sh schema | `groupings` required, 1–50; `title` 1–120 chars; `skills` 1–500 names of 1–120; `description` ≤ 500; `notGrouped` is `top` or `bottom`; no other keys. An invalid file is not rejected — the page falls back to the default list. |
+| `skills-sh-unknown-skill` · `skills-sh-duplicate` | warn · info | skills-sh docs | Names that match no skill are ignored; a skill in two groups shows in the first. Matching ignores case and treats spaces and underscores as hyphens. |
+
+**Three things this corrected.**
+
+1. *Marketplace `skills` arrays are not needed for discovery.* It is widely
+   repeated that each plugin entry must list its skills. The source says
+   otherwise: "Always add conventional skills/ directory for discovery". An
+   array is only needed for a skill that is *not* directly under `skills/`.
+2. *The rule's old message overclaimed.* It said a skill with a colon in its
+   description "loads with no name or description at all". Claude Code turned
+   out to load that skill fine — it is lenient where YAML is not. The message
+   now names who actually rejects it. A lenient loader is exactly why the
+   defect shipped for five releases.
+3. *Bracketed `argument-hint` values are left alone.* `argument-hint: [a] [b]`
+   is invalid YAML, but Claude Code's own docs write it that way and load it.
+   Flagging it would have been correct and useless.
+
+**Scope, on purpose.** Discovery checks run only for a repo that *publishes*
+skills (a marketplace, a root plugin, or a `skills.sh.json`) and only when the
+run covers more than one skill. A project that keeps a few skills for itself is
+not a catalog. And only *shipped* skills are judged — a SKILL.md under
+`tests/fixtures/` or `examples/` is not a miss.
+
+**Calibration (2026-10-06).** 475 SKILL.md files on one machine, compared
+against a real YAML parser: the widened `frontmatter-invalid` caught 6 distinct
+skills the old rule passed, all confirmed invalid, with 0 false positives.
+`frontmatter-comment-cut` fired on 0 of 475 — it ships on the strength of the
+spec, not of a sighting, and is the first candidate for removal if it stays
+silent.
 
 ## Guidance deliberately not enforced
 

@@ -32,6 +32,14 @@ slash-command field, silently ignored in agents) and ran with the full tool set
 for months. `agent-wrong-tools-field` is an *error* for that reason: it is not a
 style problem, it is a false safety claim.
 
+Since 0.5.0 it also checks **discovery**: whether `npx skills add` — the
+installer every agent other than Claude Code uses, and the only route onto
+skills.sh — will actually list each skill. Every way of missing one is silent.
+The check is a port of the installer's own directory walk, so it reports the
+cause: an unlisted plugin, a `source` without `./`, a skill nested too deep or
+inside another, a duplicate name, a root SKILL.md hiding the rest. It runs only
+for a repo that publishes skills, and only when the run covers a collection.
+
 ## Run it
 
 ```bash
@@ -61,6 +69,7 @@ The rules that matter most, in rough order of how much damage they do:
 | Rule | Why it earns a place |
 |---|---|
 | `frontmatter-invalid` · `name-mismatch` | The loader keys off the directory and the frontmatter. Get either wrong and the skill is unreachable — no amount of good content compensates. |
+| `skill-undiscoverable` · `duplicate-skill-name` | The skill works in Claude Code and is absent from `npx skills add`, with no error on either side. Nothing else will tell the author. |
 | `description-no-trigger` | The description is the *only* thing read when deciding whether to load a skill. One that never says when it applies is a skill that quietly never fires. |
 | `trigger-info-in-body` | A `## When to use` section in the body cannot influence a decision that was made before the body was read. |
 | `description-recites-workflow` | Steps in the description become a shortcut. An agent that can read the workflow there may act on it and never open the skill. |

@@ -61,6 +61,10 @@ class Skill:
     body: str = ""
     body_line0: int = 0              # 1-indexed line where the body starts
     text: str = ""
+    # What a strict YAML reader sees that the string-only dict above hides:
+    # {"quoted": keys whose value is always a string, "nested": {key: {sub: val}},
+    #  "comment": {key: text a ` #` cut off}}.
+    fm_extra: dict = field(default_factory=dict)
 
     @property
     def label(self) -> str:
@@ -79,7 +83,21 @@ def _scalar(raw: str) -> str:
     return raw
 
 
-def parse_frontmatter(text: str) -> tuple[dict, str, int, str]:
+# What YAML 1.2's core schema resolves an unquoted scalar to something OTHER
+# than a string: null, booleans, ints, floats. `name: 2048` is the number 2048.
+YAML_NONSTR = re.compile(
+    r"^(?:~|null|Null|NULL|true|True|TRUE|false|False|FALSE"
+    r"|[-+]?\d+|0o[0-7]+|0x[0-9a-fA-F]+"
+    r"|[-+]?(?:\.\d+|\d+(?:\.\d*)?)(?:[eE][-+]?\d+)?"
+    r"|[-+]?\.(?:inf|Inf|INF)|\.(?:nan|NaN|NAN))$")
+# Inside an unquoted scalar, `: ` (or a trailing `:`) is the mapping indicator
+# and ` #` opens a comment. Neither is text.
+PLAIN_COLON = re.compile(r"(\S*):(?:\s|$)")
+PLAIN_COMMENT = re.compile(r"(?:^|\s)#")
+NESTED_CHILD = re.compile(r"^\s+([A-Za-z_][\w-]*):\s*(.*)$")
+
+
+def parse_frontmatter(text: str, extra: dict | None = None) -> tuple[dict, str, int, str]:
     """Minimal YAML-subset parser: `key: value`, plus `>` and `|` block scalars.
 
     Hand-rolled rather than pyyaml so the linter runs anywhere with bare Python —
@@ -102,48 +120,124 @@ def parse_frontmatter(text: str) -> tuple[dict, str, int, str]:
     # EMPTY metadata — it silently never triggers. This linter's own description
     # shipped with "Learns: a defect it failed to catch becomes a new rule." and
     # was called clean, because a lenient parser launders broken frontmatter.
-    NESTED_MAP = re.compile(r"^\s*([A-Za-z][\w -]{0,40}):(\s|$)")
+    #
+    # The first guard only looked at the START of a CONTINUATION line. A colon
+    # on the key's own line, or mid-line, is the same error: a description
+    # ending "…the built-in `init` skill: `init` bootstraps…" sat on one line,
+    # passed, and was the one skill of 33 the skills CLI refused to list.
+    QUOTED, FLOW = "quoted", "flow"   # "…" / '…' and [..] / {..}: a colon is text or syntax
+    NESTED = "nested"          # `metadata:` with no value + indented children — valid YAML
 
     fm: dict[str, str] = {}
+    info = extra if extra is not None else {}
+    info.setdefault("quoted", set())
+    info.setdefault("nested", {})
+    info.setdefault("comment", {})
+    info.setdefault("collection", set())
     key, buf, mode = None, [], PLAIN
+    cut = False                # a ` #` comment already ended this plain scalar
+    body, body_line = "\n".join(lines[end + 1:]), end + 2
+
+    def plain(chunk: str, first: bool) -> tuple[str, str]:
+        """One line of an unquoted scalar → (text YAML keeps, error)."""
+        nonlocal cut
+        if chunk.lstrip().startswith("#"):
+            cut = True                 # a comment line ends the scalar, cutting nothing
+            return "", ""
+        if cut:
+            return "", (
+                f"text continues after a `#` comment inside the unquoted value of "
+                f"`{key}` — a comment ends a plain scalar, so YAML rejects the lines "
+                f"after it and the whole block with them. Quote the value or use a "
+                f"`>` block")
+        if not chunk.strip():
+            return "", ""
+        if c := PLAIN_COMMENT.search(chunk):
+            info["comment"].setdefault(key, chunk[c.start():].strip())
+            chunk, cut = chunk[:c.start()], True
+        if hit := PLAIN_COLON.search(chunk):
+            word = hit.group(1)[-40:]
+            return "", (
+                f"`{word}:` inside the unquoted value of `{key}` — YAML reads "
+                f"that as a nested mapping and rejects the whole block. Every "
+                f"strict reader (the `skills` CLI, anything on a real YAML "
+                f"parser) then skips the skill outright; a lenient loader may "
+                f"still take it, which is how this ships unnoticed. Quote the "
+                f"value, use a `>` block, or reword it")
+        return chunk.strip(), ""
 
     def flush() -> None:
         if key is None:
             return
+        if mode is NESTED:
+            rows = [b for b in buf if b.strip() and not b.lstrip().startswith("#")]
+            if not rows:
+                return
+            if any(PLAIN_COLON.search(b) or b.lstrip().startswith("- ") for b in rows):
+                # A sub-mapping or a list. Only its top level is ours to read.
+                dent = min(len(b) - len(b.lstrip()) for b in rows)
+                sub: dict[str, str] = {}
+                for b in rows:
+                    k = NESTED_CHILD.match(b)
+                    if k and len(b) - len(b.lstrip()) == dent:
+                        sub.setdefault(k.group(1), _scalar(k.group(2)))
+                info["nested"][key] = sub
+                info["collection"].add(key)
+            else:
+                # `description:` then the text on indented lines below — a plain
+                # scalar that merely starts on the next line. Skipping it as a
+                # "nested map" reported a present description as missing.
+                fm[key] = " ".join(b.strip() for b in rows)
+            return
         joined = "\n".join(buf) if mode is LITERAL else " ".join(b for b in buf if b)
-        fm[key] = _scalar(joined.strip()) if mode is PLAIN else joined.strip()
+        fm[key] = _scalar(joined.strip()) if mode in (PLAIN, QUOTED) else joined.strip()
+        if mode in (QUOTED, FOLDED, LITERAL):
+            info["quoted"].add(key)
 
-    NESTED = "nested"          # `metadata:` with no value + indented children — valid YAML
     for raw in lines[1:end]:
         m = re.match(r"^([A-Za-z_][\w-]*):\s*(.*)$", raw)
         if m and not raw.startswith((" ", "\t")):
             flush()
             key, rest = m.group(1), m.group(2).strip()
-            if rest in (">", "|", ">-", "|-", ">+", "|+"):
+            cut = False
+            if re.fullmatch(r"[>|][-+]?\d?[-+]?", rest):
                 buf, mode = [], (FOLDED if rest[0] == ">" else LITERAL)
-            elif rest == "":
+            elif rest == "" or rest.startswith("#"):
                 # An empty value followed by indented `sub: val` lines is a real
                 # nested mapping (antfu's skills: `metadata:` / `  author: …`).
                 # The guard below is only for text scalars that grow a colon —
                 # firing here called three perfectly valid skills broken.
                 buf, mode = [], NESTED
+            elif rest[0] in "\"'":
+                buf, mode = [rest], QUOTED
+            elif rest[0] in "[{":
+                buf, mode = [rest], FLOW
+                info["collection"].add(key)
+                if key == "metadata":
+                    info["nested"][key] = dict(
+                        (k, _scalar(v.strip())) for k, v in
+                        re.findall(r"([A-Za-z_][\w-]*):\s*([^,}]*)", rest))
             else:
-                buf, mode = [rest], PLAIN
+                kept, err = plain(rest, first=True)
+                if err:
+                    return {}, body, body_line, err
+                buf, mode = [kept], PLAIN
         elif key is not None:
             if mode is NESTED:
-                continue               # children of a nested map: not our schema, skip
-            if mode is PLAIN and (hit := NESTED_MAP.match(raw)):
-                return {}, "\n".join(lines[end + 1:]), end + 2, (
-                    f"`{hit.group(1)}:` on a continuation line of `{key}` — YAML reads "
-                    f"that as a nested mapping and rejects the whole block, so the "
-                    f"skill loads with no name or description at all and can never "
-                    f"trigger. Quote the value, use a `>` block, or reword it")
+                buf.append(raw)        # sorted out in flush(): a sub-mapping or a late-starting scalar
+                continue
+            if mode is PLAIN:
+                kept, err = plain(raw, first=False)
+                if err:
+                    return {}, body, body_line, err
+                buf.append(kept)
+                continue
             buf.append(raw.strip())
-        elif raw.strip():
-            return {}, "\n".join(lines[end + 1:]), end + 2, \
+        elif raw.strip() and not raw.lstrip().startswith("#"):
+            return {}, body, body_line, \
                 f"cannot parse frontmatter line: {raw.strip()[:60]!r}"
     flush()
-    return fm, "\n".join(lines[end + 1:]), end + 2, ""
+    return fm, body, body_line, ""
 
 
 # --------------------------------------------------------------- rule helpers
@@ -251,6 +345,30 @@ def check(sk: Skill) -> list[Finding]:
             "name and description are the only always-loaded part of a skill; if they "
             "do not parse, the skill cannot be selected at all", 1)
         return out                     # nothing else is meaningful without it
+
+    # --- what a strict reader sees (source: vercel-labs/skills, skills.ts) ---
+    ex = sk.fm_extra
+    for k in ("name", "description"):
+        raw = sk.frontmatter.get(k, "")
+        if k in ex.get("collection", ()) or (
+                raw and k not in ex.get("quoted", ()) and YAML_NONSTR.match(raw)):
+            add("frontmatter-not-string", WARN,
+                f"YAML reads `{k}` as a "
+                f"{'list or mapping' if k in ex.get('collection', ()) else 'number, boolean or null'}"
+                f", not text",
+                "the skills CLI requires both fields to be strings and skips the skill "
+                "otherwise — quote the value", 1)
+        if k in ex.get("comment", {}):
+            add("frontmatter-comment-cut", WARN,
+                f"` #` starts a YAML comment, so `{k}` ends before "
+                f"`{ex['comment'][k][:40]}`",
+                "everything from the ` #` on is dropped without an error — quote the "
+                "value or use a `>` block", 1)
+    if ex.get("nested", {}).get("metadata", {}).get("internal", "").lower() == "true":
+        add("metadata-internal", INFO,
+            "`metadata.internal: true` hides this skill from `npx skills add`",
+            "deliberate for work-in-progress skills; it is listed only with "
+            "INSTALL_INTERNAL_SKILLS=1 or when asked for by name", 1)
 
     if not sk.name:
         add("name-missing", ERROR, "frontmatter has no `name`", ln=1)
@@ -762,12 +880,376 @@ def apply_learned(sk: Skill, rules: list[dict]) -> list[Finding]:
 
 # --------------------------------------------------------------- driver
 
+# ------------------------------------------------- discovery (the skills CLI)
+#
+# `npx skills add <owner>/<repo>` is how a skill reaches the 30-odd agents that
+# are not Claude Code, and its install telemetry is the only way onto skills.sh.
+# It finds skills by walking a fixed set of directories, and every way of
+# missing one is silent: no error, the skill is simply not in the list.
+#
+# This is a port of `discoverSkills` (vercel-labs/skills v1.7.0, src/skills.ts
+# and src/plugin-manifest.ts) — the walk itself, not a summary of it, so the
+# linter and the CLI cannot disagree about what is reachable.
+
+CLI_SKIP_DIRS = {"node_modules", ".git", "dist", "build", "__pycache__"}
+CLI_CONTAINER_DEPTH = 3
+CLI_AGENT_DIRS = [
+    ".agents/skills", ".claude/skills", ".cline/skills", ".codebuddy/skills",
+    ".codex/skills", ".commandcode/skills", ".continue/skills", ".factory/skills",
+    ".github/skills", ".goose/skills", ".grok/skills", ".iflow/skills",
+    ".junie/skills", ".kilo/skills", ".kilocode/skills", ".kimchi/skills",
+    ".kiro/skills", ".minimax/skills", ".mux/skills", ".neovate/skills",
+    ".opencode/skills", ".openhands/skills", ".pi/skills", ".posit/assistant/skills",
+    ".qoder/skills", ".roo/skills", ".trae/skills", ".windsurf/skills",
+    ".zcode/skills", ".zencoder/skills",
+]
+
+
+def cli_install_name(name: str) -> str:
+    """`sanitizeName` (installer.ts): the directory a skill is installed into."""
+    out = re.sub(r"[^a-z0-9._]+", "-", name.lower())
+    return re.sub(r"^[.\-]+|[.\-]+$", "", out)[:255] or "unnamed-skill"
+
+
+def cli_skip_reason(sk: Skill) -> str:
+    """Why `parseSkillMd` would return null for this file, or ""."""
+    if sk.fm_error:
+        return "its frontmatter is not valid YAML"
+    ex = sk.fm_extra
+    for k in ("name", "description"):
+        raw = sk.frontmatter.get(k, "")
+        if not raw:
+            return f"it has no `{k}`"
+        if k in ex.get("collection", ()) or (
+                k not in ex.get("quoted", ()) and YAML_NONSTR.match(raw)):
+            return f"its `{k}` is not a string"
+    if ex.get("nested", {}).get("metadata", {}).get("internal", "").lower() == "true":
+        return "it is marked `metadata.internal`"
+    return ""
+
+
+def _inside(p: Path, base: Path) -> bool:
+    try:
+        p.resolve().relative_to(base.resolve())
+        return True
+    except (ValueError, OSError):
+        return False
+
+
+def _subdirs(d: Path) -> list[Path]:
+    try:
+        return sorted(c for c in d.iterdir() if c.is_dir())
+    except OSError:
+        return []
+
+
+def cli_plugin_bases(root: Path) -> tuple[list[Path], dict[str, str]]:
+    """Plugin directories the CLI will look inside, plus — for the entries it
+    will NOT — a `name → reason` map. Mirrors getPluginSkillPaths."""
+    bases: list[Path] = []
+    skipped: dict[str, str] = {}
+    try:
+        mk = json.loads((root / ".claude-plugin" / "marketplace.json").read_text("utf-8"))
+    except (OSError, ValueError):
+        return bases, skipped
+    if not isinstance(mk, dict):
+        return bases, skipped
+    meta = mk.get("metadata") if isinstance(mk.get("metadata"), dict) else {}
+    proot = meta.get("pluginRoot")
+    root_ok = proot is None or (isinstance(proot, str) and proot.startswith("./"))
+    for pl in mk.get("plugins") or []:
+        if not isinstance(pl, dict):
+            continue
+        name, src = str(pl.get("name", "?")), pl.get("source")
+        if not root_ok:
+            skipped[name] = f"`metadata.pluginRoot` is `{proot}`, which does not start with `./`"
+        elif src is not None and not isinstance(src, str):
+            continue                   # a remote plugin: its skills live in another repo
+        elif isinstance(src, str) and not src.startswith("./"):
+            skipped[name] = f"its marketplace `source` is `{src}`, which does not start with `./`"
+        else:
+            base = root / (proot or "") / (src or "")
+            if _inside(base, root):
+                bases.append(base)
+            else:
+                skipped[name] = f"its marketplace `source` `{src}` points outside the repo"
+    return bases, skipped
+
+
+def cli_discover(root: Path, loadable) -> list[Path]:
+    """Skill directories `npx skills add` reaches from `root`, in visit order.
+
+    `loadable(dir)` says whether the CLI would accept that directory's
+    SKILL.md; it matters because the walk only falls back to a full recursive
+    search when it has found NO acceptable skill."""
+    seen: list[Path] = []
+    good = 0
+
+    def take(d: Path) -> bool:
+        nonlocal good
+        if not (d / "SKILL.md").is_file():
+            return False
+        if d not in seen:
+            seen.append(d)
+            good += bool(loadable(d))
+        return True
+
+    if (root / "SKILL.md").is_file():
+        take(root)
+        if good:
+            return seen                # a root skill is the whole answer, by design
+
+    def walk(d: Path, max_depth: int, depth: int = 1) -> None:
+        for child in _subdirs(d):
+            if take(child) or depth >= max_depth or child.name in CLI_SKIP_DIRS:
+                continue               # nothing below a skill is ever visited
+            walk(child, max_depth, depth + 1)
+
+    walk(root, 1)
+    for rel in ["skills", "skills/.curated", "skills/.experimental", "skills/.system",
+                *CLI_AGENT_DIRS]:
+        walk(root / rel, CLI_CONTAINER_DEPTH)
+
+    bases, _ = cli_plugin_bases(root)
+    declared: list[Path] = []
+    try:
+        mk = json.loads((root / ".claude-plugin" / "marketplace.json").read_text("utf-8"))
+        entries = [p for p in (mk.get("plugins") or []) if isinstance(p, dict)]
+    except (OSError, ValueError, AttributeError):
+        entries = []
+    for base in bases:
+        for pl in entries:
+            for sp in pl.get("skills") or []:
+                if isinstance(sp, str) and sp.startswith("./") and _inside(base / sp, root) \
+                        and (base / sp).exists():
+                    declared.append((base / sp).parent)
+        declared.append(base / "skills")
+    try:
+        pj = json.loads((root / ".claude-plugin" / "plugin.json").read_text("utf-8"))
+        for sp in (pj.get("skills") or []) if isinstance(pj, dict) else []:
+            if isinstance(sp, str) and sp.startswith("./") and _inside(root / sp, root):
+                declared.append((root / sp).parent)
+        declared.append(root / "skills")
+    except (OSError, ValueError):
+        pass
+    for d in declared:
+        walk(d, 1)
+
+    if not good:                       # the only time the CLI searches everywhere
+        def deep(d: Path, depth: int = 0) -> None:
+            if depth > 5:
+                return
+            take(d)
+            for child in _subdirs(d):
+                if child.name not in CLI_SKIP_DIRS:
+                    deep(child, depth + 1)
+        deep(root)
+    return seen
+
+
+def distribution_root(start: Path) -> Path | None:
+    """The repo a path belongs to, IF that repo publishes skills. A project
+    that merely keeps a few skills for itself is not a catalog, and holding
+    it to a catalog's rules would be noise."""
+    start = start.resolve()
+    for d in [start, *start.parents]:
+        cp = d / ".claude-plugin"
+        if (cp / "marketplace.json").is_file() or (d / "skills.sh.json").is_file():
+            return d
+        if (d / ".git").exists():
+            return d if (cp / "plugin.json").is_file() else None
+    return None
+
+
+def check_discovery(root: Path, scanned: list[Path]) -> list[Finding]:
+    """Collection-level: what the skills CLI will and will not list for `root`."""
+    out: list[Finding] = []
+    cache: dict[Path, Skill] = {}
+
+    def sk_at(d: Path) -> Skill:
+        if d not in cache:
+            cache[d] = load_skill(d / "SKILL.md")
+        return cache[d]
+
+    reached = cli_discover(root, lambda d: not cli_skip_reason(sk_at(d)))
+    reached_set = set(reached)
+    bases, skipped = cli_plugin_bases(root)
+    base_set = {b.resolve() for b in bases}
+    shadow = (root / "SKILL.md").is_file() and reached == [root]
+
+    # 1. A shipped skill the CLI never visits.
+    hidden = 0
+    for f in scanned:
+        d = f.resolve().parent
+        if d in reached_set or not _inside(d, root):
+            continue
+        plugin = next((a for a in d.parents if (a / ".claude-plugin" / "plugin.json").is_file()
+                       and _inside(a, root)), None)
+        if plugin is None and _inside(d, root / "skills"):
+            plugin = root              # a plain `skills/` catalog at the repo root
+        if plugin is None or not _inside(d, plugin / "skills"):
+            continue                   # a fixture or an example, not a shipped skill
+        if shadow:
+            hidden += 1                # one cause, one finding — see below
+            continue
+        if plugin.resolve() not in base_set and plugin.resolve() != root.resolve():
+            try:
+                pname = json.loads((plugin / ".claude-plugin" / "plugin.json")
+                                   .read_text("utf-8")).get("name", plugin.name)
+            except (OSError, ValueError, AttributeError):
+                pname = plugin.name
+            why = skipped.get(pname) or (
+                f"plugin `{pname}` has no entry in .claude-plugin/marketplace.json, "
+                f"and the CLI only looks inside listed plugins")
+        else:
+            rel = d.relative_to((plugin / "skills").resolve())
+            holder = next((a for a in d.parents if a in reached_set), None)
+            why = (f"it sits inside another skill (`{holder.name}`), and the CLI never "
+                   f"looks below a SKILL.md" if holder else
+                   f"it is {len(rel.parts)} levels below `skills/`, and the CLI walks "
+                   f"the repo's own `skills/` {CLI_CONTAINER_DEPTH} levels deep"
+                   if plugin.resolve() == root.resolve() else
+                   f"it is {len(rel.parts)} levels below `skills/` and the CLI reads a "
+                   f"plugin's `skills/` one level deep — move it up, or name it in the "
+                   f"plugin's marketplace `skills` array")
+        out.append(Finding(sk_at(d).label, "skill-undiscoverable", WARN,
+                           f"`npx skills add` will not list this skill: {why}",
+                           "nothing reports the miss — the skill is just absent from the "
+                           "list, and from skills.sh, which is built from CLI installs"))
+
+    if hidden:
+        out.append(Finding(
+            "(collection)", "root-skill-shadows", WARN,
+            f"the repo root has its own SKILL.md, so `npx skills add` lists that one "
+            f"skill and stops — {hidden} other skill(s) here are never offered",
+            "a root SKILL.md means \"this repo IS a skill\" to the CLI; only "
+            "`--full-depth` looks further. Move it into `skills/<name>/`"))
+
+    # 2. Two reachable skills the CLI cannot tell apart.
+    by_name: dict[str, list[Path]] = {}
+    by_dir: dict[str, list[Path]] = {}
+    for d in reached:
+        sk = sk_at(d)
+        if cli_skip_reason(sk):
+            continue
+        by_name.setdefault(sk.name, []).append(d)
+        by_dir.setdefault(cli_install_name(sk.name), []).append(d)
+    rel = lambda d: str(d.relative_to(root)) if _inside(d, root) else str(d)
+    for name, dirs in sorted(by_name.items()):
+        if len(dirs) > 1:
+            out.append(Finding(
+                "(collection)", "duplicate-skill-name", WARN,
+                f"{len(dirs)} skills are named `{name}`: {', '.join(rel(d) for d in dirs)}",
+                "the skills CLI keeps whichever it reads first and drops the rest "
+                "without a word; Claude Code namespaces by plugin, so this only shows "
+                "up on install"))
+    for slug, dirs in sorted(by_dir.items()):
+        names = sorted({sk_at(d).name for d in dirs})
+        if len(names) > 1:
+            out.append(Finding(
+                "(collection)", "duplicate-skill-name", WARN,
+                f"{', '.join(f'`{n}`' for n in names)} all install into the directory `{slug}`",
+                "the CLI lowercases a name and turns every run of other characters "
+                "into `-`; the later install overwrites the earlier one"))
+
+    # 3. Repo-local skills published along with the catalog.
+    if (root / ".claude-plugin" / "marketplace.json").is_file():
+        local = [d for d in reached
+                 if any(_inside(d, root / a) for a in CLI_AGENT_DIRS)
+                 and not cli_skip_reason(sk_at(d))]
+        if local:
+            out.append(Finding(
+                "(collection)", "agent-dir-skill-listed", INFO,
+                f"{len(local)} skill(s) under an agent config dir are listed by "
+                f"`npx skills add` next to the catalog: "
+                f"{', '.join(rel(d) for d in local[:4])}{' …' if len(local) > 4 else ''}",
+                "the CLI searches `.claude/skills`, `.agents/skills` and 28 similar "
+                "dirs in every repo — fine if these are meant to ship; set "
+                "`metadata.internal: true` on any that are not"))
+
+    out += check_skills_sh(root, {sk_at(d).name for d in reached
+                                  if not cli_skip_reason(sk_at(d))})
+    return out
+
+
+def _slug(s: str) -> str:
+    return re.sub(r"[\s_]+", "-", s.strip().lower())
+
+
+def check_skills_sh(root: Path, names: set[str]) -> list[Finding]:
+    """`skills.sh.json` groups a repo's page on skills.sh. An invalid file is
+    not rejected — the page silently falls back to the flat default list."""
+    f = root / "skills.sh.json"
+    if not f.is_file():
+        return []
+    bad = lambda m: [Finding("skills.sh.json", "skills-sh-invalid", WARN, m,
+                             "skills.sh ignores an invalid file and shows the default "
+                             "list, so the grouping never appears and nothing says why")]
+    try:
+        cfg = json.loads(f.read_text("utf-8"))
+    except (OSError, ValueError) as exc:
+        return bad(f"not valid JSON: {exc}")
+    if not isinstance(cfg, dict):
+        return bad("the top level must be an object")
+    problems: list[str] = []
+    extra = sorted(set(cfg) - {"$schema", "schema", "notGrouped", "groupings"})
+    if extra:
+        problems.append(f"unknown key(s) {', '.join(f'`{k}`' for k in extra)}")
+    if "notGrouped" in cfg and cfg["notGrouped"] not in ("top", "bottom"):
+        problems.append('`notGrouped` must be "top" or "bottom"')
+    groups = cfg.get("groupings")
+    if not isinstance(groups, list) or not 1 <= len(groups) <= 50:
+        problems.append("`groupings` is required and takes 1–50 groups")
+        groups = []
+    listed: dict[str, str] = {}
+    out: list[Finding] = []
+    for i, g in enumerate(groups, 1):
+        if not isinstance(g, dict):
+            problems.append(f"group {i} is not an object")
+            continue
+        title, skills = g.get("title"), g.get("skills")
+        tag = f"group {i}" + (f" (`{title}`)" if isinstance(title, str) and title else "")
+        junk = sorted(set(g) - {"title", "description", "skills"})
+        if junk:
+            problems.append(f"{tag}: unknown key(s) {', '.join(f'`{k}`' for k in junk)}")
+        if not isinstance(title, str) or not 1 <= len(title) <= 120:
+            problems.append(f"{tag}: `title` must be 1–120 characters")
+        if "description" in g and (not isinstance(g["description"], str)
+                                   or len(g["description"]) > 500):
+            problems.append(f"{tag}: `description` must be text of at most 500 characters")
+        if not isinstance(skills, list) or not 1 <= len(skills) <= 500 or not all(
+                isinstance(s, str) and 1 <= len(s) <= 120 for s in skills):
+            problems.append(f"{tag}: `skills` takes 1–500 names of 1–120 characters")
+            continue
+        for s in skills:
+            if _slug(s) in listed and listed[_slug(s)] != tag:
+                out.append(Finding(
+                    "skills.sh.json", "skills-sh-duplicate", INFO,
+                    f"`{s}` is in {listed[_slug(s)]} and {tag}",
+                    "a skill appears once, in the first group that names it"))
+            listed.setdefault(_slug(s), tag)
+    if problems:
+        return bad("; ".join(problems[:6]) + (" …" if len(problems) > 6 else ""))
+    known = {_slug(n) for n in names}
+    ghosts = sorted(s for s in listed if s not in known)
+    if ghosts and known:
+        out.append(Finding(
+            "skills.sh.json", "skills-sh-unknown-skill", WARN,
+            f"{len(ghosts)} grouped name(s) match no skill the CLI can list: "
+            f"{', '.join(f'`{g}`' for g in ghosts[:6])}{' …' if len(ghosts) > 6 else ''}",
+            "names that match nothing are ignored without an error — usually a "
+            "rename the file did not follow"))
+    return out
+
+
 def load_skill(p: Path) -> Skill:
     text = p.read_text(encoding="utf-8", errors="replace")
-    fm, body, line0, err = parse_frontmatter(text)
+    extra: dict = {}
+    fm, body, line0, err = parse_frontmatter(text, extra)
     return Skill(path=p, dir=p.parent, name=str(fm.get("name", "")),
                  description=" ".join(str(fm.get("description", "")).split()),
-                 frontmatter=fm, fm_error=err, body=body, body_line0=line0, text=text)
+                 frontmatter=fm, fm_error=err, body=body, body_line0=line0, text=text,
+                 fm_extra=extra)
 
 
 def _is_agent_dir(d: Path) -> bool:
@@ -879,6 +1361,13 @@ def main(argv: list[str] | None = None) -> int:
                 f"the shared listing budget is ~15,000",
                 "skills past the cutoff silently never trigger; trim the longest "
                 "descriptions first"))
+
+    # Discovery: only for a repo that publishes skills, and only when the run
+    # covers a collection — linting one skill should not audit the catalog.
+    if len(skill_files) > 1:
+        roots = {distribution_root(Path(p)) for p in (args.paths or ["."])}
+        for root in sorted(r for r in roots if r):
+            findings += check_discovery(root, skill_files)
 
     if args.only:
         keep = {s.strip() for s in args.only.split(",")}

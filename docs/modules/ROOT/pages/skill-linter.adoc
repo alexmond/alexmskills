@@ -41,6 +41,8 @@ Four surfaces, grown one defect at a time:
 
 | `commands/*.md` | 0.4.0 | The docs merged commands into skills, so they get the skill rules with command semantics: the filename is the name, trigger rules apply only when Claude-invoked, and `allowed-tools` is *valid* here — the same string that's an error in agents.
 
+| Discovery — what `npx skills add` will list | 0.5.0 | A skill can work in Claude Code and be missing from the installer every other agent uses, with no error on either side. One skill of this catalog's 33 was, for five releases.
+
 | `hooks/hooks.json` + plugin structure | 0.4.0 | An unknown hook event never fires and never errors — silently dead, so it lints as an error against the documented 31-event list. `${CLAUDE_PLUGIN_ROOT}` targets must exist; components inside `.claude-plugin/` are the docs' verbatim "Common mistake".
 |===
 
@@ -64,6 +66,68 @@ The linter classifies each skill by shape — signal-based, multi-label: *workfl
 |===
 
 The rules themselves are researched, not invented: 0.3.0 came from a verified sweep — 87 claims across six source categories, 41 surviving adversarial verification (URL fetched, quote confirmed) — recorded in the repo's `docs/decisions/2026-08-18-skill-authoring-research.md` and cited per-rule in `references/rule-sources.md`, including where the official sources *contradict each other* and how each conflict is resolved.
+
+== Discovery: will the installer find it?
+
+`npx skills add <owner>/<repo>` is how a skill reaches the thirty-odd agents that are not Claude Code, and
+its install telemetry is the only way onto https://skills.sh[skills.sh] — there is no submission form. It finds
+skills by walking a fixed set of directories. *Every way of missing one is silent*: no error, the skill is just
+not in the list.
+
+The linter carries a port of that walk — the walk itself, read from the installer's source, not a summary of
+its README — so it can say which skills are unreachable and why.
+
+[cols="2,1,4"]
+|===
+| Rule | Level | What it catches
+
+| `frontmatter-invalid`
+| error
+| Frontmatter a real YAML parser rejects. The usual cause is a colon in an unquoted description: `…the init skill: it bootstraps…`. Claude Code is lenient and loads it anyway, which is how it ships unnoticed.
+
+| `skill-undiscoverable`
+| warn
+| A shipped skill the walk never visits. The finding names the cause: the plugin has no marketplace entry, its `source` does not start with `./`, the skill sits more than one level below `skills/`, or it sits inside another skill.
+
+| `root-skill-shadows`
+| warn
+| A `SKILL.md` at the repo root. To the installer that means "this repo is a skill", so it lists that one and stops.
+
+| `duplicate-skill-name`
+| warn
+| Two reachable skills with one name — the installer keeps the first and drops the rest — or two names that install into the same directory. Claude Code namespaces by plugin, so neither shows until someone installs.
+
+| `frontmatter-not-string`
+| warn
+| `name: 2048` is a number to YAML. The installer requires text and skips the skill.
+
+| `frontmatter-comment-cut`
+| warn
+| A space followed by `#` starts a YAML comment. "Closes issue #12 for good" is the description "Closes issue".
+
+| `skills-sh-invalid` · `skills-sh-unknown-skill`
+| warn
+| A `skills.sh.json` that breaks the published schema, or groups a skill that does not exist. Neither is rejected: the page silently shows the default list, or leaves the name out.
+
+| `metadata-internal` · `agent-dir-skill-listed` · `skills-sh-duplicate`
+| info
+| Choices worth seeing: a skill deliberately hidden, repo-local skills in `.claude/skills` that the installer will publish next to the catalog, a skill named in two groups.
+|===
+
+Three guards keep this quiet. It runs only for a repo that *publishes* skills — a marketplace, a root plugin,
+or one with a `skills.sh.json` — because a project that keeps a few skills for itself is not a catalog. It runs
+only when the lint covers more than one skill. And it judges only shipped skills: a `SKILL.md` under
+`tests/fixtures/` or `examples/` is not a miss.
+
+[NOTE]
+====
+A marketplace entry does *not* need a `skills` array for its skills to be found. The installer always looks in
+`<source>/skills`. An array is only needed for a skill that is not directly under that directory.
+====
+
+The port was checked against the real installer on five layouts — this catalog and four synthetic repos — and
+listed the same skills every time. The parser behind `frontmatter-invalid` was compared with a real YAML
+parser on 475 skill files: 6 broken skills newly caught, no false positives.
 
 == What it checks per skill
 

@@ -91,6 +91,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > lint hook; audit runs on SessionStart + PostCompact.
 
 - 2026-10-06 — **record-to-verify** — recording real sessions for the docs found 2 defects that validate + green unit tests had passed: context-bar wrapped a row, mindmap dropped Shift+Enter breaks. Why: tests cover the arithmetic, not what the engine or browser actually draws.
+- 2026-10-06 — **port-the-walk** — linter 0.5.0 (#47): discovery rules are a port of the skills CLI's directory walk, diffed against the real CLI on 5 layouts. Why: the ticket's README-derived premise (skills arrays) was wrong.
 - 2026-10-02 — **cadence-change-retest** — archive-decisions.py was fine quarterly but broke once compact ran it repeatedly: dropped the format note, swallowed its own teaser. Why: a new call frequency is a new requirement — re-test idempotency.
 - 2026-09-28 — **producer-field-whitelist** — progress 0.6.0: the server stores any record field, but `_token_record` copies a fixed list — a new field (`parent`) is silently dropped on the shell path unless added there too. Why: "the server accepts it" proved nothing about the producers.
 - 2026-09-18 — **gate-both-directions** — coach 1.5.0: gate gained `applies_only_on` + tip coverage + `model_rules` user switch; 3 Opus-5 rules added, 1 FP found on 1197 real prompts. Why: a gate that stopped the rule but left its mirror tip firing the same advice was not a gate.

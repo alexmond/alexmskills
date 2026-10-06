@@ -13,7 +13,7 @@
       "displayName": "Evolving CLAUDE.md",
       "source": "./plugins/evolving-claude-md",
       "description": "Turn CLAUDE.md into a living Decisions & Learnings log that stays bounded: a format contract enforced at write time by a PreToolUse lint, four downward pressures (strike-through, merge, graduation, quarterly archive), staleness detection against the tree, and a tree-grounded coverage check for the essentials a file can pass every size threshold and still be missing.",
-      "version": "1.8.0",
+      "version": "1.8.1",
       "category": "self-learning",
       "keywords": [
         "claude-md",
@@ -253,7 +253,7 @@
       "displayName": "Skill Linter",
       "source": "./plugins/skill-linter",
       "description": "Audit SKILL.md files against published skill-authoring guidance — frontmatter validity, whether the description actually says when to trigger, body size, progressive disclosure, and broken references. Zero-dependency Python checker with three severity levels, usable as a CI gate. Self-learning: a defect it fails to catch becomes a new rule in the consuming repo, and a rule that proves itself graduates into the shipped checker.",
-      "version": "0.4.3",
+      "version": "0.5.0",
       "category": "self-learning",
       "keywords": [
         "skills",
