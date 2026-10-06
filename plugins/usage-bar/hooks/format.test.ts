@@ -1,6 +1,11 @@
 import { expect, test } from 'claude-code/testing'
 
-import { DANGER_AT, WARN_AT, filled, left, line, percent, resets, tail, tone } from './format'
+import { DANGER_AT, LABELS, TITLE, WARN_AT, filled, left, line, percent, resets, tail, tone } from './format'
+
+test('the row names itself, so it is not read as part of the mod above it', () => {
+  expect(TITLE).toBe('Usage')
+  expect(Object.values(LABELS).includes(TITLE)).toBe(false)
+})
 
 test('tone is green with room, yellow from 70, red from 90', () => {
   expect(tone(0)).toBe('success')

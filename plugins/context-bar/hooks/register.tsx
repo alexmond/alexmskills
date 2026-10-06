@@ -93,11 +93,14 @@ export const register: Register = on => {
           <Box>
             {snap.slices.map((s, i) => (
               <Text color={s.color} dimColor={s.kind !== 'used'}>
-                {(s.kind === 'used' ? '█' : s.kind === 'buffer' ? '▒' : '░').repeat(widths[i])}
+                {(s.kind === 'used' ? '█' : s.kind === 'buffer' ? '▒' : '░').repeat(widths[i] ?? 0)}
               </Text>
             ))}
           </Box>
           <Box columnGap={2} flexWrap="wrap">
+            {/* Named, like every row in the shared band: unlabelled rows from
+                two mods read as one block. */}
+            <Text bold>Context</Text>
             <Text dimColor>
               {short(snap.total)}/{short(snap.max)} ({percent}%)
             </Text>

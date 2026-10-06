@@ -1,7 +1,7 @@
 {
   "name": "usage-bar",
   "description": "A Claude Code mod that draws the 5-hour and 7-day rate-limit windows as bars above the prompt, each with percent used, time left and the local reset time. Toggled with /usage-bar; refreshes every minute from the last API response, at no cost.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"

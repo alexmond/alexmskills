@@ -3,6 +3,10 @@ import type { Window } from '../types'
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 export const LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: 'spend' }
 
+// What the row is. Several mods share the band above the prompt, and a row of
+// bars with no name reads as part of whatever is drawn above it.
+export const TITLE = 'Usage'
+
 /** `4h45m`, `6d23h` or `12m`: the two largest units, as the old status line wrote it. */
 export function left(ms: number): string {
   const minutes = Math.max(0, Math.round(ms / 60_000))

@@ -1,8 +1,8 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import type { Reading } from '../types'
-import { LABELS, filled, percent, resets, tone } from './format'
+import { LABELS, TITLE, filled, percent, resets, tone } from './format'
 
 const WIDTH = 10
 const isOn = atom({ plugin: 'usage-bar', key: 'isOn' } as const, true)
@@ -16,16 +16,19 @@ async function refresh($: EngineInterface): Promise<void> {
 }
 
 export const register: Register = on => {
-  let stop: (() => void) | undefined
+  let timer: Timer | undefined
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'usage-bar',
       description: 'Toggle the rate-limit usage bar above the prompt',
     })
-    stop?.()
+    // `every` returns a Timer, not a function. Calling it — as this did until
+    // 0.2.2 — throws on the second session.start (a hot reload, a resume), and
+    // the first timer is never stopped.
+    timer?.cancel()
     // The countdown moves by the minute, so a minute is the finest tick worth drawing.
-    stop = $.clock.every(60_000, () => void refresh($))
+    timer = $.clock.every(60_000, () => void refresh($))
     void refresh($)
 
     return next(e)
@@ -81,6 +84,7 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column">
         <Box columnGap={3} flexWrap="wrap">
+          <Text bold>{TITLE}</Text>
           {bars}
         </Box>
         {below}

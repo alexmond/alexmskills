@@ -1,7 +1,7 @@
 {
   "name": "context-bar",
   "description": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"

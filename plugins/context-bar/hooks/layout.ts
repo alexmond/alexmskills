@@ -15,7 +15,7 @@ export function cells(slices: readonly Slice[], max: number, width: number): num
   )
   const biggest = out.indexOf(Math.max(...out))
   const drift = width - out.reduce((a, b) => a + b, 0)
-  out[biggest] = Math.max(0, out[biggest] + drift)
+  out[biggest] = Math.max(0, (out[biggest] ?? 0) + drift)
 
   return out
 }

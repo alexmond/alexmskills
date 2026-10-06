@@ -4,7 +4,7 @@
 // state the account is actually in, and that is usually green.
 //
 //   node --experimental-strip-types states.mjs
-import { LABELS, filled, percent, resets, tone } from '../hooks/format.ts'
+import { LABELS, TITLE, filled, percent, resets, tone } from '../hooks/format.ts'
 
 const WIDTH = 10
 const ANSI = { success: 32, warning: 33, error: 31 }
@@ -27,5 +27,5 @@ for (const [label, windows] of samples) {
     return `${LABELS[w.kind]} \x1b[${c}m${'█'.repeat(n)}\x1b[0m\x1b[2m${'░'.repeat(WIDTH - n)}\x1b[0m`
       + `\x1b[${c}m ${percent(w)}\x1b[0m\x1b[2m ${resets(w, now)}\x1b[0m`
   }).join('   ')
-  console.log(`\x1b[2m# ${label}\x1b[0m\n${row}\n`)
+  console.log(`\x1b[2m# ${label}\x1b[0m\n\x1b[1m${TITLE}\x1b[0m   ${row}\n`)
 }
