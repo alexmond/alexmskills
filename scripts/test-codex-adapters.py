@@ -168,8 +168,13 @@ class Adapters(unittest.TestCase):
         for entry in catalog['plugins']:
             plugin=ROOT/'plugins'/entry['name']
             manifest=json.loads((plugin/'.codex-plugin/plugin.json').read_text())
-            self.assertTrue((plugin/manifest['skills']).is_dir(),entry['name'])
-            self.assertTrue(list((plugin/manifest['skills']).glob('*/SKILL.md')),entry['name'])
+            has_skills=bool(list(plugin.glob('skills/*/SKILL.md')))
+            # Both directions: a declared path must be real, and a plugin with
+            # skills must declare them. A mod (hooks module, no skill) declares none.
+            self.assertEqual('skills' in manifest,has_skills,entry['name'])
+            if 'skills' in manifest:
+                self.assertTrue((plugin/manifest['skills']).is_dir(),entry['name'])
+                self.assertTrue(list((plugin/manifest['skills']).glob('*/SKILL.md')),entry['name'])
 
 
 if __name__ == '__main__':

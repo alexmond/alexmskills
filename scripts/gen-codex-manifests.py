@@ -117,7 +117,11 @@ def build(plugin: dict) -> tuple[Path, dict]:
         "repository": manifest.get("repository", ""),
         "license": manifest.get("license", "MIT"),
         "keywords": manifest.get("keywords", []),
-        "skills": "./skills/",
+        # Declared only when it exists. A mod is a hooks module with no skill,
+        # and a manifest naming a `./skills/` folder that is not there is a
+        # claim the adapter test rightly fails — it kept CI red from the first
+        # mod onward, unseen, because `make validate` does not run that test.
+        **({"skills": "./skills/"} if any(pdir.glob("skills/*/SKILL.md")) else {}),
         # Opt in per plugin after adapting and testing its runtime behavior.
         "hooks": "./hooks/codex.json" if sig["codex_hooks"] else {},
         "compatibility": {

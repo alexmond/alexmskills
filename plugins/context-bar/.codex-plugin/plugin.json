@@ -16,7 +16,6 @@
     "statusline",
     "ui"
   ],
-  "skills": "./skills/",
   "hooks": {},
   "compatibility": {
     "tier": 3,
