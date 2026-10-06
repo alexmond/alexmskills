@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/whats-new.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/whats-new.py\"",
             "timeout": 5
           }
         ]
@@ -18,11 +18,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/suggest-progress.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/suggest-progress.py\"",
             "timeout": 5
           }
         ]
       }
     ]
-  }
+  },
+  "modules": [
+    "./register.tsx"
+  ]
 }

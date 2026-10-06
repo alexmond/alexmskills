@@ -552,6 +552,12 @@ check("statusline: a full bar has no empty cells",
       statusline.bar(1.0, 8) == "\u2588" * 8, repr(statusline.bar(1.0, 8)))
 check("statusline: an empty bar has no filled cells",
       statusline.bar(0.0, 8) == "\u2591" * 8, repr(statusline.bar(0.0, 8)))
+_evil = statusline._row({"name": "build\x1b[2J\x1b[H\u202egnp", "progress": 0.5,
+                         "progress_mode": "items", "done": 1, "total": 2,
+                         "state": "running", "agent": "a\x1b[31m"}, 10)
+check("statusline: a job name cannot inject an escape sequence into the prompt",
+      "\x1b[2J" not in _evil and "\x1b[H" not in _evil and "\u202e" not in _evil
+      and "\x1b[31m" not in _evil and "build" in _evil, repr(_evil))
 check("statusline: no gap between filled and empty runs",
       " " not in statusline.bar(2 / 18, 18), repr(statusline.bar(2 / 18, 18)))
 
@@ -727,6 +733,15 @@ check("advisory: git clone is long-running now, tap-suggested with --pattern git
       "progress_tap.py" in out and "--pattern git" in out, out[:200])
 check("advisory: plain git stays short-safe",
       run_suggest("git status") == "")
+
+# The band mod (0.7.0) polls with view=mod. It must not read as a status line:
+# its `auto` mode hides when one is wired, and it would be seeing itself.
+_mod = progress._get_json("/jobs?session=mod-probe&view=mod") or {}
+check("view=mod: the mod's own poll does not count as a wired status line",
+      _mod.get("statusline_seen") is False
+      and (progress._get_json("/health") or {}).get("statusline_seen") is False)
+check("view=mod: it is still a session-filtered view",
+      _mod.get("jobs") == [], str(_mod.get("jobs"))[:120])
 
 progress._get_json("/jobs?session=wired-probe")
 check("statusline_seen: flips true after one session-filtered poll",

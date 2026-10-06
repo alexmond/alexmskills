@@ -63,6 +63,7 @@ Rule-based plugins cite a source for every rule and calibrate against real promp
 
 A pipeline and its current step, nested. The parent's bar and time-left **roll up from the step that's running**, so a long stage never reads as a frozen bar. Nest a whole shell pipeline with one line — `export PROGRESS_PARENT=$T` — and every sub-script, even one that knows nothing about pipelines, files itself underneath.
 
+- **No setup in Claude Code** — a built-in mod draws the bars above your prompt, and steps aside if you wire the status line instead.
 - **Learned ETAs** from each job's own history, borrowed from similar jobs when the name is new.
 - **Measured bars for Maven and git**, read from their own output with a transparent pipe tap.
 - **Stall and orphan detection** from each job's own rhythm, not a fixed timeout.
@@ -167,6 +168,8 @@ When the audit says it's time, **`/evolving-claude-md:compact`** proposes the wh
 /plugin install usage-bar@alexmskills
 ```
 
+`progress-channel` ships a third: its live job bars, drawn in the same band with `/progress-bar` to toggle. It comes with that plugin rather than as its own install.
+
 Install both and both draw: each adds its rows and then lets the next mod draw its own. Mods need a Claude Code build that loads hooks modules, and are Claude Code only. **[How mods work →](https://www.alexmond.org/alexmskills/mods/)**
 
 ---
@@ -187,7 +190,7 @@ Install both and both draw: each adds its rows and then lets the next mod draw i
 | [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.1.1 | Flags agent memory that the code now contradicts. |
 | [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
 | [`skill-linter`](plugins/skill-linter) | 🧠 | 0.5.0 | Lints `SKILL.md` against published guidance, and checks `npx skills` will find it; every rule cited. |
-| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.6.0 | Every long job as a live bar in your status line. |
+| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.7.0 | Every long job as a live bar above your prompt or in your status line. |
 | [`ticket-triage`](plugins/ticket-triage) | 🔧 | 0.4.2 | Ranks the backlog and runs startable tickets in parallel. |
 | [`implement-issue`](plugins/implement-issue) | 🔧 | 1.0.1 | GitHub issue → branch → implement → verify → PR. |
 | [`screenshot-tour`](plugins/screenshot-tour) | 🔧 | 1.1.1 | A captioned, narrative-ordered screenshot deck of your product. |

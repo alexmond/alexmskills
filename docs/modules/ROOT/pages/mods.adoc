@@ -21,6 +21,10 @@ _Both mods in one real session. The context bar and its legend sit above the two
 | xref:usage-bar.adoc[usage-bar]
 | Your 5-hour and 7-day rate limits as two bars that turn yellow, then red, as you near a limit.
 | `/usage-bar`
+
+| xref:progress-channel.adoc[progress-channel]
+| Every long-running job in this session as a live bar with time left, sub-jobs nested. Part of the progress-channel plugin, not a separate install.
+| `/progress-bar`
 |===
 
 == Install

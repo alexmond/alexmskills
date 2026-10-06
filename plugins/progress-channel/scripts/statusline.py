@@ -40,6 +40,7 @@ Two rules this file keeps, and any replacement must keep:
 Filtering is done by the daemon (`/jobs?session=`), not here, so this and the
 web page ask the same question and cannot drift apart.
 """
+import re
 import json
 import os
 import sys
@@ -148,7 +149,22 @@ def _units(jobs):
     return units
 
 
+_UNSAFE = re.compile(
+    "[\\x00-\\x1f\\x7f-\\x9f\\u200b-\\u200f\\u2028-\\u202e\\u2066-\\u2069\\ufeff]")
+
+
+def _clean(v) -> str:
+    """Any process on the machine can register a job, so a name is untrusted
+    text about to be printed where ANSI is live. Control characters go — an
+    escape sequence could recolour or overwrite the prompt — and so do the
+    bidi and zero-width marks that make text read as something it is not."""
+    return _UNSAFE.sub(" ", str(v or ""))
+
+
 def _row(j, width, child=False, folded=()):
+    j = dict(j, name=_clean(j.get("name")) or "job", agent=_clean(j.get("agent")),
+             detached=_clean(j.get("detached")))
+    folded = [dict(f, name=_clean(f.get("name"))) for f in folded]
     ratio = j["progress"]
     mode = j.get("progress_mode") or "creep"
     stalled = j.get("state") == "stalled"

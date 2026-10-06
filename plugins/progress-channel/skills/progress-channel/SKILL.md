@@ -260,11 +260,28 @@ in the Claude Code prompt:
 ⏳ explorer: scan repo █████████████▌░░░░  75% 6/8
 ```
 
-The status line is the **only** surface in the Claude Code window a user script
+The status line is the only surface in the Claude Code window a user *script*
 can drive on its own schedule: `statusLine.refreshInterval` re-runs the command
 on a timer (minimum 1 s). Tool stdout is a sanitised pipe with no terminal —
-carriage returns, cursor control and even colour are stripped — so this is the
-one place a live bar can go.
+carriage returns, cursor control and even colour are stripped.
+
+### Or with no setup: the band above the prompt (0.7.0, Claude Code only)
+
+The plugin also ships a **mod** (`hooks/register.tsx`) that draws the same rows
+above the prompt. It needs no `settings.json` edit — it loads with the plugin —
+and has room for six rows, with the bars in one column.
+
+- `/progress-bar` toggles it; `/progress-bar on|off|auto` sets the mode, and the
+  choice is remembered across sessions.
+- **`auto` is the default**: the band draws only while no status line is polling
+  the daemon. Wire the status line and the band steps aside, so the same job is
+  never drawn twice.
+- It only reads: one local `GET /jobs?session=…&view=mod` a second while a job
+  is live, every two seconds otherwise. It never starts the daemon.
+
+When the user asks for progress "in the window" and has no status line, point
+them at the band first — it is already on. Offer the status line when they want
+the rows somewhere a mod cannot draw, or are on Codex.
 
 Use it as the whole status line, in `~/.claude/settings.json`:
 

@@ -962,8 +962,14 @@ def run_daemon(bind_port: int | None = None,
                 q = urllib.parse.parse_qs(path.query)
 
                 want = (q.get("session") or [None])[0]
-                if want:
+                # The band mod asks with view=mod. It is a renderer too, but
+                # it must not count as the status line: its `auto` mode hides
+                # itself when a status line is wired, and it would be reading
+                # its own polls back as proof of one.
+                is_mod = (q.get("view") or [None])[0] == "mod"
+                if want and not is_mod:
                     wired["statusline_seen"] = True
+                if want:
                     # Exact match only. A job with no session (cron, bare shell)
                     # is deliberately excluded: a per-session view that quietly
                     # included machine-wide work would be worse than useless.
