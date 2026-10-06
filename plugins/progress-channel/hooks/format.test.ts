@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Job } from '../types'
-import { DEFAULT_PORT, bar, clean, dur, isShown, nextMode, parse, port, rows, signature, units } from './format'
+import { DEFAULT_PORT, MAX_REPLY, bar, clean, dur, isShown, nextMode, parse, port, rows, signature, units } from './format'
 
 const job = (over: Partial<Job>): Job => ({
   uid: 'u',
@@ -161,6 +161,39 @@ test('a malformed record is dropped or defaulted, never a crash in the draw', ()
   expect(view?.jobs.map(j => j.uid)).toEqual(['a', 'b'])
   expect(rows(view?.jobs ?? []).map(r => r.name)).toEqual(['ok'])
   expect(parse(JSON.stringify({ jobs: Array.from({ length: 999 }, (_, i) => ({ uid: String(i) })) }))?.jobs.length).toBe(200)
+})
+
+test('an oversized reply is refused before it is parsed', () => {
+  const huge = `{"jobs":[],"pad":"${'x'.repeat(MAX_REPLY)}"}`
+  expect(parse(huge)).toBe(null)
+  expect(parse('{"jobs":[]}')).toEqual({ jobs: [], hasStatusLine: false })
+})
+
+test('every drawn field is checked, not only the name', () => {
+  const view = parse(
+    JSON.stringify({
+      jobs: [{ uid: 'u', name: 'n', state: 'running', progress: 0.5, progress_mode: 'x\u001b[31m', done: '\u001b[2J', total: '9' }],
+    }),
+  )
+  const drawn = JSON.stringify(rows(view?.jobs ?? []))
+  expect(drawn.includes('\\u001b')).toBe(false)
+  expect(drawn.includes('2J')).toBe(false)
+})
+
+test('a number out of its honest range is refused, not drawn', () => {
+  const one = (over: object) =>
+    parse(JSON.stringify({ jobs: [{ uid: 'u', name: 'n', state: 'running', progress: 0.5, progress_mode: 'items', done: 1, total: 2, ...over }] }))
+      ?.jobs[0]
+  expect(one({ progress: 1e308 })?.progress).toBe(null)
+  expect(one({ progress: -0.1 })?.progress).toBe(null)
+  expect(one({ progress: 1 })?.progress).toBe(1)
+  expect(one({ done: 1e300 })?.done).toBe(null)
+  expect(one({ total: -5 })?.total).toBe(null)
+  expect(one({ eta_seconds: 1e12 })?.eta_seconds).toBe(null)
+  expect(one({ depth: 9999 })?.depth).toBe(null)
+  // a job with no usable fraction is not drawn at all
+  expect(rows([one({ progress: 1e308 })!])).toEqual([])
+  expect(JSON.stringify(rows([one({ done: 1e300 })!])).includes('e+')).toBe(false)
 })
 
 test('the signature changes only when the drawing would', () => {

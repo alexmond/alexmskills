@@ -189,10 +189,16 @@ export function port(raw: string | undefined): number {
 const UNSAFE = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/g
 
 export function clean(v: unknown, max = 80): string | null {
-  return typeof v === 'string' ? v.replace(UNSAFE, ' ').slice(0, max) : null
+  // Cut first, then scan: the other order runs the pattern over the whole of
+  // a megabyte-long name to keep eighty characters of it.
+  return typeof v === 'string' ? v.slice(0, max).replace(UNSAFE, ' ') : null
 }
 
-const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+// A number inside [lo, hi], or null. Finite is not enough: 1e308 is finite,
+// and a progress that large draws as `Infinity%`. Out of range is refused,
+// not clamped — a nonsense count should not be drawn as a plausible one.
+const num = (v: unknown, lo = 0, hi = 1e12): number | null =>
+  typeof v === 'number' && v >= lo && v <= hi ? v : null
 
 /** One record from the wire, every field checked, or null if it is not a job. */
 function job(v: unknown): Job | null {
@@ -211,20 +217,28 @@ function job(v: unknown): Job | null {
     uid,
     name: clean(r.name),
     state: clean(r.state, 16) ?? '',
-    progress: num(r.progress),
+    progress: num(r.progress, 0, 1),
     progress_mode: clean(r.progress_mode, 16),
     done: num(r.done),
     total: num(r.total),
-    eta_seconds: num(r.eta_seconds),
-    depth: num(r.depth),
+    eta_seconds: num(r.eta_seconds, 0, 1e9),
+    depth: num(r.depth, 0, 64),
     parent: clean(r.parent, 64),
     agent: clean(r.agent, 40),
     detached: clean(r.detached),
   }
 }
 
+// A real reply is a few KB. The length is checked BEFORE the text is parsed:
+// a cap applied to the parsed list has already paid for parsing all of it.
+export const MAX_REPLY = 1_000_000
+
 /** The daemon's reply, or null for anything that is not one. */
 export function parse(text: string): View | null {
+  if (text.length > MAX_REPLY) {
+    return null
+  }
+
   try {
     const d: unknown = JSON.parse(text)
 

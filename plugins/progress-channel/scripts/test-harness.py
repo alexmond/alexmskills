@@ -558,6 +558,50 @@ _evil = statusline._row({"name": "build\x1b[2J\x1b[H\u202egnp", "progress": 0.5,
 check("statusline: a job name cannot inject an escape sequence into the prompt",
       "\x1b[2J" not in _evil and "\x1b[H" not in _evil and "\u202e" not in _evil
       and "\x1b[31m" not in _evil and "build" in _evil, repr(_evil))
+_evil2 = statusline._row({"name": "n", "progress": 0.5, "progress_mode": "items",
+                          "done": "\x1b[2J", "total": "\x1b[31m9", "state": "running",
+                          "eta_seconds": "soon", "detached": "x\x1b[H"}, 10,
+                         folded=[{"name": "f\x1b[0m", "progress": "half"}])
+check("statusline: every printed field is checked, not only the name",
+      _evil2.count("\x1b") == _evil.count("\x1b") - _evil.count("\x1b[31m")
+      and "\x1b[2J" not in _evil2 and "\x1b[H" not in _evil2, repr(_evil2))
+check("statusline: a non-numeric progress draws an empty bar instead of crashing",
+      "0%" in statusline._row({"name": "n", "progress": "half", "state": "running"}, 10))
+_big = statusline._row({"name": "n", "progress": 1e308, "progress_mode": "items",
+                        "done": 10 ** 5000, "total": 10 ** 5000, "state": "running",
+                        "eta_seconds": 10 ** 400, "depth": 10 ** 9}, 10,
+                       folded=[{"name": "f", "progress": 1e308}])
+check("statusline: absurd numbers cannot crash the row or flood the line",
+      len(_big) < 200 and "0%" in _big, "%d chars: %r" % (len(_big), _big[:120]))
+check("statusline: a number out of its honest range is refused",
+      statusline._num(1.5, 0, 1) is None and statusline._num(-1) is None
+      and statusline._num(float("nan")) is None and statusline._num(True) is None
+      and statusline._num(10 ** 13) is None and statusline._num(1, 0, 1) == 1
+      and statusline._num(0) == 0)
+import re as _re
+
+
+class _CountingPattern:
+    """Stands in for the compiled pattern to see how much text it is handed."""
+    seen = 0
+
+    def sub(self, repl, text):
+        _CountingPattern.seen = max(_CountingPattern.seen, len(text))
+        return _re.sub("[\x00-\x1f]", repl, text)
+
+
+_real, statusline._UNSAFE = statusline._UNSAFE, _CountingPattern()
+_long = statusline._safe({"uid": "u", "name": "a\x1b" * 500_000, "state": "running"})
+statusline._UNSAFE = _real
+check("statusline: a huge field is cut BEFORE it is scanned, not after",
+      _CountingPattern.seen <= statusline.MAX_TEXT and len(_long["name"]) == statusline.MAX_TEXT
+      and "\x1b" not in _long["name"], "scanned %d chars" % _CountingPattern.seen)
+check("statusline: _safe keeps honest values untouched",
+      statusline._safe({"uid": "u", "name": "reel 03 \u2713", "progress": 0.25, "done": 3,
+                        "total": 12, "depth": 1, "state": "running"})
+      == {"uid": "u", "name": "reel 03 \u2713", "state": "running", "progress_mode": None,
+          "parent": None, "agent": None, "detached": None, "progress": 0.25, "done": 3,
+          "total": 12, "eta_seconds": None, "depth": 1})
 check("statusline: no gap between filled and empty runs",
       " " not in statusline.bar(2 / 18, 18), repr(statusline.bar(2 / 18, 18)))
 

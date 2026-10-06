@@ -15,18 +15,34 @@ const IDLE_EVERY = 2
 
 // Module state: it starts over on a hot reload, which is right — the next
 // tick fetches again and redraws.
-const live = { url: '', drawn: '', ticks: 0, isBusy: false }
+const live = { url: '', drawn: '', ticks: 0, isBusy: false, busySince: 0, inFlight: 0 }
+
+// The host's fetch takes no timeout. A reply that never comes must not hold
+// the one-at-a-time guard forever, or the band would freeze on its last frame.
+const GIVE_UP_AFTER = 10
+// ...but giving up on a request does not end it. Without a ceiling, a daemon
+// that never answers would collect one more open request every ten seconds
+// for as long as the session lives. Three, then the band waits.
+const MAX_IN_FLIGHT = 3
 
 // One GET to the daemon on this machine. `view=mod` tells it this is not a
 // status line asking, so `auto` can still tell whether one is wired.
 async function refresh($: EngineInterface): Promise<void> {
-  if (live.isBusy || live.url === '') {
+  const isStuck = live.isBusy && live.ticks - live.busySince > GIVE_UP_AFTER
+
+  if ((live.isBusy && !isStuck) || live.url === '' || live.inFlight >= MAX_IN_FLIGHT) {
     return
   }
 
+  live.inFlight += 1
   live.isBusy = true
+  live.busySince = live.ticks
+  const mine = live.busySince
 
   try {
+    // The host reads the whole body before this returns and offers no size
+    // limit, so `parse` can only refuse an oversized reply, not avoid reading
+    // it. The address is fixed to this machine, which is what bounds that.
     const { ok, text } = await $.http.fetch(live.url)
     const next: View | null = ok ? parse(text) : null
     const sig = signature(next)
@@ -44,7 +60,13 @@ async function refresh($: EngineInterface): Promise<void> {
       await update($, view, () => null)
     }
   } finally {
-    live.isBusy = false
+    live.inFlight -= 1
+
+    // Only the newest request clears the guard; a stuck one that finally
+    // returns must not release a guard a later request is holding.
+    if (live.busySince === mine) {
+      live.isBusy = false
+    }
   }
 }
 

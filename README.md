@@ -190,7 +190,7 @@ Install both and both draw: each adds its rows and then lets the next mod draw i
 | [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.1.1 | Flags agent memory that the code now contradicts. |
 | [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
 | [`skill-linter`](plugins/skill-linter) | 🧠 | 0.5.0 | Lints `SKILL.md` against published guidance, and checks `npx skills` will find it; every rule cited. |
-| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.7.0 | Every long job as a live bar above your prompt or in your status line. |
+| [`progress-channel`](plugins/progress-channel) | 🔧 | 0.7.1 | Every long job as a live bar above your prompt or in your status line. |
 | [`ticket-triage`](plugins/ticket-triage) | 🔧 | 0.4.2 | Ranks the backlog and runs startable tickets in parallel. |
 | [`implement-issue`](plugins/implement-issue) | 🔧 | 1.0.1 | GitHub issue → branch → implement → verify → PR. |
 | [`screenshot-tour`](plugins/screenshot-tour) | 🔧 | 1.1.1 | A captioned, narrative-ordered screenshot deck of your product. |

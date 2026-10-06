@@ -49,6 +49,9 @@ import urllib.request
 
 TIMEOUT = 0.25          # seconds — never wait on a sick daemon
 MAX_ROWS = 3            # never push the prompt off the screen
+MAX_BYTES = 1_000_000   # a real reply is a few KB; refuse anything absurd unread
+MAX_JOBS = 200
+MAX_TEXT = 80           # no printed field is longer than this, so none is scanned further
 WIDTH = 18
 _RAMP = " ▏▎▍▌▋▊▉█"    # 8 sub-steps per cell: at 1 fps, small moves stay visible
 
@@ -69,7 +72,13 @@ def fetch(session_id=None):
         url += "?session=" + urllib.parse.quote(str(session_id))
     try:
         with urllib.request.urlopen(url, timeout=TIMEOUT) as r:
-            return (json.loads(r.read().decode()) or {}).get("jobs") or []
+            # Bounded BEFORE it is parsed: a cap applied to the parsed list
+            # has already paid for reading and decoding all of it.
+            raw = r.read(MAX_BYTES + 1)
+        if len(raw) > MAX_BYTES:
+            return []
+        jobs = (json.loads(raw.decode()) or {}).get("jobs") or []
+        return [_safe(j) for j in jobs[:MAX_JOBS] if isinstance(j, dict)]
     except Exception:
         return []
 
@@ -158,14 +167,48 @@ def _clean(v) -> str:
     text about to be printed where ANSI is live. Control characters go — an
     escape sequence could recolour or overwrite the prompt — and so do the
     bidi and zero-width marks that make text read as something it is not."""
-    return _UNSAFE.sub(" ", str(v or ""))
+    # Cut first, then scan: the other order runs the pattern over the whole of
+    # a megabyte-long name to keep eighty characters of it. Every replacement
+    # is one character for one, so the cut length holds.
+    return _UNSAFE.sub(" ", str(v or "")[:MAX_TEXT])
+
+
+def _num(v, lo=0, hi=10 ** 12):
+    """A number inside [lo, hi], or None. Finite is not enough: Python ints
+    have no upper limit, so a `done` of 10**5000 is a valid number that prints
+    as five thousand digits, and a progress of 1e308 overflows the percent.
+    Out of range is refused, not clamped — a nonsense count should not be
+    drawn as a plausible one. bool is an int in Python; it is not a count."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    if v != v or not lo <= v <= hi:
+        return None
+    return v
+
+
+# Each number with the range it can honestly have.
+_NUM_RANGE = {"progress": (0, 1), "done": (0, 10 ** 12), "total": (0, 10 ** 12),
+              "eta_seconds": (0, 10 ** 9), "depth": (0, 64)}
+
+
+_TEXT = ("uid", "name", "state", "progress_mode", "parent", "agent", "detached")
+_NUMS = ("progress", "done", "total", "eta_seconds", "depth")
+
+
+def _safe(j: dict) -> dict:
+    """One job with EVERY field that reaches the screen checked — not only the
+    name. `done`, `total` and the mode are printed too, and a producer that
+    posts straight to the daemon can put text in any of them."""
+    out = {k: (_clean(j.get(k)) if isinstance(j.get(k), str) else None)
+           for k in _TEXT}
+    out.update({k: _num(j.get(k), *_NUM_RANGE[k]) for k in _NUMS})
+    return out
 
 
 def _row(j, width, child=False, folded=()):
-    j = dict(j, name=_clean(j.get("name")) or "job", agent=_clean(j.get("agent")),
-             detached=_clean(j.get("detached")))
-    folded = [dict(f, name=_clean(f.get("name"))) for f in folded]
-    ratio = j["progress"]
+    j = _safe(j)
+    folded = [_safe(f) for f in folded]
+    ratio = j["progress"] or 0
     mode = j.get("progress_mode") or "creep"
     stalled = j.get("state") == "stalled"
     if child:
@@ -184,7 +227,7 @@ def _row(j, width, child=False, folded=()):
     # time/eta/creep are estimates. Name the mode so an estimated bar is never
     # read as a counted one.
     if mode in ("items", "items+sub"):
-        tail = "%s/%s" % (j.get("done", 0), j.get("total"))
+        tail = "%s/%s" % (j.get("done") or 0, j.get("total"))
     else:
         tail = mode
     if j.get("eta_seconds"):
@@ -209,7 +252,7 @@ def main() -> int:
     # Claude Code pipes the session JSON in on stdin; tolerate being run by hand.
     session_id = None
     try:
-        raw = sys.stdin.read() if not sys.stdin.isatty() else ""
+        raw = sys.stdin.read(MAX_BYTES) if not sys.stdin.isatty() else ""
         if raw.strip():
             session_id = (json.loads(raw) or {}).get("session_id")
     except Exception:
