@@ -1247,18 +1247,35 @@ class Rule:
     applies_only_on: tuple[str, ...] = ()
 
 
-# Model-id prefixes for the gates above. Matched as a prefix so dated and
-# suffixed ids (`claude-opus-5-20260115`, `claude-opus-5[1m]`) resolve too.
-# Deliberately narrow: every gate here rests on evidence from Anthropic's
-# published guidance about *that specific model*. Do not widen one to a whole
-# model generation without equivalent per-model evidence — guessing which
-# sibling models share a behaviour is how a gate turns into a blind spot.
-OPUS_5 = ("claude-opus-5",)
+# Model ids for the gates above. Each gate rests on Anthropic's published
+# guidance about a NAMED model, so each model is listed by name and matched
+# exactly — plus that model's own routing variants (see model_matches).
+#
+#   claude-opus-5    the Opus 5 prompting / migration guidance: verifies its
+#                    own work, delegates to subagents readily, thinking on by
+#                    default.
+#   claude-opus-5-5  its guidance is written as a layer ON TOP of Opus 5's, so
+#                    the same re-tuning applies; and thinking cannot be turned
+#                    off at all, where a prompt pushing the model to write its
+#                    reasoning into the response can be declined outright.
+#
+# This used to be the single prefix "claude-opus-5", which matched Opus 5.5 by
+# accident of spelling: right this time, but it would have applied the same
+# gate, unexamined, to any later model whose id began the same way. A new
+# model gets its behaviour gated when it is added here, with its evidence.
+OPUS_5 = ("claude-opus-5", "claude-opus-5-5")
+
+# What may follow a model's id and still be the same model: a bracketed
+# context tag (`[1m]`), a dated snapshot (`-20260115`), or a routing suffix
+# (`-fast`, `-200k`). Anything else — `-5`, `0` — is a different model.
+_VARIANT_RE = re.compile(r"^(?:\[[^\]]*\]|-(?:\d{8}|fast|\d+k))*$")
 
 
-def model_matches(model: str, prefixes: tuple[str, ...]) -> bool:
-    """Prefix match of a model id against a gate's model list."""
-    return bool(model) and any(model.startswith(p) for p in prefixes)
+def model_matches(model: str, ids: tuple[str, ...]) -> bool:
+    """True when `model` is one of `ids` or a routing variant of one."""
+    return bool(model) and any(
+        model.startswith(i) and _VARIANT_RE.match(model[len(i):]) is not None
+        for i in ids)
 
 
 def gate_state(item, model: str) -> str:

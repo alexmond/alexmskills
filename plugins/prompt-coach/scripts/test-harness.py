@@ -875,6 +875,38 @@ def t_model_carveout():
           f"missing obsolete_why: {missing}")
 
 
+def t_model_gate_names_models_exactly():
+    """v1.5.1 — a gate matches a NAMED model and its routing variants, never a
+    different model that merely shares the leading characters. The gate used to
+    be the bare prefix "claude-opus-5", which swept in Opus 5.5 by accident of
+    spelling and would have done the same to any later model."""
+    m = _load_analyzer("_an_exact")
+    cfg = dict(m.DEFAULT_CONFIG)
+    same = ["claude-opus-5", "claude-opus-5[1m]", "claude-opus-5-20260115",
+            "claude-opus-5-fast", "claude-opus-5-200k",
+            "claude-opus-5-5", "claude-opus-5-5[1m]", "claude-opus-5-5-20261001"]
+    missed = [x for x in same if not m.model_matches(x, m.OPUS_5)]
+    check("named models and their routing variants are gated", not missed,
+          f"not matched: {missed}")
+    other = ["claude-opus-5-9", "claude-opus-50", "claude-opus-5-55",
+             "claude-opus-6", "claude-opus-4-8", "claude-sonnet-5-5",
+             "claude-fable-5", ""]
+    leaked = [x for x in other if m.model_matches(x, m.OPUS_5)]
+    check("a look-alike id is a different model and is NOT gated", not leaked,
+          f"wrongly matched: {leaked}")
+    # Opus 5.5 is gated because it is LISTED, with the same five items as
+    # Opus 5 — not because its id happens to start the same way.
+    check("Opus 5.5 is listed by name",
+          "claude-opus-5-5" in m.OPUS_5 and "claude-opus-5" in m.OPUS_5)
+    check("Opus 5.5 gets the same gate as Opus 5",
+          m.gated_out(cfg, "claude-opus-5-5") == m.gated_out(cfg, "claude-opus-5")
+          and len(m.gated_out(cfg, "claude-opus-5-5")) == 5,
+          str(sorted(m.gated_out(cfg, "claude-opus-5-5"))))
+    check("the Opus-5-only rules are live on Opus 5.5 too",
+          not ({"self-check-request", "subagent-for-verification"}
+               & set(m.gated_out(cfg, "claude-opus-5-5"))))
+
+
 def t_opus5_rules():
     """v1.5.0 — the three rules drawn from Anthropic's Opus 5 prompting
     guidance. Half of each block asserts the rule does NOT fire: these all
@@ -1228,6 +1260,7 @@ CHECKS = [
     t_fatigue_cap,
     t_precision_gate,
     t_model_carveout,
+    t_model_gate_names_models_exactly,
     t_opus5_rules,
     t_model_gate_covers_tips,
     t_model_switch_config,

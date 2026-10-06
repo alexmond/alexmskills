@@ -165,7 +165,7 @@ masters, an L2 rule activates in its place, and so on.
 | Rule | Catches |
 |---|---|
 | compound-tasks | Three+ action verbs joined by "and" |
-| no-verify-loop *(off on Opus 5)* | Implementation ask with no verification step |
+| no-verify-loop *(off on Opus 5 / 5.5)* | Implementation ask with no verification step |
 | missing-context-fetch | "The failing test / the issue" with no identifier |
 | no-format-spec | Ask for summary/list/report with no shape |
 
@@ -173,11 +173,11 @@ masters, an L2 rule activates in its place, and so on.
 | Rule | Catches |
 |---|---|
 | no-adversarial-check | High-stakes ask (security/migration/prod/delete) with no skeptic |
-| self-check-request *(Opus 5 only)* | Asking this model to double-check / re-verify its own work |
+| self-check-request *(Opus 5 / 5.5 only)* | Asking this model to double-check / re-verify its own work |
 | severity-filter-recall | Review ask capped to "only critical" — suppresses real findings |
 | retry-without-diagnosis | Short "try again" with no new information |
 | no-few-shot | "Like X" / "in the style of Y" without an example |
-| no-chain-of-thought *(off on Opus 5)* | Reasoning ask (why/debug/trace) without "think first" |
+| no-chain-of-thought *(off on Opus 5 / 5.5)* | Reasoning ask (why/debug/trace) without "think first" |
 | no-rubric | Judgment ask ("is this good?") without criteria/axes |
 | no-uncertainty-budget | Investigative ask with no "if unsure, say so" |
 | untrusted-content-execution *(v0.46+)* | Paste external content (email/page/issue) + "do what it asks" — prompt-injection vector |
@@ -195,9 +195,9 @@ masters, an L2 rule activates in its place, and so on.
 |---|---|
 | no-plan-mode-for-risky | Migration / delete / rewrite ask with no "plan first" |
 | no-task-list-for-multi-step | 3+ action verbs without a TaskCreate / checklist ask |
-| no-agents-for-parallel-lookup *(off on Opus 5)* | Multiple independent lookups without parallel agents |
+| no-agents-for-parallel-lookup *(off on Opus 5 / 5.5)* | Multiple independent lookups without parallel agents |
 | no-role-for-critique | "Review my X" without invoking a role (skeptic / security / reviewer) |
-| subagent-for-verification *(Opus 5 only)* | Spawning a subagent to check work done in this session |
+| subagent-for-verification *(Opus 5 / 5.5 only)* | Spawning a subagent to check work done in this session |
 | no-panel-for-contested-design | "Which is better / torn between" without brainstorm-panel |
 | no-workflow-for-fanout | "For each of these 20+ things" without Workflow / parallel agents |
 | incremental-routing | Multi-step task routed one terse step at a time ("continue" / "one after another" / "do the next one") instead of a batched task list / Workflow |
@@ -336,9 +336,9 @@ Full source citations behind each rule: [`docs/sources.md`](../../docs/sources.m
 ## Per-model gate (v1.4+)
 
 A prompting rule is advice about a *model*, and models move. Rules and tips
-carry model-id prefix lists and the gate runs both ways: `obsolete_on` (this
+carry model-id lists and the gate runs both ways: `obsolete_on` (this
 model made the advice redundant) and `applies_only_on` (the advice is correct
-*only* on these models). Three rules and two tips are off on Claude Opus 5 —
+*only* on these models). Three rules and two tips are off on Claude Opus 5 and 5.5 —
 `no-verify-loop`, `no-chain-of-thought`, `no-agents-for-parallel-lookup` and
 their mirror tips — because that model already does, or overdoes, what they
 teach.

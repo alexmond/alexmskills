@@ -4,7 +4,7 @@ A prompting rule is advice about a *model*, and models move. A rule that was
 sound guidance for one model can become redundant on the next — or worse, can
 teach a habit the newer model already overdoes.
 
-Rules **and tips** carry model-id prefix lists, and the gate runs both ways:
+Rules **and tips** carry lists of model ids, and the gate runs both ways:
 
 - `obsolete_on` — advice this model has made redundant or harmful. Suppressed.
 - `applies_only_on` — advice that is *only* correct on certain models. Inert
@@ -33,7 +33,7 @@ applied independently.
 
 ## What's carved out, and why
 
-Three rules are suppressed on Claude Opus 5:
+Three rules are suppressed on Claude Opus 5 and Opus 5.5:
 
 | Rule | Why it's off |
 |---|---|
@@ -70,6 +70,25 @@ fanned-out result set is the writer-verifier pattern the same guidance
 endorses, and verifying an external artifact is not self-check at all — both
 stay quiet.
 
+## Opus 5.5
+
+Opus 5.5 carries the same gate as Opus 5, and it is listed by name — it is not
+caught by a prefix. Until 1.5.1 the gate was the bare prefix `claude-opus-5`,
+which matched Opus 5.5 by accident of spelling. The outcome was right; the
+reason was luck, and the same prefix would have applied the gate unexamined to
+any later model with a similar id.
+
+The evidence for listing it:
+
+- Anthropic's Opus 5.5 migration guidance is written as a layer *on top of* the
+  Opus 5 guidance, so the same prompt re-tuning applies: no verification
+  scaffolding, no "delegate more".
+- Thinking cannot be switched off on Opus 5.5 at all, and the guidance says to
+  remove instructions that stood in for thinking. A prompt that pushes the
+  model to reproduce its reasoning in the response can be *declined*. That
+  makes `no-chain-of-thought` — "think it through in your response" — more
+  wrong here than on Opus 5, not less.
+
 ## What is deliberately kept
 
 `no-adversarial-check` and `workflow-fanout-no-verify` look similar and are
@@ -86,8 +105,11 @@ parallelizable" case the guidance still endorses delegating.
 
 - **Per-model, not a deletion.** On Opus 4.8, Sonnet, Haiku and any
   unrecognized model, the full catalog still runs.
-- **Prefix match**, so dated and suffixed ids (`claude-opus-5-20260115`,
-  `claude-opus-5[1m]`) resolve.
+- **Models are matched by name, not by prefix.** A gate entry matches that
+  model's id and its routing variants — a bracketed context tag
+  (`claude-opus-5[1m]`), a dated snapshot (`claude-opus-5-20260115`), a
+  routing suffix (`-fast`, `-200k`) — and nothing else. `claude-opus-5-9`
+  would be a different model and is not gated until it is listed.
 - **Fail-safe.** The model is read from the transcript's most recent assistant
   turn — the only place the running model is stated, since the
   `UserPromptSubmit` payload doesn't carry it and an env var would report the
@@ -111,6 +133,10 @@ parallelizable" case the guidance still endorses delegating.
     }
   }
   ```
+
+  This table, unlike the shipped gates, IS matched by prefix — it is your
+  own, and a short key such as `claude-opus-5` is a convenient way to cover
+  Opus 5 and 5.5 together. A longer key (`claude-opus-5-5`) overrides it.
 
   `"on"` forces an item back on for that model, overriding a shipped gate;
   `"off"` silences one the shipped gate leaves on. Longest matching prefix
@@ -142,7 +168,7 @@ harness fails a rule that carries a carve-out with no rationale, because a
 suppression nobody can argue with is one nobody can re-litigate when the next
 model lands.
 
-Keep `OPUS_5`-style prefix constants narrow. Every rule carved out here is
+Keep the `OPUS_5`-style model lists narrow, and add a model by name. Every rule carved out here is
 carved out on published guidance about *that specific model*. Widening a
 carve-out to a whole model generation without equivalent per-model evidence is
 how a carve-out turns into a blind spot.

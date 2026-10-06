@@ -181,7 +181,7 @@ Install both and both draw: each adds its rows and then lets the next mod draw i
 | [`brainstorm-panel`](plugins/brainstorm-panel) | 🧠 | 1.3.3 | A task-fit expert panel that debates until it converges. |
 | [`dev-crew`](plugins/dev-crew) | 🧠 | 1.3.1 | A task-fit delivery crew, run as a gated relay. |
 | [`roles`](plugins/roles) | 🧠 | 1.4.1 | One evolving pool of personas, shared by every orchestrator. |
-| [`prompt-coach`](plugins/prompt-coach) | 🧠 | 1.5.0 | Rewrites your prompts toward better habits; mastery is earned. |
+| [`prompt-coach`](plugins/prompt-coach) | 🧠 | 1.5.1 | Rewrites your prompts toward better habits; mastery is earned. |
 | [`conductor`](plugins/conductor) | 🧠 | 0.1.1 | The main session's playbook while parallel agent lanes run. |
 | [`learn-on-failure`](plugins/learn-on-failure) | 🧠 | 1.1.1 | Saves a lesson whenever a fix took more than one try. |
 | [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.1.1 | Flags agent memory that the code now contradicts. |

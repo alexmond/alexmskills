@@ -9,6 +9,9 @@ unreleased/rolling (no global version).
 
 ## 2026-10-06
 
+### Fixed
+- **prompt-coach 1.5.1** — the per-model gate matched Opus 5.5 by accident. It compared ids by the bare prefix `claude-opus-5`, so `claude-opus-5-5` got Opus 5's gate without anyone having decided it should, and any later model with a similar id would have too. Gates now name models and match exactly: a listed id and its routing variants (`[1m]`, a dated snapshot, `-fast`, `-200k`), nothing else. Opus 5.5 is listed by name, on its own evidence — Anthropic's 5.5 guidance is written as a layer on top of Opus 5's, and on 5.5 thinking cannot be switched off and a prompt that pushes the model to reproduce its reasoning in the response can be declined, which makes `no-chain-of-thought` more wrong there, not less. Behaviour on Opus 5 and 5.5 is unchanged; what changed is that look-alikes such as `claude-opus-5-9` are no longer gated until someone lists them. The user's own `model_rules` table is still matched by prefix, deliberately. Tests pin both the variants that must match and the look-alikes that must not.
+
 ### Added
 - **context-bar 0.1.0** — new plugin, and the marketplace's first Claude Code **mod** (a hooks module, no skill). Draws the context window as a stacked bar above the prompt, one colour per `/context` category, with a token legend; `/context-bar` toggles it. It reads the local `summary` breakdown, so a refresh after every turn sends no token-count requests.
 - **usage-bar 0.2.0** — new plugin, a mod. Draws the 5-hour and 7-day rate-limit windows as bars above the prompt with percent used, time left and the local reset time; `/usage-bar` toggles it. Refreshes every minute from what the last API response reported.
