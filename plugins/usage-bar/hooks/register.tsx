@@ -1,12 +1,15 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
-import type { Reading } from '../types'
-import { LABELS, TITLE, filled, percent, resets, tone } from './format'
+import type { Activity, Reading } from '../types'
+import { LABELS, TITLE, cache, cacheMinutes, filled, percent, resets, tone } from './format'
 
 const WIDTH = 10
 const isOn = atom({ plugin: 'usage-bar', key: 'isOn' } as const, true)
 const reading = atom({ plugin: 'usage-bar', key: 'reading' } as const, null)
+const IDLE: Activity = { lastAt: null, isBusy: false }
+const activity = atom({ plugin: 'usage-bar', key: 'activity' } as const, IDLE)
+const showCache = atom({ plugin: 'usage-bar', key: 'showCache' } as const, true)
 
 // The plain usage call costs nothing: it reads what the last API response reported.
 async function refresh($: EngineInterface): Promise<void> {
@@ -21,8 +24,13 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'usage-bar',
-      description: 'Toggle the rate-limit usage bar above the prompt',
+      description: 'Toggle the rate-limit usage bar above the prompt (or: cache, to show or hide the cache countdown)',
     })
+
+    if ((await $.store.get('showCache')) === false) {
+      await update($, showCache, () => false)
+    }
+
     // `every` returns a Timer, not a function. Calling it — as this did until
     // 0.2.2 — throws on the second session.start (a hot reload, a resume), and
     // the first timer is never stopped.
@@ -34,7 +42,15 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('command.run', { command: 'usage-bar' }, async $ => {
+  on('command.run', { command: 'usage-bar' }, async ($, e) => {
+    if (e.args.trim().toLowerCase() === 'cache') {
+      const shown = !(await read($, showCache))
+      await update($, showCache, () => shown)
+      await $.store.set('showCache', shown)
+
+      return { text: `Cache countdown ${shown ? 'on' : 'off'}.` }
+    }
+
     const now = !(await read($, isOn))
     await update($, isOn, () => now)
 
@@ -45,8 +61,24 @@ export const register: Register = on => {
     return { text: `Usage bar ${now ? 'on' : 'off'}.` }
   })
 
+  // The cache is refreshed by every request, so it is warm for as long as the
+  // model is answering and starts to age when the turn ends.
+  on('prompt.submit', async ($, e, next) => {
+    // This hook sits in the path of every prompt. A countdown is not worth a
+    // prompt that fails to send, so nothing here may throw past this line.
+    try {
+      await update($, activity, a => ({ ...a, isBusy: true }))
+    } catch {
+      // The figure will be stale for one turn. That is the whole cost.
+    }
+
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
     const done = await next(e)
+    const at = await $.clock.now()
+    await update($, activity, () => ({ lastAt: at, isBusy: false }))
     void refresh($)
 
     return done
@@ -63,6 +95,9 @@ export const register: Register = on => {
     // The band holds ONE tree, so a mod that returns only its own hides every mod beneath it.
     // Draw ours, then whatever the rest of the chain draws.
     const below = await next(e)
+    const warmth = (await read($, showCache))
+      ? cache(await read($, activity), now.at, cacheMinutes(now.windows))
+      : null
     const bars = now.windows.map(w => {
       const n = filled(w.percentUsed, WIDTH)
       // Green with room to spare, yellow from 70%, red from 90% (format.ts).
@@ -86,6 +121,11 @@ export const register: Register = on => {
         <Box columnGap={3} flexWrap="wrap">
           <Text bold>{TITLE}</Text>
           {bars}
+          {warmth === null ? null : (
+            <Text color={warmth.tone === 'warning' ? 'warning' : undefined} dimColor={warmth.tone === 'quiet'}>
+              {warmth.text}
+            </Text>
+          )}
         </Box>
         {below}
       </Box>

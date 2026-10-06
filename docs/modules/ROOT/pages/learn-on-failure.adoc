@@ -40,6 +40,25 @@ On an automatic trigger it derives, from the conversation: the root cause of the
 
 Short insights go into a `MEMORY.md` section (kept under 200 lines); detailed learnings go into a topic file with a one-line index reference. Entries are bullet points that lead with *what to do / check* and follow with *why*, superseding stale notes rather than duplicating them. Confirms in one line where it saved.
 
+== Fail-streak nudge (1.2.0)
+
+The skill fires *after* a multi-cycle fix. The cycles themselves often look like this: the same command, run again, failing again. From 1.2.0 the plugin ships a small hook that notices.
+
+When the same Bash command fails three times in a row, the hook adds one line to Claude's context:
+
+[quote]
+The same command has now failed 3 times in a row: `npm test`. Running it again is not converging. Stop and change approach: read the error text, check the assumption the command rests on, or take a different route. When this is resolved it was a multi-cycle fix — save what the wrong assumption was with the learn-on-failure skill.
+
+* Any passing command ends the streak. A different failing command starts its own count.
+* It speaks at three, then stays quiet until six, then nine — a reminder, not a nag.
+* Runs that differ only in whitespace are the same command. A command you interrupted is your decision, not a failure.
+* It is context only. It never approves, blocks or changes a command.
+* The count lives in a small per-session file under the system temp directory; nothing is written to the plugin or the repo.
+
+It reads the failure from the hook event itself (`PostToolUseFailure`), not by parsing output, and was checked in a real session: the note reached the model on the third failure. If another plugin rewrites commands with a launcher prefix, the prefix is stripped so the note quotes what you actually ran.
+
+Claude Code only: the hook is not wired for Codex.
+
 == What's new in 1.1.0
 
 * Every fire appends one line to the consuming repo's

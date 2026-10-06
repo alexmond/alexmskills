@@ -1,4 +1,4 @@
-import type { Window } from '../types'
+import type { Activity, Window } from '../types'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 export const LABELS: Record<string, string> = { five_hour: '5h', seven_day: '7d', spend_limit: 'spend' }
@@ -88,4 +88,52 @@ export function filled(percentUsed: number, width: number): number {
   const n = Math.round((Math.min(100, Math.max(0, percentUsed)) / 100) * width)
 
   return percentUsed > 0 ? Math.max(1, n) : 0
+}
+
+// ── Prompt cache ────────────────────────────────────────────────────────────
+//
+// Each request re-reads the conversation so far. While the prompt cache is
+// warm that read is cheap; once it expires, the next prompt pays to write the
+// whole context again. The cache is refreshed by every request and expires a
+// fixed time after the last one, so "how long since the model last answered"
+// says how long you can step away before the next prompt gets expensive.
+//
+// THE LIFETIME IS AN ASSUMPTION. The engine does not report the cache's
+// expiry. These are the published defaults — an hour on a Claude plan, five
+// minutes on API billing — and a session can be on a different one (a plan in
+// overage drops to five minutes). So the figure is drawn with a `~`, and the
+// mod never claims the cache IS cold, only that it probably is.
+export const CACHE_PLAN_MINUTES = 60
+export const CACHE_API_MINUTES = 5
+
+/** Plan windows mean a subscription; with none, assume API billing. */
+export function cacheMinutes(windows: readonly Window[]): number {
+  return windows.some(w => w.kind === 'five_hour' || w.kind === 'seven_day') ? CACHE_PLAN_MINUTES : CACHE_API_MINUTES
+}
+
+export type Cache = { text: string; tone: 'quiet' | 'warning' }
+
+/**
+ * The cache figure for the row, or null before the model has answered once.
+ * Low — the last 15% of the lifetime, at least a minute — turns it yellow:
+ * that is the moment a short reply now is cheaper than a long one later.
+ */
+export function cache(activity: Activity, nowMs: number, minutes: number): Cache | null {
+  if (activity.isBusy) {
+    return { text: 'cache warm', tone: 'quiet' }
+  }
+
+  if (activity.lastAt === null || minutes <= 0) {
+    return null
+  }
+
+  const leftMs = minutes * 60_000 - (nowMs - activity.lastAt)
+
+  if (leftMs <= 0) {
+    return { text: 'cache ~cold', tone: 'quiet' }
+  }
+
+  const lowMs = Math.max(60_000, minutes * 60_000 * 0.15)
+
+  return { text: `cache ~${left(leftMs)}`, tone: leftMs <= lowMs ? 'warning' : 'quiet' }
 }

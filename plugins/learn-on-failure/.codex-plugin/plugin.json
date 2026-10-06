@@ -1,7 +1,7 @@
 {
   "name": "learn-on-failure",
-  "version": "1.1.1",
-  "description": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve.",
+  "version": "1.2.0",
+  "description": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve, and nudges toward a change of approach when the same command fails three times in a row.",
   "author": {
     "name": "Alex Mondshain",
     "email": "alexmond@gmail.com"
@@ -24,8 +24,8 @@
   },
   "interface": {
     "displayName": "Learn on Failure",
-    "shortDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve",
-    "longDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve. Includes Codex lifecycle hooks. Review and trust them with /hooks before they run.",
+    "shortDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve, and nud",
+    "longDescription": "Automatically captures learnings to per-project memory whenever a task takes more than one fix cycle to resolve, and nudges toward a change of approach when the same command fails three times in a row. Includes Codex lifecycle hooks. Review and trust them with /hooks before they run.",
     "developerName": "Alex Mondshain",
     "category": "Developer Tools",
     "capabilities": [

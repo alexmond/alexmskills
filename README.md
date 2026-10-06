@@ -153,8 +153,8 @@ When the audit says it's time, **`/evolving-claude-md:compact`** proposes the wh
 
 | Mod | | Version | What it draws |
 |---|:-:|---|---|
-| [`context-bar`](plugins/context-bar) | 🧩 | 0.2.0 | Your context window as a stacked bar, and a nudge to compact before auto-compact cuts in. |
-| [`usage-bar`](plugins/usage-bar) | 🧩 | 0.2.2 | Your 5-hour and 7-day limits as bars: green, yellow, then red. |
+| [`context-bar`](plugins/context-bar) | 🧩 | 0.2.0 | Your context window as a stacked bar, a nudge to compact before auto-compact cuts in, and `top` to see what fills it. |
+| [`usage-bar`](plugins/usage-bar) | 🧩 | 0.3.0 | Your 5-hour and 7-day limits as bars, plus how long the prompt cache stays warm. |
 
 **`context-bar`** answers "what is filling my window?" without you asking: one segment per category, with a token legend, refreshed after every turn from a local estimate. Toggle it with `/context-bar`.
 
@@ -187,7 +187,7 @@ Install both and both draw: each adds its rows and then lets the next mod draw i
 | [`roles`](plugins/roles) | 🧠 | 1.4.1 | One evolving pool of personas, shared by every orchestrator. |
 | [`prompt-coach`](plugins/prompt-coach) | 🧠 | 1.5.1 | Rewrites your prompts toward better habits; mastery is earned. |
 | [`conductor`](plugins/conductor) | 🧠 | 0.1.1 | The main session's playbook while parallel agent lanes run. |
-| [`learn-on-failure`](plugins/learn-on-failure) | 🧠 | 1.1.1 | Saves a lesson whenever a fix took more than one try. |
+| [`learn-on-failure`](plugins/learn-on-failure) | 🧠 | 1.2.0 | Saves a lesson whenever a fix took more than one try. |
 | [`memory-hygiene`](plugins/memory-hygiene) | 🧠 | 0.2.0 | Flags agent memory that the code now contradicts. |
 | [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
 | [`skill-linter`](plugins/skill-linter) | 🧠 | 0.5.0 | Lints `SKILL.md` against published guidance, and checks `npx skills` will find it; every rule cited. |

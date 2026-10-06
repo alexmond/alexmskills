@@ -47,6 +47,19 @@ image::{raw}/context-bar/demo/demo.gif[Recording: Claude answers a prompt, the c
 
 *What is left out.* Deferred tool schemas are not drawn, because they sit outside the window until a tool is loaded.
 
+== What is filling it: `/context-bar top` (0.2.0)
+
+The bar shows categories — "Memory files 14.3k". That says where to look, not what to cut. `/context-bar top` ranks the individual items behind those categories:
+
+image::mod-context-bar-top.png[A real session: /context-bar top lists the eight largest items in the window with tokens, share and kind — a 4.1k CLAUDE.md first, then individual skills,width=100%]
+
+* *Memory files* are named with their folder, so a project `CLAUDE.md` and your global one are told apart.
+* *MCP tools* are grouped by server, because a server is what you connect or disconnect. A tool whose schema is deferred is not in the window and is not counted.
+* *Skills and custom agents* are listed one by one; each one's description is in every session.
+* Each kind shown comes with one line on what you can do about it.
+
+Built-in tools, messages and the system prompt are not itemized — the engine reports those only as totals. It uses the same free local estimate as the bar, so it sends no token-count requests.
+
 == When to compact (0.2.0)
 
 Compaction replaces the conversation with a summary. Done by hand at a stopping point, you pick the moment and can say what must be kept. Done automatically, it happens wherever the window happens to fill — often mid-task — and anything that lived only in the conversation survives as whatever the summary made of it.

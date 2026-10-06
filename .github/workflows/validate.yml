@@ -34,6 +34,9 @@ jobs:
       - name: skill-linter harness
         run: python3 plugins/skill-linter/scripts/test-harness.py
 
+      - name: learn-on-failure fail-streak hook
+        run: python3 plugins/learn-on-failure/hooks/test-fail-streak.py
+
       - name: evolving-claude-md harness
         run: python3 plugins/evolving-claude-md/skills/evolving-claude-md/test-harness.py
 

@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Slice, Snapshot } from '../types'
 import { advise, track } from './advice'
 import { cells, short } from './layout'
+import { report } from './top'
 
 const isOn = atom({ plugin: 'context-bar', key: 'isOn' } as const, true)
 const snapshot = atom({ plugin: 'context-bar', key: 'snapshot' } as const, null)
@@ -47,14 +48,21 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'context-bar',
-      description: 'Toggle the context window bar above the prompt',
+      description: 'Toggle the context window bar above the prompt (or: top, to list what is filling it)',
     })
     void refresh($)
 
     return next(e)
   })
 
-  on('command.run', { command: 'context-bar' }, async $ => {
+  on('command.run', { command: 'context-bar' }, async ($, e) => {
+    if (e.args.trim().toLowerCase() === 'top') {
+      // The same free local estimate the bar uses; no token-count requests.
+      const { context } = await $.session.usage({ breakdown: 'summary' })
+
+      return { text: context.breakdown ? report(context.breakdown) : 'No breakdown is available for this session yet.' }
+    }
+
     const now = !(await read($, isOn))
     await update($, isOn, () => now)
 

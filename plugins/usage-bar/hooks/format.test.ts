@@ -1,6 +1,22 @@
 import { expect, test } from 'claude-code/testing'
 
-import { DANGER_AT, LABELS, TITLE, WARN_AT, filled, left, line, percent, resets, tail, tone } from './format'
+import {
+  CACHE_API_MINUTES,
+  CACHE_PLAN_MINUTES,
+  DANGER_AT,
+  LABELS,
+  TITLE,
+  WARN_AT,
+  cache,
+  cacheMinutes,
+  filled,
+  left,
+  line,
+  percent,
+  resets,
+  tail,
+  tone,
+} from './format'
 
 test('the row names itself, so it is not read as part of the mod above it', () => {
   expect(TITLE).toBe('Usage')
@@ -63,4 +79,36 @@ test('tail is the text after a bar', () => {
   const at = new Date(2026, 9, 6, 6, 0).toISOString()
 
   expect(tail({ kind: 'five_hour', percentUsed: 1, resetsAt: at }, now)).toBe('1% (resets in 4h45m · 6:00)')
+})
+
+test('the cache lifetime is assumed from the kind of account', () => {
+  expect(cacheMinutes([{ kind: 'five_hour', percentUsed: 5 }])).toBe(CACHE_PLAN_MINUTES)
+  expect(cacheMinutes([{ kind: 'seven_day', percentUsed: 5 }])).toBe(CACHE_PLAN_MINUTES)
+  expect(cacheMinutes([{ kind: 'spend_limit', percentUsed: 5 }])).toBe(CACHE_API_MINUTES)
+  expect(cacheMinutes([])).toBe(CACHE_API_MINUTES)
+})
+
+test('the countdown runs from the last answer, and is always marked as an estimate', () => {
+  const t0 = 1_000_000_000_000
+  const idle = { lastAt: t0, isBusy: false }
+  expect(cache(idle, t0, 60)).toEqual({ text: 'cache ~1h0m', tone: 'quiet' })
+  expect(cache(idle, t0 + 18 * 60_000, 60)).toEqual({ text: 'cache ~42m', tone: 'quiet' })
+  expect(cache(idle, t0 + 61 * 60_000, 60)).toEqual({ text: 'cache ~cold', tone: 'quiet' })
+  expect(cache(idle, t0 + 60 * 60_000, 60)?.text).toBe('cache ~cold')
+})
+
+test('the last 15% of the lifetime, at least a minute, is the warning', () => {
+  const t0 = 1_000_000_000_000
+  const idle = { lastAt: t0, isBusy: false }
+  expect(cache(idle, t0 + 50 * 60_000, 60)?.tone).toBe('quiet')
+  expect(cache(idle, t0 + 52 * 60_000, 60)).toEqual({ text: 'cache ~8m', tone: 'warning' })
+  // Five-minute cache: 15% is 45s, so the floor of one minute applies.
+  expect(cache(idle, t0 + 3 * 60_000, 5)?.tone).toBe('quiet')
+  expect(cache(idle, t0 + 4 * 60_000, 5)).toEqual({ text: 'cache ~1m', tone: 'warning' })
+})
+
+test('while the model is answering the cache is warm; before any answer there is no figure', () => {
+  expect(cache({ lastAt: 5, isBusy: true }, 9_999_999_999, 60)).toEqual({ text: 'cache warm', tone: 'quiet' })
+  expect(cache({ lastAt: null, isBusy: false }, 1, 60)).toBe(null)
+  expect(cache({ lastAt: 1, isBusy: false }, 2, 0)).toBe(null)
 })
