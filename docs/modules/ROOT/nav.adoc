@@ -28,6 +28,8 @@
 ** xref:screenshot-tour.adoc[Screenshot Tour]
 ** xref:mindmap-prompt.adoc[Mindmap Prompt]
 ** xref:progress-channel.adoc[Progress Channel]
+** xref:context-bar.adoc[Context Bar]
+** xref:usage-bar.adoc[Usage Bar]
 ** xref:ticket-triage.adoc[Ticket Triage]
 * Development reference
 ** xref:spring-batch.adoc[Spring Batch]

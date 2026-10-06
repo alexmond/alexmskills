@@ -146,6 +146,8 @@ When the audit says it's time, **`/evolving-claude-md:compact`** proposes the wh
 | [`screenshot-sweep`](plugins/screenshot-sweep) | 🧠 | 1.1.0 | Reads the whole screenshot, not just the bug you came for. |
 | [`skill-linter`](plugins/skill-linter) | 🧠 | 0.4.3 | Lints `SKILL.md` against published guidance; every rule cited. |
 | [`progress-channel`](plugins/progress-channel) | 🔧 | 0.6.0 | Every long job as a live bar in your status line. |
+| [`context-bar`](plugins/context-bar) | 🔧 | 0.1.0 | Your context window as a stacked bar above the prompt. |
+| [`usage-bar`](plugins/usage-bar) | 🔧 | 0.2.0 | 5-hour and 7-day rate limits as bars above the prompt. |
 | [`ticket-triage`](plugins/ticket-triage) | 🔧 | 0.4.2 | Ranks the backlog and runs startable tickets in parallel. |
 | [`implement-issue`](plugins/implement-issue) | 🔧 | 1.0.1 | GitHub issue → branch → implement → verify → PR. |
 | [`screenshot-tour`](plugins/screenshot-tour) | 🔧 | 1.1.1 | A captioned, narrative-ordered screenshot deck of your product. |
@@ -195,6 +197,8 @@ Then just ask:
 /plugin install mindmap-prompt@alexmskills
 /plugin install screenshot-tour@alexmskills
 /plugin install progress-channel@alexmskills
+/plugin install context-bar@alexmskills
+/plugin install usage-bar@alexmskills
 /plugin install ticket-triage@alexmskills
 /plugin install review-agents@alexmskills
 /plugin install research-sweep@alexmskills

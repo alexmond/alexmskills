@@ -7,6 +7,12 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-10-06
+
+### Added
+- **context-bar 0.1.0** — new plugin, and the marketplace's first Claude Code **mod** (a hooks module, no skill). Draws the context window as a stacked bar above the prompt, one colour per `/context` category, with a token legend; `/context-bar` toggles it. It reads the local `summary` breakdown, so a refresh after every turn sends no token-count requests.
+- **usage-bar 0.2.0** — new plugin, a mod. Draws the 5-hour and 7-day rate-limit windows as bars above the prompt with percent used, time left and the local reset time; `/usage-bar` toggles it. Refreshes every minute from what the last API response reported.
+
 ## 2026-10-02
 
 ### Added

@@ -1,0 +1,42 @@
+= Context Bar
+:navtitle: context-bar
+:description: Your context window as a stacked bar above the prompt.
+
+`/context` answers "what is filling my window" only when you ask. `context-bar` keeps the answer on screen: one stacked bar above the prompt, in the same colours `/context` uses.
+
+== Install
+
+[source,text]
+----
+/plugin install context-bar@alexmskills
+----
+
+It is a *mod*: a hooks module that draws inside Claude Code, with no skill and nothing for the model to read. It needs a Claude Code build that loads function-hook plugins.
+
+== Use it
+
+[source,text]
+----
+/context-bar
+----
+
+The command toggles the bar. It starts on.
+
+== What it draws
+
+* One bar the width of the terminal. Each category gets cells in proportion to its tokens, and any non-empty category gets at least one cell.
+* Used categories are solid; free space is `░` and the autocompact buffer is `▒`.
+* A second line gives the total (`943.1k/1.0m (94%)`) and a legend with each category's tokens.
+* Deferred tool schemas are left out, because they sit outside the window.
+
+== How it reads the numbers
+
+It asks the session for the `summary` breakdown after every turn and after a compaction. `summary` is a local estimate and sends no token-count requests, so the figures can differ slightly from `/context`, which counts exactly.
+
+== Check it
+
+[source,bash]
+----
+claude plugin validate plugins/context-bar
+claude plugin test plugins/context-bar
+----

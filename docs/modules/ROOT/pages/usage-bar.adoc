@@ -1,0 +1,47 @@
+= Usage Bar
+:navtitle: usage-bar
+:description: 5-hour and 7-day rate limits as bars above the prompt.
+
+A rate limit is easiest to respect when it is always in view. `usage-bar` draws the 5-hour and 7-day windows as two small bars above the prompt.
+
+== Install
+
+[source,text]
+----
+/plugin install usage-bar@alexmskills
+----
+
+It is a *mod*: a hooks module that draws inside Claude Code, with no skill and nothing for the model to read. It needs a Claude Code build that loads function-hook plugins.
+
+== Use it
+
+[source,text]
+----
+/usage-bar
+----
+
+The command toggles the bar. It starts on.
+
+== What it draws
+
+[source,text]
+----
+5h █░░░░░░░░░ 1% (resets in 4h45m · 6:00)   7d ░░░░░░░░░░ 0% (resets in 6d23h · Tue 1:00)
+----
+
+* Each window is a 10-cell bar, then percent used, time left and the reset time in local time.
+* A reset more than a day away also shows its weekday.
+* The bar changes colour from 70% and again from 90%.
+* A gateway's spend limit appears as a third bar when the session reports one.
+
+== How it reads the numbers
+
+It reads the rate-limit windows the last API response reported. That call is free. It refreshes every minute, since the countdown moves by the minute, and after every turn. Before the first response there is no reading and nothing is drawn.
+
+== Check it
+
+[source,bash]
+----
+claude plugin validate plugins/usage-bar
+claude plugin test plugins/usage-bar
+----

@@ -22,7 +22,7 @@ Makefile                          # validate / list / bump helpers
 ## Catalog (see README for descriptions)
 
 `evolving-claude-md`, `memory-hygiene`, `dev-crew`, `brainstorm-panel`, `learn-on-failure`, `roles`, `prompt-coach`
-(self-learning) · `implement-issue`, `maven-quality`, `security-audit`, `screenshot-tour`, `progress-channel`, `ticket-triage` (workflow) ·
+(self-learning) · `implement-issue`, `maven-quality`, `security-audit`, `screenshot-tour`, `progress-channel`, `ticket-triage`, `context-bar`, `usage-bar` (workflow) ·
 `review-agents` (review) · `research-sweep` (research) · `skill-linter` (self-learning). Beta (`-beta` suffix): `tune-repo-beta`, `systemic-fix-beta`.
 
 ## Conventions

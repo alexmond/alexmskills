@@ -1,0 +1,42 @@
+{
+  "name": "usage-bar",
+  "version": "0.2.0",
+  "description": "A Claude Code mod that draws the 5-hour and 7-day rate-limit windows as bars above the prompt, each with percent used, time left and the local reset time. Toggled with /usage-bar; refreshes every minute from the last API response, at no cost.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "rate-limits",
+    "usage",
+    "statusline",
+    "ui"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 3,
+    "enforcement": "claude-code",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Usage Bar",
+    "shortDescription": "A Claude Code mod that draws the 5-hour and 7-day rate-limit windows as bars above the prompt, each with percent used, t",
+    "longDescription": "A Claude Code mod that draws the 5-hour and 7-day rate-limit windows as bars above the prompt, each with percent used, time left and the local reset time. Toggled with /usage-bar; refreshes every minute from the last API response, at no cost. Ships Claude Code hooks that this plugin has not yet adapted for Codex. Automatic hook behavior is disabled here; skill instructions remain advisory.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use usage-bar."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}

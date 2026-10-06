@@ -1,0 +1,42 @@
+{
+  "name": "context-bar",
+  "version": "0.1.0",
+  "description": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests.",
+  "author": {
+    "name": "Alex Mondshain",
+    "email": "alexmond@gmail.com"
+  },
+  "homepage": "https://www.alexmond.org/alexmskills/",
+  "repository": "https://github.com/alexmond/alexmskills",
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "context",
+    "tokens",
+    "statusline",
+    "ui"
+  ],
+  "skills": "./skills/",
+  "hooks": {},
+  "compatibility": {
+    "tier": 3,
+    "enforcement": "claude-code",
+    "needsToolTranslation": false
+  },
+  "interface": {
+    "displayName": "Context Bar",
+    "shortDescription": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, wit",
+    "longDescription": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests. Ships Claude Code hooks that this plugin has not yet adapted for Codex. Automatic hook behavior is disabled here; skill instructions remain advisory.",
+    "developerName": "Alex Mondshain",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use context-bar."
+    ],
+    "websiteURL": "https://www.alexmond.org/alexmskills/"
+  }
+}
