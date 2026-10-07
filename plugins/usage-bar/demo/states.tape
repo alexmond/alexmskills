@@ -5,8 +5,8 @@
 Output "states.gif"
 Set Shell bash
 Set FontSize 16
-Set Width 1200
-Set Height 300
+Set Width 1500
+Set Height 360
 Set Padding 16
 Hide
 Type `clear && node --experimental-strip-types states.mjs 2>/dev/null`

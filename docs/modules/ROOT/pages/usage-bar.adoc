@@ -35,13 +35,13 @@ image::{raw}/usage-bar/demo/demo.gif[Recording: Claude answers a prompt, the two
 
 [source,text]
 ----
-5h █░░░░░░░░░ 3% (resets in 4h23m · 6:00)   7d █░░░░░░░░░ 1% (resets in 6d23h · Tue 1:00)
+◔ Usage   5h ███░░░│░░░ 34% (resets in 2h0m · 15:15)   7d ██│░░░░░░░ 30% ▲ ~136% by reset (resets in 5d11h · Mon 0:17)   ⚡ cache ~42m
 ----
 
-For each window, left to right:
+The row opens with a one-cell pie (`○ ◔ ◑ ◕ ●`) showing the fullest window, in its colour — the row's state at a glance. Then, for each window, left to right:
 
 * a label — `5h`, `7d`, or `spend` for a gateway's spend limit when the session reports one;
-* a 10-cell bar. Any use at all fills one cell, so "a little" never looks like "none";
+* a 10-cell bar. Any use at all fills one cell, so "a little" never looks like "none". One cell, `│`, marks where the clock is — see <<pace>>;
 * percent used, in the bar's colour;
 * time left and the reset time in your local time. A reset more than a day away also shows its weekday.
 
@@ -63,6 +63,18 @@ _The three states, drawn by the mod's own functions at sample percentages. This 
 
 The percentage is coloured as well as the bar because near a limit the bar is almost full either way — the number is what still moves. The colours are theme colours, so each terminal theme supplies its own green, yellow and red.
 
+[#pace]
+== Against the clock (0.4.0)
+
+"62% used" means little alone. With one hour gone of five it means you will run out long before the reset; with four hours gone it means you are fine. Each window has a fixed length and reports when it resets, so the mod knows how much of it has passed, and reads your usage against that.
+
+* *The `│` in the bar is the clock.* It sits at the share of the window that has elapsed. Fill to the left of it: you are behind the clock, with margin. Fill running past it: you are using faster than time is passing.
+* *`▲ ~136% by reset`* appears when the window is on course to run out before it resets — your use at the reset if the rest of the window goes like the part so far. It is a straight-line projection, hence the `~`: a heavy morning followed by a quiet afternoon will pull it back.
+* *The colour never reads calmer than the pace.* A window on course to run out is yellow at any fill, and red when the projection passes 150%.
+* *Nothing is projected in the first tenth of a window.* Two percent used after one percent elapsed is not "200% by reset".
+
+A gateway's spend limit has no fixed length, so it gets no clock mark and no projection.
+
 == Cache countdown (0.3.0)
 
 image::mod-usage-bar-cache.png[A real session: the Usage row ends with a dim cache figure showing about one hour left,width=100%]
@@ -72,15 +84,28 @@ Every request re-reads the conversation so far. While the prompt cache is warm t
 [cols="1,3",options="header"]
 |===
 | Shown | Meaning
-| `cache warm` | The model is answering; every request is refreshing the cache.
-| `cache ~42m` | About that long until it expires, counted from the last answer.
-| `cache ~8m` in yellow | The last 15% of the lifetime (at least a minute). A short reply now is cheaper than a long one later.
-| `cache ~cold` | Probably expired. The next prompt re-reads everything at full price — a good moment to `/compact` or `/clear` first if the session is large.
+| `⚡ cache warm` | The model is answering; every request is refreshing the cache.
+| `⚡ cache ~42m` | About that long until it expires, counted from the last answer.
+| `⚡ cache ~8m` in yellow | The last 15% of the lifetime (at least a minute). A short reply now is cheaper than a long one later.
+| `⚡ cache ~cold` | Probably expired. The next prompt re-reads everything at full price — a good moment to `/compact` or `/clear` first if the session is large.
 |===
 
 *The lifetime is an assumption, which is why every figure has a `~`.* The engine does not report the cache's expiry. The mod uses the published defaults: an hour when the session has plan windows (a Claude subscription), five minutes otherwise (API billing). A session can be on a different one — a plan in overage drops to five minutes — and then the figure is wrong. Treat it as a reminder, not a meter.
 
-`/usage-bar cache` hides or shows the figure; the choice is remembered. The mod only reads the clock — it never sends a request to keep the cache warm.
+*From 0.4.0 the assumption is corrected from the session's own traffic.* Every turn reports how many tokens it wrote to the cache. A warm cache only takes the new part of the conversation; a cold one has to take all of it again. So after a pause of known length the mod compares what was written with how big the context already was:
+
+* far less written than the context held, after a pause longer than five minutes — the entry outlived the pause, so the lifetime is an hour;
+* about the whole context written again, after a pause shorter than an hour, on the same model and with no compaction in between — it did not, so the lifetime is five minutes.
+
+Anything else proves nothing and changes nothing. Claude Code's own switches are honoured first: `DISABLE_PROMPT_CACHING` removes the figure, `FORCE_PROMPT_CACHING_5M` and `ENABLE_PROMPT_CACHING_1H` set the starting lifetime.
+
+`/usage-bar cache` hides or shows the figure, and its reply says which lifetime is in use and whether it was assumed or observed. The choice is remembered. The mod only reads the clock and the turn's token counts — it never sends a request to keep the cache warm.
+
+== Icons
+
+The pie and the `│` are single-cell characters, so they never shift a bar. `⚡` is two cells wide and sits where nothing after it has to line up. All of them are plain text: they draw in any terminal whose font has them, and take the theme's colours. Drawn (SVG) icons are not used — the terminal cannot draw them.
+
+Reading the limits against the clock, and learning the cache lifetime from traffic, are ideas from https://github.com/augiefra/claude-mods[augiefra/claude-mods] (which credits HolyGrail's usage-meter and Daniel San's prompt-cache-control for them). The implementation here is independent.
 
 == When it updates
 

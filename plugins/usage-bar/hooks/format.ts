@@ -107,8 +107,13 @@ export const CACHE_PLAN_MINUTES = 60
 export const CACHE_API_MINUTES = 5
 
 /** Plan windows mean a subscription; with none, assume API billing. */
+export function hasPlanWindows(windows: readonly Window[]): boolean {
+  return windows.some(w => w.kind === 'five_hour' || w.kind === 'seven_day')
+}
+
+/** The lifetime to assume before the session's own traffic says which it is (cachettl.ts). */
 export function cacheMinutes(windows: readonly Window[]): number {
-  return windows.some(w => w.kind === 'five_hour' || w.kind === 'seven_day') ? CACHE_PLAN_MINUTES : CACHE_API_MINUTES
+  return hasPlanWindows(windows) ? CACHE_PLAN_MINUTES : CACHE_API_MINUTES
 }
 
 export type Cache = { text: string; tone: 'quiet' | 'warning' }

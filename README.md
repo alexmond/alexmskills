@@ -153,8 +153,8 @@ When the audit says it's time, **`/evolving-claude-md:compact`** proposes the wh
 
 | Mod | | Version | What it draws |
 |---|:-:|---|---|
-| [`context-bar`](plugins/context-bar) | 🧩 | 0.2.0 | Your context window as a stacked bar, a nudge to compact before auto-compact cuts in, and `top` to see what fills it. |
-| [`usage-bar`](plugins/usage-bar) | 🧩 | 0.3.0 | Your 5-hour and 7-day limits as bars, plus how long the prompt cache stays warm. |
+| [`context-bar`](plugins/context-bar) | 🧩 | 0.2.1 | Your context window as a stacked bar, a nudge to compact before auto-compact cuts in, and `top` to see what fills it. |
+| [`usage-bar`](plugins/usage-bar) | 🧩 | 0.4.0 | Your 5-hour and 7-day limits against the clock, plus how long the prompt cache stays warm. |
 
 **`context-bar`** answers "what is filling my window?" without you asking: one segment per category, with a token legend, refreshed after every turn from a local estimate. Toggle it with `/context-bar`.
 

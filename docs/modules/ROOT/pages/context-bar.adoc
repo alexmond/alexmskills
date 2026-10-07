@@ -43,7 +43,7 @@ image::{raw}/context-bar/demo/demo.gif[Recording: Claude answers a prompt, the c
 | `░` | dimmed | free space
 |===
 
-*The legend.* A second line gives the total — `50.6k/1.0m (5%)` — then each category with its colour swatch and token count, written the way `/context` writes them (`611`, `9.9k`, `1.0m`). On a narrow terminal the legend wraps onto more rows.
+*The legend.* A second line opens with a one-cell pie (`○ ◔ ◑ ◕ ●`) showing how far the window is toward auto-compact — green while there is nothing to do, then the colour of the advice below — and the label *Context*. It then gives the total — `50.6k/1.0m (5%)` — then each category with its colour swatch and token count, written the way `/context` writes them (`611`, `9.9k`, `1.0m`). On a narrow terminal the legend wraps onto more rows.
 
 *What is left out.* Deferred tool schemas are not drawn, because they sit outside the window until a tool is loaded.
 

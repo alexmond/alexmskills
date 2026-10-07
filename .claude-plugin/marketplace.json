@@ -347,7 +347,7 @@
       "displayName": "Context Bar",
       "source": "./plugins/context-bar",
       "description": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend — and says when to compact: a hint, then a warning, then what will be lost, as auto-compact gets close. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests.",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "category": "workflow",
       "keywords": [
         "mod",
@@ -362,7 +362,7 @@
       "displayName": "Usage Bar",
       "source": "./plugins/usage-bar",
       "description": "A Claude Code mod that draws the 5-hour and 7-day rate-limit windows as bars above the prompt, each with percent used, time left and the local reset time, plus an estimate of how long the prompt cache stays warm. Toggled with /usage-bar; refreshes every minute from the last API response, at no cost.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "category": "workflow",
       "keywords": [
         "mod",

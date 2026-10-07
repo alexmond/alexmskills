@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { GROWTH_KEPT, advise, pace, track, turnsLeft } from './advice'
+import { GROWTH_KEPT, advise, pace, pie, track, turnsLeft } from './advice'
 import type { Reading } from './advice'
 
 // A 1M window whose auto-compaction runs at 900k.
@@ -94,4 +94,9 @@ test('growth keeps the newest few turns and ignores a drop', () => {
 test('past the limit, and with nonsense input, it still answers sanely', () => {
   expect(advise(at(950_000))?.text.includes('~0 left')).toBe(true)
   expect(advise({ total: 5, max: 0, growth: [], compactions: 0 })).toBe(null)
+})
+
+test('the label icon is a one-cell pie of the fill', () => {
+  expect([0, 0.05, 0.3, 0.5, 0.8, 0.95, 1.4].map(pie).join('')).toBe('○○◔◑◕●●')
+  expect(pie(Number.NaN)).toBe('○')
 })

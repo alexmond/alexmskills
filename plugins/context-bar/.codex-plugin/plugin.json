@@ -1,6 +1,6 @@
 {
   "name": "context-bar",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A Claude Code mod that draws the context window as a stacked bar above the prompt, one colour per /context category, with a token legend — and says when to compact: a hint, then a warning, then what will be lost, as auto-compact gets close. Toggled with /context-bar; refreshes after every turn from a local estimate, so it sends no token-count requests.",
   "author": {
     "name": "Alex Mondshain",

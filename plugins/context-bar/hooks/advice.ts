@@ -132,3 +132,10 @@ export function advise(r: Reading): Advice | null {
     text: `${Math.round((r.total / limit) * 100)}% of the way to ${what}. Between tasks is the cheap time to /compact.${depth}`,
   }
 }
+
+/** A one-cell pie for a share from 0 to 1: ○ ◔ ◑ ◕ ●. Single-width, so it never shifts the legend. */
+export function pie(share: number): string {
+  const s = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0
+
+  return ['○', '◔', '◑', '◕', '●'][Math.round(s * 4)] ?? '○'
+}

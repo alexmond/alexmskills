@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Slice, Snapshot } from '../types'
-import { advise, track } from './advice'
+import { advise, pie, track } from './advice'
 import { cells, short } from './layout'
 import { report } from './top'
 
@@ -126,7 +126,13 @@ export const register: Register = on => {
           <Box columnGap={2} flexWrap="wrap">
             {/* Named, like every row in the shared band: unlabelled rows from
                 two mods read as one block. */}
-            <Text bold>Context</Text>
+            <Box>
+              {/* One cell: how full, and — by its colour — whether to act. */}
+              <Text color={advice === null ? 'success' : TONE[advice.level]} dimColor={advice?.level === 'hint'}>
+                {pie(snap.total / (snap.threshold ?? snap.max))}{' '}
+              </Text>
+              <Text bold>Context</Text>
+            </Box>
             <Text dimColor>
               {short(snap.total)}/{short(snap.max)} ({percent}%)
             </Text>
