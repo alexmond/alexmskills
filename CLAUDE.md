@@ -90,6 +90,7 @@ topic (3+ entries, ≥14 days) into **Conventions**/**Gotchas**; archive quarter
 > Format: `- YYYY-MM-DD — **topic-tag** — body ≤200 chars. Why: reason.` Enforced by the PreToolUse
 > lint hook; audit runs on SessionStart + PostCompact.
 
+- 2026-10-12 — **in-flight-is-evidence** — progress 0.8.2: ETA from completed work only said 6s/step through a 10-min step, then 0s with 12 left. Why: a fix for "counts up" had deleted the one case where it should.
 - 2026-10-06 — **record-to-verify** — recording real sessions for the docs found 2 defects that validate + green unit tests had passed: context-bar wrapped a row, mindmap dropped Shift+Enter breaks. Why: tests cover the arithmetic, not what the engine or browser actually draws.
 - 2026-10-06 — **stack-neutral-sweep** — 4 general plugins assumed Java/Maven (review-agents, security-audit, freshness, tap); each now detects the stack. Why: "language-agnostic" in a description is a claim, not a property.
 - 2026-10-06 — **examples-are-tests** — progress 0.8.0 ships runnable examples and the harness runs each one; writing them found the subshell-ownership orphan bug. Why: an example nobody runs is documentation that rots.

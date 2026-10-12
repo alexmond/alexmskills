@@ -158,6 +158,59 @@ eta_early = t.eta_seconds({"name": "t-eta", "kind": "local", "total": 100,
 check("eta: history dominates early", eta_early is not None and eta_early > 500,
       f"eta={eta_early}")
 
+# A slow step is evidence. Reported from a real reactor build: 2 of 14 modules
+# landed in 12s, the third ran ten minutes, and the estimate said "about a
+# minute", then "0s" with twelve modules still to go.
+_t2 = progress.Tracker()
+_t2.history = []
+_ts = lambda s: (datetime.now(timezone.utc) - timedelta(seconds=s)
+                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
+_slow = {"name": "t-overrun", "kind": "local", "total": 14, "done": 2,
+         "started_at": _ts(623), "done_at": _ts(611)}
+_e = _t2.eta_seconds(_slow)
+check("eta: a step far past the rate raises the estimate",
+      _e is not None and _e > 600, f"eta={_e} (completed work alone says 72)")
+check("eta: steps still to come are never cancelled by one slow step",
+      _e is not None and _e >= 11 * 6, f"eta={_e}")
+_r = _t2.per_item_rate(_slow)
+check("eta: the per-step rate a parent prices with rises too",
+      _r is not None and _r > 60, f"rate={_r}")
+# Ordinary variance is not evidence: twice the rate changes nothing.
+_ok = {"name": "t-overrun", "kind": "local", "total": 14, "done": 2,
+       "started_at": _ts(24), "done_at": _ts(12)}
+check("eta: an item at twice the rate leaves the rate alone",
+      abs((_t2.per_item_rate(_ok) or 0) - 6.0) < 0.6, str(_t2.per_item_rate(_ok)))
+# Below the rate the estimate still ticks down, one second per second.
+_a = _t2.eta_seconds({"name": "t-overrun", "kind": "local", "total": 14,
+                      "done": 2, "started_at": _ts(14), "done_at": _ts(2)})
+_b = _t2.eta_seconds({"name": "t-overrun", "kind": "local", "total": 14,
+                      "done": 2, "started_at": _ts(16), "done_at": _ts(4)})
+check("eta: still counts down while the item is inside the rate",
+      _a is not None and _b is not None and 1.0 < _a - _b < 3.0, f"{_a} -> {_b}")
+# The last item has nothing after it: past its estimate it reads zero.
+check("eta: the last item floors at zero",
+      _t2.eta_seconds({"name": "t-overrun", "kind": "local", "total": 3,
+                       "done": 2, "started_at": _ts(30), "done_at": _ts(18)}) == 0.0)
+
+# A child that has finished but the parent has not counted yet keeps its place
+# in the parent's bar. It used to drop out and walk the bar backwards.
+_rows = lambda: [
+    {"uid": "p" * 32, "name": "landed parent", "state": "running", "total": 14,
+     "done": 2, "progress": 2 / 14, "progress_mode": "items",
+     "done_at": "2026-10-12T21:52:40Z", "updated_at": "2026-10-12T21:52:40Z",
+     "eta_seconds": 10.0, "_rate": 6.0},
+    {"uid": "k" * 32, "name": "landed child", "state": "done", "total": 10,
+     "done": 10, "progress": 1.0, "progress_mode": "done", "parent": "p" * 32,
+     "finished_at": "2026-10-12T22:03:31Z", "updated_at": "2026-10-12T22:03:31Z",
+     "eta_seconds": None, "_rate": None}]
+_lp = {r["name"]: r for r in progress._tree_order(_rows())}["landed parent"]
+check("rollup: a finished child the parent has not counted still fills the bar",
+      abs(_lp["progress"] - 3 / 14) < 1e-6, str(_lp["progress"]))
+_old = _rows(); _old[1]["finished_at"] = "2026-10-12T21:50:00Z"
+_lp2 = {r["name"]: r for r in progress._tree_order(_old)}["landed parent"]
+check("rollup: a child finished before the parent's last step is not counted twice",
+      abs(_lp2["progress"] - 2 / 14) < 1e-6, str(_lp2["progress"]))
+
 # 11 · classify: stalled vs always-slow --------------------------------------
 t.history.append({"name": "t-stall", "status": "done", "p95_gap": 1.0,
                   "kind": "local", "total_bucket": 0,

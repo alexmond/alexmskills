@@ -69,6 +69,9 @@ ORPHAN_KEEP_MINUTES = 30     # orphans are already dead — a much shorter leash
 FINISHED_KEEP_MAX = 60       # hard cap, so a busy day cannot grow the view
 MAX_POST_BYTES = 256 * 1024
 LIVE_STATES = ("running", "stalled")   # what /jobs returns when no state is asked for
+# How many times the per-item rate an in-flight item may run before its
+# overrun counts as evidence about the rate (see _rate_parts).
+OVERRUN_TOLERANCE = 3.0
 ETA_CUTOVER_FRACTION = 0.10  # current-run rate fully trusted past this progress
 STALL_GAP_FACTOR = 3.0       # stalled when silent > factor * learned p95 gap
 STALL_GAP_FLOOR = 30.0       # ... but never call a gap under this a stall
@@ -553,8 +556,9 @@ class Tracker:
 
         Then the time already spent on the in-flight item is **subtracted**, so
         the number ticks down in real time instead of holding still between
-        steps and jumping at each one. It floors at zero: a job past its own
-        estimate reads "any moment now", never negative.
+        steps and jumping at each one. Only that item floors at zero; the
+        steps after it keep their price. An item far past the rate raises the
+        rate (see _rate_parts) — that is the one case where time left may grow.
         """
         total, done = job.get("total"), job.get("done", 0)
         if not total or done <= 0:
@@ -563,7 +567,13 @@ class Tracker:
         if parts is None:
             return None
         rate, in_flight = parts
-        return max(0.0, max(0, total - done) * rate - in_flight)
+        left = max(0, total - done)
+        if left == 0:
+            return 0.0
+        # The in-flight item floors on its own. Subtracting its overrun from
+        # the whole estimate let one slow step cancel every step still to
+        # come: twelve steps left and "0s".
+        return max(0.0, rate - in_flight) + (left - 1) * rate
 
     def per_item_rate(self, job: dict) -> float | None:
         """Seconds per item — what a parent needs to price its remaining whole
@@ -618,6 +628,16 @@ class Tracker:
             rate = current
         if rate is None:
             return None
+        # An item that has far outrun the rate is evidence too. Completed work
+        # alone says "6s a step" forever while the third step is ten minutes
+        # in. Ordinary variance is not evidence, so nothing changes until the
+        # in-flight item is OVERRUN_TOLERANCE times the rate; past that it is
+        # priced at in_flight / tolerance, which is continuous at the threshold
+        # and grows only as fast as the clock proves it must.
+        if marked is not None and done < total:
+            worked = max((marked - started).total_seconds(), 0.0)
+            cost = max(rate, in_flight / OVERRUN_TOLERANCE)
+            rate = max(rate, (worked + cost) / (done + 1))
         return rate, in_flight
 
     def progress(self, job: dict) -> tuple[float | None, str]:
@@ -744,6 +764,13 @@ def _tree_order(rows: list[dict]) -> list[dict]:
                        if c["state"] in LIVE_STATES
                        and c.get("progress_mode") in _MEASURED
                        and c.get("progress") is not None)
+            # A child that finished AFTER the parent's count last moved is a
+            # step the parent has not counted yet. Dropping it the moment it
+            # ends walks the bar backwards until the parent steps.
+            landed = sum(1 for c in children
+                         if c["state"] == "done"
+                         and (c.get("finished_at") or "") > (r.get("done_at") or "~"))
+            frac = min(frac + landed, max(0, r["total"] - r.get("done", 0)))
             if frac > 0:
                 r["progress"] = min(1.0, (r.get("done", 0) + frac) / r["total"])
                 r["progress_mode"] = "items+sub"

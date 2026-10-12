@@ -280,6 +280,7 @@ progress finish $T                          # also cancels any child still open
 
 * *The parent bar rolls up.* A counted parent with running, counted children reads `(done + child fractions) / total`, labelled `+sub` — 79% above, instead of a bar stuck at 76% for the whole step. Estimated children never move a counted bar.
 * *Time left rolls up too:* the running step's own time-left plus the remaining whole steps at the parent's per-step rate — the parent alone would treat the in-flight step as untouched.
+* *A slow step is evidence:* a step that has run three times the usual time raises the per-step rate, so time left can grow. One slow step never cancels the steps after it.
 * *Closing cascades from the producer.* Exiting a parent's `with` block, or `finish` on its token, closes any open child first, as `cancelled` with the reason. A child whose parent ended without cascading stays visible at the top level, labelled — never hidden.
 * *The child keeps its plain name*, so `ground-round` learns one duration whether it ran nested or on its own.
 * *Mirrors* take sub-steps from an optional second `--poll-cmd` line, `<done> <total> <name>`.

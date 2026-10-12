@@ -7,6 +7,12 @@ This log groups changes by date and tags each entry with the plugin and the vers
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); the marketplace itself is
 unreleased/rolling (no global version).
 
+## 2026-10-12
+
+### Fixed
+- **progress-channel 0.8.2** — time left was badly wrong when one step took far longer than the ones before it. The rate came from completed work only, so a build whose first 2 of 14 modules took 12 seconds said "6 seconds a step" for the whole ten minutes the third module ran: about a minute left, then `0s` with twelve modules still to go. A step that has run three times the rate now counts as evidence and raises it (ordinary variance below that changes nothing, so the estimate still ticks down between steps), and a slow step can no longer cancel the steps after it — only the in-flight step floors at zero. Reported from a real session.
+- **progress-channel 0.8.2** — a parent's bar walked backwards when a sub-step finished. A finished child dropped out of the roll-up until the parent counted the step, so 21% became 14% in between. A child that finished after the parent's count last moved now keeps its place.
+
 ## 2026-10-06
 
 ### Security

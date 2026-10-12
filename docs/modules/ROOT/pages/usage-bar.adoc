@@ -5,7 +5,7 @@
 
 A rate limit is easiest to respect when it is always in view. `usage-bar` draws the 5-hour and 7-day windows as two small bars above the prompt, and changes their colour as you get close.
 
-image::mod-usage-bar.png[A real Claude Code session with usage-bar: above the prompt, a 5-hour bar at 3% resetting in 4h23m at 6:00, and a 7-day bar at 1% resetting in 6d23h on Tuesday at 1:00, both green,width=100%]
+image::mod-usage-bar.png[A real Claude Code session with usage-bar: above the prompt, a pie icon and the word Usage, a 5-hour bar at 22% and a 7-day bar at 15% each with a mark where the clock is, the 7-day one in yellow reading about 114% by reset, and a cache figure of about one hour,width=100%]
 
 _A real session, recorded. Both windows have plenty of room, so both are green._
 
