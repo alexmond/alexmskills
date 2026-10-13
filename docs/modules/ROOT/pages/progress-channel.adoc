@@ -100,6 +100,8 @@ image::progress-page.png[The live progress page — running jobs with ETAs and p
 /plugin install progress-channel@alexmskills
 ----
 
+NOTE: Use the plugin install above. `npx skills add` copies only the skill text and leaves out the `progress` command, the daemon, the status line and the band. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 Nothing to configure and no service to manage: the first registered job auto-spawns the daemon.
 
 == Architecture: the page server is the tracker

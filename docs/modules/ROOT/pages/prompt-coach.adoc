@@ -18,6 +18,8 @@ _The local dashboard. Every rule shows the mistake it catches, the fix, and how 
 /reload-plugins
 ----
 
+NOTE: Use the plugin install above. `npx skills add` copies only the skill text and leaves out the hook, and the hook is the coach. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 That's it. No separate channel, no extra configuration. Restart the session so the `UserPromptSubmit` hook registers. Then just prompt Claude normally — the coach analyzes every prompt in the background and steps in when a rule matches.
 
 === Codex

@@ -57,6 +57,15 @@ The tier test: strip the repo's proper nouns — a rule that survives is generic
 /plugin install conductor@alexmskills
 ----
 
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill conductor
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 Composes with `ticket-triage` (its round file logs relays), `roles` (graduation target), and `dev-crew`; all optional.
 
 == Positioning

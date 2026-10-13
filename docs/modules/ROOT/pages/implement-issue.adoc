@@ -10,6 +10,15 @@ Drives a GitHub issue from branch to pull request in one workflow: read the issu
 /plugin install implement-issue@alexmskills
 ----
 
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill implement-issue
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Trigger it
 
 [source,text]

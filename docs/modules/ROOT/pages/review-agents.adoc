@@ -10,6 +10,8 @@ Three focused, read-only review subagents for any stack — a test runner, a PR 
 /plugin install review-agents@alexmskills
 ----
 
+NOTE: Use the plugin install above. `npx skills add` copies only the skill text and leaves out the three review agents. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Trigger it
 
 [source,text]

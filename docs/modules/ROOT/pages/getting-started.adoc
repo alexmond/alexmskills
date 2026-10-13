@@ -7,7 +7,37 @@ Two in-progress plugins ship with a `-beta` suffix (`tune-repo-beta`,
 section for their graduation path.
 ====
 
-== Add the marketplace
+[#two-ways]
+== Two ways to install
+
+There are two installers. Pick one for each plugin, not both.
+
+[cols="1,2,2",options="header"]
+|===
+| | Way 1: Claude Code plugin | Way 2: `npx skills`
+
+| Command
+| `/plugin install <name>@alexmskills`
+| `npx skills add alexmond/alexmskills`
+
+| Works in
+| Claude Code (and Codex, see xref:codex.adoc[Codex])
+| Claude Code, Cursor, Codex and the other agents the https://skills.sh/[skills CLI] supports
+
+| What you get
+| Everything: skills, hooks, agents, slash commands, scripts and mods
+| The skill folders only
+
+| Updates
+| `/plugin marketplace update alexmskills`
+| `npx skills update`
+|===
+
+*Use way 1 in Claude Code.* It is the only way that installs the whole plugin.
+Use way 2 for another agent, or when you only want the skill text.
+
+[#way-1]
+== Way 1: Claude Code plugin
 
 Add the marketplace once:
 
@@ -16,7 +46,7 @@ Add the marketplace once:
 /plugin marketplace add alexmond/alexmskills
 ----
 
-Then install what you want — copy-paste any of these:
+Then install what you want. Copy any of these:
 
 [source,text]
 ----
@@ -35,18 +65,87 @@ Then install what you want — copy-paste any of these:
 /plugin install mindmap-prompt@alexmskills
 /plugin install screenshot-tour@alexmskills
 /plugin install progress-channel@alexmskills
+/plugin install context-bar@alexmskills
+/plugin install usage-bar@alexmskills
 /plugin install ticket-triage@alexmskills
 /plugin install review-agents@alexmskills
 /plugin install research-sweep@alexmskills
+/plugin install spring-batch@alexmskills
+/plugin install conductor@alexmskills
+/plugin install tune-repo-beta@alexmskills
+/plugin install systemic-fix-beta@alexmskills
 ----
 
-Or browse interactively with `/plugin` (the **Discover** tab). After a new release is pushed, refresh
-the catalog with:
+Or browse with `/plugin` (the **Discover** tab). After a new release, refresh the catalog:
 
 [source,text]
 ----
 /plugin marketplace update alexmskills
 ----
+
+[#way-2]
+== Way 2: `npx skills`
+
+This needs Node.js. Run it in a terminal, not inside Claude Code.
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --list                      # see what is there
+npx skills add alexmond/alexmskills --skill brainstorm-panel    # install one skill
+npx skills add alexmond/alexmskills --skill codestyle jacoco    # install several
+npx skills add alexmond/alexmskills                             # pick from a menu
+----
+
+Useful options:
+
+* `-g` installs for your user. Without it the skill goes into the current project.
+* `-a claude-code` picks the agent and skips the question. `-a '*'` installs for every agent.
+* `-y` skips the confirmation prompts.
+
+Later: `npx skills list` shows what is installed, `npx skills update` pulls new versions and
+`npx skills remove <skill>` removes one.
+
+=== What this way leaves out
+
+The skills CLI copies each skill's own folder and nothing else. A plugin's hooks, agents,
+slash commands, shared scripts and mods are not copied. So the plugins fall into three groups.
+
+[cols="1,3",options="header"]
+|===
+| Group | Plugins
+
+| *Works the same.* The plugin is only skills.
+| xref:brainstorm-panel.adoc[brainstorm-panel], xref:conductor.adoc[conductor],
+xref:implement-issue.adoc[implement-issue], xref:maven-quality.adoc[maven-quality]
+(skills `codestyle`, `jacoco`, `pmd`, `precommit`), xref:research-sweep.adoc[research-sweep],
+xref:screenshot-sweep.adoc[screenshot-sweep], xref:screenshot-tour.adoc[screenshot-tour],
+xref:security-audit.adoc[security-audit], xref:spring-batch.adoc[spring-batch],
+xref:systemic-fix.adoc[systemic-fix-beta] (skill `systemic-fix`),
+xref:tune-repo.adoc[tune-repo-beta] (skill `tune-repo`)
+
+| *Incomplete.* The skill text arrives, but the part that does the work does not. Use way 1.
+| xref:dev-crew.adoc[dev-crew], xref:evolving-claude-md.adoc[evolving-claude-md],
+xref:learn-on-failure.adoc[learn-on-failure], xref:memory-hygiene.adoc[memory-hygiene],
+xref:mindmap-prompt.adoc[mindmap-prompt], xref:progress-channel.adoc[progress-channel],
+xref:prompt-coach.adoc[prompt-coach], xref:review-agents.adoc[review-agents],
+xref:roles.adoc[roles], xref:skill-linter.adoc[skill-linter], xref:ticket-triage.adoc[ticket-triage]
+
+| *Not available.* These are mods and have no skill. Use way 1.
+| xref:context-bar.adoc[context-bar], xref:usage-bar.adoc[usage-bar]
+|===
+
+Each plugin's page says which group it is in and what is missing.
+
+[NOTE]
+====
+The skills CLI names skills, not plugins. The two beta plugins install as `tune-repo` and
+`systemic-fix`, and `maven-quality` and `roles` each install as several skills.
+====
+
+[WARNING]
+====
+Do not install the same plugin both ways. Claude Code would then list its skill twice.
+====
 
 == Try a plugin without installing
 
@@ -79,6 +178,5 @@ claude --plugin-dir ./plugins/dev-crew
 [NOTE]
 ====
 Installing from a **local directory** marketplace is not supported by the Claude Code CLI
-(it expects a GitHub/git source). For local evaluation use `claude --plugin-dir` as shown above;
-`+/plugin install ...@alexmskills+` works once the marketplace is published to GitHub.
+(it expects a GitHub/git source). To evaluate a local checkout, use `claude --plugin-dir` as shown above.
 ====

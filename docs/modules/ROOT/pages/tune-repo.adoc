@@ -9,10 +9,26 @@ worse than a missing one — so accuracy is the top lever this skill pulls.
 
 [NOTE]
 ====
-`tune-repo` ships on the *beta* channel (`alexmskills-beta`). Expect breaking changes; it is
-the calibration counterpart to xref:evolving-claude-md.adoc[Evolving CLAUDE.md] (which is the
-ongoing maintenance loop).
+`tune-repo` is a *beta* plugin, so its plugin name is `tune-repo-beta`. Expect breaking changes.
+It is the calibration counterpart to xref:evolving-claude-md.adoc[Evolving CLAUDE.md] (which is
+the ongoing maintenance loop).
 ====
+
+== Install
+
+[source,text]
+----
+/plugin install tune-repo-beta@alexmskills
+----
+
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill tune-repo
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
 
 == When to run it
 

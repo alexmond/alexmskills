@@ -21,6 +21,8 @@ _Press *Compile* and the map becomes an organized prompt: the goal as the headin
 /plugin install mindmap-prompt@alexmskills
 ----
 
+NOTE: Use the plugin install above. `npx skills add` copies only the skill text and leaves out the canvas server and the compiler. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Open the canvas
 
 [source,bash]

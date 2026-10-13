@@ -13,6 +13,8 @@ xref:role-system-usage.adoc#usage-sequence[Choosing & chaining] for how to chain
 /plugin install dev-crew@alexmskills
 ----
 
+NOTE: Use the plugin install above. `npx skills add` copies only the skill text and leaves out the `dc-*` agents and the phase-gate hook. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Trigger it
 
 [source,text]

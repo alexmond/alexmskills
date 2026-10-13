@@ -22,6 +22,15 @@ the case there and run it, then correct the file.
 /plugin install spring-batch@alexmskills
 ----
 
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill spring-batch
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == When it fires
 
 * Writing or debugging a Spring Batch job.

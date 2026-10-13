@@ -24,6 +24,15 @@ xref:evolving-claude-md.adoc[Evolving CLAUDE.md] (ongoing maintenance).
 /plugin install systemic-fix-beta@alexmskills
 ----
 
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill systemic-fix
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == When it fires
 
 * Any correctness bug Claude finds during ordinary work (wrong behaviour, crash, race, leak,

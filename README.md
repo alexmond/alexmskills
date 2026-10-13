@@ -169,6 +169,8 @@ When the audit says it's time, **`/evolving-claude-md:compact`** proposes the wh
 /plugin install usage-bar@alexmskills
 ```
 
+Mods install this way only. `npx skills add` copies skills, and a mod has none.
+
 `progress-channel` ships a third: its live job bars, drawn in the same band with `/progress-bar` to toggle. It comes with that plugin rather than as its own install.
 
 Install both and both draw: each adds its rows and then lets the next mod draw its own. Mods need a Claude Code build that loads hooks modules, and are Claude Code only. **[How mods work →](https://www.alexmond.org/alexmskills/mods/)**
@@ -208,10 +210,23 @@ Two plugins in progress ship with a `-beta` suffix: `tune-repo-beta` and `system
 
 ## Get started in 30 seconds
 
+There are two ways to install. Pick one for each plugin.
+
+**Way 1: Claude Code plugin.** Installs everything: skills, hooks, agents, slash commands and mods.
+
 ```text
 /plugin marketplace add alexmond/alexmskills
 /plugin install progress-channel@alexmskills
 ```
+
+**Way 2: `npx skills`.** Works for Claude Code, Cursor, Codex and other agents. Copies the skills only.
+
+```bash
+npx skills add alexmond/alexmskills --list                     # see what is there
+npx skills add alexmond/alexmskills --skill brainstorm-panel   # install one
+```
+
+Way 2 is complete for 11 plugins and incomplete for 11 that rely on hooks, agents or scripts. The two mods need way 1. **[Which is which →](https://www.alexmond.org/alexmskills/getting-started/#two-ways)**
 
 Then just ask:
 
@@ -223,7 +238,7 @@ Then just ask:
 | *"set up the progress status line"* | `progress-channel` wires live bars into your Claude Code status line. |
 
 <details>
-<summary><b>Every install command</b></summary>
+<summary><b>Every install command (way 1)</b></summary>
 
 ```text
 /plugin install evolving-claude-md@alexmskills

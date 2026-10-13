@@ -13,6 +13,8 @@ The failure modes differ, and the difference is the design. Bloat makes an agent
 /plugin install memory-hygiene@alexmskills
 ----
 
+NOTE: Use the plugin install above. `npx skills add` copies only the skill text and leaves out its hooks. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 Two hooks register on enable: a `SessionStart` sweep and a `PreToolUse` write lint. Nothing to configure; silent when healthy.
 
 == The sweep

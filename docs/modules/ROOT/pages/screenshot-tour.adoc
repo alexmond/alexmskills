@@ -12,6 +12,15 @@ Slide-deck export, README integration, and docs-site embedding are *opt-in follo
 /plugin install screenshot-tour@alexmskills
 ----
 
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill screenshot-tour
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Trigger it
 
 [source,text]

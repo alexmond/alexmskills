@@ -13,6 +13,15 @@ xref:role-system-usage.adoc#usage-sequence[Choosing & chaining] for how to chain
 /plugin install research-sweep@alexmskills
 ----
 
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill research-sweep
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Trigger it
 
 [source,text]

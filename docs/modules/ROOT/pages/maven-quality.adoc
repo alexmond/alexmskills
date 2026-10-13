@@ -11,6 +11,15 @@ Four quality skills for Maven/Java projects built around spring-javaformat, Chec
 /plugin install maven-quality@alexmskills
 ----
 
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill codestyle jacoco pmd precommit
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Trigger it
 
 [source,text]

@@ -9,6 +9,8 @@
 /plugin install tune-repo-beta@alexmskills
 ----
 
+With the skills CLI the beta suffix is not part of the name: `npx skills add alexmond/alexmskills --skill tune-repo`. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 The `-beta` suffix is intentional: it makes it obvious at install time and in the enabled-plugins list that the plugin is beta quality. When a beta plugin earns its stable slot, it graduates — the directory is renamed, the `-beta` drops from the name and marketplace entry, and the version bumps to `1.0.0`.
 
 xref:prompt-coach.adoc[prompt-coach] graduated this way on 2026-07-28, from `prompt-coach-beta` to a stable `1.0.0`.

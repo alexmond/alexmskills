@@ -10,6 +10,8 @@ Captures hard-won lessons into per-project memory so the same detour isn't repea
 /plugin install learn-on-failure@alexmskills
 ----
 
+NOTE: Use the plugin install above. `npx skills add` copies only the skill text and leaves out the hook that notices a failed attempt. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Trigger it
 
 [source,text]

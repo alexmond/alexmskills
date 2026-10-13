@@ -18,6 +18,8 @@ It is a xref:mods.adoc[mod]: code that draws inside Claude Code, with no skill a
 /plugin install usage-bar@alexmskills
 ----
 
+NOTE: This is a mod with no skill, so `npx skills add` cannot install it. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 It needs a Claude Code build that loads hooks modules; see xref:mods.adoc#_install[Mods → Install].
 
 == Use it

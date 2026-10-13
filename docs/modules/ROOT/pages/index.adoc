@@ -14,12 +14,22 @@ image::https://raw.githubusercontent.com/alexmond/alexmskills/main/plugins/progr
 
 _A real Claude Code session, recorded: xref:progress-channel.adoc[progress-channel] showing a build's live bar in the status line._
 
+There are two ways to install. In Claude Code, add the marketplace and install plugins from it:
+
 [source,text]
 ----
 /plugin marketplace add alexmond/alexmskills
+/plugin install progress-channel@alexmskills
 ----
 
-Then install what you want — xref:getting-started.adoc[Getting Started] has the full list.
+For another agent, or for the skills alone, use the skills CLI in a terminal:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills
+----
+
+The second way copies skills only: no hooks, agents or mods. xref:getting-started.adoc#two-ways[Two ways to install] has the full list and says which plugins need the first way.
 
 == Self-learning
 

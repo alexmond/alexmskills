@@ -36,6 +36,8 @@ _Both mods in one real session. The context bar and its legend sit above the two
 /plugin install usage-bar@alexmskills
 ----
 
+This is the only way to install a mod. `npx skills add` copies skills, and a mod has none. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 Each mod starts switched on. Its slash command turns it off and on again, and the choice is remembered for the session.
 
 *Requirement:* a Claude Code build that loads hooks modules (function-hook plugins). The screenshots on these pages were recorded on Claude Code 2.1.290. Builds without that support do not load hooks modules, so nothing is drawn.

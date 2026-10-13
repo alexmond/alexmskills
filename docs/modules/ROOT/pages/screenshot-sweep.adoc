@@ -15,6 +15,15 @@ NOTE: Not xref:screenshot-tour.adoc[screenshot-tour], which *produces* a present
 /plugin install screenshot-sweep@alexmskills
 ----
 
+Or with the skills CLI, which also works for agents other than Claude Code:
+
+[source,bash]
+----
+npx skills add alexmond/alexmskills --skill screenshot-sweep
+----
+
+Both ways install the same thing here. Use one, not both. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 There is nothing to configure. The skill fires whenever a screenshot enters the conversation — a bug report, a Playwright capture, a design review, a "does this look right".
 
 == The rule

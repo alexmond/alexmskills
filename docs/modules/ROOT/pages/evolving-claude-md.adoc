@@ -10,6 +10,8 @@ Wires `CLAUDE.md` to maintain a living *Decisions & Learnings* log that the assi
 /plugin install evolving-claude-md@alexmskills
 ----
 
+NOTE: Use the plugin install above. `npx skills add` copies only the skill text and leaves out the hooks that lint and audit the log. See xref:getting-started.adoc#two-ways[Two ways to install].
+
 == Trigger it
 
 [source,text]
