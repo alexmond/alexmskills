@@ -77,9 +77,9 @@ test('a second compaction is worth saying whatever the fill', () => {
   expect(advise(at(100_000, { compactions: 1 }))).toBe(null)
   expect(advise(at(100_000, { compactions: 2 }))).toEqual({
     level: 'hint',
-    text: 'Compacted 2× — early detail is a summary of a summary.',
+    text: 'Compacted 2×. Early details may be lost. Start a new session for new work.',
   })
-  expect(advise(at(800_000, { compactions: 3 }))?.text.endsWith('Compacted 3× — early detail is a summary of a summary.')).toBe(true)
+  expect(advise(at(800_000, { compactions: 3 }))?.text.endsWith('Compacted 3×. Early details may be lost.')).toBe(true)
   expect(advise(at(800_000, { compactions: 3 }))?.level).toBe('warn')
 })
 

@@ -102,10 +102,11 @@ export function advise(r: Reading): Advice | null {
   const level = levelOf(r.total / limit, r.total / limit >= 0.5 ? turns : null)
   // A second compaction is worth saying whatever the fill: what was summarized
   // once has now been summarized again.
-  const depth = r.compactions >= 2 ? ` Compacted ${r.compactions}× — early detail is a summary of a summary.` : ''
+  // Appended to a warning it stays short: that row already says what to do.
+  const depth = r.compactions >= 2 ? ` Compacted ${r.compactions}×. Early details may be lost.` : ''
 
   if (level === null) {
-    return depth === '' ? null : { level: 'hint', text: depth.trim() }
+    return depth === '' ? null : { level: 'hint', text: `${depth.trim()} Start a new session for new work.` }
   }
 
   const room = turns === null ? `~${short(left)} left` : `~${short(left)} left, about ${turns} ${turns === 1 ? 'turn' : 'turns'}`

@@ -90,7 +90,7 @@ _Rendered by the mod's own `advise()` over sample readings; a live recording wou
 
 | note (dim)
 | after a second compaction, at any fill
-| Early detail is now a summary of a summary — the point where it is worth re-stating a decision you still depend on.
+| The start of the conversation has been shortened more than once, so early details may be lost. Re-state a decision you still depend on, or start a new session for new work.
 |===
 
 Three things about how it decides:
